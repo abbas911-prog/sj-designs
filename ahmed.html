@@ -78,7 +78,7 @@
   .dl input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   .done h2{font-family:var(--display);font-weight:500;font-size:26px;margin:0}
   .done .ar{color:var(--muted);font-size:17px}
-  .done pre{margin:0;background:var(--soft);border-radius:8px;padding:14px;font:600 15px/1.6 var(--body);white-space:pre-wrap}
+  .done pre{margin:0;background:var(--soft);border-radius:8px;padding:12px 14px;font:500 12.5px/1.5 var(--body);white-space:pre-wrap;word-break:break-all;color:var(--muted)}
   .done .hint{font-size:12.5px;color:var(--muted)}
   .done .notice{font-size:14px;padding:12px 14px;border-radius:8px;background:#FBF1E6;border:1px solid #E3C79C;color:#5A3D0C;display:flex;flex-direction:column;gap:6px}
   .done .notice[hidden]{display:none}
@@ -180,7 +180,7 @@
       <b>press and hold each photo above</b> → Share → WhatsApp to send it separately.
       <div class="ar">هذا المتصفح منع إرسال الصور مع الرسالة. أرسل النص بالزر أدناه، ثم اضغط مطولاً على كل صورة أعلاه ← مشاركة ← واتساب</div>
     </div>
-    <div class="hint">This is the message we receive, with your marked photos and delivery photo attached. We'll confirm on WhatsApp. <span class="ar">سنؤكد لك على واتساب</span></div>
+    <div class="hint">Your order goes as pictures. This link reopens your choices if you want to change them. We'll confirm on WhatsApp. <span class="ar">يُرسل طلبك كصور. هذا الرابط يفتح اختيارك مرة أخرى للتعديل. سنؤكد لك على واتساب</span></div>
     <div class="acts">
       <a class="primary" id="wa" href="#" target="_blank" rel="noopener">Send on WhatsApp</a>
       <button id="share" type="button" class="primary" hidden>Send photos + order</button>
@@ -237,7 +237,8 @@
     if (notes) lines.push(notes);
     if (!deliveryFile && !notes) lines.push('— · —');
     var text = lines.join('\n');
-    document.getElementById('msg').textContent = text;
+    window.SJ_LINK = (orderLines.filter(function(l){ return /github\.io/.test(l); })[0] || '');
+    document.getElementById('msg').textContent = window.SJ_LINK;
     document.getElementById('wa').href = 'https://wa.me/971562529222?text=' + encodeURIComponent(text);
     try { localStorage.setItem('sj-notes', notes); } catch (e) {}
     return text;
@@ -256,11 +257,11 @@
              : (function(f){ var a=[]; for (var i=0;i<n;i++) a.push(f+i); return a; })(+photoEl.dataset.first);
     var W = img.naturalWidth, H = img.naturalHeight, c = document.createElement('canvas'); c.width = W; c.height = H;
     var g = c.getContext('2d'); g.drawImage(img, 0, 0);
-    var colW = W / n, pillH = Math.round(H * 0.075), f = Math.round(H * 0.034);
+    var colW = W / n, pillH = Math.round(H * 0.078), f = Math.round(H * 0.030);
     for (var i = 0; i < n; i++){
       var no = nums[i], sets = no ? chosen[no] : 0;
       if (!sets){ g.fillStyle = 'rgba(236,233,226,0.72)'; g.fillRect(i * colW, 0, colW + 1, H); continue; }
-      var cx = i * colW + colW / 2, label = no + '  ·  ' + setsEn(sets);
+      var cx = i * colW + colW / 2, label = no + '  ·  ' + setsEn(sets) + ' / ' + setsAr(sets);
       g.font = 'bold ' + f + 'px Manrope, Arial, sans-serif';
       var tw = g.measureText(label).width + f * 1.4, x = cx - tw / 2, y = H - pillH - f * 0.6;
       g.fillStyle = '#234C47'; g.beginPath(); g.roundRect(x, y, tw, pillH, pillH / 2); g.fill();
@@ -338,13 +339,13 @@
     shareText = buildText();
     var files = [summaryImage(shareText)].concat(shareFiles);
     if (deliveryFile) files.push(deliveryFile);
-    var payload = { files: files, text: shareText, title: 'Order' };
+    var payload = { files: files, text: window.SJ_LINK || '', title: 'Order' };
     if (navigator.canShare && !navigator.canShare(payload)) { payload = { files: files, title: 'Order' }; }   // some phones refuse text+files together
     var p;
     try { p = navigator.share(payload); } catch (e) { fallbackToText(); return; }
     p.catch(function(err){
       if (err && err.name === 'AbortError') return;           // he closed the share sheet — do nothing
-      if (err && err.name === 'TypeError' && payload.text) {  // files+text refused: try files only
+      if (err && err.name === 'TypeError' && payload.text) {  // files+link refused: try files only
         navigator.share({ files: files, title: 'Order' }).catch(function(e2){ if (!e2 || e2.name !== 'AbortError') fallbackToText(); });
         return;
       }
