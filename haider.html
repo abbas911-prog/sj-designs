@@ -365,14 +365,15 @@
     Object.keys(state).sort().forEach(function(k){ var p = k.split(':'); (byDesign[p[0]] = byDesign[p[0]] || {})[+p[1]] = state[k]; sets += state[k]; });
     var d = new Date(), date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
     var lines = ['Order request · طلب شراء', 'Haji Haider (Baghdad) · حاج حيدر (بغداد)', date, ''];
-    Object.keys(byDesign).forEach(function(no){
-      var en = Object.keys(byDesign[no]).map(function(c){ return 'colour ' + c + ' (' + setsEn(byDesign[no][c]) + ')'; });
-      var ar = Object.keys(byDesign[no]).map(function(c){ return 'لون ' + c + ' (' + setsAr(byDesign[no][c]) + ')'; });
-      lines.push(no + ' — ' + en.join(', '));
-      lines.push(no + ' — ' + ar.join('، '));
+    Object.keys(byDesign).forEach(function(no){          // one line per design, both languages inline
+      var cs = Object.keys(byDesign[no]).map(Number).sort(function(a,b){ return a - b; });
+      lines.push(no + ' — ' + cs.map(function(c){
+        return 'colour ' + c + ' (' + setsEn(byDesign[no][c]) + ' / ' + setsAr(byDesign[no][c]) + ')';
+      }).join(', '));
     });
-    lines.push('', 'Total ' + setsEn(sets) + ' · ' + sets * 4 + ' pcs',
-               'المجموع ' + sets + ' طقم · ' + sets * 4 + ' قطعة');
+    var nd = Object.keys(byDesign).length;
+    lines.push('', 'Total: ' + nd + (nd === 1 ? ' design' : ' designs') + ' · ' +
+                   setsEn(sets) + ' · ' + sets * 4 + ' pcs');
     var code = Object.keys(state).sort().map(function(k){ return k.replace(':', '-') + '-' + state[k]; }).join(',');
     lines.push('', 'Marked photos · الصور المعلّمة', 'https://abbas911-prog.github.io/sj-designs/haider.html#o=' + code);
     orderLines = lines;
