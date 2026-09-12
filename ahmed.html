@@ -233,7 +233,10 @@
   function setsAr(n){ return SETS_AR[n]; }
   function buildText(){
     var notes = (document.getElementById('f-notes').value || '').trim();
-    var lines = orderLines.slice();
+    var lines = orderLines.filter(function(l, i){        // the link is the WhatsApp caption, not a printed line
+      return !/github\.io/.test(l) && !/Marked photos/.test(l);
+    });
+    while (lines.length && lines[lines.length - 1] === '') lines.pop();
     lines.push('', 'Delivery · التوصيل');
     if (deliveryFile) lines.push('Details in the attached photo · التفاصيل في الصورة المرفقة');
     if (notes) lines.push(notes);
@@ -339,8 +342,9 @@
   }
   document.getElementById('share').addEventListener('click', function(){
     shareText = buildText();
-    var files = [summaryImage(shareText)].concat(shareFiles);
+    var files = shareFiles.slice();
     if (deliveryFile) files.push(deliveryFile);
+    files.push(summaryImage(shareText));        // the ordered list, last — the link rides with it
     var payload = { files: files, text: window.SJ_LINK || '', title: 'Order' };
     if (navigator.canShare && !navigator.canShare(payload)) { payload = { files: files, title: 'Order' }; }   // some phones refuse text+files together
     var p;
