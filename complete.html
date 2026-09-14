@@ -283,7 +283,8 @@
     });
     var nd = Object.keys(byDesign).length;
     lines.push('', 'Total: ' + nd + (nd === 1 ? ' design' : ' designs') + ' · ' +
-                   sets + (sets === 1 ? ' complete set' : ' complete sets') + ' · ' + pcs + ' pcs');
+                   sets + (sets === 1 ? ' complete set' : ' complete sets') + ' · ' + pcs + ' pcs' +
+                   ' / ' + arDesigns(nd) + ' · ' + arFull(sets) + ' · ' + arPcs(pcs));
     var code = Object.keys(state).sort().map(function(k){ return k.replace(':', '-') + '-' + state[k]; }).join(',');
     lines.push('', 'Marked photos · الصور المعلّمة', 'https://abbas911-prog.github.io/sj-designs/complete.html#o=' + code);
     orderLines = lines;
