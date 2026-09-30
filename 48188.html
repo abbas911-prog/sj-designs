@@ -283,8 +283,11 @@
     });
     var d = new Date(), date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
     var lines = ['Order request · طلب شراء', date, ''];
+    var ORD = [];
     Object.keys(byDesign).forEach(function(no){          // one line per design, both languages inline
       var cs = Object.keys(byDesign[no]).map(Number).sort(function(a,b){ return a - b; });
+      ORD.push({ no: no, rows: cs.map(function(c){
+        return { c: c, en: labEn(no, c, byDesign[no][c]), ar: labAr(no, c, byDesign[no][c]) }; }) });
       lines.push(no + ' — ' + cs.map(function(c){
         return 'colour ' + c + ' (' + labEn(no, c, byDesign[no][c]) + ' / ' + labAr(no, c, byDesign[no][c]) + ')';
       }).join(', '));
@@ -293,6 +296,8 @@
     lines.push('', 'Total: ' + nd + (nd === 1 ? ' design' : ' designs') + ' · ' +
                    sets + (sets === 1 ? ' set' : ' sets') + ' · ' + pcs + ' pcs' +
                    ' / ' + arDesigns(nd) + ' · ' + arSets(sets) + ' · ' + arPcs(pcs));
+    var _t = lines[lines.length - 1].replace(/^Total: /, '').split(' / ');
+    window.SJ_ORDER = { date: date, designs: ORD, tEn: _t[0] || '', tAr: _t[1] || '' };
     var code = Object.keys(state).sort().map(function(k){ return k.replace(':', '-') + '-' + state[k]; }).join(',');
     lines.push('', 'Marked photos · الصور المعلّمة', 'https://abbas911-prog.github.io/sj-designs/48188.html#o=' + code);
     orderLines = lines;
@@ -319,34 +324,95 @@
   // the order text as a picture: WhatsApp on some phones drops the text when photos are shared with it,
   // so the first photo carries the whole order (built synchronously — the share must run inside the tap)
   function summaryImage(text){
-    var W = 1080, pad = 70, fs = 40, lh = 58, maxW = W - pad * 2;
-    var raw = text.split('\n'), m = document.createElement('canvas').getContext('2d');
-    var rows = [];
-    raw.forEach(function(ln, i){
-      var big = i === 0;
-      m.font = (big ? 'bold ' : '') + fs + 'px Arial, sans-serif';
-      if (!ln) { rows.push({t:'', i:i, first:true}); return; }
-      if (m.measureText(ln).width <= maxW) { rows.push({t:ln, i:i, first:true}); return; }
-      var words = ln.split(' '), cur = '', first = true;          // wrap on spaces, keep the indent visual
-      words.forEach(function(w){
-        var test = cur ? cur + ' ' + w : w;
-        if (m.measureText(test).width > maxW && cur) { rows.push({t:cur, i:i, first:first}); first = false; cur = w; }
-        else cur = test;
+    var O = window.SJ_ORDER || {date:'', designs:[], tEn:'', tAr:''};
+    var notes = (document.getElementById('f-notes').value || '').trim();
+    var hasPhoto = !!deliveryFile;
+    var W = 1080, P = 64;
+    function draw(ctx, measure){
+      var y = 110;
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#1C1A17'; ctx.font = 'bold 46px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+      if (!measure) ctx.fillText('ORDER REQUEST', P, y);
+      ctx.textAlign = 'right'; ctx.direction = 'rtl';
+      if (!measure) ctx.fillText('طلب شراء', W - P, y);
+      y += 46;
+      ctx.textAlign = 'left'; ctx.direction = 'ltr'; ctx.font = '30px Arial'; ctx.fillStyle = '#6E675D';
+      if (!measure) ctx.fillText(O.date, P, y);
+      y += 34;
+      if (!measure){ ctx.strokeStyle = '#CFC9BD'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(P, y); ctx.lineTo(W - P, y); ctx.stroke(); }
+      O.designs.forEach(function(d){
+        y += 62;
+        ctx.fillStyle = '#1C1A17'; ctx.font = 'bold 52px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+        if (!measure) ctx.fillText('DESIGN ' + d.no, P, y);
+        y += 30;
+        d.rows.forEach(function(r){
+          y += 58;
+          var x = P;
+          if (r.c){
+            if (!measure){
+              ctx.fillStyle = '#234C47'; ctx.beginPath(); ctx.arc(P + 22, y - 13, 24, 0, 7); ctx.fill();
+              ctx.fillStyle = '#fff'; ctx.font = 'bold 27px Arial'; ctx.textAlign = 'center'; ctx.direction = 'ltr';
+              ctx.fillText(String(r.c), P + 22, y - 4);
+            }
+            x = P + 72;
+          }
+          if (!measure){
+            ctx.fillStyle = '#1C1A17'; ctx.font = '34px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+            ctx.fillText(r.en, x, y - 2);
+            ctx.fillStyle = '#3A352E'; ctx.font = '34px Arial'; ctx.textAlign = 'right'; ctx.direction = 'rtl';
+            ctx.fillText(r.ar, W - P, y - 2);
+          }
+          y += 16;
+          if (!measure){ ctx.strokeStyle = '#E3DED4'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P, y); ctx.lineTo(W - P, y); ctx.stroke(); }
+        });
       });
-      if (cur) rows.push({t:cur, i:i, first:first});
-    });
-    var c = document.createElement('canvas'); c.width = W; c.height = pad * 2 + rows.length * lh;
-    var g = c.getContext('2d'); g.fillStyle = '#ECE9E2'; g.fillRect(0, 0, c.width, c.height);
-    g.fillStyle = '#8A6A2A'; g.fillRect(0, 0, W, 6);
-    g.textBaseline = 'middle';
-    rows.forEach(function(row, k){
-      var ln = row.t, y = pad + k * lh + lh / 2, arab = /^[\u0600-\u06FF]/.test(ln), big = row.i === 0;
-      g.font = (big ? 'bold ' : '') + fs + 'px Arial, sans-serif'; g.fillStyle = big ? '#1C1A17' : '#2B2825';
-      if (/github\.io/.test(ln)) { g.fillStyle = '#6E675D'; g.font = (fs - 10) + 'px Arial, sans-serif'; }
-      g.direction = arab ? 'rtl' : 'ltr'; g.textAlign = arab ? 'right' : 'left';
-      g.fillText(ln, arab ? W - pad : (row.first ? pad : pad + 34), y);
-    });
-    var b64 = c.toDataURL('image/jpeg', 0.9).split(',')[1], bin = atob(b64), u8 = new Uint8Array(bin.length);
+      y += 54;
+      if (!measure){
+        ctx.fillStyle = '#234C47'; ctx.fillRect(P, y - 46, W - 2 * P, 104);
+        ctx.fillStyle = '#F3F6F5'; ctx.font = 'bold 34px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+        ctx.fillText(O.tEn, P + 24, y - 4);
+        ctx.fillStyle = '#CFE0DC'; ctx.font = '30px Arial'; ctx.textAlign = 'right'; ctx.direction = 'rtl';
+        ctx.fillText(O.tAr, W - P - 24, y + 40);
+      }
+      y += 104;
+      ctx.fillStyle = '#1C1A17'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+      if (!measure) ctx.fillText('DELIVERY', P, y);
+      ctx.textAlign = 'right'; ctx.direction = 'rtl';
+      if (!measure) ctx.fillText('التوصيل', W - P, y);
+      if (hasPhoto){
+        y += 44;
+        ctx.fillStyle = '#3A352E'; ctx.font = '30px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+        if (!measure) ctx.fillText('Details in the attached photo', P, y);
+        y += 42; ctx.textAlign = 'right'; ctx.direction = 'rtl';
+        if (!measure) ctx.fillText('التفاصيل في الصورة المرفقة', W - P, y);
+      }
+      if (notes){
+        ctx.font = '30px Arial';
+        var words = notes.split(' '), cur = '', ls = [];
+        words.forEach(function(w){ var t = cur ? cur + ' ' + w : w;
+          if (ctx.measureText(t).width > W - 2 * P && cur){ ls.push(cur); cur = w; } else cur = t; });
+        if (cur) ls.push(cur);
+        var ar = /^[؀-ۿ]/.test(notes);
+        ls.forEach(function(l){
+          y += 42;
+          if (!measure){ ctx.fillStyle = '#3A352E'; ctx.font = '30px Arial';
+            ctx.direction = ar ? 'rtl' : 'ltr'; ctx.textAlign = ar ? 'right' : 'left';
+            ctx.fillText(l, ar ? W - P : P, y); }
+        });
+      }
+      if (!hasPhoto && !notes){
+        y += 44;
+        if (!measure){ ctx.fillStyle = '#6E675D'; ctx.font = '30px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr'; ctx.fillText('—', P, y); }
+      }
+      return y + 50;
+    }
+    var H = draw(document.createElement('canvas').getContext('2d'), true);
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var g = c.getContext('2d');
+    g.fillStyle = '#F4F2ED'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#8A6A2A'; g.fillRect(0, 0, W, 10);
+    draw(g, false);
+    var b64 = c.toDataURL('image/jpeg', 0.92).split(',')[1], bin = atob(b64), u8 = new Uint8Array(bin.length);
     for (var k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
     return new File([u8], 'SJ-order.jpg', {type: 'image/jpeg'});
   }
