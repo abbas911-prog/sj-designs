@@ -410,22 +410,47 @@
     shareText = buildText();
   });
   document.addEventListener('input', function(e){ if (e.target.closest('.dl')) { shareText = buildText(); } });
-  function markPhoto(photoEl, chosen){   // chosen: {colourNo: sets}
-    var img = photoEl.querySelector('img'), n = +photoEl.dataset.n, t = photoEl.closest('.design').dataset.no;
-    var nums = photoEl.dataset.nums ? photoEl.dataset.nums.split(',').map(Number)
-             : (function(f){ var a=[]; for (var i=0;i<n;i++) a.push(f+i); return a; })(+photoEl.dataset.first);
+  // one tag under a dress: English on top, Arabic beneath, never on the same line,
+  // width-capped to its own column so two neighbours can never run into each other
+  function tag(g, cx, H, maxW, en, ar, W){
+    var pad = Math.round(H * 0.016), gap = Math.round(H * 0.012);
+    var f = Math.round(H * 0.030), lim = maxW - gap * 2;
+    var wEn, wAr, bw;
+    for (;;){
+      g.font = 'bold ' + f + 'px Manrope, Arial, sans-serif'; wEn = g.measureText(en).width;
+      g.font = (f - 2) + 'px Arial, sans-serif';              wAr = g.measureText(ar).width;
+      bw = Math.max(wEn, wAr) + pad * 2.6;
+      if (bw <= lim || f <= Math.round(H * 0.016)) break;
+      f -= 1;
+    }
+    if (bw > lim) bw = lim;
+    var bh = f * 2 + pad * 2.4, r = Math.min(bh / 2, Math.round(H * 0.018));
+    var x = cx - bw / 2;
+    if (x < gap) x = gap;
+    if (x + bw > W - gap) x = W - gap - bw;
+    var y = H - bh - gap * 2;
+    g.fillStyle = 'rgba(35,76,71,0.94)'; g.beginPath(); g.roundRect(x, y, bw, bh, r); g.fill();
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'ltr';
+    g.fillStyle = '#FFFFFF'; g.font = 'bold ' + f + 'px Manrope, Arial, sans-serif';
+    g.fillText(en, x + bw / 2, y + pad * 1.2 + f * 0.5);
+    g.direction = 'rtl'; g.fillStyle = '#CFE0DC'; g.font = (f - 2) + 'px Arial, sans-serif';
+    g.fillText(ar, x + bw / 2, y + pad * 1.2 + f * 1.55);
+    g.direction = 'ltr';
+  }
+  function stamp(g, t, H){
+    var f = Math.round(H * 0.034), pad = Math.round(H * 0.013), m = Math.round(H * 0.016);
+    g.font = 'bold ' + f + 'px Manrope, Arial, sans-serif';
+    g.textAlign = 'left'; g.textBaseline = 'top'; g.direction = 'ltr';
+    var w = g.measureText(t).width + pad * 2.4, h = f + pad * 1.8;
+    g.fillStyle = 'rgba(28,26,23,0.82)'; g.beginPath(); g.roundRect(m, m, w, h, Math.round(h * 0.28)); g.fill();
+    g.fillStyle = '#F3F2EE'; g.fillText(t, m + pad * 1.2, m + pad * 0.85);
+  }
+  function markPhoto(photoEl, chosen){
+    var img = photoEl.querySelector('img'), t = photoEl.closest('.design').dataset.no;
     var W = img.naturalWidth, H = img.naturalHeight, c = document.createElement('canvas'); c.width = W; c.height = H;
     var g = c.getContext('2d'); g.drawImage(img, 0, 0);
-    var pillH = Math.round(H * 0.078), f = Math.round(H * 0.030);
-    var label = labEn(t, 0, chosen) + ' / ' + labAr(t, 0, chosen);   // complete: every colour is in, nothing fades
-    g.font = 'bold ' + f + 'px Manrope, Arial, sans-serif';
-    var tw = g.measureText(label).width + f * 1.4, x = W / 2 - tw / 2, y = H - pillH - f * 0.6;
-    g.fillStyle = '#234C47'; g.beginPath(); g.roundRect(x, y, tw, pillH, pillH / 2); g.fill();
-    g.fillStyle = '#F3F6F5'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, W / 2, y + pillH / 2 + 1);
-    g.font = 'bold ' + Math.round(H * 0.05) + 'px Fraunces, Georgia, serif'; g.textAlign = 'left'; g.textBaseline = 'top';
-    g.fillStyle = 'rgba(236,233,226,0.9)'; var tw2 = g.measureText(lbl(t)).width + f;
-    g.fillRect(f * 0.6, f * 0.6, tw2, Math.round(H * 0.05) + f * 0.8);
-    g.fillStyle = '#1C1A17'; g.fillText(lbl(t), f * 1.1, f);
+    tag(g, W / 2, H, W * 0.9, labEn(t, 0, chosen), labAr(t, 0, chosen), W);   // complete: every colour is in, nothing fades
+    stamp(g, lbl(t), H);
     var out = document.createElement('img'); out.src = c.toDataURL('image/jpeg', 0.85); out.alt = 'Design ' + t + ' with chosen colours marked';
     c.toBlob(function(b){ if (b) shareFiles.push(new File([b], 'SJ-' + t + '-order.jpg', {type: 'image/jpeg'})); }, 'image/jpeg', 0.85);
     return out;
