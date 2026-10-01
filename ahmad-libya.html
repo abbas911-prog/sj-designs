@@ -206,6 +206,7 @@
 <script>
 (function(){
   var SETS_AR = {1:'طقم واحد', 2:'طقمان', 3:'٣ أطقم', 4:'٤ أطقم'};
+  var CUSTOMER = "AHMAD AL WASTA", CUSTOMER_SUB = "LIBYA";
   var PAGE_ORDER = ["81016", "18634", "64827", "92236", "58273"];
   var MODE = {"81016": "C", "18634": "C", "64827": "C", "92236": "S", "58273": "C"};
   var TOT  = {"81016": 74, "18634": 112, "64827": 136, "58273": 48};   // COMPLETE designs — total pieces
@@ -436,10 +437,15 @@
       if (!measure) ctx.fillText('ORDER REQUEST', P, y);
       ctx.textAlign = 'right'; ctx.direction = 'rtl';
       if (!measure) ctx.fillText('طلب شراء', W - P, y);
-      y += 46;
-      ctx.textAlign = 'left'; ctx.direction = 'ltr'; ctx.font = '30px Arial'; ctx.fillStyle = '#6E675D';
-      if (!measure) ctx.fillText(O.date, P, y);
-      y += 34;
+      y += 54;
+      ctx.textAlign = 'left'; ctx.direction = 'ltr'; ctx.font = 'bold 38px Arial'; ctx.fillStyle = '#1C1A17';
+      if (!measure) ctx.fillText(CUSTOMER, P, y);
+      ctx.textAlign = 'right'; ctx.direction = 'ltr'; ctx.font = '28px Arial'; ctx.fillStyle = '#6E675D';
+      if (!measure) ctx.fillText(O.date, W - P, y);
+      y += 36;
+      ctx.textAlign = 'left'; ctx.direction = 'ltr'; ctx.font = '26px Arial'; ctx.fillStyle = '#6E675D';
+      if (!measure && CUSTOMER_SUB) ctx.fillText(CUSTOMER_SUB, P, y);
+      y += 30;
       if (!measure){ ctx.strokeStyle = '#CFC9BD'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(P, y); ctx.lineTo(W - P, y); ctx.stroke(); }
       O.designs.forEach(function(d){
         y += 62;
