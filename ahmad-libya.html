@@ -2,11 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SJ Trading">
+<meta property="og:title" content="AHMAD AL WASTA · LIBYA — 5 new designs">
+<meta property="og:description" content="Tap to view the catalogue and choose your colours. اضغط لمشاهدة الكتالوج واختيار الألوان">
+<meta property="og:url" content="https://abbas911-prog.github.io/sj-designs/ahmad-libya.html">
+<meta property="og:image" content="https://abbas911-prog.github.io/sj-designs/og-ahmad-libya.jpg?v=1">
+<meta property="og:image:secure_url" content="https://abbas911-prog.github.io/sj-designs/og-ahmad-libya.jpg?v=1">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="AHMAD AL WASTA · LIBYA — 5 new designs">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://abbas911-prog.github.io/sj-designs/og-ahmad-libya.jpg?v=1">
+<meta name="description" content="Tap to view the catalogue and choose your colours. اضغط لمشاهدة الكتالوج واختيار الألوان">
+
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
-<title>SJ Trading Designs</title>
+<title>AHMAD AL WASTA · LIBYA — 5 new designs</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap">
 <style>
   :root{--bg:#ECE9E2;--surface:#fff;--ink:#1C1A17;--muted:#6E675D;--line:#D9D4CA;--accent:#234C47;--accent-ink:#F3F6F5;--soft:#E3EBE9;
@@ -196,8 +212,8 @@
     </div>
     <div class="hint">Your order goes as pictures. This link reopens your choices if you want to change them. We'll confirm on WhatsApp. <span class="ar">يُرسل طلبك كصور. هذا الرابط يفتح اختيارك مرة أخرى للتعديل. سنؤكد لك على واتساب</span></div>
     <div class="acts">
-      <a class="primary" id="wa" href="#" target="_blank" rel="noopener">Send on WhatsApp</a>
-      <button id="share" type="button" class="primary" hidden>Send photos + order</button>
+      <a class="primary" id="wa" href="#" target="_blank" rel="noopener">Open WhatsApp · افتح واتساب</a>
+      <button id="share" type="button" class="primary" hidden>Send order · إرسال الطلب</button>
       <button id="back" type="button">Change order</button>
     </div>
   </div>
@@ -304,7 +320,7 @@
     var text = lines.join('\n');
     window.SJ_LINK = (orderLines.filter(function(l){ return /github\.io/.test(l); })[0] || '');
     document.getElementById('msg').textContent = window.SJ_LINK;
-    document.getElementById('wa').href = 'https://wa.me/971562529222?text=' + encodeURIComponent(text);
+    document.getElementById('wa').href = 'https://wa.me/971562529222';   // no order text — the order is the PDF
     try { localStorage.setItem('sj-notes', notes); } catch (e) {}
     return text;
   }
@@ -420,7 +436,7 @@
     showSheet();
     var sb = document.getElementById('share');
     var canShare = !!navigator.share;
-    sb.hidden = !canShare; document.getElementById('wa').hidden = canShare;
+    sb.hidden = false; document.getElementById('wa').hidden = true;   // one button always: it shares the PDF, or saves it
     document.getElementById('done').hidden = false; document.getElementById('bar').hidden = true;
     document.getElementById('done').scrollTop = 0; window.scrollTo(0,0);
   });
@@ -541,7 +557,11 @@
       g.textBaseline = 'alphabetic';
       items.forEach(function(it){ it.b.draw(g, it.y, it.cont); });
       en(g, (CUSTOMER ? CUSTOMER + '  ·  ' : '') + O.date + '  ·  page ' + (pi + 1) + ' / ' + pages.length,
-         W / 2, PH - Math.round(30 * S), px(20), '#9A9286', 'center');
+         W / 2, PH - Math.round(24 * S), px(18), '#9A9286', 'center');
+      if (window.SJ_LINK){                                   // the whole strip is a live link in the PDF
+        en(g, 'Tap here to reopen this order', W / 2 - Math.round(12 * S), PH - Math.round(50 * S), bpx(20), '#234C47', 'right');
+        ar(g, 'اضغط هنا لفتح الطلب', W / 2 + Math.round(12 * S), PH - Math.round(50 * S), bpx(20), '#234C47', 'left');
+      }
       return cv;
     });
     function en(g, t, x, yy, font, col, al){ g.font = font; g.fillStyle = col; g.textAlign = al || 'left'; g.direction = 'ltr'; g.fillText(t, x, yy); }
@@ -561,11 +581,13 @@
   }
   // minimal PDF writer: one full-page JPEG per A4 page, no library needed, runs synchronously inside the tap
   function b64bytes(d){ var s = atob(d.split(',')[1]), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
-  function makePDF(canvases){
+  function makePDF(canvases, link){
     var parts = [], len = 0, offs = [];
     function add(x){ if (typeof x === 'string'){ var u = new Uint8Array(x.length); for (var i = 0; i < x.length; i++) u[i] = x.charCodeAt(i) & 255; x = u; } parts.push(x); len += x.length; }
     function obj(n){ offs[n] = len; add(n + ' 0 obj\n'); }
     var n = canvases.length, MW = 595.28, MH = 841.89;
+    var esc = (link || '').replace(/[^\x20-\x7E]/g, encodeURIComponent).replace(/([\\()])/g, '\\$1');
+    var annot = link ? ' /Annots [<< /Type /Annot /Subtype /Link /Rect [0 0 ' + MW + ' ' + (MH * 66 / 1528).toFixed(2) + '] /Border [0 0 0] /A << /S /URI /URI (' + esc + ') >> >>]' : '';
     add('%PDF-1.4\n%âãÏÓ\n');
     obj(1); add('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
     var kids = []; for (var i = 0; i < n; i++) kids.push((3 + 3 * i) + ' 0 R');
@@ -573,7 +595,7 @@
     canvases.forEach(function(cv, i){
       var p = 3 + 3 * i, c = p + 1, im = p + 2, jpg = b64bytes(cv.toDataURL('image/jpeg', 0.86));
       var cs = 'q ' + MW + ' 0 0 ' + MH + ' 0 0 cm /Im0 Do Q';
-      obj(p); add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + MW + ' ' + MH + '] /Resources << /XObject << /Im0 ' + im + ' 0 R >> >> /Contents ' + c + ' 0 R >>\nendobj\n');
+      obj(p); add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + MW + ' ' + MH + '] /Resources << /XObject << /Im0 ' + im + ' 0 R >> >> /Contents ' + c + ' 0 R' + annot + ' >>\nendobj\n');
       obj(c); add('<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream\nendobj\n');
       obj(im); add('<< /Type /XObject /Subtype /Image /Width ' + cv.width + ' /Height ' + cv.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n');
       add(jpg); add('\nendstream\nendobj\n');
@@ -590,7 +612,7 @@
     return base.replace(/-+$/, '') + '.pdf';
   }
   function summaryImage(text){
-    return new File([makePDF(drawPages())], orderFileName(), {type: 'application/pdf'});
+    return new File([makePDF(drawPages(), window.SJ_LINK || '')], orderFileName(), {type: 'application/pdf'});
   }
   function showSheet(){
     if (!window.SJ_ORDER) return;
@@ -598,26 +620,23 @@
     m.innerHTML = '';
     drawPages().forEach(function(cv){ var im = document.createElement('img'); im.alt = 'Your order'; im.src = cv.toDataURL('image/jpeg', 0.7); m.appendChild(im); });
   }
-  function fallbackToText(){
-    document.getElementById('blocked').hidden = false;
+  function fallbackToText(pdf){
+    try { pdf = pdf || summaryImage(buildText());
+      var a = document.createElement('a'); a.href = URL.createObjectURL(pdf); a.download = pdf.name;
+      document.body.appendChild(a); a.click(); a.remove(); } catch (e) {}
+    var bl = document.getElementById('blocked');
+    bl.innerHTML = 'Your order PDF has been saved to your phone. Open WhatsApp and attach it. <span class="ar">تم حفظ ملف الطلب PDF على هاتفك. افتح واتساب وأرفقه.</span>';
+    bl.hidden = false;
     document.getElementById('share').hidden = true;
     document.getElementById('wa').hidden = false;
   }
   document.getElementById('share').addEventListener('click', function(){
     shareText = buildText();
-    var files = [summaryImage(shareText)];      // one picture: the whole order, the link rides with it
-    var payload = { files: files, text: window.SJ_LINK || '', title: 'Order' };
-    if (navigator.canShare && !navigator.canShare(payload)) { payload = { files: files, title: 'Order' }; }   // some phones refuse text+files together
+    var pdf = summaryImage(shareText), payload = { files: [pdf] };     // the PDF only — nothing else goes
+    if (!navigator.share || (navigator.canShare && !navigator.canShare(payload))) { fallbackToText(pdf); return; }
     var p;
-    try { p = navigator.share(payload); } catch (e) { fallbackToText(); return; }
-    p.catch(function(err){
-      if (err && err.name === 'AbortError') return;           // he closed the share sheet — do nothing
-      if (err && err.name === 'TypeError' && payload.text) {  // files+link refused: try files only
-        navigator.share({ files: files, title: 'Order' }).catch(function(e2){ if (!e2 || e2.name !== 'AbortError') fallbackToText(); });
-        return;
-      }
-      fallbackToText();
-    });
+    try { p = navigator.share(payload); } catch (e) { fallbackToText(pdf); return; }
+    p.catch(function(err){ if (!err || err.name !== 'AbortError') fallbackToText(pdf); });
   });
   function openFromLink(){
     var m = /[#&]o=([^&]+)/.exec(location.hash); if (!m) return;
