@@ -196,7 +196,7 @@
     <h2>Your order</h2>
     <div class="ar">طلبك — الألوان المختارة مُعلَّمة في الصور</div>
     <div class="marks" id="marks"></div>
-    <div class="sub">Your whole order goes as one PDF. <span class="ar">يُرسل طلبك كاملاً في ملف PDF واحد</span></div>
+    <div class="sub">Your choice is marked on each picture. Save these pictures for your records.</div>
     <div class="dl">
       <div class="dl-h">Delivery <span class="ar">التوصيل</span></div>
       <div class="sub">Add a photo of your delivery details — cargo card, previous label, or a note. <span class="ar">أضف صورة بتفاصيل الشحن — بطاقة شركة الشحن أو ملصق سابق</span></div>
@@ -327,11 +327,11 @@
   document.getElementById('f-photo').addEventListener('change', function(e){
     var f = e.target.files && e.target.files[0]; if (!f) return;
     deliveryFile = f;
-    var img = document.getElementById('f-prev'); img.onload = showSheet; img.src = URL.createObjectURL(f); img.hidden = false;
+    var img = document.getElementById('f-prev'); img.src = URL.createObjectURL(f); img.hidden = false;
     document.getElementById('pick-lbl').innerHTML = 'Change photo <span class="ar">تغيير الصورة</span>';
     shareText = buildText();
   });
-  document.addEventListener('input', function(e){ if (e.target.closest('.dl')) { shareText = buildText(); clearTimeout(window._sjT); window._sjT = setTimeout(showSheet, 400); } });
+  document.addEventListener('input', function(e){ if (e.target.closest('.dl')) { shareText = buildText(); } });
   // one tag under a dress: English on top, Arabic beneath, never on the same line,
   // width-capped to its own column so two neighbours can never run into each other
   function tag(g, cx, H, maxW, en, ar, W){
@@ -433,7 +433,6 @@
         if (any) marks.appendChild(markPhoto(ph, byDesign[no]));
       });
     });
-    showSheet();
     var sb = document.getElementById('share');
     var canShare = !!navigator.share;
     sb.hidden = false; document.getElementById('wa').hidden = true;   // one button always: it shares the PDF, or saves it
