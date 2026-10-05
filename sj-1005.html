@@ -676,6 +676,10 @@
   .sh1 svg{width:15px;height:15px;flex:none}
   .sh1 small{font-size:11px;opacity:.9;font-weight:500}
   .sh1[disabled]{opacity:.6}
+  /* videos: the button sits in a strip UNDER the video, never over it — the phone's volume/mute and
+     full-screen buttons live in the video's corners (5 Oct 2026: it was covering the volume icon) */
+  .shbar{display:flex;justify-content:flex-end;padding:7px 8px;background:#111}
+  .shbar .sh1{position:static;box-shadow:none;background:rgba(255,255,255,.14)}
 </style>
 <script>
 /* SHARE ANY SINGLE PHOTO OR VIDEO (5 Oct 2026): "give an option for share on every photo and video,
@@ -699,7 +703,8 @@
     for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return new File([u], name, { type: (p[0].match(/data:([^;]+)/) || [,'image/jpeg'])[1] });
   }
-  function button(host, onTap){
+  function button(host, onTap, under){
+    if (under){ var bar = document.createElement('div'); bar.className = 'shbar'; host.appendChild(bar); host = bar; }
     var b = document.createElement('button'); b.type = 'button'; b.className = 'sh1'; b.innerHTML = LABEL;
     b.setAttribute('aria-label', 'Share this · مشاركة');
     b.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); onTap(b); });
@@ -723,7 +728,7 @@
           file = new File([bl], name, { type: 'video/mp4' }); busy = false; b.disabled = false; b.innerHTML = LABEL;
           send(file, b);                          // if the phone says the tap is too old, the button asks for one more tap
         }).catch(function(){ busy = false; b.disabled = false; b.innerHTML = LABEL; window.open(vEl.currentSrc || vEl.getAttribute('src'), '_blank'); });
-      });
+      }, true);
     });
   });
 })();
