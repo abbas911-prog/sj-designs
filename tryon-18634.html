@@ -84,17 +84,16 @@ function inPoly(p, poly){ var c = false; for (var i = 0, j = poly.length-1; i < 
 function initGL(){
   gl = gc.getContext('webgl', { premultipliedAlpha: true, alpha: true, preserveDrawingBuffer: true, antialias: true });
   if (!gl) throw new Error('WebGL not available');
-  var vs = 'attribute vec2 p; attribute vec2 uv; uniform vec2 res; varying vec2 v;' +
-           'void main(){ v = uv; gl_Position = vec4(p.x/res.x*2.0-1.0, 1.0-p.y/res.y*2.0, 0.0, 1.0); }';
-  var fs = 'precision mediump float; varying vec2 v; uniform sampler2D t; uniform float light; uniform float shade;' +
-           'void main(){ vec4 c = texture2D(t, v); float s = mix(1.0, 0.86 + 0.14*smoothstep(0.0,0.5,abs(v.x-0.5)*-1.0+0.5), shade);' +
-           ' gl_FragColor = vec4(c.rgb*light*s, c.a); }';
+  var vs = 'attribute vec2 p; attribute vec2 uv; attribute float sh; uniform vec2 res; varying vec2 v; varying float vs;' +
+           'void main(){ v = uv; vs = sh; gl_Position = vec4(p.x/res.x*2.0-1.0, 1.0-p.y/res.y*2.0, 0.0, 1.0); }';
+  var fs = 'precision mediump float; varying vec2 v; varying float vs; uniform sampler2D t; uniform float light;' +
+           'void main(){ vec4 c = texture2D(t, v); gl_FragColor = vec4(c.rgb*light*vs, c.a); }';
   function sh(type, src){ var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
     if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
   prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
   gl.linkProgram(prog); gl.useProgram(prog);
-  loc = { p: gl.getAttribLocation(prog, 'p'), uv: gl.getAttribLocation(prog, 'uv'), res: gl.getUniformLocation(prog, 'res'),
-          light: gl.getUniformLocation(prog, 'light'), shade: gl.getUniformLocation(prog, 'shade') };
+  loc = { p: gl.getAttribLocation(prog, 'p'), uv: gl.getAttribLocation(prog, 'uv'), sh: gl.getAttribLocation(prog, 'sh'),
+          res: gl.getUniformLocation(prog, 'res'), light: gl.getUniformLocation(prog, 'light') };
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
 }
@@ -117,7 +116,9 @@ function gridMesh(x0, y0, x1, y1, nx, ny, W, H, keep){
     if (keep && !keep(src[a]) && !keep(src[b]) && !keep(src[c]) && !keep(src[d])) continue;
     idx.push(a, b, d, a, d, c);
   }
-  var m = { src: src, n: src.length, idx: idx.length, pos: new Float32Array(src.length*2) };
+  var m = { src: src, n: src.length, idx: idx.length, nx: nx, ny: ny, pos: new Float32Array(src.length*2),
+            tgt: new Float32Array(src.length*2), shade: new Float32Array(src.length).fill(1), free: new Float32Array(src.length) };
+  m.shBuf = gl.createBuffer();
   m.uvBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, m.uvBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv), gl.STATIC_DRAW);
   m.posBuf = gl.createBuffer();
   m.idxBuf = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.idxBuf); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
@@ -129,6 +130,8 @@ function drawMesh(m, tex){
   gl.enableVertexAttribArray(loc.p); gl.vertexAttribPointer(loc.p, 2, gl.FLOAT, false, 0, 0);
   gl.bindBuffer(gl.ARRAY_BUFFER, m.uvBuf);
   gl.enableVertexAttribArray(loc.uv); gl.vertexAttribPointer(loc.uv, 2, gl.FLOAT, false, 0, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, m.shBuf); gl.bufferData(gl.ARRAY_BUFFER, m.shade, gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(loc.sh); gl.vertexAttribPointer(loc.sh, 1, gl.FLOAT, false, 0, 0);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.idxBuf);
   gl.drawElements(gl.TRIANGLES, m.idx, gl.UNSIGNED_SHORT, 0);
 }
@@ -159,6 +162,17 @@ async function loadGarment(k){
   g.sL = gridMesh(bl[0], bl[1], bl[2], bl[3], 8, 20, W, H, function(p){ return inPoly(p, c.slvL); });
   g.sR = gridMesh(br[0], br[1], br[2], br[3], 8, 20, W, H, function(p){ return inPoly(p, c.slvR); });
   sleeveSkin(g.sL, c.SL, c.EL, c.WL); sleeveSkin(g.sR, c.SR, c.ER, c.WR);
+  // which parts of the cloth are free to swing: skirt below the hips, sleeve flare away from the arm
+  g.body.src.forEach(function(p, i){ var f = sst(c.HL[1], H, p[1]); g.body.free[i] = Math.min(0.62, Math.pow(f, 1.4) * 0.7); });
+  [g.sL, g.sR].forEach(function(mm){
+    var vmax = 1; mm.skin.forEach(function(sk){ vmax = Math.max(vmax, Math.abs(sk.vu)); });
+    mm.skin.forEach(function(sk, i){
+      var away = sst(0.45, 1.0, Math.abs(sk.vu) / vmax) * sst(0.25, 0.7, sk.au);
+      var f = (1 - sk.wt) * away * 0.45;
+      if (sk.af > 1.0) f = Math.max(f, 0.5 * (1 - sk.wt));
+      mm.free[i] = f;
+    });
+  });
   garments[k] = g; return g;
 }
 
@@ -226,6 +240,66 @@ function stepSway(hipC, Ds){
   sway.last = hipC.slice();
 }
 
+// ---------- cloth: verlet points pulled toward the tracked pose, with gravity, drag, wind and neighbour constraints ----------
+var clothT = 0;
+function cloth(m, Ds){
+  var n = m.n, T = m.tgt, P = m.pos, F = m.free, nx = m.nx, cols = nx + 1;
+  if (!m.prev) { m.prev = new Float32Array(T); P.set(T); m.simInit = true; return; }
+  var prev = m.prev, G = Ds * 0.0045, W = Ds * 0.0032, i, j;
+  for (i = 0; i < n; i++){
+    var f = F[i];
+    if (f <= 0.001) { prev[2*i] = P[2*i] = T[2*i]; prev[2*i+1] = P[2*i+1] = T[2*i+1]; continue; }
+    var x = P[2*i], y = P[2*i+1];
+    var vx = (x - prev[2*i]) * 0.90, vy = (y - prev[2*i+1]) * 0.90;
+    var pull = 0.10 + 0.35 * (1 - f);
+    var row = Math.floor(i / cols) / (m.ny || 1), col = (i % cols) / nx;
+    var ax = (T[2*i] - x) * pull + W * f * (Math.sin(clothT * 1.7 + row * 5.0 + col * 2.0) * 0.6 + Math.sin(clothT * 0.6 + col * 3.0) * 0.4);
+    var ay = (T[2*i+1] - y) * pull + G * f * 0.25;
+    prev[2*i] = x; prev[2*i+1] = y;
+    P[2*i] = x + vx + ax; P[2*i+1] = y + vy + ay;
+  }
+  // the cloth moves as one sheet: smooth the displacement from the tracked pose across neighbours, and cap it
+  var D = m.disp || (m.disp = new Float32Array(2*n)), lim = Ds * 0.22;
+  for (i = 0; i < n; i++){ D[2*i] = P[2*i] - T[2*i]; D[2*i+1] = P[2*i+1] - T[2*i+1]; }
+  for (var sm2 = 0; sm2 < 2; sm2++){
+    for (i = 0; i < n; i++){
+      if (F[i] <= 0.001) continue;
+      var ci3 = i % cols, ri3 = Math.floor(i / cols), sx = 0, sy = 0, cnt = 0;
+      if (ci3 > 0){ sx += D[2*(i-1)]; sy += D[2*(i-1)+1]; cnt++; }
+      if (ci3 < nx){ sx += D[2*(i+1)]; sy += D[2*(i+1)+1]; cnt++; }
+      if (ri3 > 0){ sx += D[2*(i-cols)]; sy += D[2*(i-cols)+1]; cnt++; }
+      if (ri3 < m.ny){ sx += D[2*(i+cols)]; sy += D[2*(i+cols)+1]; cnt++; }
+      var dx2 = D[2*i] * 0.4 + sx / cnt * 0.6, dy2 = D[2*i+1] * 0.4 + sy / cnt * 0.6;
+      var mag = Math.hypot(dx2, dy2), cap = lim * F[i]; if (mag > cap){ dx2 *= cap / mag; dy2 *= cap / mag; }
+      P[2*i] = T[2*i] + dx2; P[2*i+1] = T[2*i+1] + dy2; D[2*i] = dx2; D[2*i+1] = dy2;
+    }
+  }
+  // keep neighbours at their rest spacing so the cloth bends and swings instead of stretching
+  for (var it = 0; it < 2; it++){
+    for (i = 0; i < n; i++){
+      var ci = i % cols, ri = Math.floor(i / cols);
+      if (ci < nx) relax(i, i + 1);
+      if (ri < m.ny) relax(i, i + cols);
+    }
+  }
+  function relax(a, b){
+    var fa = F[a], fb = F[b]; if (fa <= 0.001 && fb <= 0.001) return;
+    var rx = T[2*b] - T[2*a], ry = T[2*b+1] - T[2*a+1], rest = Math.hypot(rx, ry);
+    var dx = P[2*b] - P[2*a], dy = P[2*b+1] - P[2*a+1], d = Math.hypot(dx, dy) || 1e-3;
+    var diff = (d - rest) / d * 0.5, wa = fa / (fa + fb + 1e-6), wb = fb / (fa + fb + 1e-6);
+    P[2*a] += dx * diff * wa * 2; P[2*a+1] += dy * diff * wa * 2;
+    P[2*b] -= dx * diff * wb * 2; P[2*b+1] -= dy * diff * wb * 2;
+  }
+  // shading from folds: where the cloth is squeezed sideways it darkens, where it opens it lightens
+  for (i = 0; i < n; i++){
+    var ci2 = i % cols, a2 = ci2 > 0 ? i - 1 : i, b2 = ci2 < nx ? i + 1 : i;
+    var rw = Math.hypot(T[2*b2] - T[2*a2], T[2*b2+1] - T[2*a2+1]) || 1, cw = Math.hypot(P[2*b2] - P[2*a2], P[2*b2+1] - P[2*a2+1]);
+    var r = cw / rw, sh = r < 1 ? 1 - (1 - Math.max(0.75, r)) * 0.8 : 1 + Math.min(0.08, (r - 1) * 0.3);
+    m.shade[i] += (sh - m.shade[i]) * 0.3;
+  }
+}
+function resetCloth(g){ if (!g) return; [g.body, g.sL, g.sR].forEach(function(m){ m.prev = null; m.shade.fill(1); }); }
+
 function render(L, g){
   var c = g.cfg, w = c.w, h = c.h;
   var A = { sh: L[12], el: L[14], wr: L[16], hp: L[24] }, B = { sh: L[11], el: L[13], wr: L[15], hp: L[23] };
@@ -260,14 +334,14 @@ function render(L, g){
       var a = keys[i], b = keys[i+1], tt = (y - a[0]) / (b[0] - a[0]);
       var cc = lerp(a[1], b[1], tt), u = nrm(lerp(a[2], b[2], tt)), k = a[3] + (b[3]-a[3])*tt, sx = a[4] + (b[4]-a[4])*tt;
       var p = add(cc, mul(u, (x - sx) * k));
-      if (y > c.HL[1]) { var s = (y - c.HL[1]) / (h - c.HL[1]); p[0] += sway.x * s * s; }
+      if (y > c.HL[1]) { var s = (y - c.HL[1]) / (h - c.HL[1]); p[0] += sway.x * s * s * 0.4; }
       return p;
     }
     return add(f[1], mul(f[2], (x - f[4]) * f[3]));
   }
   // body
   var m = g.body, i;
-  for (i = 0; i < m.n; i++){ var q = torsoMap(m.src[i][0], m.src[i][1]); m.pos[2*i] = q[0]; m.pos[2*i+1] = q[1]; }
+  for (i = 0; i < m.n; i++){ var q = torsoMap(m.src[i][0], m.src[i][1]); m.tgt[2*i] = q[0]; m.tgt[2*i+1] = q[1]; }
   // sleeves
   function arm(S){
     var sh = S.sh.p, el, wr;
@@ -291,8 +365,8 @@ function render(L, g){
         var hw = hang * sst(0.4, 1.0, sk.af);
         pf = lerp(pf, ph, hw);
       }
-      mm.pos[2*j]   = pt[0]*sk.wt + pu[0]*sk.wu + pf[0]*sk.wf;
-      mm.pos[2*j+1] = pt[1]*sk.wt + pu[1]*sk.wu + pf[1]*sk.wf;
+      mm.tgt[2*j]   = pt[0]*sk.wt + pu[0]*sk.wu + pf[0]*sk.wf;
+      mm.tgt[2*j+1] = pt[1]*sk.wt + pu[1]*sk.wu + pf[1]*sk.wf;
     }
   }
   skinSleeve(g.sL, c.SL, c.EL, c.WL, arm(A));
@@ -301,8 +375,10 @@ function render(L, g){
     var bx = Math.max(0, Math.min(shC[0], hpC[0]) - Ds*0.6), by = Math.max(0, shC[1]);
     updateLight([bx, by, Math.min(cv.width - bx, Ds*1.6), Math.max(4, Math.min(cv.height - by, len(torso)))]);
   }
+  clothT += 1/30;
+  cloth(g.body, Ds); cloth(g.sL, Ds); cloth(g.sR, Ds);
   gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.uniform2f(loc.res, gc.width, gc.height); gl.uniform1f(loc.light, lightK); gl.uniform1f(loc.shade, 0.0);
+  gl.uniform2f(loc.res, gc.width, gc.height); gl.uniform1f(loc.light, lightK);
   drawMesh(g.body, g.tBody);
   drawMesh(g.sL, g.tSlv); drawMesh(g.sR, g.tSlv);
   return true;
@@ -323,7 +399,7 @@ function loop(){
     hint.hidden = seen < 8;
     hint.innerHTML = turned ? 'Face the camera or mirror<br><span class="ar">واجه الكاميرا أو المرآة</span>'
                             : 'Step back so your shoulders and hips are visible<br><span class="ar">ابتعد قليلاً حتى تظهر الأكتاف والوركان</span>';
-    if (!ok && seen > 8) sm = null;
+    if (!ok && seen > 8) { sm = null; resetCloth(garments[cur]); }
   }
   requestAnimationFrame(loop);
 }
