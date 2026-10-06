@@ -1,0 +1,35 @@
+name: memo-catalog
+run-name: catalog ${{ fromJSON(inputs.req).id }}
+# Started from memo.html (Catalogue) through the relay: builds a customer catalogue page from design numbers + SETS/COMPLETE.
+on:
+  workflow_dispatch:
+    inputs:
+      req: { description: 'request (JSON, from memo.html)', required: true }
+      sig: { description: 'signature (shop password)', required: true }
+permissions:
+  contents: write
+concurrency: { group: memo-catalog, cancel-in-progress: false }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          pip install -q pillow numpy
+          which ffmpeg || (sudo apt-get update -q && sudo apt-get install -y -q ffmpeg)
+          fc-list :lang=ar | grep -q . || (sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-core)
+      - name: Build the catalogue
+        env:
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
+          REQ: ${{ inputs.req }}
+          SIG: ${{ inputs.sig }}
+        run: python3 tools/catalog/build.py
+      - name: Publish
+        run: |
+          git config user.name memo-bot; git config user.email memo-bot@users.noreply.github.com
+          git add -A jobs vid *.html og-*.jpg
+          git commit -q -m "catalogue: $(ls -t jobs | head -1)" || exit 0
+          for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done

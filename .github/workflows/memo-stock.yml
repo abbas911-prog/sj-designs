@@ -1,0 +1,34 @@
+name: memo-stock
+run-name: stock ${{ fromJSON(inputs.req).id }}
+# Started by memo.html when an invoice is sent (or returned): takes the sold pieces off the Trello card titles.
+on:
+  workflow_dispatch:
+    inputs:
+      req: { description: 'request (JSON, from memo.html)', required: true }
+      sig: { description: 'signature (shop password)', required: true }
+permissions:
+  contents: write
+  actions: write
+concurrency: { group: trello-stock, cancel-in-progress: false }
+jobs:
+  stock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Take the pieces off Trello
+        env:
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
+          REQ: ${{ inputs.req }}
+          SIG: ${{ inputs.sig }}
+        run: python3 tools/stock.py
+      - name: Save the result for the memo
+        run: |
+          git config user.name memo-bot; git config user.email memo-bot@users.noreply.github.com
+          git add jobs
+          git commit -q -m "stock: $(ls -t jobs | head -1)" || exit 0
+          for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done
+      - name: Refresh the memo list now
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: gh workflow run memo-thumbs.yml || true
