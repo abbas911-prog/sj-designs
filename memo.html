@@ -24,8 +24,8 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .meta{font-size:12.5px;color:var(--mute);text-align:right}
 .meta b{color:var(--ink)}
 .warn{color:#9a3b1e}
-.photos{display:flex;gap:8px;overflow-x:auto;padding:0 14px 6px;scroll-snap-type:x mandatory}
-.ph{position:relative;flex:0 0 auto;width:min(100%,640px);scroll-snap-align:start;border-radius:10px;overflow:hidden;background:#eee}
+.photos{display:flex;flex-direction:column;gap:8px;padding:0 14px 6px}
+.ph{position:relative;width:100%;border-radius:10px;overflow:hidden;background:#eee}
 .ph img{display:block;width:100%;height:auto;min-height:220px;object-fit:contain}
 .ph img:not([src]){aspect-ratio:3/4;min-height:0;visibility:hidden}
 .ph .pmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--mute);text-align:center;padding:12px}
@@ -46,9 +46,18 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .step button:disabled{opacity:.3}
 .step .v{min-width:34px;text-align:center;font-weight:700}
 .step .v.on{color:var(--gold)}
+.pc{width:54px;padding:6px 4px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:15px;text-align:center;background:#fff;-moz-appearance:textfield}
+.pc::-webkit-outer-spin-button,.pc::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.pc.on{border-color:var(--gold);color:var(--gold);font-weight:700}
+.pc::placeholder{color:#b9b0a4;font-size:12px}
 .all{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font:inherit;font-size:12px}
 .all.on{border-color:var(--gold);color:var(--gold);font-weight:700}
 .row.zero{opacity:.45}
+.price{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 14px 12px;padding:10px 12px;border-radius:12px;background:#F6F2EC;font-size:13px;color:var(--mute)}
+.price[hidden]{display:none}
+.price input{width:90px;padding:7px 8px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:15px;text-align:right;background:#fff;-moz-appearance:textfield}
+.price input::-webkit-outer-spin-button,.price input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.price .amt{margin-left:auto;color:var(--ink);font-weight:700}
 #bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));z-index:6}
 #bar .in{max-width:720px;margin:0 auto;display:flex;gap:10px;align-items:center}
 #sum{flex:1;font-size:14px;line-height:1.35}#sum b{font-weight:700}#sum .ar{display:block;font-size:12.5px;color:var(--mute)}
@@ -113,7 +122,7 @@ function idb(op, val){ return new Promise(function(ok){ try { var r = indexedDB.
   r.onerror = function(){ ok(null); }; } catch(e){ ok(null); } }); }
 function keepToken(t){ token = t; try { localStorage.setItem('sj_memo_pw', t); } catch(e){} idb('put', t); try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){} }
 function dropToken(){ token = ''; try { localStorage.removeItem('sj_memo_pw'); } catch(e){} idb('del'); }
-var designs = [], state = {};   // state["no:c"] = {sets:n, all:bool}
+var designs = [], state = {}, prices = {};   // prices[no] = AED per piece (optional)   // state["no:c"] = {sets:n, all:bool}
 
 // ---------- parsing a card title ----------
 function parseTitle(t){
@@ -213,7 +222,8 @@ async function loadCards(){
 var AR_D = '٠١٢٣٤٥٦٧٨٩'; function arD(n){ return String(n).replace(/\d/g, function(d){ return AR_D[+d]; }); }
 function arSets(n){ return n === 1 ? 'طقم واحد' : n === 2 ? 'طقمان' : arD(n) + ' أطقم'; }
 function arPcs(n){ return n === 1 ? 'قطعة واحدة' : n === 2 ? 'قطعتان' : arD(n) + (n <= 10 ? ' قطع' : ' قطعة'); }
-function lab(sel, pcs){ if (sel.all) { var st = Math.floor(pcs / 4), r = pcs % 4; return { en: (st ? st + ' set' + (st > 1 ? 's' : '') : '') + (st && r ? ' + ' : '') + (r ? r + ' pc' + (r > 1 ? 's' : '') : '') + ' (' + pcs + ' pcs)', ar: (st ? arSets(st) : '') + (st && r ? ' + ' : '') + (r ? arPcs(r) : ''), pcs: pcs, sets: st }; }
+function lab(sel, pcs){ if (sel.pcs) { return { en: sel.pcs + ' pc' + (sel.pcs > 1 ? 's' : ''), ar: arPcs(sel.pcs), pcs: sel.pcs, sets: 0 }; }
+  if (sel.all) { var st = Math.floor(pcs / 4), r = pcs % 4; return { en: (st ? st + ' set' + (st > 1 ? 's' : '') : '') + (st && r ? ' + ' : '') + (r ? r + ' pc' + (r > 1 ? 's' : '') : '') + ' (' + pcs + ' pcs)', ar: (st ? arSets(st) : '') + (st && r ? ' + ' : '') + (r ? arPcs(r) : ''), pcs: pcs, sets: st }; }
   return { en: sel.sets + ' set' + (sel.sets > 1 ? 's' : '') + ' (' + sel.sets * 4 + ' pcs)', ar: arSets(sel.sets), pcs: sel.sets * 4, sets: sel.sets }; }
 function render(){
   var feed = $('feed'); feed.innerHTML = '';
@@ -228,9 +238,10 @@ function render(){
     var rows = d.colours.map(function(n){
       var k = d.no + ':' + n.c, st = Math.floor(n.pcs / 4), r = n.pcs % 4;
       return '<div class="row' + (n.pcs ? '' : ' zero') + '" data-k="' + k + '"><div class="c">' + n.c + '</div><div class="p"><b>' + n.pcs + ' pcs</b> · ' + st + ' set' + (st === 1 ? '' : 's') + (r ? ' + ' + r : '') + '</div>' +
-        (n.pcs ? '<div class="step"><button type="button" data-d="-1">−</button><span class="v">0</span><button type="button" data-d="1">+</button></div><button type="button" class="all">All</button>' : '') + '</div>';
+        (n.pcs ? '<div class="step"><button type="button" data-d="-1">−</button><span class="v">0</span><button type="button" data-d="1">+</button></div><input class="pc" type="number" inputmode="numeric" min="1" max="' + n.pcs + '" placeholder="pcs" aria-label="pieces"><button type="button" class="all">All</button>' : '') + '</div>';
     }).join('');
-    art.innerHTML = '<div class="head"><div class="no">' + d.no + '</div><div class="meta">' + meta + '</div></div><div class="photos">' + ph + '</div><div class="rows">' + rows + '</div>';
+    art.innerHTML = '<div class="head"><div class="no">' + d.no + '</div><div class="meta">' + meta + '</div></div><div class="photos">' + ph + '</div><div class="rows">' + rows + '</div>' +
+      '<div class="price" hidden><span>Price / pc · السعر للقطعة</span><input class="prc" type="number" inputmode="decimal" min="0" step="any" placeholder="AED"><span class="amt"></span></div>';
     feed.appendChild(art);
   });
   feed.querySelectorAll('.ph img').forEach(function(im){ if (io) io.observe(im); else loadInto(im); });
@@ -238,11 +249,21 @@ function render(){
   feed.onclick = function(e){
     var b = e.target.closest('button'); if (!b) return;
     var row = b.closest('.row'); if (!row) return; var k = row.dataset.k, d = byNo(k.split(':')[0]), c = +k.split(':')[1], pcs = colPcs(d, c), maxSets = Math.floor(pcs / 4);
-    var s = state[k] || { sets: 0, all: false };
+    var s = state[k] || { sets: 0, all: false }; if (s.pcs) s = { sets: 0, all: false };
     if (b.classList.contains('all')) { s = s.all ? { sets: 0, all: false } : { sets: maxSets, all: true }; }
     else { var n = Math.max(0, Math.min(maxSets, (s.all ? maxSets : s.sets) + (+b.dataset.d))); s = { sets: n, all: false }; }
     if (!s.sets && !s.all) delete state[k]; else state[k] = s;
     paint(row, s, maxSets); refresh();
+  };
+  // typed pieces: any number from 1 to what the colour has (e.g. 5 of 9); replaces the set choice for that colour
+  feed.oninput = function(e){
+    var inp = e.target; if (!inp.classList) return;
+    if (inp.classList.contains('prc')) { var no = inp.closest('.design').dataset.no, v = parseFloat(inp.value); if (v > 0) prices[no] = v; else delete prices[no]; refresh(); return; }
+    if (!inp.classList.contains('pc')) return;
+    var row = inp.closest('.row'), k = row.dataset.k, d = byNo(k.split(':')[0]), c = +k.split(':')[1], pcs = colPcs(d, c), maxSets = Math.floor(pcs / 4);
+    var n = parseInt(inp.value, 10); if (isNaN(n) || n < 1) { delete state[k]; paint(row, { sets: 0, all: false }, maxSets); refresh(); return; }
+    if (n > pcs) { n = pcs; inp.value = pcs; }
+    state[k] = { sets: 0, all: false, pcs: n }; paint(row, state[k], maxSets); refresh();
   };
   applySearch();
 }
@@ -250,16 +271,23 @@ function byNo(no){ return designs.filter(function(d){ return d.no === no; })[0];
 function colPcs(d, c){ return (d.colours.filter(function(n){ return n.c === c; })[0] || {}).pcs || 0; }
 function paint(row, s, maxSets){
   var v = row.querySelector('.v'), all = row.querySelector('.all'); if (!v) return;
+  var pc = row.querySelector('.pc'); if (pc) { if (!s.pcs) pc.value = ''; pc.classList.toggle('on', !!s.pcs); }
   v.textContent = s.all ? 'All' : s.sets; v.classList.toggle('on', !!(s.sets || s.all)); all.classList.toggle('on', !!s.all);
   row.querySelector('[data-d="1"]').disabled = s.all || s.sets >= maxSets; row.querySelector('[data-d="-1"]').disabled = !s.all && !s.sets;
   var art = row.closest('.design'), c = row.dataset.k.split(':')[1];
-  art.querySelectorAll('.nums span[data-c="' + c + '"]').forEach(function(sp){ sp.classList.toggle('on', !!(s.sets || s.all)); });
+  art.querySelectorAll('.nums span[data-c="' + c + '"]').forEach(function(sp){ sp.classList.toggle('on', !!(s.sets || s.all || s.pcs)); });
 }
+function money(n){ return (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' AED'; }
+function designPcs(no){ var d = byNo(no), t = 0; Object.keys(state).forEach(function(k){ var p = k.split(':'); if (p[0] === no) t += lab(state[k], colPcs(d, +p[1])).pcs; }); return t; }
+function orderAmount(){ return Object.keys(byDesign()).reduce(function(a, no){ return a + (prices[no] > 0 ? designPcs(no) * prices[no] : 0); }, 0); }
+function priced(){ return Object.keys(byDesign()).some(function(no){ return prices[no] > 0; }); }
 function refresh(){
+  document.querySelectorAll('.design').forEach(function(a){ var no = a.dataset.no, box = a.querySelector('.price'), sel = Object.keys(state).some(function(k){ return k.split(':')[0] === no; });
+    box.hidden = !sel; var t = designPcs(no); box.querySelector('.amt').textContent = sel && prices[no] > 0 ? t + ' pcs × ' + prices[no] + ' = ' + money(t * prices[no]) : ''; });
   var keys = Object.keys(state), ds = {}, sets = 0, pcs = 0;
   keys.forEach(function(k){ var p = k.split(':'), d = byNo(p[0]); ds[p[0]] = 1; var L = lab(state[k], colPcs(d, +p[1])); sets += L.sets; pcs += L.pcs; });
   var nd = Object.keys(ds).length; $('ok').disabled = !keys.length; $('clr').hidden = !keys.length;
-  $('sum').innerHTML = keys.length ? '<b>' + nd + (nd === 1 ? ' design' : ' designs') + '</b> · ' + keys.length + (keys.length === 1 ? ' colour' : ' colours') + ' · <b>' + pcs + ' pcs</b><span class="ar">' + arD(nd) + (nd === 1 ? ' تصميم' : ' تصاميم') + '، ' + arPcs(pcs) + '</span>' : 'Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span>';
+  $('sum').innerHTML = keys.length ? '<b>' + nd + (nd === 1 ? ' design' : ' designs') + '</b> · ' + keys.length + (keys.length === 1 ? ' colour' : ' colours') + ' · <b>' + pcs + ' pcs</b>' + (priced() ? ' · <b>' + money(orderAmount()) + '</b>' : '') + '<span class="ar">' + arD(nd) + (nd === 1 ? ' تصميم' : ' تصاميم') + '، ' + arPcs(pcs) + '</span>' : 'Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span>';
 }
 function applySearch(){
   var q = $('q').value.trim(); var n = 0;
@@ -267,14 +295,15 @@ function applySearch(){
   $('cnt').textContent = n + ' / ' + designs.length;
 }
 $('q').oninput = applySearch;
-$('clr').onclick = function(){ state = {}; document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
+$('clr').onclick = function(){ state = {}; prices = {}; document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
 
 // ---------- memo output ----------
 function orderText(){
   var name = $('name').value.trim(), d = new Date(), date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
   var lines = ['Order memo · مذكرة طلب', (name ? name + ' · ' : '') + date, ''], tp = 0;
-  Object.keys(byDesign()).forEach(function(no){ var d = byNo(no), parts = []; Object.keys(byDesign()[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(d, +c)); tp += L.pcs; parts.push('colour ' + c + ': ' + L.en); }); lines.push('SJ-' + no + ' — ' + parts.join(', ')); });
-  lines.push('', 'Total · الإجمالي: ' + tp + ' pcs');
+  Object.keys(byDesign()).forEach(function(no){ var d = byNo(no), parts = []; Object.keys(byDesign()[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(d, +c)); tp += L.pcs; parts.push('colour ' + c + ': ' + L.en); }); lines.push('SJ-' + no + ' — ' + parts.join(', ') + (prices[no] > 0 ? ' · ' + designPcs(no) + ' pcs × ' + prices[no] + ' AED = ' + money(designPcs(no) * prices[no]) : '')); });
+  lines.push('', 'Total · الإجمالي: ' + tp + ' pcs' + (priced() ? ' · ' + money(orderAmount()) : ''));
+  var unp = Object.keys(byDesign()).filter(function(x){ return !(prices[x] > 0); }); if (priced() && unp.length) lines.push('(amount covers priced designs only; no price: ' + unp.map(function(x){ return 'SJ-' + x; }).join(', ') + ')');
   return lines.join('\n');
 }
 function byDesign(){ var o = {}; Object.keys(state).sort().forEach(function(k){ var p = k.split(':'); (o[p[0]] = o[p[0]] || {})[p[1]] = state[k]; }); return o; }
@@ -290,9 +319,18 @@ async function drawPages(){
     g.fillStyle = '#1C1A17'; g.font = 'bold 40px Arial'; g.fillText(name || ' ', P, P + 62);
     g.textAlign = 'right'; g.font = '26px Arial'; g.fillStyle = '#6E675D'; g.fillText(date + '  ·  ' + (i + 1) + '/' + nos.length, W - P, P + 62); g.textAlign = 'left';
     g.fillStyle = '#1C1A17'; g.font = 'bold 54px Arial'; g.fillText('SJ-' + no, P, P + 140);
-    var y = P + 170, lines = [];
+    var y = P + 196, lines = [];
     Object.keys(bd[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push('Colour ' + c + '  ·  ' + L.en); });
     g.font = '30px Arial'; lines.forEach(function(t){ g.fillText(t, P, y); y += 40; });
+    if (prices[no] > 0) { var dp = designPcs(no); g.font = 'bold 32px Arial'; g.fillText(dp + ' pcs × ' + prices[no] + ' AED = ' + money(dp * prices[no]), P, y + 4); y += 48; }
+    if (i === nos.length - 1) {   // last page carries the order total
+      var tpcs = nos.reduce(function(a, x){ return a + designPcs(x); }, 0);
+      g.fillStyle = '#A8864A'; g.fillRect(P, y, W - 2 * P, 62); g.fillStyle = '#fff'; g.font = 'bold 32px Arial';
+      g.fillText('TOTAL  ·  ' + nos.length + (nos.length === 1 ? ' design' : ' designs') + '  ·  ' + tpcs + ' pcs' + (priced() ? '  ·  ' + money(orderAmount()) : ''), P + 20, y + 42);
+      g.fillStyle = '#1C1A17'; y += 80;
+      var unp = nos.filter(function(x){ return !(prices[x] > 0); });
+      if (priced() && unp.length) { g.font = '24px Arial'; g.fillStyle = '#9a3b1e'; g.fillText('Amount covers priced designs only · no price: ' + unp.map(function(x){ return 'SJ-' + x; }).join(', '), P, y + 12); g.fillStyle = '#1C1A17'; y += 44; }
+    }
     y += 10;
     // photos that carry selected colours, with the other colours faded
     var phs = dz.photos.filter(function(p){ return p.nums && p.nums.some(function(n){ return bd[no][n.c]; }); });
@@ -338,7 +376,7 @@ $('ok').onclick = async function(){
   pages.forEach(function(cv){ var im = document.createElement('img'); im.src = cv.toDataURL('image/jpeg', 0.7); $('marks').appendChild(im); });
   var nm = ($('name').value.trim() || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-');
   pdfFile = new File([makePDF(pages)], nm + '-SJ-memo.pdf', { type: 'application/pdf' });
-  $('ds').textContent = orderText().split('\n').slice(-1)[0] + ' · ' + pages.length + (pages.length === 1 ? ' page' : ' pages');
+  $('ds').textContent = orderText().split('\n').filter(function(l){ return /^Total/.test(l); })[0] + ' · ' + pages.length + (pages.length === 1 ? ' page' : ' pages');
 };
 $('back').onclick = function(){ $('done').hidden = true; };
 $('send').onclick = async function(){
