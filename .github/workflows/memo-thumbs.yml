@@ -1,0 +1,27 @@
+name: memo-thumbs
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: memo-thumbs
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow cryptography
+      - run: python tools/thumbs.py
+        env:
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
+      - run: |
+          git config user.name "memo-bot"
+          git config user.email "memo-bot@users.noreply.github.com"
+          git add -A thumbs
+          if [ -f memo-data.enc ]; then git add memo-data.enc; fi
+          git diff --cached --quiet || (git commit -m "memo photos sync" && git pull --rebase && git push)
