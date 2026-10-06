@@ -69,7 +69,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 #done .in{max-width:720px;margin:0 auto}
 #done h2{margin:6px 0 2px;font-size:20px}
 #done .sub{color:var(--mute);font-size:13px;margin-bottom:10px}
-#mode{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:10px 0 6px;padding:4px;background:#fff;border:1px solid var(--line);border-radius:14px}
+#mode{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;margin:10px 0 6px;padding:4px;background:#fff;border:1px solid var(--line);border-radius:14px}
 #mode button{border:0;background:none;border-radius:10px;padding:8px 2px;font:inherit;font-size:13.5px;font-weight:700;color:var(--mute)}
 #mode button small{display:block;font-weight:500;font-size:11px}
 #mode button.on{background:var(--gold);color:#fff}
@@ -107,10 +107,24 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 #setup button{margin-top:10px;border-radius:999px;padding:11px 18px;font:inherit;border:1.5px solid var(--gold);background:#fff;color:var(--gold);font-weight:700}
 #load{text-align:center;color:var(--mute);padding:40px 12px;font-size:14px}
 #load[hidden]{display:none}
+#catbtn{border:1.5px solid var(--gold);background:#fff;color:var(--gold);border-radius:999px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;white-space:nowrap}
+#catbtn[hidden],#mode button[hidden]{display:none}
+.stk{font-size:13.5px;line-height:1.45;background:#fff;border-radius:12px;padding:10px 12px;margin:8px 0;border-left:4px solid var(--gold)}
+.stk.ok{border-color:#2f7d4f}.stk.bad{border-color:#9a3b1e;color:#9a3b1e}.stk[hidden]{display:none}
+.stk small{display:block;color:var(--mute);margin-top:3px}
+.stk button{margin-top:8px;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;border:1.5px solid var(--line);background:#fff;font-weight:700}
+#p-cat textarea{width:100%;min-height:90px;padding:10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px}
+.crow{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border-radius:10px;padding:8px 10px;margin:6px 0;font-weight:700}
+.crow .sw{display:flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
+.crow .sw button{border:0;background:#fff;padding:7px 11px;font:inherit;font-size:12.5px;font-weight:700;color:var(--mute)}
+.crow .sw button.on{background:var(--gold);color:#fff}
+#cres img{display:block;width:100%;border-radius:12px;margin:10px 0}
+#cres ul{margin:6px 0;padding-left:18px;font-size:13px;color:var(--mute)}
+#chist a{display:block;font-size:13.5px;color:var(--gold);margin:4px 0}
 .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:#efe9df;color:var(--mute);margin-left:6px;vertical-align:middle}
 </style></head><body>
 <header>
-  <div class="top"><h1>ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"></div>
+  <div class="top"><h1 id="ttl">ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button></div>
   <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span></div>
   <div id="pst"></div>
 </header>
@@ -129,7 +143,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
 <div id="done" hidden><div class="in">
   <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
-  <div id="mode"><button type="button" data-m="memo" class="on">Order memo<small>مذكرة طلب</small></button><button type="button" data-m="inv">Invoice<small>فاتورة</small></button><button type="button" data-m="rv">Receipt<small>سند قبض</small></button><button type="button" data-m="pv">Payment<small>سند صرف</small></button></div>
+  <div id="mode"><button type="button" data-m="memo" class="on">Order memo<small>مذكرة طلب</small></button><button type="button" data-m="inv">Invoice<small>فاتورة</small></button><button type="button" data-m="rv">Receipt<small>سند قبض</small></button><button type="button" data-m="pv">Payment<small>سند صرف</small></button><button type="button" data-m="cat" hidden>Catalogue<small>كتالوج</small></button></div>
   <section id="p-memo">
   <h2 id="dh">Order memo</h2><div class="sub" id="ds"></div>
   <div class="btns"><button id="send" class="gold" type="button">Send PDF to customer · أرسل PDF</button><button id="copy" type="button">Copy text · نسخ النص</button></div>
@@ -138,7 +152,19 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
   <section id="p-doc" hidden>
   <div id="bform"></div>
   <div class="btns"><button id="dsend" class="gold" type="button">Send PDF · أرسل PDF</button><button id="dcopy" type="button">Copy text · نسخ النص</button><button id="dnew" type="button">New number · رقم جديد</button></div>
+  <div id="stk" class="stk" hidden></div>
   <div id="dprev"></div>
+  </section>
+  <section id="p-cat" hidden>
+  <h2 style="margin:6px 0 2px">Catalogue · كتالوج</h2>
+  <div class="sub">Design numbers → a customer catalogue link with photos, videos and the Send-order PDF, same as before. Stock is not touched.</div>
+  <div class="bgrid" style="margin-top:8px"><label class="bf"><span>Customer · العميل</span><input id="cname" placeholder="e.g. AHMAD AL WASTA"></label><label class="bf"><span>Country · البلد</span><input id="ccountry" placeholder="e.g. LIBYA"></label></div>
+  <label class="bf" style="margin-top:8px"><span>Design numbers — one per line, add SETS or COMPLETE after the number · أرقام التصاميم</span><textarea id="cnos" placeholder="46209 complete&#10;38156 sets&#10;71352 c"></textarea></label>
+  <div id="clist"></div>
+  <div class="btns"><button id="cmake" class="gold" type="button">Make catalogue · اصنع الكتالوج</button></div>
+  <div id="cst" class="stk" hidden></div>
+  <div id="cres"></div>
+  <div id="chist"></div>
   </section>
 </div></div>
 <script>
@@ -182,7 +208,7 @@ function parseTitle(t){
 }
 
 // ---------- shop data ----------
-var updated = '';
+var updated = '', RAW = null;
 function b64(s){ var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
 async function unlock(box, pw){
   var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
@@ -234,7 +260,11 @@ async function loadCards(){
   updated = data.updated || '';
   var cards = data.cards, roles = {};
   try { var rr = await fetch('thumbs/roles.json?t=' + Date.now(), { cache: 'no-store' }); if (rr.ok) roles = await rr.json(); } catch(e){}
-  return cards.map(function(c){
+  RAW = { cards: cards, roles: roles };
+  return mkDesigns(cards, roles);
+}
+function mkDesigns(cards, roles){
+  return uniq(cards.map(function(c){
     var p = parseTitle(c.name);
     var all = c.attachments.filter(function(a){ return /^image\//.test(a.mimeType); })
       .sort(function(a, b){ return new Date(b.date) - new Date(a.date); });    // newest first = first colour group
@@ -254,9 +284,13 @@ async function loadCards(){
     }
     extra.forEach(function(a){ photos.push({ srcs: imgSrcs(a), att: a.id, nums: null, name: a.name }); });
     var colours = []; photos.forEach(function(ph){ (ph.nums || []).forEach(function(n){ colours.push(n); }); });
-    return { id: c.id, title: c.name, no: p.no || String(c.idShort), total: p.total, ncol: p.ncol, sum: p.sum, ok: p.ok, warn: p.warn, photos: photos, colours: colours, pos: c.pos };
-  });
+    return { id: c.id, title: c.name, base: p.no || String(c.idShort), no: p.no || String(c.idShort), total: p.total, ncol: p.ncol, sum: p.sum, ok: p.ok, warn: p.warn, photos: photos, colours: colours, pos: c.pos };
+  }));
 }
+// two READY cards with the same design number get their own keys (newest card keeps the plain number: 81016, then 81016-2)
+function uniq(ds){ var by = {}; ds.forEach(function(d){ (by[d.no] = by[d.no] || []).push(d); });
+  Object.keys(by).forEach(function(no){ var g = by[no]; if (g.length < 2) return; g.sort(function(x, y){ return x.id < y.id ? 1 : -1; }); g.forEach(function(d, i){ if (i) d.no = no + '-' + (i + 1); }); });
+  return ds; }
 
 // ---------- render ----------
 var AR_D = '٠١٢٣٤٥٦٧٨٩'; function arD(n){ return String(n).replace(/\d/g, function(d){ return AR_D[+d]; }); }
@@ -617,8 +651,9 @@ async function preview(){
 }
 function setMode(m){
   B.mode = m; document.querySelectorAll('#mode button').forEach(function(b){ b.classList.toggle('on', b.dataset.m === m); });
-  $('p-memo').hidden = m !== 'memo'; $('p-doc').hidden = m === 'memo';
-  if (m !== 'memo') { if (B[m] && !B[m].name) B[m].name = $('name').value.trim(); redraw(); }
+  $('p-memo').hidden = m !== 'memo'; $('p-doc').hidden = m === 'memo' || m === 'cat'; $('p-cat').hidden = m !== 'cat';
+  if (m === 'cat') { catOpen(); return; }
+  if (m !== 'memo') { setTimeout(stkShow, 0); if (B[m] && !B[m].name) B[m].name = $('name').value.trim(); redraw(); }
 }
 $('mode').onclick = function(e){ var b = e.target.closest('button'); if (b) setMode(b.dataset.m); };
 $('bform').addEventListener('input', onForm); $('bform').addEventListener('change', onForm);
@@ -628,12 +663,158 @@ $('bform').addEventListener('click', function(e){ var d = B[B.mode];
 $('dsend').onclick = async function(){
   var k = B.mode, d = B[k]; if (!d) return; clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
   var f = B.pdf, txt = docText(k, d);
-  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); if (k === 'inv') stkRun('sell'); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click();
+  if (k === 'inv') stkRun('sell');      // an invoice that is sent (or saved) takes its pieces off Trello
 };
 $('dcopy').onclick = async function(){ var t = docText(B.mode, B[B.mode]); try { await navigator.clipboard.writeText(t); $('dcopy').textContent = 'Copied ✓'; setTimeout(function(){ $('dcopy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', t); } };
-$('dnew').onclick = function(){ var k = B.mode; keepNo(k, B[k].ref); B[k] = freshDoc(k); redraw(); };
+$('dnew').onclick = function(){ var k = B.mode; keepNo(k, B[k].ref); B[k] = freshDoc(k); redraw(); stkShow(); };
 $('bills').onclick = function(){ $('done').hidden = false; window.scrollTo(0, 0); setMode(Object.keys(state).length ? 'inv' : 'rv'); };
+
+// ---------- stock off Trello when an invoice is sent · catalogue builder (Abbas, 7 Oct 2026) ----------
+// Both run as GitHub jobs (memo-stock / memo-catalog). The memo cannot hold the GitHub key, so it asks the relay
+// (a Google Apps Script web app that keeps the key on Google's side); every request is signed with the shop password.
+var RELAY = '';   // the relay web-app URL, set once it is deployed
+var GH_RAW = 'https://raw.githubusercontent.com/abbas911-prog/sj-designs/main/';
+function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
+function devId(){ var d = ls('sj_dev'); if (!d) { d = Math.random().toString(36).slice(2, 8); ls('sj_dev', d); } return d; }
+function jobId(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+async function hmacHex(msg){
+  var k = await crypto.subtle.importKey('raw', new TextEncoder().encode(token), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg)))).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
+}
+async function relay(job, obj){
+  if (!RELAY) throw new Error('the relay is not set up yet');
+  var req = JSON.stringify(obj), sig = await hmacHex(req);
+  var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: job, req: req, sig: sig }) });
+  var j = await r.json(); if (!j.ok) throw new Error(j.error || 'refused'); return true;
+}
+function sleep(ms){ return new Promise(function(ok){ setTimeout(ok, ms); }); }
+async function waitJob(id, kind, maxMin, tick){
+  var t0 = Date.now(), lastRun = 0;
+  while (Date.now() - t0 < maxMin * 60000){
+    await sleep(5000);
+    try { var r = await fetch(GH_RAW + 'jobs/' + id + '.json?t=' + Date.now(), { cache: 'no-store' }); if (r.ok) return await r.json(); } catch(e){}
+    if (Date.now() - lastRun > 45000) { lastRun = Date.now();
+      try { var rr = await fetch('https://api.github.com/repos/abbas911-prog/sj-designs/actions/runs?event=workflow_dispatch&per_page=20', { cache: 'no-store' });
+        if (rr.ok) { var run = ((await rr.json()).workflow_runs || []).filter(function(x){ return x.display_title === kind + ' ' + id; })[0];
+          if (run && run.status === 'completed' && run.conclusion !== 'success') return { ok: false, error: 'The GitHub job stopped (' + run.conclusion + ').' }; } } catch(e){}
+    }
+    if (tick) tick(Math.round((Date.now() - t0) / 1000));
+  }
+  return { ok: false, error: 'No answer after ' + maxMin + ' minutes — check again later.' };
+}
+
+// ----- stock: an INVOICE that is sent takes its pieces off the Trello card; a memo never does -----
+var STK = {}; try { STK = JSON.parse(ls('sj_stock') || '{}'); } catch(e){}
+function stkSave(){ var ks = Object.keys(STK).sort(function(a, b){ return (STK[b].t || 0) - (STK[a].t || 0); }); ks.slice(40).forEach(function(k){ delete STK[k]; }); ls('sj_stock', JSON.stringify(STK)); }
+function stkKey(ref){ return devId() + '|' + ref; }
+function stkLines(){ return invLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var d = byNo(l.no); return { card: d.id, no: d.base, c: l.c, pcs: l.qty }; }); }
+function stkShow(){ var el = $('stk'); if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
+  if (s) { stkPaint(s); return; }
+  el.hidden = false; el.className = 'stk';
+  el.innerHTML = RELAY ? 'Sending this invoice takes its pieces off Trello. <small>إرسال الفاتورة يخصم القطع من تريلو · a memo never does</small>'
+                       : 'Stock link not set up yet — sending will not change Trello. <small>لم يتم ربط المخزون بعد</small>'; }
+function stkPaint(s){ var el = $('stk'); if (B.mode !== 'inv' || !B.inv || stkKey(B.inv.ref) !== stkKey(s.ref)) return; el.hidden = false;
+  var pcs = s.lines.reduce(function(a, l){ return a + l.pcs; }, 0), h = '';
+  if (s.st === 'busy') { el.className = 'stk'; h = (s.op === 'sell' ? 'Taking ' + pcs + ' pcs off Trello…' : 'Putting ' + s.ref + ' back on Trello…') + '<small>' + (s.op === 'sell' ? 'جارٍ الخصم من تريلو' : 'جارٍ الإرجاع') + ' · about a minute</small>'; }
+  else if (s.st === 'bad') { el.className = 'stk bad'; h = (s.op === 'sell' ? 'Trello NOT fully updated for ' : 'Return NOT done for ') + esc(s.ref) + '<small>' + esc(s.err) + '</small>' + cardLines(s.res) + '<button type="button" data-stk="' + s.op + '">Try again · أعد المحاولة</button>'; }
+  else { el.className = 'stk ok'; h = (s.st === 'ok' ? 'Trello updated ✓ ' + pcs + ' pcs taken off for ' : 'Put back on Trello ✓ ') + esc(s.ref) + cardLines(s.res) +
+    (s.st === 'ok' ? '<button type="button" data-stk="return">Undo · put the pieces back · إرجاع</button>' : ''); }
+  el.innerHTML = h; }
+function cardLines(res){ if (!res || !res.cards) return ''; return res.cards.map(function(c){
+  return '<small><b>SJ-' + esc(c.no) + '</b> ' + (c.err ? '✗ ' + esc(c.err) : c.skip ? '(' + esc(c.skip) + ')' : esc((c.lines || []).join(' · ')) + ' · ' + c.left + ' pcs left' + (c.moved ? ' · ' + esc(c.moved) : '')) + '</small>'; }).join(''); }
+async function stkRun(op){
+  var d = B.inv; if (!d || !RELAY) { stkShow(); return; }
+  var k = stkKey(d.ref), s = STK[k];
+  if (op === 'sell' && s && (s.st === 'ok' || s.st === 'busy' || s.st === 'returned')) { stkPaint(s); return; }   // one invoice number is taken once
+  var lines = op === 'sell' ? stkLines() : (s ? s.lines : []);
+  if (!lines.length) { stkShow(); return; }
+  var id = jobId('s');
+  s = STK[k] = { st: 'busy', op: op, ref: d.ref, lines: lines, id: id, who: d.name || $('name').value.trim(), t: Date.now() }; stkSave(); stkPaint(s);
+  try { await relay('stock', { id: id, op: op, ref: d.ref, dev: devId(), who: s.who, lines: lines }); }
+  catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); stkPaint(s); return; }
+  var res = await waitJob(id, 'stock', 8);
+  s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
+  applyCards(res.cards || []);
+}
+function applyCards(cs){ if (!RAW) return; var ch = false;     // show the new numbers at once; the full list refreshes within a few minutes
+  cs.forEach(function(c){ if (!c.after) return; RAW.cards.forEach(function(rc, i){ if (rc.id === c.card) { rc.name = c.after; ch = true; } });
+    if (/FINISH/.test(c.moved || '')) { RAW.cards = RAW.cards.filter(function(rc){ return rc.id !== c.card; }); ch = true; } });
+  if (ch) { designs = mkDesigns(RAW.cards, RAW.roles); render(); } }
+$('stk').addEventListener('click', function(e){ var b = e.target.closest('button[data-stk]'); if (!b) return;
+  if (b.dataset.stk === 'return' && !confirm('Put the pieces of ' + B.inv.ref + ' back on Trello?')) return;
+  if (b.dataset.stk === 'sell') { var s = STK[stkKey(B.inv.ref)]; if (s) s.st = 'retry'; }
+  stkRun(b.dataset.stk); });
+
+// ----- catalogue (his phone only): design numbers + SETS / COMPLETE -> customer catalogue link -----
+var CAT = { items: [], modes: {}, busy: false };
+function isOwner(){ return ls('sj_owner') === '1'; }
+function ownerUI(){ var o = isOwner(); $('catbtn').hidden = !o; document.querySelector('#mode button[data-m="cat"]').hidden = !o; }
+(function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
+  function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
+  function stop(){ clearTimeout(t); }
+  el.addEventListener('touchstart', start, { passive: true }); el.addEventListener('mousedown', start);
+  ['touchend', 'touchmove', 'mouseup', 'mouseleave'].forEach(function(ev){ el.addEventListener(ev, stop); }); })();
+ownerUI();
+$('catbtn').onclick = function(){ $('done').hidden = false; window.scrollTo(0, 0); setMode('cat'); };
+function catOpen(){ if (!$('cname').value.trim()) $('cname').value = $('name').value.trim(); catParse(); catHist(); }
+function catParse(){
+  var out = [], seen = {};
+  $('cnos').value.split(/[\n,;]+/).forEach(function(line){ var m = line.match(/\d{3,6}/); if (!m || seen[m[0]]) return; seen[m[0]] = 1;
+    var w = line.replace(m[0], '').toLowerCase().trim();
+    var mode = /comp|^c\b|كامل/.test(w) ? 'C' : /set|^s\b|طقم|اطقم|أطقم/.test(w) ? 'S' : (CAT.modes[m[0]] || '');
+    out.push({ no: m[0], mode: mode }); });
+  CAT.items = out;
+  $('clist').innerHTML = out.map(function(it, i){ var inR = designs.some(function(d){ return d.base === it.no; });
+    return '<div class="crow"><span>SJ-' + it.no + ' <small style="font-weight:500;color:' + (inR ? 'var(--mute)' : '#9a3b1e') + '">' + (inR ? 'in READY' : 'not in READY') + '</small></span><span class="sw">' +
+      '<button type="button" data-i="' + i + '" data-v="S" class="' + (it.mode === 'S' ? 'on' : '') + '">SETS</button><button type="button" data-i="' + i + '" data-v="C" class="' + (it.mode === 'C' ? 'on' : '') + '">COMPLETE</button></span></div>'; }).join('');
+}
+$('cnos').addEventListener('input', catParse);
+$('clist').addEventListener('click', function(e){ var b = e.target.closest('button[data-i]'); if (!b) return; var it = CAT.items[+b.dataset.i]; it.mode = b.dataset.v; CAT.modes[it.no] = it.mode;
+  $('cnos').value = CAT.items.map(function(x){ return x.no + (x.mode ? (x.mode === 'C' ? ' complete' : ' sets') : ''); }).join('\n'); catParse(); });
+function cst(cls, h){ var el = $('cst'); el.hidden = !h; el.className = 'stk ' + cls; el.innerHTML = h; }
+$('cmake').onclick = async function(){
+  if (CAT.busy) return; catParse();
+  var name = $('cname').value.trim(), country = $('ccountry').value.trim(), items = CAT.items;
+  if (!items.length) { cst('bad', 'Type the design numbers first.'); return; }
+  var miss = items.filter(function(it){ return !it.mode; });
+  if (miss.length) { cst('bad', 'Say SETS or COMPLETE for: ' + miss.map(function(x){ return 'SJ-' + x.no; }).join(', ') + ' <small>اختر SETS أو COMPLETE لكل تصميم</small>'); return; }
+  if (!RELAY) { cst('bad', 'The catalogue link is not set up yet (relay missing).'); return; }
+  var id = jobId('c'); CAT.busy = true; $('cres').innerHTML = '';
+  cst('', 'Building the catalogue for ' + esc(name || 'NEW COLLECTION') + ' — ' + items.length + ' design' + (items.length > 1 ? 's' : '') + '…<small>usually 2–6 minutes (videos take longest). You can keep using the memo.</small>');
+  try { await relay('catalog', { id: id, name: name, country: country, items: items }); }
+  catch(e){ CAT.busy = false; cst('bad', 'Could not start: ' + esc(e.message)); return; }
+  var res = await waitJob(id, 'catalog', 30, function(sec){ cst('', 'Building the catalogue… ' + Math.floor(sec / 60) + ':' + ('0' + sec % 60).slice(-2) + '<small>photos, cut-outs, videos, cover picture</small>'); });
+  CAT.busy = false;
+  if (!res.ok) { cst('bad', 'Catalogue NOT made.<small>' + esc(res.error || '') + '</small>' + (res.report || []).map(function(l){ return '<small>' + esc(l) + '</small>'; }).join('')); return; }
+  cst('', 'Made ✓ — waiting for the link to go live…<small>about a minute</small>');
+  catShow(res, false);
+  var live = false; for (var i = 0; i < 36 && !live; i++) { try { var r = await fetch(res.page + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); live = r.ok; } catch(e){} if (!live) await sleep(5000); }
+  cst(live ? 'ok' : '', live ? 'Catalogue ready ✓ — send the picture with the link.' : 'Made ✓ — the link may need another minute before it opens.');
+  var h = []; try { h = JSON.parse(ls('sj_cat_hist') || '[]'); } catch(e){}
+  h.unshift({ name: res.name || 'NEW COLLECTION', country: res.country || '', url: res.url, cover: res.cover, page: res.page, t: Date.now(), report: res.report, flags: res.flags });
+  ls('sj_cat_hist', JSON.stringify(h.slice(0, 20))); catShow(res, true); catHist();
+};
+function catShow(res, ready){
+  $('cres').innerHTML = '<img src="' + GH_RAW + res.cover + '?t=' + Date.now() + '" alt="cover">' +
+    '<div class="btns"><button type="button" class="gold" data-c="share">Send picture + link · أرسل</button><button type="button" data-c="copy">Copy link · نسخ الرابط</button><a href="' + esc(res.url) + '" target="_blank" style="align-self:center;color:var(--gold);font-weight:700">Open page ↗</a></div>' +
+    '<div style="font-size:13px;word-break:break-all;margin:6px 0"><b>' + esc(res.url) + '</b></div>' +
+    '<ul>' + (res.report || []).map(function(l){ return '<li>' + esc(l) + '</li>'; }).join('') + (res.flags || []).map(function(l){ return '<li style="color:#9a3b1e">' + esc(l) + '</li>'; }).join('') + '</ul>';
+  $('cres').dataset.url = res.url; $('cres').dataset.cover = res.cover;
+}
+$('cres').addEventListener('click', async function(e){ var b = e.target.closest('button[data-c]'); if (!b) return; var url = $('cres').dataset.url;
+  if (b.dataset.c === 'copy') { try { await navigator.clipboard.writeText(url); b.textContent = 'Copied ✓'; } catch(e2){ prompt('Copy:', url); } return; }
+  try { var blob = await (await fetch(GH_RAW + $('cres').dataset.cover + '?t=' + Date.now())).blob();
+    var f = new File([blob], 'SJ-catalogue-' + $('cres').dataset.cover.replace(/^og-/, ''), { type: 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: url }); return; }
+  } catch(e3){ if (e3 && e3.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); } catch(e4){} window.open(url, '_blank'); });
+function catHist(){ var h = []; try { h = JSON.parse(ls('sj_cat_hist') || '[]'); } catch(e){}
+  $('chist').innerHTML = h.length ? '<h3 style="font-size:14px;margin:16px 0 4px;color:var(--mute)">Made on this phone · السابقة</h3>' + h.map(function(x, i){
+    return '<a href="#" data-h="' + i + '">' + esc(x.name) + (x.country ? ' · ' + esc(x.country) : '') + ' — ' + new Date(x.t).toLocaleDateString() + '</a>'; }).join('') : ''; }
+$('chist').addEventListener('click', function(e){ var a = e.target.closest('a[data-h]'); if (!a) return; e.preventDefault(); var h = JSON.parse(ls('sj_cat_hist') || '[]')[+a.dataset.h]; if (h) { cst('ok', 'Catalogue: ' + esc(h.name)); catShow(h, true); window.scrollTo(0, 0); } });
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
