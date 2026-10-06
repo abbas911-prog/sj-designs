@@ -10,16 +10,17 @@ h1{margin:0;font-size:20px;letter-spacing:.5px}h1 small{display:block;font-size:
 .ar{direction:rtl}
 #stage{position:relative;margin:8px auto 0;width:min(100vw,520px);background:#111;border-radius:14px;overflow:hidden;aspect-ratio:9/16;max-height:78vh}
 #stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#111}
-#vin{opacity:.0;transition:opacity .4s}#stage.waiting #vin{opacity:.55}
+#vin{opacity:0;transition:opacity .4s}#stage.cam #vin{opacity:1}#stage.waiting #vin{opacity:.6}
 #vout{opacity:0;transition:opacity .6s}#stage.live #vout{opacity:1}
-#stat{position:absolute;left:12px;right:12px;top:50%;transform:translateY(-50%);text-align:center;color:#fff;font-size:15px;line-height:1.5;text-shadow:0 1px 4px #000;pointer-events:none}
-#tm{position:absolute;right:10px;top:10px;background:rgba(0,0,0,.5);color:#fff;font-size:12px;padding:4px 9px;border-radius:999px;display:none}
+#stat{position:absolute;left:12px;right:12px;bottom:14px;z-index:3;text-align:center;color:#fff;font-size:14px;line-height:1.5;background:rgba(0,0,0,.55);border-radius:10px;padding:8px 10px;pointer-events:none}#stat:empty{display:none}
+#tm{position:absolute;right:10px;top:10px;z-index:3;background:rgba(0,0,0,.5);color:#fff;font-size:12px;padding:4px 9px;border-radius:999px;display:none}
 #stage.live #tm{display:block}
-.intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#eee;padding:24px;text-align:center;font-size:14px;line-height:1.55;background:#111}
+.intro{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#eee;padding:24px;text-align:center;font-size:14px;line-height:1.55;background:#111}
 .intro[hidden]{display:none}
 button{font:inherit}
 .gold{background:var(--gold);color:#fff;border:0;border-radius:999px;padding:13px 26px;font-size:16px;font-weight:600}
 .gold:disabled{opacity:.6}
+#bar[hidden],#cols[hidden]{display:none}
 #bar{display:flex;gap:10px;justify-content:center;align-items:center;padding:12px 16px;flex-wrap:wrap}
 #bar button{background:var(--card);border:1px solid #ddd2c4;border-radius:999px;padding:10px 16px;font-size:14px}
 #cols{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:8px 16px 0}
@@ -27,9 +28,9 @@ button{font:inherit}
 #cols button::before{content:"";position:absolute;left:8px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:var(--sw)}
 #cols button.on{border-color:var(--gold)}
 .note{max-width:520px;margin:10px auto 24px;padding:0 16px;color:var(--mute);font-size:12.5px;line-height:1.55;text-align:center}
-#keybox{max-width:520px;margin:8px auto;padding:0 16px;display:none}
-#keybox input{width:100%;padding:10px;border:1px solid #ddd2c4;border-radius:10px;font:inherit}
-#keybox.show{display:block}
+#keybox{width:100%;max-width:340px;display:none}#keybox.show{display:block}
+#keybox input{width:100%;padding:11px;border:1px solid #666;border-radius:10px;font:inherit;background:#222;color:#fff}
+#keybox .kn{font-size:11.5px;color:#aaa;margin-top:6px;line-height:1.4}
 </style></head><body>
 <header><h1>SJ-18634 · AI try-on<small class="ar">جرّبيها عليكِ بالذكاء الاصطناعي</small></h1></header>
 <div id="cols" hidden></div>
@@ -41,10 +42,10 @@ button{font:inherit}
   <div class="intro" id="intro">
     <div>Stand so your shoulders to knees are in view.<br>The dress appears on you in a few seconds.</div>
     <div class="ar">قفي بحيث يظهر جسمك من الكتفين إلى الركبتين.<br>سيظهر الفستان عليكِ خلال ثوانٍ.</div>
+    <div id="keybox"><input id="key" type="password" autocomplete="off" placeholder="Paste Decart API key (dct_…)"><div class="kn">Test mode until the token server is set: the key stays only in this phone's browser.</div></div>
     <button id="start" class="gold" type="button">Start · ابدئي</button>
   </div>
 </div>
-<div id="keybox"><input id="key" type="password" placeholder="Decart API key (test mode — stays on this phone)"><div class="note" style="margin:6px 0 0">Test mode: no token server set yet. The key is kept only in this phone's browser.</div></div>
 <div id="bar" hidden>
   <button id="flip" type="button">Switch camera · تبديل</button>
   <button id="snap" type="button">Photo · صورة</button>
@@ -107,19 +108,29 @@ async function connect(){
     else if (st === 'reconnecting') say('Reconnecting…', 'إعادة الاتصال…');
     else if (st === 'disconnected') { stage.classList.remove('live'); timer(false); }
   });
-  rt.on('error', e => { say('Error: ' + (e.message || e.code || e), 'حدث خطأ'); console.error(e); });
+  rt.on('error', e => { const bad = /INVALID_API_KEY|401|unauthor/i.test((e.code||'') + ' ' + (e.message||'')); say(bad ? 'Decart rejected the key — check it and tap Start again' : 'Error: ' + (e.message || e.code || e), bad ? 'المفتاح غير صحيح' : 'حدث خطأ'); if (bad) { try { localStorage.removeItem('sj_decart_key'); } catch(x){} stop(); $('keybox').classList.add('show'); } console.error(e); });
 }
 
+function haveKey(){
+  if (D.tokenUrl) return true;
+  let k = ''; try { k = localStorage.getItem('sj_decart_key') || ''; } catch(e){}
+  return !!(k || $('key').value.trim());
+}
 async function start(){
+  if (!haveKey()) { $('keybox').classList.add('show'); $('key').focus(); say('Paste your Decart API key above, then tap Start', 'الصقي مفتاح Decart ثم اضغطي ابدئي'); return; }
   $('start').disabled = true;
   try {
-    await cam(); $('intro').hidden = true; secs = 0; paused = false;
+    say('Opening camera…', 'جارٍ فتح الكاميرا…');
+    await cam(); stage.classList.add('cam'); $('intro').hidden = true; secs = 0; paused = false;
     await connect();
     $('bar').hidden = false;
   } catch (e) {
     $('start').disabled = false; $('intro').hidden = false; stage.classList.remove('waiting');
     const denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
-    say(denied ? 'Camera permission is needed.' : (e.message || String(e)), denied ? 'يلزم السماح باستخدام الكاميرا.' : '');
+    const nocam = e && (e.name === 'NotFoundError' || e.name === 'OverconstrainedError');
+    say(denied ? 'Camera permission is needed — allow it in the browser, then tap Start.' : nocam ? 'No camera found on this device.' : 'Error: ' + (e.message || String(e)),
+        denied ? 'يلزم السماح باستخدام الكاميرا ثم اضغطي ابدئي.' : '');
+    if (e && /401|403|api key|unauthor|invalid/i.test(e.message || '')) { try { localStorage.removeItem('sj_decart_key'); } catch(x){} $('keybox').classList.add('show'); }
     console.error(e);
   }
 }
@@ -129,7 +140,7 @@ async function stop(){
   if (paused) { paused = false; $('stop').textContent = 'Stop · إيقاف'; secs = 0; try { await connect(); } catch(e){ say(e.message || String(e)); } return; }
   if (rt) { rt.disconnect(); rt = null; } timer(false);
   if (stream) stream.getTracks().forEach(t => t.stop());
-  stage.classList.remove('live', 'waiting'); $('bar').hidden = true; $('intro').hidden = false; $('start').disabled = false; say('');
+  stage.classList.remove('live', 'waiting', 'cam'); $('bar').hidden = true; $('intro').hidden = false; $('start').disabled = false; say('');
 }
 async function flip(){ facing = facing === 'user' ? 'environment' : 'user';
   if (rt) { rt.disconnect(); rt = null; } timer(false);
@@ -157,7 +168,7 @@ const cols = $('cols');
 D.dresses.forEach((d, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = d.name;
   b.style.setProperty('--sw', d.swatch); b.onclick = () => pick(i); cols.appendChild(b); });
 cols.hidden = D.dresses.length < 2; pick(0);
-if (!D.tokenUrl) { let k = ''; try { k = localStorage.getItem('sj_decart_key') || ''; } catch(e){} if (!k) $('keybox').classList.add('show'); }
+if (!haveKey()) $('keybox').classList.add('show');
 window.__ai = { state: () => ({ live: stage.classList.contains('live'), stat: stat.textContent, rt: !!rt }) };
 </script>
 </body></html>
