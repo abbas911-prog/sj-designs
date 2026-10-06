@@ -78,7 +78,7 @@ def run(req):
             card = call('GET', '/cards/' + cid, fields='name,idList,closed')
             r['no'] = parse(card['name'])['no'] or r['no']
             notes = [a['data']['text'] for a in call('GET', '/cards/%s/actions' % cid, filter='commentCard', limit=1000)]
-            if any(n.splitlines()[-1].strip() == tag for n in notes if n.strip()):
+            if op != 'check' and any(n.splitlines()[-1].strip() == tag for n in notes if n.strip()):
                 r.update(skip='already done for ' + ref); out.append(r); continue
             if op == 'return':                                            # put back exactly what that invoice took
                 sold = [n for n in notes if n.strip() and n.splitlines()[-1].strip() == '#memo sell %s %s' % (ref, dev)]
@@ -101,6 +101,8 @@ def run(req):
             name = rewrite(card['name'], p, new)
             check = parse(name)
             assert [c[0] for c in check['cells']] == new and check['ok'], 'rewrite check failed'
+            if op == 'check':                                             # test run: say what would change, write nothing
+                r.update(before=card['name'], after=name, left=sum(new), lines=desc, moved='(check only — Trello not changed)'); out.append(r); continue
             if name != card['name']:
                 call('PUT', '/cards/' + cid, name=name)
             moved = ''
