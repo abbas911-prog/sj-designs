@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SJ-18634 · Try it on</title>
+<style>
+:root{--ink:#2b2622;--mute:#7a7068;--bg:#f6f2ec;--card:#fff;--gold:#a8864a}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:10px 16px 6px;text-align:center}
+#back{display:block;text-align:left;font-size:12.5px;color:var(--gold);text-decoration:none;font-weight:600;margin-bottom:6px}#back[hidden]{display:none}
+h1{margin:0;font-size:20px}h1 small{display:block;font-size:13px;color:var(--mute);font-weight:500;margin-top:2px}
+.ar{direction:rtl}
+main{max-width:520px;margin:0 auto;padding:0 16px 30px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-top:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.step{font-size:12px;letter-spacing:.12em;color:var(--mute);font-weight:700;margin-bottom:6px}
+.tips{font-size:13px;line-height:1.5;color:var(--mute)}.tips b{color:var(--ink)}
+#pick{display:flex;gap:10px;margin-top:10px}
+#pick label{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 8px;border:1.5px solid #ddd2c4;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;background:#fff}
+#pick label small{font-weight:500;font-size:12px;color:var(--mute)}
+#pick input{display:none}
+#cols{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+#cols button{border:2px solid transparent;border-radius:999px;padding:7px 12px 7px 28px;background:#f3eee6;position:relative;font:inherit;font-size:13px}
+#cols button::before{content:"";position:absolute;left:8px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:var(--sw)}
+#cols button.on{border-color:var(--gold);background:#fff}
+#stage{position:relative;margin-top:10px;background:#111;border-radius:12px;overflow:hidden;aspect-ratio:3/4}
+#stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none}
+#stage img.show{display:block}
+#stat{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(0,0,0,.6);color:#fff;border-radius:10px;padding:8px 10px;font-size:13.5px;text-align:center;line-height:1.45}#stat:empty{display:none}
+#bar{position:absolute;left:0;right:0;top:0;height:4px;background:rgba(255,255,255,.15)}#bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .6s linear}
+.gold{width:100%;margin-top:10px;background:var(--gold);color:#fff;border:0;border-radius:999px;padding:13px;font:inherit;font-size:16px;font-weight:600}
+.gold:disabled{opacity:.5}
+.row{display:flex;gap:8px;margin-top:8px}.row button{flex:1;background:#fff;border:1px solid #ddd2c4;border-radius:999px;padding:10px;font:inherit;font-size:14px}
+.row button.on{border-color:var(--gold);color:var(--gold)}
+#srv{display:none;margin-top:8px}#srv.show{display:block}#srv input{width:100%;padding:10px;border:1px solid #ddd2c4;border-radius:10px;font:inherit}
+.note{font-size:12px;color:var(--mute);line-height:1.5;margin-top:10px;text-align:center}
+[hidden]{display:none!important}
+</style></head><body>
+<header><a id="back" href="#" hidden>← Back to order · العودة للطلب</a><h1>SJ-18634 · Try it on<small class="ar">جرّبيها عليكِ من صورتكِ</small></h1></header>
+<main>
+<div class="card">
+  <div class="step">1 · YOUR PHOTO · صورتكِ</div>
+  <div class="tips"><b>Full body, front, arms a little away from the body.</b> Plain wall, good light, phone upright.<br><span class="ar">صورة كاملة من الأمام، الذراعان بعيدتان قليلاً عن الجسم، خلفية بسيطة وإضاءة جيدة.</span></div>
+  <div id="pick">
+    <label><input type="file" accept="image/*" capture="user" id="fcam">📷 Camera<small>الكاميرا</small></label>
+    <label><input type="file" accept="image/*" id="ffile">🖼 Choose photo<small>من الصور</small></label>
+  </div>
+</div>
+<div class="card">
+  <div class="step">2 · COLOUR · اللون</div>
+  <div id="cols"></div>
+  <div id="stage"><div id="bar"><i></i></div><img id="imgA" alt=""><img id="imgB" alt=""><div id="stat"></div></div>
+  <div class="row" id="ab" hidden><button id="bA" type="button">Before · قبل</button><button id="bB" class="on" type="button">After · بعد</button></div>
+  <button id="go" class="gold" type="button" disabled>Try it on · جرّبيها</button>
+  <div class="row" id="after" hidden><button id="save" type="button">Save / share · حفظ</button><button id="again" type="button">New photo · صورة أخرى</button></div>
+  <div id="srv"><input id="srvin" placeholder="Server address (https://…)"><div class="note">One-time setup: paste the GPU server address, then tap Try it on.</div></div>
+</div>
+<p class="note">Your photo goes to our own server for a few seconds to make the picture and is not kept.<br><span class="ar">تُرسل صورتكِ إلى خادمنا الخاص لثوانٍ لإنشاء الصورة ولا يتم حفظها.</span></p>
+</main>
+<script>window.TRYON = {"no": "18634", "server": "", "colours": [{"i": 0, "name": "Navy · كحلي", "swatch": "#1f3a68"}, {"i": 1, "name": "Red · أحمر", "swatch": "#b5123f"}, {"i": 2, "name": "Mustard · خردلي", "swatch": "#d9a428"}, {"i": 3, "name": "Burgundy · عنابي", "swatch": "#6e1a2a"}]};</script>
+<script>
+(function(){
+var D = window.TRYON, $ = function(id){ return document.getElementById(id); };
+var cur = 0, photoBlob = null, results = {}, busy = false;
+var imgA = $('imgA'), imgB = $('imgB'), stat = $('stat'), bar = $('bar').firstElementChild;
+function say(en, ar){ stat.innerHTML = en ? en + (ar ? '<br><span class="ar">' + ar + '</span>' : '') : ''; }
+function server(){ var s = D.server; try { s = s || localStorage.getItem('sj_tryon_server') || ''; } catch(e){} var t = $('srvin').value.trim(); if (t) { s = t; try { localStorage.setItem('sj_tryon_server', s); } catch(e){} } return s.replace(/\/+$/, ''); }
+function showA(){ imgA.classList.add('show'); imgB.classList.remove('show'); $('bA').classList.add('on'); $('bB').classList.remove('on'); }
+function showB(){ imgB.classList.add('show'); imgA.classList.remove('show'); $('bB').classList.add('on'); $('bA').classList.remove('on'); }
+function downscale(file){ return new Promise(function(ok){
+  var img = new Image(); img.onload = function(){
+    var k = Math.min(1, 1600 / Math.max(img.width, img.height)); var c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    c.toBlob(function(b){ ok(b); }, 'image/jpeg', 0.9); URL.revokeObjectURL(img.src); };
+  img.src = URL.createObjectURL(file); }); }
+function onPick(e){ var f = e.target.files && e.target.files[0]; if (!f) return;
+  downscale(f).then(function(b){ photoBlob = b; results = {}; imgA.src = URL.createObjectURL(b); showA(); $('ab').hidden = true; $('after').hidden = true; $('go').disabled = false; say('Choose a colour, then tap Try it on', 'اختاري اللون ثم اضغطي جرّبيها'); }); }
+$('fcam').onchange = onPick; $('ffile').onchange = onPick;
+function pick(k){ cur = k; document.querySelectorAll('#cols button').forEach(function(b, i){ b.classList.toggle('on', i === k); });
+  if (results[k]) { imgB.src = results[k]; showB(); $('ab').hidden = false; $('after').hidden = false; say(''); } else if (photoBlob && !busy) { showA(); $('ab').hidden = true; } }
+D.colours.forEach(function(c, i){ var b = document.createElement('button'); b.type = 'button'; b.textContent = c.name; b.style.setProperty('--sw', c.swatch); b.onclick = function(){ pick(i); }; $('cols').appendChild(b); });
+pick(0);
+var prog = null;
+function progress(on){ clearInterval(prog); bar.style.width = '0'; if (!on) return; var t = 0; prog = setInterval(function(){ t += 0.6; bar.style.width = Math.min(92, 100 * (1 - Math.exp(-t / 9))) + '%'; }, 600); }
+$('go').onclick = async function(){
+  if (!photoBlob || busy) return;
+  var s = server(); if (!s) { $('srv').classList.add('show'); say('Server address needed (one-time)', 'يلزم عنوان الخادم مرة واحدة'); return; }
+  busy = true; $('go').disabled = true; showA(); $('ab').hidden = true; progress(true);
+  say('Making your picture… about 10–20 seconds', 'جارٍ إنشاء الصورة… حوالي ١٠–٢٠ ثانية');
+  var fd = new FormData(); fd.append('photo', photoBlob, 'photo.jpg'); fd.append('no', D.no); fd.append('colour', String(cur));
+  try {
+    var r = await fetch(s + '/tryon', { method: 'POST', body: fd });
+    if (!r.ok) { var m = ''; try { m = (await r.json()).error || ''; } catch(e){} throw new Error(m || ('Server error ' + r.status)); }
+    var b = await r.blob(); results[cur] = URL.createObjectURL(b); imgB.src = results[cur]; showB(); $('ab').hidden = false; $('after').hidden = false; say('');
+  } catch (e) {
+    say(/Failed to fetch|NetworkError/.test(e.message) ? 'Cannot reach the server — is it switched on?' : e.message, 'تعذّر الوصول إلى الخادم');
+    if (/Failed to fetch|NetworkError/.test(e.message)) $('srv').classList.add('show');
+  }
+  progress(false); busy = false; $('go').disabled = false;
+};
+$('bA').onclick = showA; $('bB').onclick = showB;
+$('again').onclick = function(){ $('ffile').value = ''; $('fcam').value = ''; $('ffile').click(); };
+$('save').onclick = async function(){
+  var src = results[cur]; if (!src) return; var b = await (await fetch(src)).blob();
+  var file = new File([b], 'SJ-' + D.no + '-' + D.colours[cur].name.split(' ')[0] + '.jpg', { type: 'image/jpeg' });
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  var a = document.createElement('a'); a.href = src; a.download = file.name; a.click();
+};
+var from = new URLSearchParams(location.search).get('from'); if (from && /^[\w.-]+\.html$/.test(from)) { $('back').href = from; $('back').hidden = false; }
+if (!server()) $('srv').classList.add('show');
+window.__photo = { state: function(){ return { stat: stat.textContent, hasResult: !!results[cur], busy: busy }; } };
+})();
+</script>
+</body></html>
