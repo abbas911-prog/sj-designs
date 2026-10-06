@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="SJ Memo">
 <title>SJ · Order memo</title>
 <style>
 :root{--ink:#1C1A17;--mute:#6E675D;--bg:#F6F2EC;--card:#fff;--gold:#A8864A;--line:#E3DBCF;--fade:rgba(236,233,226,.72)}
@@ -25,7 +26,11 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .warn{color:#9a3b1e}
 .photos{display:flex;gap:8px;overflow-x:auto;padding:0 14px 6px;scroll-snap-type:x mandatory}
 .ph{position:relative;flex:0 0 auto;width:min(100%,640px);scroll-snap-align:start;border-radius:10px;overflow:hidden;background:#eee}
-.ph img{display:block;width:100%;height:auto}
+.ph img{display:block;width:100%;height:auto;min-height:220px;object-fit:contain}
+.ph img:not([src]){aspect-ratio:3/4;min-height:0;visibility:hidden}
+.ph .pmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--mute);text-align:center;padding:12px}
+#pst{max-width:720px;margin:4px auto 0;font-size:12px;color:var(--mute)}#pst:empty{display:none}#pst.bad{color:#a33}
+#setup .tip{background:#F6F2EC;border-radius:12px;padding:10px 12px;color:var(--ink);font-size:13.5px}
 .ph .nums{position:absolute;left:0;right:0;bottom:0;display:grid;pointer-events:none}
 .ph .nums span{text-align:center;padding:6px 0;background:rgba(28,26,23,.55);color:#fff;font-weight:700;font-size:14px;border-left:1px solid rgba(255,255,255,.25)}
 .ph .nums span.z{color:rgba(255,255,255,.45)}
@@ -73,12 +78,15 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 <header>
   <div class="top"><h1>ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"></div>
   <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span></div>
+  <div id="pst"></div>
 </header>
 <main>
   <div id="setup" hidden>
     <h2>Connect Trello (one time)</h2>
-    <p>This memo reads the READY list live from Trello, so pieces are always today's. Tap the button, allow, copy the token Trello shows, paste it below. The token stays only in this phone's browser.</p>
-    <a class="gold" id="auth" target="_blank" rel="noopener">Get Trello token</a>
+    <p>This memo reads the READY list live from Trello, so pieces are always today's. Tap <b>Connect Trello</b>, then <b>Allow</b> — it comes straight back here and remembers. Read-only; stays only on this phone.</p>
+    <p class="tip"><b>So it never asks again:</b> open this link in <b>Safari</b> (iPhone) or <b>Chrome</b> (Android) — not inside WhatsApp's preview — then Share → <b>Add to Home Screen</b> and always open it from that icon.<br><span class="ar">افتح الرابط في سفاري أو كروم (وليس داخل واتساب) ثم «إضافة إلى الشاشة الرئيسية» وافتحه دائمًا من الأيقونة.</span></p>
+    <a class="gold" id="auth">Connect Trello</a>
+    <p style="margin:14px 0 0;font-size:12.5px">Or paste a token by hand:</p>
     <input id="tok" placeholder="Paste token here" autocomplete="off">
     <button id="save" type="button">Save and load</button>
     <p id="seterr" class="warn"></p>
@@ -99,6 +107,15 @@ var KEY = '83fea3748717dd1e3fe28a15f2371759', LIST = '66254dc6f8ade3c3a0c9b7d4';
 var API = window.TRELLO_API || 'https://api.trello.com';
 var $ = function(id){ return document.getElementById(id); };
 var token = ''; try { token = localStorage.getItem('sj_memo_token') || ''; } catch(e){}
+// token kept in two places (localStorage + IndexedDB) and the browser is asked to keep them
+function idb(op, val){ return new Promise(function(ok){ try { var r = indexedDB.open('sj_memo', 1);
+  r.onupgradeneeded = function(){ r.result.createObjectStore('kv'); };
+  r.onsuccess = function(){ try { var s = r.result.transaction('kv', op === 'get' ? 'readonly' : 'readwrite').objectStore('kv');
+    var q = op === 'get' ? s.get('token') : op === 'put' ? s.put(val, 'token') : s.delete('token'); q.onsuccess = function(){ ok(q.result || null); }; q.onerror = function(){ ok(null); }; } catch(e){ ok(null); } };
+  r.onerror = function(){ ok(null); }; } catch(e){ ok(null); } }); }
+function keepToken(t){ token = t; try { localStorage.setItem('sj_memo_token', t); } catch(e){} idb('put', t); try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){} }
+function dropToken(){ token = ''; try { localStorage.removeItem('sj_memo_token'); } catch(e){} idb('del'); }
+(function(){ var m = location.hash.match(/[#&]token=([0-9A-Za-z]+)/); if (m) { keepToken(m[1]); try { history.replaceState(null, '', location.pathname + location.search); } catch(e){ location.hash = ''; } } })();
 var designs = [], state = {};   // state["no:c"] = {sets:n, all:bool}
 
 // ---------- parsing a card title ----------
@@ -127,13 +144,40 @@ function parseTitle(t){
 
 // ---------- Trello ----------
 function auth(){ return 'key=' + KEY + '&token=' + encodeURIComponent(token); }
-function imgUrl(card, a){
-  var p = (a.previews || []).filter(function(x){ return x.width >= 600; }).sort(function(x, y){ return x.width - y.width; })[0];
-  var u = p ? p.url : a.url;
-  return u + (u.indexOf('?') > 0 ? '&' : '?') + auth();
+function apiUrl(u){ return String(u || '').replace(/^https?:\/\/(api\.)?trello\.com/, API); }
+function imgSrcs(a){
+  var p = (a.previews || []).filter(function(x){ return x.width >= 600 && x.width <= 1300; }).sort(function(x, y){ return x.width - y.width; })[0];
+  var out = []; if (p && p.url) out.push(apiUrl(p.url)); if (a.url) out.push(apiUrl(a.url)); return out;
 }
+// Trello photos need the Authorization header (a plain <img src> is refused) -> fetch -> small JPEG -> blob: URL
+function authHeader(){ return { Authorization: 'OAuth oauth_consumer_key="' + KEY + '", oauth_token="' + token + '"' }; }
+var pstat = { ok: 0, bad: 0, why: '' }, queue = [], running = 0;
+function shrink(blob){ return new Promise(function(ok){
+  var u = URL.createObjectURL(blob), im = new Image();
+  im.onload = function(){ var k = Math.min(1, 1000 / Math.max(im.naturalWidth, im.naturalHeight)); if (k === 1 && blob.size < 450000) { ok(u); return; }
+    var c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    c.toBlob(function(b){ URL.revokeObjectURL(u); ok(b ? URL.createObjectURL(b) : null); }, 'image/jpeg', 0.85); };
+  im.onerror = function(){ URL.revokeObjectURL(u); ok(null); }; im.src = u; }); }
+async function fetchPhoto(p){
+  var why = '';
+  var tries = p.srcs.map(function(u){ return [u, { headers: authHeader() }]; }).concat([['thumbs/' + p.att + '.jpg', {}]]);
+  for (var i = 0; i < tries.length; i++){
+    try { var r = await fetch(tries[i][0], tries[i][1]);
+      if (r.ok && /^image\//.test(r.headers.get('content-type') || 'image/')) { var u = await shrink(await r.blob()); if (u) return u; why = 'decode'; }
+      else why = why || ('HTTP ' + r.status);
+    } catch(e){ why = why || 'blocked'; }
+  }
+  pstat.why = why; return null;
+}
+function getPhoto(p){ if (!p.job) p.job = new Promise(function(ok){ queue.push(function(){ return fetchPhoto(p).then(function(u){ p.blob = u; if (u) pstat.ok++; else pstat.bad++; showPst(); ok(u); }); }); pump(); }); return p.job; }
+function pump(){ while (running < 4 && queue.length){ running++; queue.shift()().then(function(){ running--; pump(); }); } }
+function showPst(){ var el = $('pst'); if (!pstat.bad) { el.textContent = ''; el.className = ''; return; }
+  el.className = 'bad'; el.textContent = pstat.bad + ' photo' + (pstat.bad > 1 ? 's' : '') + ' could not load (' + pstat.why + ')' + (pstat.ok ? ' · ' + pstat.ok + ' loaded' : ''); }
+var io = 'IntersectionObserver' in window ? new IntersectionObserver(function(es){ es.forEach(function(e){ if (!e.isIntersecting) return; io.unobserve(e.target); loadInto(e.target); }); }, { rootMargin: '800px 0px' }) : null;
+function loadInto(img){ var d = byNo(img.dataset.no), p = d && d.photos[+img.dataset.i]; if (!p) return;
+  getPhoto(p).then(function(u){ if (u) img.src = u; else { var m = document.createElement('div'); m.className = 'pmsg'; m.textContent = 'Photo not available · open the card in Trello'; img.parentNode.appendChild(m); } }); }
 async function loadCards(){
-  var r = await fetch(API + '/1/lists/' + LIST + '/cards?fields=name,pos,idShort,dateLastActivity&attachments=true&attachment_fields=name,bytes,mimeType,date,url,previews&' + auth());
+  var r = await fetch(API + '/1/lists/' + LIST + '/cards?fields=name,pos,idShort,dateLastActivity&attachments=true&attachment_fields=id,name,bytes,mimeType,date,url,previews&' + auth());
   if (r.status === 401) throw new Error('Token not accepted');
   if (!r.ok) throw new Error('Trello error ' + r.status);
   var cards = await r.json();
@@ -145,7 +189,7 @@ async function loadCards(){
     imgs.forEach(function(a, i){
       var g = p.groups[i] || (i === 0 ? [] : null);
       var nums = g ? g.map(function(q){ c0++; return { c: c0, pcs: q }; }) : null;
-      photos.push({ url: imgUrl(c, a), nums: nums, name: a.name });
+      photos.push({ srcs: imgSrcs(a), att: a.id, nums: nums, name: a.name });
     });
     if (p.groups.length > imgs.length) { // more groups than photos: attach leftovers to the last photo
       p.groups.slice(imgs.length).forEach(function(g){ var last = photos[photos.length - 1]; if (!last) return; last.nums = (last.nums || []).concat(g.map(function(q){ c0++; return { c: c0, pcs: q }; })); });
@@ -169,7 +213,7 @@ function render(){
     if (!d.ok) meta += '<span class="tag warn">check card</span>';
     var ph = d.photos.map(function(p, i){
       var nums = p.nums ? '<div class="nums" style="grid-template-columns:repeat(' + p.nums.length + ',1fr)">' + p.nums.map(function(n){ return '<span data-c="' + n.c + '" class="' + (n.pcs ? '' : 'z') + '">' + n.c + '</span>'; }).join('') + '</div>' : '';
-      return '<div class="ph"><img loading="lazy" src="' + p.url + '" alt="SJ-' + d.no + '">' + nums + '</div>';
+      return '<div class="ph"><img data-no="' + d.no + '" data-i="' + i + '" alt="SJ-' + d.no + '">' + nums + '</div>';
     }).join('');
     var rows = d.colours.map(function(n){
       var k = d.no + ':' + n.c, st = Math.floor(n.pcs / 4), r = n.pcs % 4;
@@ -179,6 +223,7 @@ function render(){
     art.innerHTML = '<div class="head"><div class="no">' + d.no + '</div><div class="meta">' + meta + '</div></div><div class="photos">' + ph + '</div><div class="rows">' + rows + '</div>';
     feed.appendChild(art);
   });
+  feed.querySelectorAll('.ph img').forEach(function(im){ if (io) io.observe(im); else loadInto(im); });
   $('cnt').textContent = designs.length + ' designs';
   feed.onclick = function(e){
     var b = e.target.closest('button'); if (!b) return;
@@ -223,7 +268,7 @@ function orderText(){
   return lines.join('\n');
 }
 function byDesign(){ var o = {}; Object.keys(state).sort().forEach(function(k){ var p = k.split(':'); (o[p[0]] = o[p[0]] || {})[p[1]] = state[k]; }); return o; }
-function loadImg(src){ return new Promise(function(ok){ var i = new Image(); i.crossOrigin = 'anonymous'; i.onload = function(){ ok(i); }; i.onerror = function(){ ok(null); }; i.src = src; }); }
+function loadImg(src){ return new Promise(function(ok){ var i = new Image(); i.onload = function(){ ok(i); }; i.onerror = function(){ ok(null); }; i.src = src; }); }
 async function drawPages(){
   var W = 1240, H = 1754, P = 60, name = $('name').value.trim(), d = new Date();
   var date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
@@ -244,7 +289,7 @@ async function drawPages(){
     if (!phs.length) phs = dz.photos.slice(0, 1);
     var slotH = Math.floor((H - y - P) / Math.max(1, phs.length)) - 16;
     for (var j = 0; j < phs.length; j++){
-      var p = phs[j], im = await loadImg(p.url); if (!im) continue;
+      var p = phs[j], u = await getPhoto(p), im = u ? await loadImg(u) : null; if (!im) continue;
       var k = Math.min((W - 2 * P) / im.naturalWidth, slotH / im.naturalHeight), dw = im.naturalWidth * k, dh = im.naturalHeight * k, x0 = (W - dw) / 2;
       g.drawImage(im, x0, y, dw, dh);
       if (p.nums){ var n = p.nums.length, cw = dw / n;
@@ -295,16 +340,20 @@ $('send').onclick = async function(){
 $('copy').onclick = async function(){ try { await navigator.clipboard.writeText(orderText()); $('copy').textContent = 'Copied ✓'; setTimeout(function(){ $('copy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', orderText()); } };
 
 // ---------- setup / boot ----------
-$('auth').href = 'https://trello.com/1/authorize?expiration=never&scope=read&response_type=token&name=SJ%20Order%20Memo&key=' + KEY;
-$('save').onclick = function(){ var t = $('tok').value.trim(); if (!t) return; token = t; try { localStorage.setItem('sj_memo_token', t); } catch(e){} boot(); };
+$('auth').href = 'https://trello.com/1/authorize?expiration=never&scope=read&response_type=token&callback_method=fragment&name=SJ%20Order%20Memo&key=' + KEY + '&return_url=' + encodeURIComponent(location.origin + location.pathname);
+$('save').onclick = function(){ var t = $('tok').value.trim(); if (!t) return; keepToken(t); boot(); };
 async function boot(){
+  if (!token) { token = (await idb('get')) || ''; if (token) keepToken(token); }
   if (!token) { $('setup').hidden = false; return; }
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
   $('setup').hidden = true; $('load').hidden = false;
   try { designs = await loadCards(); $('load').hidden = true; render(); }
-  catch (e) { $('load').hidden = true; $('setup').hidden = false; $('seterr').textContent = e.message + ' — paste the token again.'; if (/not accepted/.test(e.message)) { token = ''; try { localStorage.removeItem('sj_memo_token'); } catch(x){} } }
+  catch (e) { $('load').hidden = true;
+    if (/not accepted/.test(e.message)) { dropToken(); $('setup').hidden = false; $('seterr').textContent = 'Trello did not accept the saved connection — tap Connect Trello again.'; }
+    else { $('load').hidden = false; $('load').innerHTML = 'Could not reach Trello (' + e.message.replace(/[<>]/g, '') + '). <a href="" style="color:var(--gold)">Try again</a>'; } }
 }
 boot();
-window.__memo = { parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
+window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
 })();
 </script>
 </body></html>
