@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>SJ Trading Designs</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap">
+<style>
+  :root{--bg:#ECE9E2;--surface:#fff;--ink:#1C1A17;--muted:#6E675D;--line:#D9D4CA;--accent:#234C47;--accent-ink:#F3F6F5;--soft:#E3EBE9;
+        --display:"Fraunces","Iowan Old Style",Georgia,serif;--body:"Manrope","Helvetica Neue",Arial,sans-serif;--ar:"Noto Naskh Arabic","Geeza Pro",serif}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#151614;--surface:#1F211E;--ink:#EDE9E1;--muted:#A39C90;--line:#33362F;--accent:#7FBDB3;--accent-ink:#10201D;--soft:#243330}}
+  :root[data-theme="dark"]{--bg:#151614;--surface:#1F211E;--ink:#EDE9E1;--muted:#A39C90;--line:#33362F;--accent:#7FBDB3;--accent-ink:#10201D;--soft:#243330}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;padding-block:0 120px}
+  .wrap{max-width:480px;margin:0 auto;padding-inline:14px}
+  .ar{font-family:var(--ar);direction:rtl}
+  header{padding-block:22px 14px}
+  header h1{font-family:var(--display);font-weight:500;font-size:24px;margin:0 0 6px;letter-spacing:.01em;text-wrap:balance}
+  header p{margin:0;color:var(--muted);font-size:14px}
+  header .ar{margin-top:4px;font-size:16px}
+
+  .openfull{background:#234C47;color:#F3F6F5;padding:12px 14px;display:flex;align-items:center;gap:12px;font-size:13.5px}
+  .openfull[hidden]{display:none}
+  .openfull div{flex:1}
+  .openfull .ar{display:block;font-size:14px;opacity:.9}
+  .openfull button{appearance:none;font:inherit;font-weight:700;font-size:14px;padding:10px 14px;border-radius:7px;border:0;background:#F3F6F5;color:#234C47;cursor:pointer;white-space:nowrap}
+  .feed{display:flex;flex-direction:column;gap:18px}
+  .design{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .photo{position:relative;background:#F2F0EB}
+  .photo img{display:block;width:100%;max-width:100%;height:auto}
+  .nums{display:grid;padding:8px 6px 4px;gap:4px}
+  .nums span{display:flex;align-items:center;justify-content:center;height:34px;width:34px;margin:0 auto;border-radius:50%;
+             background:var(--surface);border:1.5px solid var(--line);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+  .nums span:empty{border:0;background:none}
+  .vid{position:relative;background:#000;border-top:1px solid var(--line)}
+  .vid video{display:block;width:100%;height:auto;max-height:70vh;background:#000}
+  .head{display:flex;align-items:baseline;justify-content:space-between;padding:10px 14px 4px}
+  .head .no{font-family:var(--display);font-size:30px;font-weight:500;line-height:1}
+  .head .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .head .ar{font-size:14px;color:var(--muted)}
+
+  .colours{padding:6px 14px 14px;display:flex;flex-direction:column;gap:8px}
+  .row{display:grid;grid-template-columns:38px 1fr;align-items:center;gap:8px}
+  .row.full{grid-template-columns:1fr}
+  .row .n{font-weight:700;font-size:16px;text-align:center;font-variant-numeric:tabular-nums}
+  .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .seg button{min-width:0}
+  .seg button{appearance:none;font:inherit;font-weight:600;font-size:14px;padding:9px 2px;border-radius:7px;border:1.5px solid var(--line);
+              background:var(--surface);color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.15}
+  .seg button small{font-family:var(--ar);font-weight:400;font-size:11px;color:var(--muted)}
+  .seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .seg button[aria-pressed="true"] small{color:var(--accent-ink);opacity:.85}
+  .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .seg button.tail{border-color:#B08432;color:#7D5A11;background:#FBF4E4;font-size:13px}
+  .seg button.tail small{color:#9A7420}
+  .seg button.tail[aria-pressed="true"]{background:#A97F26;border-color:#A97F26;color:#fff}
+  .seg button.tail[aria-pressed="true"] small{color:#fff;opacity:.9}
+
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:12px 14px calc(12px + env(safe-area-inset-bottom))}
+  .bar .in{max-width:480px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .bar .sum{flex:1;font-size:14px;color:var(--muted);line-height:1.3}
+  .bar .sum .ar{display:block;font-size:13.5px;margin-top:1px}
+  .bar .sum b{color:var(--ink);font-weight:700}
+  .ok{appearance:none;font:inherit;font-weight:700;font-size:17px;padding:14px 34px;border-radius:9px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+  .ok:disabled{opacity:.45;cursor:default}
+  .ok:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  .done[hidden],.bar[hidden]{display:none}
+  .done{position:fixed;inset:0;background:var(--bg);overflow-y:auto;padding:20px 14px 40px}
+  .done .card{max-width:480px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px 18px;display:flex;flex-direction:column;gap:14px}
+  .done .marks{display:flex;flex-direction:column;gap:12px}
+  .done .marks img{display:block;width:100%;max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line)}
+  .done .sub{font-size:13px;color:var(--muted)}
+  .dl{display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid var(--line);border-radius:10px}
+  .dl-h{font-weight:700;font-size:15px;margin-bottom:4px}
+  .dl label{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-top:6px;display:flex;justify-content:space-between}
+  .dl label .ar{text-transform:none;letter-spacing:0;font-size:14px}
+  .dl input[type=text]{font:inherit;font-size:16px;padding:11px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);width:100%}
+  .dl .pick{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border:1.5px dashed var(--accent);border-radius:8px;color:var(--accent);font-weight:700;font-size:15px;cursor:pointer;text-transform:none;letter-spacing:0;margin-top:4px}
+  .dl .pick .ar{font-weight:400;font-size:15px}
+  .dl .pick input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+  .dl #f-prev{display:block;width:100%;max-width:100%;height:auto;border-radius:8px;border:1px solid var(--line)}
+  .dl #f-prev[hidden]{display:none}
+  .dl input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .done h2{font-family:var(--display);font-weight:500;font-size:26px;margin:0}
+  .done .ar{color:var(--muted);font-size:17px}
+  .done pre{margin:0;background:var(--soft);border-radius:8px;padding:12px 14px;font:500 12.5px/1.5 var(--body);white-space:pre-wrap;word-break:break-all;color:var(--muted)}
+  .done .hint{font-size:12.5px;color:var(--muted)}
+  .done .notice{font-size:14px;padding:12px 14px;border-radius:8px;background:#FBF1E6;border:1px solid #E3C79C;color:#5A3D0C;display:flex;flex-direction:column;gap:6px}
+  .done .notice[hidden]{display:none}
+  .done .acts{display:flex;gap:10px;flex-wrap:wrap}
+  .done .acts a,.done .acts button{flex:1;appearance:none;font:inherit;font-weight:700;font-size:15px;padding:13px 14px;border-radius:8px;text-align:center;text-decoration:none;cursor:pointer;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+  .done .acts a.primary,.done .acts button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .done .acts [hidden]{display:none}
+  @media (prefers-reduced-motion:no-preference){.seg button,.ok{transition:transform .1s ease}.seg button:active,.ok:active{transform:scale(.97)}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Example — sets and loose pieces</h1>
+    <p>Tap the sets you want under each colour, then OK.</p>
+    <p class="ar">اختر الأطقم تحت كل لون، ثم اضغط OK</p>
+  </header>
+
+  <main class="feed" id="feed">
+    <!-- designs go here (build.py) -->
+  </main>
+</div>
+
+<div class="bar" id="bar"><div class="in">
+  <div class="sum" id="sum">Nothing selected yet</div>
+  <button class="ok" id="ok" disabled>OK</button>
+</div></div>
+
+<div class="done" id="done" hidden>
+  <div class="card">
+    <h2>Your order</h2>
+    <div class="ar">طلبك — الألوان المختارة مُعلَّمة في الصور</div>
+    <div class="marks" id="marks"></div>
+    <div class="sub">Chosen colours stay in full colour; the rest are faded. Save these pictures for your records.</div>
+    <div class="dl">
+      <div class="dl-h">Delivery <span class="ar">التوصيل</span></div>
+      <div class="sub">Add a photo of your delivery details — cargo card, previous label, or a note. <span class="ar">أضف صورة بتفاصيل الشحن — بطاقة شركة الشحن أو ملصق سابق</span></div>
+      <label class="pick" for="f-photo"><span id="pick-lbl">Add photo <span class="ar">أضف صورة</span></span><input id="f-photo" type="file" accept="image/*"></label>
+      <img id="f-prev" alt="" hidden>
+      <label for="f-notes">Cargo / notes <span class="ar">شركة الشحن / ملاحظات</span></label><input id="f-notes" type="text" placeholder="optional · اختياري">
+    </div>
+    <pre id="msg"></pre>
+    <div class="notice" id="blocked" hidden>
+      <b>This browser blocked sending the photos with the message.</b> Send the text with the button below, then
+      <b>press and hold each photo above</b> → Share → WhatsApp to send it separately.
+      <div class="ar">هذا المتصفح منع إرسال الصور مع الرسالة. أرسل النص بالزر أدناه، ثم اضغط مطولاً على كل صورة أعلاه ← مشاركة ← واتساب</div>
+    </div>
+    <div class="hint">Your order goes as pictures. This link reopens your choices if you want to change them. We'll confirm on WhatsApp. <span class="ar">يُرسل طلبك كصور. هذا الرابط يفتح اختيارك مرة أخرى للتعديل. سنؤكد لك على واتساب</span></div>
+    <div class="acts">
+      <a class="primary" id="wa" href="#" target="_blank" rel="noopener">Send on WhatsApp</a>
+      <button id="share" type="button" class="primary" hidden>Send photos + order</button>
+      <button id="back" type="button">Change order</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var SETS_AR = {1:'طقم واحد', 2:'طقمان', 3:'٣ أطقم', 4:'٤ أطقم'};
+  var PCS  = {"81016": 75};   // total pieces in the design
+  var COLS = {"81016": 4};    // colours — one COMPLETE set is COLS x 4 sizes
+  function unit(no){ return COLS[no] * 4; }
+  function arD(n){ return String(n).replace(/\d/g, function(d){ return '٠١٢٣٤٥٦٧٨٩'[+d]; }); }
+  function arSets(n){ return n===1 ? 'طقم واحد' : n===2 ? 'طقمان' : arD(n)+' أطقم'; }
+  function arPcs(n){ return n===1 ? 'قطعة واحدة' : n===2 ? 'قطعتان' : arD(n)+(n<=10?' قطع':' قطعة'); }
+  function arDesigns(n){ return n===1 ? 'تصميم واحد' : n===2 ? 'تصميمان' : arD(n)+' تصاميم'; }
+  function arColours(n){ return n===1 ? 'لون واحد' : n===2 ? 'لونان' : arD(n)+(n<=10?' ألوان':' لونًا'); }
+  function arFull(n){ return n===1 ? 'طقم كامل' : n===2 ? 'طقمان كاملان' : arD(n)+' أطقم كاملة'; }
+  function pcsOf(no,c,v){ return v==='F' ? PCS[no] : v*unit(no); }
+  function setsOf(no,c,v){ return v==='F' ? Math.floor(PCS[no]/unit(no)) : v; }
+  function labEn(no,c,v){
+    if (v!=='F') return v + (v===1?' complete set':' complete sets');
+    var p=PCS[no], u=unit(no), st=Math.floor(p/u), r=p%u;
+    var rl = r + (r===1 ? ' pc' : ' pcs');
+    return st ? st+(st===1?' complete set':' complete sets')+' + '+rl : rl;
+  }
+  function labAr(no,c,v){
+    if (v!=='F') return arFull(v);
+    var p=PCS[no], u=unit(no), st=Math.floor(p/u), r=p%u;
+    return st ? arFull(st)+' + '+arPcs(r) : arPcs(r);
+  }
+  var state = {}; // "82554:3" -> 1..4
+  document.querySelectorAll('.colours').forEach(function(box){
+    if (box.children.length) return;   // rows are pre-rendered in the HTML
+    var art = box.closest('.design'), no = art.dataset.no;
+    var list = art.dataset.list ? art.dataset.list.split(',').map(Number)
+             : (function(n){ var a=[]; for (var i=1;i<=n;i++) a.push(i); return a; })(+box.dataset.colours);
+    list.forEach(function(i){
+      var row = document.createElement('div'); row.className = 'row';
+      var seg = '<div class="n">' + i + '</div><div class="seg">';
+      var maxSets = 4;
+      for (var v = 1; v <= maxSets; v++){
+        seg += '<button type="button" id="b-' + no + '-' + i + '-' + v + '" aria-pressed="false" data-k="' +
+               no + ':' + i + '" data-v="' + v + '">' + v + '<small>' + SETS_AR[v] + '</small></button>';
+      }
+      row.innerHTML = seg + '</div>';
+      box.appendChild(row);
+    });
+  });
+  var sum = document.getElementById('sum'), ok = document.getElementById('ok');
+  function refresh(){
+    var sets = 0, pcs = 0, designs = {};
+    for (var k in state){ var p = k.split(':'); designs[p[0]] = 1;
+      sets += setsOf(p[0], 0, state[k]); pcs += pcsOf(p[0], 0, state[k]); }
+    var d = Object.keys(designs).length;
+    ok.disabled = !d;
+    if (!d){ sum.innerHTML = 'Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span>'; return; }
+    sum.innerHTML = '<b>' + d + (d === 1 ? ' design' : ' designs') + '</b> · ' + sets +
+      (sets === 1 ? ' complete set' : ' complete sets') + ' · <b>' + pcs + ' pcs</b>' +
+      '<span class="ar">' + arDesigns(d) + ' · ' + arFull(sets) + ' · ' + arPcs(pcs) + '</span>';
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('.seg button'); if (!b) return;
+    var k = b.dataset.k, v = b.dataset.v === 'F' ? 'F' : +b.dataset.v;
+    var pair = b.parentNode.querySelectorAll('button');
+    if (state[k] === v){ delete state[k]; pair.forEach(function(x){ x.setAttribute('aria-pressed','false'); }); }
+    else { state[k] = v; pair.forEach(function(x){
+      var xv = x.dataset.v === 'F' ? 'F' : +x.dataset.v;
+      x.setAttribute('aria-pressed', String(xv === v)); }); }
+    refresh();
+  });
+  var shareFiles = [], shareText = '', orderLines = [];
+  var deliveryFile = null;
+  function setsEn(n){ return n + (n === 1 ? ' set' : ' sets'); }
+  function setsAr(n){ return SETS_AR[n]; }
+  function buildText(){
+    var notes = (document.getElementById('f-notes').value || '').trim();
+    var lines = orderLines.filter(function(l, i){        // the link is the WhatsApp caption, not a printed line
+      return !/github\.io/.test(l) && !/Marked photos/.test(l);
+    });
+    while (lines.length && lines[lines.length - 1] === '') lines.pop();
+    lines.push('', 'Delivery · التوصيل');
+    if (deliveryFile) lines.push('Details in the attached photo · التفاصيل في الصورة المرفقة');
+    if (notes) lines.push(notes);
+    if (!deliveryFile && !notes) lines.push('— · —');
+    var text = lines.join('\n');
+    window.SJ_LINK = (orderLines.filter(function(l){ return /github\.io/.test(l); })[0] || '');
+    document.getElementById('msg').textContent = window.SJ_LINK;
+    document.getElementById('wa').href = 'https://wa.me/971562529222?text=' + encodeURIComponent(text);
+    try { localStorage.setItem('sj-notes', notes); } catch (e) {}
+    return text;
+  }
+  document.getElementById('f-photo').addEventListener('change', function(e){
+    var f = e.target.files && e.target.files[0]; if (!f) return;
+    deliveryFile = f;
+    var img = document.getElementById('f-prev'); img.src = URL.createObjectURL(f); img.hidden = false;
+    document.getElementById('pick-lbl').innerHTML = 'Change photo <span class="ar">تغيير الصورة</span>';
+    shareText = buildText();
+  });
+  document.addEventListener('input', function(e){ if (e.target.closest('.dl')) { shareText = buildText(); } });
+  // one tag under a dress: English on top, Arabic beneath, never on the same line,
+  // width-capped to its own column so two neighbours can never run into each other
+  function tag(g, cx, H, maxW, en, ar, W){
+    var pad = Math.round(H * 0.016), gap = Math.round(H * 0.012);
+    var f = Math.round(H * 0.030), lim = maxW - gap * 2;
+    var wEn, wAr, bw;
+    for (;;){
+      g.font = 'bold ' + f + 'px Manrope, Arial, sans-serif'; wEn = g.measureText(en).width;
+      g.font = (f - 2) + 'px Arial, sans-serif';              wAr = g.measureText(ar).width;
+      bw = Math.max(wEn, wAr) + pad * 2.6;
+      if (bw <= lim || f <= Math.round(H * 0.016)) break;
+      f -= 1;
+    }
+    if (bw > lim) bw = lim;
+    var bh = f * 2 + pad * 2.4, r = Math.min(bh / 2, Math.round(H * 0.018));
+    var x = cx - bw / 2;
+    if (x < gap) x = gap;
+    if (x + bw > W - gap) x = W - gap - bw;
+    var y = H - bh - gap * 2;
+    g.fillStyle = 'rgba(35,76,71,0.94)'; g.beginPath(); g.roundRect(x, y, bw, bh, r); g.fill();
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'ltr';
+    g.fillStyle = '#FFFFFF'; g.font = 'bold ' + f + 'px Manrope, Arial, sans-serif';
+    g.fillText(en, x + bw / 2, y + pad * 1.2 + f * 0.5);
+    g.direction = 'rtl'; g.fillStyle = '#CFE0DC'; g.font = (f - 2) + 'px Arial, sans-serif';
+    g.fillText(ar, x + bw / 2, y + pad * 1.2 + f * 1.55);
+    g.direction = 'ltr';
+  }
+  function stamp(g, t, H){
+    var f = Math.round(H * 0.034), pad = Math.round(H * 0.013), m = Math.round(H * 0.016);
+    g.font = 'bold ' + f + 'px Manrope, Arial, sans-serif';
+    g.textAlign = 'left'; g.textBaseline = 'top'; g.direction = 'ltr';
+    var w = g.measureText(t).width + pad * 2.4, h = f + pad * 1.8;
+    g.fillStyle = 'rgba(28,26,23,0.82)'; g.beginPath(); g.roundRect(m, m, w, h, Math.round(h * 0.28)); g.fill();
+    g.fillStyle = '#F3F2EE'; g.fillText(t, m + pad * 1.2, m + pad * 0.85);
+  }
+  function markPhoto(photoEl, chosen){
+    var img = photoEl.querySelector('img'), t = photoEl.closest('.design').dataset.no;
+    var W = img.naturalWidth, H = img.naturalHeight, c = document.createElement('canvas'); c.width = W; c.height = H;
+    var g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    tag(g, W / 2, H, W * 0.9, labEn(t, 0, chosen), labAr(t, 0, chosen), W);   // complete: every colour is in, nothing fades
+    stamp(g, t, H);
+    var out = document.createElement('img'); out.src = c.toDataURL('image/jpeg', 0.85); out.alt = 'Design ' + t + ' with chosen colours marked';
+    c.toBlob(function(b){ if (b) shareFiles.push(new File([b], 'SJ-' + t + '-order.jpg', {type: 'image/jpeg'})); }, 'image/jpeg', 0.85);
+    return out;
+  }
+  ok.addEventListener('click', function(){
+    var byDesign = {}, sets = 0, pcs = 0;
+    Object.keys(state).sort().forEach(function(k){
+      var p = k.split(':'); (byDesign[p[0]] = byDesign[p[0]] || {})[+p[1]] = state[k];
+      sets += setsOf(p[0], +p[1], state[k]); pcs += pcsOf(p[0], +p[1], state[k]);
+    });
+    var d = new Date(), date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
+    var lines = ['Order request · طلب شراء', date, ''];
+    var ORD = [];
+    Object.keys(byDesign).forEach(function(no){          // one line per design, both languages inline
+      var v = byDesign[no][0];
+      ORD.push({ no: no, rows: [{ c: 0, en: labEn(no, 0, v), ar: labAr(no, 0, v) }] });
+      lines.push(no + ' — ' + labEn(no, 0, v) + ' / ' + labAr(no, 0, v));
+    });
+    var nd = Object.keys(byDesign).length;
+    lines.push('', 'Total: ' + nd + (nd === 1 ? ' design' : ' designs') + ' · ' +
+                   sets + (sets === 1 ? ' complete set' : ' complete sets') + ' · ' + pcs + ' pcs' +
+                   ' / ' + arDesigns(nd) + ' · ' + arFull(sets) + ' · ' + arPcs(pcs));
+    var _t = lines[lines.length - 1].replace(/^Total: /, '').split(' / ');
+    window.SJ_ORDER = { date: date, designs: ORD, tEn: _t[0] || '', tAr: _t[1] || '' };
+    var code = Object.keys(state).sort().map(function(k){ return k.replace(':', '-') + '-' + state[k]; }).join(',');
+    lines.push('', 'Marked photos · الصور المعلّمة', 'https://abbas911-prog.github.io/sj-designs/complete.html#o=' + code);
+    orderLines = lines;
+    try { var v = localStorage.getItem('sj-notes'); if (v) document.getElementById('f-notes').value = v; } catch (e) {}
+    var text = buildText();
+    shareFiles = []; shareText = text;
+    var marks = document.getElementById('marks'); marks.innerHTML = '';
+    Object.keys(byDesign).forEach(function(no){
+      document.querySelectorAll('.design[data-no="' + no + '"] .photo').forEach(function(ph){
+        marks.appendChild(markPhoto(ph, byDesign[no][0]));
+      });
+    });
+    // phones that can share files (iPhone Safari, Android Chrome) get one button that sends photos + text together
+    var sb = document.getElementById('share');
+    var canShare = !!navigator.share;   // try the share sheet whenever the browser has one; fall back only if it refuses
+    sb.hidden = !canShare; document.getElementById('wa').hidden = canShare;
+    document.getElementById('done').hidden = false; document.getElementById('bar').hidden = true;
+    document.getElementById('done').scrollTop = 0; window.scrollTo(0,0);
+  });
+  // the order text as a picture: WhatsApp on some phones drops the text when photos are shared with it,
+  // so the first photo carries the whole order (built synchronously — the share must run inside the tap)
+  function summaryImage(text){
+    var O = window.SJ_ORDER || {date:'', designs:[], tEn:'', tAr:''};
+    var notes = (document.getElementById('f-notes').value || '').trim();
+    var hasPhoto = !!deliveryFile;
+    var W = 1080, P = 64;
+    function draw(ctx, measure){
+      var y = 110;
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#1C1A17'; ctx.font = 'bold 46px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+      if (!measure) ctx.fillText('ORDER REQUEST', P, y);
+      ctx.textAlign = 'right'; ctx.direction = 'rtl';
+      if (!measure) ctx.fillText('طلب شراء', W - P, y);
+      y += 46;
+      ctx.textAlign = 'left'; ctx.direction = 'ltr'; ctx.font = '30px Arial'; ctx.fillStyle = '#6E675D';
+      if (!measure) ctx.fillText(O.date, P, y);
+      y += 34;
+      if (!measure){ ctx.strokeStyle = '#CFC9BD'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(P, y); ctx.lineTo(W - P, y); ctx.stroke(); }
+      O.designs.forEach(function(d){
+        y += 62;
+        ctx.fillStyle = '#1C1A17'; ctx.font = 'bold 52px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+        if (!measure) ctx.fillText('DESIGN ' + d.no, P, y);
+        y += 30;
+        d.rows.forEach(function(r){
+          y += 58;
+          var x = P;
+          if (r.c){
+            if (!measure){
+              ctx.fillStyle = '#234C47'; ctx.beginPath(); ctx.arc(P + 22, y - 13, 24, 0, 7); ctx.fill();
+              ctx.fillStyle = '#fff'; ctx.font = 'bold 27px Arial'; ctx.textAlign = 'center'; ctx.direction = 'ltr';
+              ctx.fillText(String(r.c), P + 22, y - 4);
+            }
+            x = P + 72;
+          }
+          if (!measure){
+            ctx.fillStyle = '#1C1A17'; ctx.font = '34px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+            ctx.fillText(r.en, x, y - 2);
+            ctx.fillStyle = '#3A352E'; ctx.font = '34px Arial'; ctx.textAlign = 'right'; ctx.direction = 'rtl';
+            ctx.fillText(r.ar, W - P, y - 2);
+          }
+          y += 16;
+          if (!measure){ ctx.strokeStyle = '#E3DED4'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P, y); ctx.lineTo(W - P, y); ctx.stroke(); }
+        });
+      });
+      y += 54;
+      if (!measure){
+        ctx.fillStyle = '#234C47'; ctx.fillRect(P, y - 46, W - 2 * P, 104);
+        ctx.fillStyle = '#F3F6F5'; ctx.font = 'bold 34px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+        ctx.fillText(O.tEn, P + 24, y - 4);
+        ctx.fillStyle = '#CFE0DC'; ctx.font = '30px Arial'; ctx.textAlign = 'right'; ctx.direction = 'rtl';
+        ctx.fillText(O.tAr, W - P - 24, y + 40);
+      }
+      y += 104;
+      ctx.fillStyle = '#1C1A17'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+      if (!measure) ctx.fillText('DELIVERY', P, y);
+      ctx.textAlign = 'right'; ctx.direction = 'rtl';
+      if (!measure) ctx.fillText('التوصيل', W - P, y);
+      if (hasPhoto){
+        y += 44;
+        ctx.fillStyle = '#3A352E'; ctx.font = '30px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+        if (!measure) ctx.fillText('Details in the attached photo', P, y);
+        y += 42; ctx.textAlign = 'right'; ctx.direction = 'rtl';
+        if (!measure) ctx.fillText('التفاصيل في الصورة المرفقة', W - P, y);
+      }
+      if (notes){
+        ctx.font = '30px Arial';
+        var words = notes.split(' '), cur = '', ls = [];
+        words.forEach(function(w){ var t = cur ? cur + ' ' + w : w;
+          if (ctx.measureText(t).width > W - 2 * P && cur){ ls.push(cur); cur = w; } else cur = t; });
+        if (cur) ls.push(cur);
+        var ar = /^[؀-ۿ]/.test(notes);
+        ls.forEach(function(l){
+          y += 42;
+          if (!measure){ ctx.fillStyle = '#3A352E'; ctx.font = '30px Arial';
+            ctx.direction = ar ? 'rtl' : 'ltr'; ctx.textAlign = ar ? 'right' : 'left';
+            ctx.fillText(l, ar ? W - P : P, y); }
+        });
+      }
+      if (!hasPhoto && !notes){
+        y += 44;
+        if (!measure){ ctx.fillStyle = '#6E675D'; ctx.font = '30px Arial'; ctx.textAlign = 'left'; ctx.direction = 'ltr'; ctx.fillText('—', P, y); }
+      }
+      return y + 50;
+    }
+    var H = draw(document.createElement('canvas').getContext('2d'), true);
+    var c = document.createElement('canvas'); c.width = W; c.height = H;
+    var g = c.getContext('2d');
+    g.fillStyle = '#F4F2ED'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#8A6A2A'; g.fillRect(0, 0, W, 10);
+    draw(g, false);
+    var b64 = c.toDataURL('image/jpeg', 0.92).split(',')[1], bin = atob(b64), u8 = new Uint8Array(bin.length);
+    for (var k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
+    return new File([u8], 'SJ-order.jpg', {type: 'image/jpeg'});
+  }
+  function fallbackToText(){
+    document.getElementById('blocked').hidden = false;
+    document.getElementById('share').hidden = true;
+    document.getElementById('wa').hidden = false;
+  }
+  document.getElementById('share').addEventListener('click', function(){
+    shareText = buildText();
+    var files = shareFiles.slice();
+    if (deliveryFile) files.push(deliveryFile);
+    files.push(summaryImage(shareText));        // the ordered list, last — the link rides with it
+    var payload = { files: files, text: window.SJ_LINK || '', title: 'Order' };
+    if (navigator.canShare && !navigator.canShare(payload)) { payload = { files: files, title: 'Order' }; }   // some phones refuse text+files together
+    var p;
+    try { p = navigator.share(payload); } catch (e) { fallbackToText(); return; }
+    p.catch(function(err){
+      if (err && err.name === 'AbortError') return;           // he closed the share sheet — do nothing
+      if (err && err.name === 'TypeError' && payload.text) {  // files+link refused: try files only
+        navigator.share({ files: files, title: 'Order' }).catch(function(e2){ if (!e2 || e2.name !== 'AbortError') fallbackToText(); });
+        return;
+      }
+      fallbackToText();
+    });
+  });
+  function openFromLink(){
+    var m = /[#&]o=([^&]+)/.exec(location.hash); if (!m) return;
+    m[1].split(',').forEach(function(p){
+      var a = p.split('-'); if (a.length !== 3) return;
+      var k = a[0] + ':' + a[1], v = a[2] === 'F' ? 'F' : +a[2];
+      var b = document.getElementById('b-' + a[0] + '-' + a[1] + '-' + v); if (!b) return;
+      state[k] = v; b.setAttribute('aria-pressed', 'true');
+    });
+    refresh();
+    var imgs = Array.prototype.slice.call(document.querySelectorAll('.photo img'));
+    var pending = imgs.filter(function(i){ return !i.complete; }).length;
+    function go(){ if (Object.keys(state).length) ok.click(); }
+    if (!pending) go(); else imgs.forEach(function(i){ i.addEventListener('load', function(){ if (--pending === 0) go(); }); });
+  }
+  openFromLink();
+  document.getElementById('back').addEventListener('click', function(){
+    document.getElementById('done').hidden = true; document.getElementById('bar').hidden = false;
+  });
+})();
+</script>
+
+</body>
+</html>
