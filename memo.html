@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SJ · Order memo</title>
+<style>
+:root{--ink:#1C1A17;--mute:#6E675D;--bg:#F6F2EC;--card:#fff;--gold:#A8864A;--line:#E3DBCF;--fade:rgba(236,233,226,.72)}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.ar{direction:rtl}
+header{position:sticky;top:0;z-index:5;background:rgba(246,242,236,.96);backdrop-filter:blur(6px);padding:10px 14px 8px;border-bottom:1px solid var(--line)}
+.top{display:flex;gap:8px;align-items:center;max-width:720px;margin:0 auto}
+.top h1{font-size:15px;margin:0;letter-spacing:.14em;color:var(--mute);font-weight:700;white-space:nowrap}
+#name{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px;background:#fff}
+#name:focus{border-color:var(--gold);outline:0}
+.srch{display:flex;gap:8px;max-width:720px;margin:8px auto 0}
+#q{flex:1;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px;background:#fff}
+#q:focus{border-color:var(--gold);outline:0}
+#cnt{font-size:12px;color:var(--mute);white-space:nowrap;align-self:center}
+main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
+.design{background:var(--card);border-radius:16px;margin:12px 0;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.design[hidden]{display:none}
+.head{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px 6px}
+.no{font-size:26px;font-weight:700;letter-spacing:.02em}
+.meta{font-size:12.5px;color:var(--mute);text-align:right}
+.meta b{color:var(--ink)}
+.warn{color:#9a3b1e}
+.photos{display:flex;gap:8px;overflow-x:auto;padding:0 14px 6px;scroll-snap-type:x mandatory}
+.ph{position:relative;flex:0 0 auto;width:min(100%,640px);scroll-snap-align:start;border-radius:10px;overflow:hidden;background:#eee}
+.ph img{display:block;width:100%;height:auto}
+.ph .nums{position:absolute;left:0;right:0;bottom:0;display:grid;pointer-events:none}
+.ph .nums span{text-align:center;padding:6px 0;background:rgba(28,26,23,.55);color:#fff;font-weight:700;font-size:14px;border-left:1px solid rgba(255,255,255,.25)}
+.ph .nums span.z{color:rgba(255,255,255,.45)}
+.ph .nums span.on{background:var(--gold)}
+.rows{padding:4px 14px 12px}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .c{width:30px;height:30px;border-radius:50%;background:#efe9df;display:flex;align-items:center;justify-content:center;font-weight:700}
+.row .p{flex:1;font-size:13px;color:var(--mute)}
+.row .p b{color:var(--ink);font-size:14px}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:18px;line-height:1}
+.step button:disabled{opacity:.3}
+.step .v{min-width:34px;text-align:center;font-weight:700}
+.step .v.on{color:var(--gold)}
+.all{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font:inherit;font-size:12px}
+.all.on{border-color:var(--gold);color:var(--gold);font-weight:700}
+.row.zero{opacity:.45}
+#bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));z-index:6}
+#bar .in{max-width:720px;margin:0 auto;display:flex;gap:10px;align-items:center}
+#sum{flex:1;font-size:14px;line-height:1.35}#sum b{font-weight:700}#sum .ar{display:block;font-size:12.5px;color:var(--mute)}
+#ok{background:var(--gold);color:#fff;border:0;border-radius:999px;padding:12px 22px;font:inherit;font-size:16px;font-weight:700}
+#ok:disabled{opacity:.4}
+#clr{background:none;border:0;color:var(--mute);font:inherit;font-size:13px;text-decoration:underline}
+#done{position:fixed;inset:0;background:var(--bg);z-index:10;overflow:auto;padding:14px 12px 40px}
+#done[hidden]{display:none}
+#done .in{max-width:720px;margin:0 auto}
+#done h2{margin:6px 0 2px;font-size:20px}
+#done .sub{color:var(--mute);font-size:13px;margin-bottom:10px}
+#marks img{display:block;width:100%;border-radius:12px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.btns button{flex:1;min-width:140px;border-radius:999px;padding:12px;font:inherit;font-size:15px;border:1.5px solid var(--line);background:#fff}
+.btns .gold{background:var(--gold);color:#fff;border-color:var(--gold);font-weight:700}
+#setup{max-width:560px;margin:40px auto;background:#fff;border-radius:16px;padding:18px}
+#setup[hidden]{display:none}
+#setup h2{margin:0 0 8px;font-size:18px}
+#setup p{font-size:14px;line-height:1.5;color:var(--mute)}
+#setup input{width:100%;padding:11px;border:1.5px solid var(--line);border-radius:12px;font:inherit;margin-top:8px}
+#setup a.gold{display:inline-block;background:var(--gold);color:#fff;text-decoration:none;border-radius:999px;padding:10px 16px;font-weight:700;margin-top:8px}
+#setup button{margin-top:10px;border-radius:999px;padding:11px 18px;font:inherit;border:1.5px solid var(--gold);background:#fff;color:var(--gold);font-weight:700}
+#load{text-align:center;color:var(--mute);padding:40px 12px;font-size:14px}
+#load[hidden]{display:none}
+.tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:#efe9df;color:var(--mute);margin-left:6px;vertical-align:middle}
+</style></head><body>
+<header>
+  <div class="top"><h1>ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"></div>
+  <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span></div>
+</header>
+<main>
+  <div id="setup" hidden>
+    <h2>Connect Trello (one time)</h2>
+    <p>This memo reads the READY list live from Trello, so pieces are always today's. Tap the button, allow, copy the token Trello shows, paste it below. The token stays only in this phone's browser.</p>
+    <a class="gold" id="auth" target="_blank" rel="noopener">Get Trello token</a>
+    <input id="tok" placeholder="Paste token here" autocomplete="off">
+    <button id="save" type="button">Save and load</button>
+    <p id="seterr" class="warn"></p>
+  </div>
+  <div id="load" hidden>Loading READY list from Trello…</div>
+  <div id="feed"></div>
+</main>
+<div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ok" type="button" disabled>OK</button></div></div>
+<div id="done" hidden><div class="in">
+  <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
+  <h2 id="dh">Order memo</h2><div class="sub" id="ds"></div>
+  <div class="btns"><button id="send" class="gold" type="button">Send PDF to customer · أرسل PDF</button><button id="copy" type="button">Copy text · نسخ النص</button></div>
+  <div id="marks"></div>
+</div></div>
+<script>
+(function(){
+var KEY = '83fea3748717dd1e3fe28a15f2371759', LIST = '66254dc6f8ade3c3a0c9b7d4';
+var API = window.TRELLO_API || 'https://api.trello.com';
+var $ = function(id){ return document.getElementById(id); };
+var token = ''; try { token = localStorage.getItem('sj_memo_token') || ''; } catch(e){}
+var designs = [], state = {};   // state["no:c"] = {sets:n, all:bool}
+
+// ---------- parsing a card title ----------
+function parseTitle(t){
+  var s = t.replace(/\*\*/g, ' ').replace(/[{}]/g, function(m){ return m === '{' ? '(' : ')'; });
+  var no = (s.match(/(?:SJ|SH|Sj|sj)\s*[-=:]*\s*\(?\s*(\d{3,6})/) || s.match(/\b(\d{4,6})\b/) || [])[1] || '';
+  var low = s.toLowerCase(), ci = low.search(/colou?rs?/);
+  var head = ci >= 0 ? s.slice(0, ci) : s, tail = ci >= 0 ? s.slice(ci) : s;
+  var headNums = []; head.replace(/\((\s*\d+\s*),?\)/g, function(_, d){ headNums.push(+d); });
+  if (no && headNums[0] === +no) headNums.shift();
+  var total = headNums.length ? headNums[0] : null;
+  if (total == null) { var m2 = head.match(/(\d+)\s*\)?\s*pcs/i); if (m2) total = +m2[1]; }
+  var groups = [], warn = [];
+  (tail + ')').replace(/\(([^()]*\/[^()]*?)\)/g, function(_, g){
+    var toks = g.split('/').map(function(x){ return x.trim(); });
+    groups.push(toks.map(function(x){
+      if (/^\d+$/.test(x)) return +x;
+      var d = x.match(/\d+/); if (d) { warn.push(x); return +d[0]; }
+      warn.push(x || '?'); return 0;
+    }));
+  });
+  var ncol = (tail.match(/colou?rs?\.?\s*=?\s*\(\s*(\d+)\s*\)/i) || [])[1];
+  var sum = groups.reduce(function(a, g){ return a + g.reduce(function(x, y){ return x + y; }, 0); }, 0);
+  return { no: no, total: total, groups: groups, ncol: ncol ? +ncol : null, sum: sum, warn: warn, ok: total != null && sum === total && groups.length > 0 };
+}
+
+// ---------- Trello ----------
+function auth(){ return 'key=' + KEY + '&token=' + encodeURIComponent(token); }
+function imgUrl(card, a){
+  var p = (a.previews || []).filter(function(x){ return x.width >= 600; }).sort(function(x, y){ return x.width - y.width; })[0];
+  var u = p ? p.url : a.url;
+  return u + (u.indexOf('?') > 0 ? '&' : '?') + auth();
+}
+async function loadCards(){
+  var r = await fetch(API + '/1/lists/' + LIST + '/cards?fields=name,pos,idShort,dateLastActivity&attachments=true&attachment_fields=name,bytes,mimeType,date,url,previews&' + auth());
+  if (r.status === 401) throw new Error('Token not accepted');
+  if (!r.ok) throw new Error('Trello error ' + r.status);
+  var cards = await r.json();
+  return cards.map(function(c){
+    var p = parseTitle(c.name);
+    var imgs = c.attachments.filter(function(a){ return /^image\//.test(a.mimeType); })
+      .sort(function(a, b){ return new Date(b.date) - new Date(a.date); });    // newest first = first colour group
+    var photos = [], c0 = 0;
+    imgs.forEach(function(a, i){
+      var g = p.groups[i] || (i === 0 ? [] : null);
+      var nums = g ? g.map(function(q){ c0++; return { c: c0, pcs: q }; }) : null;
+      photos.push({ url: imgUrl(c, a), nums: nums, name: a.name });
+    });
+    if (p.groups.length > imgs.length) { // more groups than photos: attach leftovers to the last photo
+      p.groups.slice(imgs.length).forEach(function(g){ var last = photos[photos.length - 1]; if (!last) return; last.nums = (last.nums || []).concat(g.map(function(q){ c0++; return { c: c0, pcs: q }; })); });
+    }
+    var colours = []; photos.forEach(function(ph){ (ph.nums || []).forEach(function(n){ colours.push(n); }); });
+    return { id: c.id, title: c.name, no: p.no || String(c.idShort), total: p.total, ncol: p.ncol, sum: p.sum, ok: p.ok, warn: p.warn, photos: photos, colours: colours, pos: c.pos };
+  });
+}
+
+// ---------- render ----------
+var AR_D = '٠١٢٣٤٥٦٧٨٩'; function arD(n){ return String(n).replace(/\d/g, function(d){ return AR_D[+d]; }); }
+function arSets(n){ return n === 1 ? 'طقم واحد' : n === 2 ? 'طقمان' : arD(n) + ' أطقم'; }
+function arPcs(n){ return n === 1 ? 'قطعة واحدة' : n === 2 ? 'قطعتان' : arD(n) + (n <= 10 ? ' قطع' : ' قطعة'); }
+function lab(sel, pcs){ if (sel.all) { var st = Math.floor(pcs / 4), r = pcs % 4; return { en: (st ? st + ' set' + (st > 1 ? 's' : '') : '') + (st && r ? ' + ' : '') + (r ? r + ' pc' + (r > 1 ? 's' : '') : '') + ' (' + pcs + ' pcs)', ar: (st ? arSets(st) : '') + (st && r ? ' + ' : '') + (r ? arPcs(r) : ''), pcs: pcs, sets: st }; }
+  return { en: sel.sets + ' set' + (sel.sets > 1 ? 's' : '') + ' (' + sel.sets * 4 + ' pcs)', ar: arSets(sel.sets), pcs: sel.sets * 4, sets: sel.sets }; }
+function render(){
+  var feed = $('feed'); feed.innerHTML = '';
+  designs.forEach(function(d){
+    var art = document.createElement('article'); art.className = 'design'; art.dataset.no = d.no;
+    var meta = d.total != null ? '<b>' + d.total + ' pcs</b> · ' + d.colours.length + ' colours' : d.colours.length + ' colours';
+    if (!d.ok) meta += '<span class="tag warn">check card</span>';
+    var ph = d.photos.map(function(p, i){
+      var nums = p.nums ? '<div class="nums" style="grid-template-columns:repeat(' + p.nums.length + ',1fr)">' + p.nums.map(function(n){ return '<span data-c="' + n.c + '" class="' + (n.pcs ? '' : 'z') + '">' + n.c + '</span>'; }).join('') + '</div>' : '';
+      return '<div class="ph"><img loading="lazy" src="' + p.url + '" alt="SJ-' + d.no + '">' + nums + '</div>';
+    }).join('');
+    var rows = d.colours.map(function(n){
+      var k = d.no + ':' + n.c, st = Math.floor(n.pcs / 4), r = n.pcs % 4;
+      return '<div class="row' + (n.pcs ? '' : ' zero') + '" data-k="' + k + '"><div class="c">' + n.c + '</div><div class="p"><b>' + n.pcs + ' pcs</b> · ' + st + ' set' + (st === 1 ? '' : 's') + (r ? ' + ' + r : '') + '</div>' +
+        (n.pcs ? '<div class="step"><button type="button" data-d="-1">−</button><span class="v">0</span><button type="button" data-d="1">+</button></div><button type="button" class="all">All</button>' : '') + '</div>';
+    }).join('');
+    art.innerHTML = '<div class="head"><div class="no">' + d.no + '</div><div class="meta">' + meta + '</div></div><div class="photos">' + ph + '</div><div class="rows">' + rows + '</div>';
+    feed.appendChild(art);
+  });
+  $('cnt').textContent = designs.length + ' designs';
+  feed.onclick = function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    var row = b.closest('.row'); if (!row) return; var k = row.dataset.k, d = byNo(k.split(':')[0]), c = +k.split(':')[1], pcs = colPcs(d, c), maxSets = Math.floor(pcs / 4);
+    var s = state[k] || { sets: 0, all: false };
+    if (b.classList.contains('all')) { s = s.all ? { sets: 0, all: false } : { sets: maxSets, all: true }; }
+    else { var n = Math.max(0, Math.min(maxSets, (s.all ? maxSets : s.sets) + (+b.dataset.d))); s = { sets: n, all: false }; }
+    if (!s.sets && !s.all) delete state[k]; else state[k] = s;
+    paint(row, s, maxSets); refresh();
+  };
+  applySearch();
+}
+function byNo(no){ return designs.filter(function(d){ return d.no === no; })[0]; }
+function colPcs(d, c){ return (d.colours.filter(function(n){ return n.c === c; })[0] || {}).pcs || 0; }
+function paint(row, s, maxSets){
+  var v = row.querySelector('.v'), all = row.querySelector('.all'); if (!v) return;
+  v.textContent = s.all ? 'All' : s.sets; v.classList.toggle('on', !!(s.sets || s.all)); all.classList.toggle('on', !!s.all);
+  row.querySelector('[data-d="1"]').disabled = s.all || s.sets >= maxSets; row.querySelector('[data-d="-1"]').disabled = !s.all && !s.sets;
+  var art = row.closest('.design'), c = row.dataset.k.split(':')[1];
+  art.querySelectorAll('.nums span[data-c="' + c + '"]').forEach(function(sp){ sp.classList.toggle('on', !!(s.sets || s.all)); });
+}
+function refresh(){
+  var keys = Object.keys(state), ds = {}, sets = 0, pcs = 0;
+  keys.forEach(function(k){ var p = k.split(':'), d = byNo(p[0]); ds[p[0]] = 1; var L = lab(state[k], colPcs(d, +p[1])); sets += L.sets; pcs += L.pcs; });
+  var nd = Object.keys(ds).length; $('ok').disabled = !keys.length; $('clr').hidden = !keys.length;
+  $('sum').innerHTML = keys.length ? '<b>' + nd + (nd === 1 ? ' design' : ' designs') + '</b> · ' + keys.length + (keys.length === 1 ? ' colour' : ' colours') + ' · <b>' + pcs + ' pcs</b><span class="ar">' + arD(nd) + (nd === 1 ? ' تصميم' : ' تصاميم') + '، ' + arPcs(pcs) + '</span>' : 'Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span>';
+}
+function applySearch(){
+  var q = $('q').value.trim(); var n = 0;
+  document.querySelectorAll('.design').forEach(function(a){ var show = !q || a.dataset.no.indexOf(q) >= 0; a.hidden = !show; if (show) n++; });
+  $('cnt').textContent = n + ' / ' + designs.length;
+}
+$('q').oninput = applySearch;
+$('clr').onclick = function(){ state = {}; document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
+
+// ---------- memo output ----------
+function orderText(){
+  var name = $('name').value.trim(), d = new Date(), date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
+  var lines = ['Order memo · مذكرة طلب', (name ? name + ' · ' : '') + date, ''], tp = 0;
+  Object.keys(byDesign()).forEach(function(no){ var d = byNo(no), parts = []; Object.keys(byDesign()[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(d, +c)); tp += L.pcs; parts.push('colour ' + c + ': ' + L.en); }); lines.push('SJ-' + no + ' — ' + parts.join(', ')); });
+  lines.push('', 'Total · الإجمالي: ' + tp + ' pcs');
+  return lines.join('\n');
+}
+function byDesign(){ var o = {}; Object.keys(state).sort().forEach(function(k){ var p = k.split(':'); (o[p[0]] = o[p[0]] || {})[p[1]] = state[k]; }); return o; }
+function loadImg(src){ return new Promise(function(ok){ var i = new Image(); i.crossOrigin = 'anonymous'; i.onload = function(){ ok(i); }; i.onerror = function(){ ok(null); }; i.src = src; }); }
+async function drawPages(){
+  var W = 1240, H = 1754, P = 60, name = $('name').value.trim(), d = new Date();
+  var date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
+  var pages = [], bd = byDesign(), nos = Object.keys(bd), tp = 0;
+  for (var i = 0; i < nos.length; i++){
+    var no = nos[i], dz = byNo(no), cv = document.createElement('canvas'); cv.width = W; cv.height = H; var g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#6E675D'; g.font = '600 26px Arial'; g.fillText('SJ TRADING · ORDER MEMO', P, P + 10);
+    g.fillStyle = '#1C1A17'; g.font = 'bold 40px Arial'; g.fillText(name || ' ', P, P + 62);
+    g.textAlign = 'right'; g.font = '26px Arial'; g.fillStyle = '#6E675D'; g.fillText(date + '  ·  ' + (i + 1) + '/' + nos.length, W - P, P + 62); g.textAlign = 'left';
+    g.fillStyle = '#1C1A17'; g.font = 'bold 54px Arial'; g.fillText('SJ-' + no, P, P + 140);
+    var y = P + 170, lines = [];
+    Object.keys(bd[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push('Colour ' + c + '  ·  ' + L.en); });
+    g.font = '30px Arial'; lines.forEach(function(t){ g.fillText(t, P, y); y += 40; });
+    y += 10;
+    // photos that carry selected colours, with the other colours faded
+    var phs = dz.photos.filter(function(p){ return p.nums && p.nums.some(function(n){ return bd[no][n.c]; }); });
+    if (!phs.length) phs = dz.photos.slice(0, 1);
+    var slotH = Math.floor((H - y - P) / Math.max(1, phs.length)) - 16;
+    for (var j = 0; j < phs.length; j++){
+      var p = phs[j], im = await loadImg(p.url); if (!im) continue;
+      var k = Math.min((W - 2 * P) / im.naturalWidth, slotH / im.naturalHeight), dw = im.naturalWidth * k, dh = im.naturalHeight * k, x0 = (W - dw) / 2;
+      g.drawImage(im, x0, y, dw, dh);
+      if (p.nums){ var n = p.nums.length, cw = dw / n;
+        p.nums.forEach(function(nn, q){ var x = x0 + q * cw; if (!bd[no][nn.c]) { g.fillStyle = 'rgba(236,233,226,0.78)'; g.fillRect(x, y, cw + 1, dh); }
+          g.fillStyle = bd[no][nn.c] ? '#A8864A' : 'rgba(28,26,23,.5)'; g.fillRect(x, y + dh - 44, cw + 1, 44);
+          g.fillStyle = '#fff'; g.font = 'bold 26px Arial'; g.textAlign = 'center'; g.fillText(String(nn.c), x + cw / 2, y + dh - 13); g.textAlign = 'left'; }); }
+      y += dh + 16;
+    }
+    pages.push(cv);
+  }
+  return pages;
+}
+function b64bytes(dataUrl){ var s = atob(dataUrl.split(',')[1]), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+function makePDF(canvases){
+  var parts = [], len = 0, offs = [];
+  function add(x){ if (typeof x === 'string'){ var u = new Uint8Array(x.length); for (var i = 0; i < x.length; i++) u[i] = x.charCodeAt(i) & 255; x = u; } parts.push(x); len += x.length; }
+  function obj(n){ offs[n] = len; add(n + ' 0 obj\n'); }
+  var n = canvases.length, MW = 595.28, MH = 841.89;
+  add('%PDF-1.4\n%âãÏÓ\n'); obj(1); add('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  var kids = []; for (var i = 0; i < n; i++) kids.push((3 + 3 * i) + ' 0 R');
+  obj(2); add('<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + n + ' >>\nendobj\n');
+  canvases.forEach(function(cv, i){ var p = 3 + 3 * i, c = p + 1, im = p + 2, jpg = b64bytes(cv.toDataURL('image/jpeg', 0.86)), cs = 'q ' + MW + ' 0 0 ' + MH + ' 0 0 cm /Im0 Do Q';
+    obj(p); add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + MW + ' ' + MH + '] /Resources << /XObject << /Im0 ' + im + ' 0 R >> >> /Contents ' + c + ' 0 R >>\nendobj\n');
+    obj(c); add('<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream\nendobj\n');
+    obj(im); add('<< /Type /XObject /Subtype /Image /Width ' + cv.width + ' /Height ' + cv.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n'); add(jpg); add('\nendstream\nendobj\n'); });
+  var total = 3 + 3 * n, xref = len, x = 'xref\n0 ' + total + '\n0000000000 65535 f \n';
+  for (var k = 1; k < total; k++) x += ('0000000000' + offs[k]).slice(-10) + ' 00000 n \n';
+  add(x + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+  var out = new Uint8Array(len), o = 0; parts.forEach(function(p){ out.set(p, o); o += p.length; }); return out;
+}
+var pdfFile = null;
+$('ok').onclick = async function(){
+  $('done').hidden = false; window.scrollTo(0, 0); $('dh').textContent = 'Order memo' + ($('name').value.trim() ? ' · ' + $('name').value.trim() : '');
+  $('ds').textContent = 'Preparing…'; $('marks').innerHTML = '';
+  var pages = await drawPages();
+  pages.forEach(function(cv){ var im = document.createElement('img'); im.src = cv.toDataURL('image/jpeg', 0.7); $('marks').appendChild(im); });
+  var nm = ($('name').value.trim() || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-');
+  pdfFile = new File([makePDF(pages)], nm + '-SJ-memo.pdf', { type: 'application/pdf' });
+  $('ds').textContent = orderText().split('\n').slice(-1)[0] + ' · ' + pages.length + (pages.length === 1 ? ' page' : ' pages');
+};
+$('back').onclick = function(){ $('done').hidden = true; };
+$('send').onclick = async function(){
+  if (!pdfFile) return;
+  try { if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) { await navigator.share({ files: [pdfFile], text: orderText() }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  var a = document.createElement('a'); a.href = URL.createObjectURL(pdfFile); a.download = pdfFile.name; a.click();
+  window.open('https://wa.me/?text=' + encodeURIComponent(orderText()), '_blank');
+};
+$('copy').onclick = async function(){ try { await navigator.clipboard.writeText(orderText()); $('copy').textContent = 'Copied ✓'; setTimeout(function(){ $('copy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', orderText()); } };
+
+// ---------- setup / boot ----------
+$('auth').href = 'https://trello.com/1/authorize?expiration=never&scope=read&response_type=token&name=SJ%20Order%20Memo&key=' + KEY;
+$('save').onclick = function(){ var t = $('tok').value.trim(); if (!t) return; token = t; try { localStorage.setItem('sj_memo_token', t); } catch(e){} boot(); };
+async function boot(){
+  if (!token) { $('setup').hidden = false; return; }
+  $('setup').hidden = true; $('load').hidden = false;
+  try { designs = await loadCards(); $('load').hidden = true; render(); }
+  catch (e) { $('load').hidden = true; $('setup').hidden = false; $('seterr').textContent = e.message + ' — paste the token again.'; if (/not accepted/.test(e.message)) { token = ''; try { localStorage.removeItem('sj_memo_token'); } catch(x){} } }
+}
+boot();
+window.__memo = { parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
+})();
+</script>
+</body></html>
