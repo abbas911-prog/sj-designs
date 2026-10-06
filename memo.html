@@ -82,16 +82,14 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 </header>
 <main>
   <div id="setup" hidden>
-    <h2>Connect Trello (one time)</h2>
-    <p id="how">This memo reads the READY list live from Trello, so pieces are always today's. Tap <b>Connect Trello</b>, then <b>Allow</b> — it comes straight back here and remembers. Read-only; stays only on this phone.</p>
-    <p class="tip"><b>So it never asks again:</b> open this link in <b>Safari</b> (iPhone) or <b>Chrome</b> (Android) — not inside WhatsApp's preview — then Share → <b>Add to Home Screen</b> and always open it from that icon.<br><span class="ar">افتح الرابط في سفاري أو كروم (وليس داخل واتساب) ثم «إضافة إلى الشاشة الرئيسية» وافتحه دائمًا من الأيقونة.</span></p>
-    <a class="gold" id="auth">Connect Trello</a>
-    <p id="alt" style="margin:14px 0 0;font-size:12.5px">Or paste a token by hand:</p>
-    <input id="tok" placeholder="Paste token here" autocomplete="off">
-    <button id="save" type="button">Save and load</button>
+    <h2>Shop password · كلمة سر المحل</h2>
+    <p>Type the shop password once. This phone remembers it.<br><span class="ar">اكتب كلمة سر المحل مرة واحدة، وسيتذكرها الهاتف.</span></p>
+    <input id="tok" type="password" placeholder="Password · كلمة السر" autocomplete="current-password" enterkeyhint="go">
+    <button id="save" type="button">Open · فتح</button>
     <p id="seterr" class="warn"></p>
+    <p class="tip"><b>So it never asks again:</b> open this link in <b>Safari</b> (iPhone) or <b>Chrome</b> (Android), not inside WhatsApp or the Claude app. Then tap Share → <b>Add to Home Screen</b> and always open it from that icon.<br><span class="ar">افتح الرابط في سفاري أو كروم (وليس داخل واتساب أو تطبيق Claude) ثم «إضافة إلى الشاشة الرئيسية» وافتحه دائمًا من الأيقونة.</span></p>
   </div>
-  <div id="load" hidden>Loading READY list from Trello…</div>
+  <div id="load" hidden>Loading READY list…</div>
   <div id="feed"></div>
 </main>
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ok" type="button" disabled>OK</button></div></div>
@@ -104,19 +102,17 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 <script>
 (function(){
 var KEY = '83fea3748717dd1e3fe28a15f2371759', LIST = '66254dc6f8ade3c3a0c9b7d4';
-var ONE_TAP = true;    // true once https://abbas911-prog.github.io is an allowed origin on the Trello key
 var API = window.TRELLO_API || 'https://api.trello.com';
 var $ = function(id){ return document.getElementById(id); };
-var token = ''; try { token = localStorage.getItem('sj_memo_token') || ''; } catch(e){}
+var token = ''; try { token = localStorage.getItem('sj_memo_pw') || ''; } catch(e){}   // the shop password (kept on this device only)
 // token kept in two places (localStorage + IndexedDB) and the browser is asked to keep them
 function idb(op, val){ return new Promise(function(ok){ try { var r = indexedDB.open('sj_memo', 1);
   r.onupgradeneeded = function(){ r.result.createObjectStore('kv'); };
   r.onsuccess = function(){ try { var s = r.result.transaction('kv', op === 'get' ? 'readonly' : 'readwrite').objectStore('kv');
-    var q = op === 'get' ? s.get('token') : op === 'put' ? s.put(val, 'token') : s.delete('token'); q.onsuccess = function(){ ok(q.result || null); }; q.onerror = function(){ ok(null); }; } catch(e){ ok(null); } };
+    var q = op === 'get' ? s.get('pw') : op === 'put' ? s.put(val, 'pw') : s.delete('pw'); q.onsuccess = function(){ ok(q.result || null); }; q.onerror = function(){ ok(null); }; } catch(e){ ok(null); } };
   r.onerror = function(){ ok(null); }; } catch(e){ ok(null); } }); }
-function keepToken(t){ token = t; try { localStorage.setItem('sj_memo_token', t); } catch(e){} idb('put', t); try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){} }
-function dropToken(){ token = ''; try { localStorage.removeItem('sj_memo_token'); } catch(e){} idb('del'); }
-(function(){ var m = location.hash.match(/[#&]token=([0-9A-Za-z]+)/); if (m) { keepToken(m[1]); try { history.replaceState(null, '', location.pathname + location.search); } catch(e){ location.hash = ''; } } })();
+function keepToken(t){ token = t; try { localStorage.setItem('sj_memo_pw', t); } catch(e){} idb('put', t); try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){} }
+function dropToken(){ token = ''; try { localStorage.removeItem('sj_memo_pw'); } catch(e){} idb('del'); }
 var designs = [], state = {};   // state["no:c"] = {sets:n, all:bool}
 
 // ---------- parsing a card title ----------
@@ -143,6 +139,15 @@ function parseTitle(t){
   return { no: no, total: total, groups: groups, ncol: ncol ? +ncol : null, sum: sum, warn: warn, ok: total != null && sum === total && groups.length > 0 };
 }
 
+// ---------- shop data ----------
+var updated = '';
+function b64(s){ var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+async function unlock(box, pw){
+  var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  var key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(box.salt), iterations: box.iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(box.iv) }, key, b64(box.ct));
+  return new TextDecoder().decode(pt);
+}
 // ---------- Trello ----------
 function auth(){ return 'key=' + KEY + '&token=' + encodeURIComponent(token); }
 function apiUrl(u){ return String(u || '').replace(/^https?:\/\/(api\.)?trello\.com/, API); }
@@ -162,7 +167,7 @@ function shrink(blob){ return new Promise(function(ok){
 async function fetchPhoto(p){
   var why = '';
   // photos are copied to this site by the memo-thumbs job (every 20 min); Trello itself refuses photos to web pages (503)
-  var tries = [['thumbs/' + p.att + '.jpg', {}]].concat(p.srcs.map(function(u){ return [u, { headers: authHeader() }]; }));
+  var tries = [['thumbs/' + p.att + '.jpg', {}]];
   for (var i = 0; i < tries.length; i++){
     try { var r = await fetch(tries[i][0], tries[i][1]);
       if (r.ok && /^image\//.test(r.headers.get('content-type') || 'image/')) { var u = await shrink(await r.blob()); if (u) return u; why = 'decode'; }
@@ -179,10 +184,13 @@ var io = 'IntersectionObserver' in window ? new IntersectionObserver(function(es
 function loadInto(img){ var d = byNo(img.dataset.no), p = d && d.photos[+img.dataset.i]; if (!p) return;
   getPhoto(p).then(function(u){ if (u) img.src = u; else { var m = document.createElement('div'); m.className = 'pmsg'; m.textContent = 'Photo coming — new photos appear within 20 minutes · الصورة قادمة خلال ٢٠ دقيقة'; img.parentNode.appendChild(m); } }); }
 async function loadCards(){
-  var r = await fetch(API + '/1/lists/' + LIST + '/cards?fields=name,pos,idShort,dateLastActivity&attachments=true&attachment_fields=id,name,bytes,mimeType,date,url,previews&' + auth());
-  if (r.status === 401) throw new Error('Token not accepted');
-  if (!r.ok) throw new Error('Trello error ' + r.status);
-  var cards = await r.json();
+  // memo-data.enc is written by the memo-thumbs job every 20 min, locked with the shop password (AES-GCM, PBKDF2)
+  var r = await fetch('memo-data.enc?t=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('List not published yet (' + r.status + ')');
+  var box = await r.json(), data;
+  try { data = JSON.parse(await unlock(box, token)); } catch(e){ throw new Error('Token not accepted'); }
+  updated = data.updated || '';
+  var cards = data.cards;
   return cards.map(function(c){
     var p = parseTitle(c.name);
     var imgs = c.attachments.filter(function(a){ return /^image\//.test(a.mimeType); })
@@ -342,18 +350,17 @@ $('send').onclick = async function(){
 $('copy').onclick = async function(){ try { await navigator.clipboard.writeText(orderText()); $('copy').textContent = 'Copied ✓'; setTimeout(function(){ $('copy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', orderText()); } };
 
 // ---------- setup / boot ----------
-$('auth').href = 'https://trello.com/1/authorize?expiration=never&scope=read&response_type=token&name=SJ%20Order%20Memo&key=' + KEY + (ONE_TAP ? '&callback_method=fragment&return_url=' + encodeURIComponent(location.origin + location.pathname) : '');
-if (!ONE_TAP) { $('auth').target = '_blank'; $('auth').rel = 'noopener'; $('how').innerHTML = 'Tap <b>Connect Trello</b> → <b>Allow</b> → copy the code Trello shows → come back and paste it below → <b>Save</b>. Read-only; stays only on this phone.'; $('alt').textContent = 'Paste the code here:'; }
-$('save').onclick = function(){ var t = $('tok').value.trim(); if (!t) return; keepToken(t); boot(); };
+$('save').onclick = function(){ var t = $('tok').value; if (!t) return; keepToken(t); boot(); };
+$('tok').onkeydown = function(e){ if (e.key === 'Enter') $('save').onclick(); };
 async function boot(){
   if (!token) { token = (await idb('get')) || ''; if (token) keepToken(token); }
   if (!token) { $('setup').hidden = false; return; }
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
   $('setup').hidden = true; $('load').hidden = false;
-  try { designs = await loadCards(); $('load').hidden = true; render(); }
+  try { designs = await loadCards(); $('load').hidden = true; render(); if (updated) { var d = new Date(updated); $('cnt').title = 'List updated ' + d.toLocaleString(); } }
   catch (e) { $('load').hidden = true;
-    if (/not accepted/.test(e.message)) { dropToken(); $('setup').hidden = false; $('seterr').textContent = 'Trello did not accept the saved connection — tap Connect Trello again.'; }
-    else { $('load').hidden = false; $('load').innerHTML = 'Could not reach Trello (' + e.message.replace(/[<>]/g, '') + '). <a href="" style="color:var(--gold)">Try again</a>'; } }
+    if (/not accepted/.test(e.message)) { dropToken(); $('setup').hidden = false; $('tok').value = ''; $('seterr').textContent = 'Wrong password · كلمة السر غير صحيحة'; }
+    else { $('load').hidden = false; $('load').innerHTML = 'Could not load the list (' + e.message.replace(/[<>]/g, '') + '). <a href="" style="color:var(--gold)">Try again</a>'; } }
 }
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
