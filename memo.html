@@ -83,10 +83,10 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 <main>
   <div id="setup" hidden>
     <h2>Connect Trello (one time)</h2>
-    <p>This memo reads the READY list live from Trello, so pieces are always today's. Tap <b>Connect Trello</b>, then <b>Allow</b> — it comes straight back here and remembers. Read-only; stays only on this phone.</p>
+    <p id="how">This memo reads the READY list live from Trello, so pieces are always today's. Tap <b>Connect Trello</b>, then <b>Allow</b> — it comes straight back here and remembers. Read-only; stays only on this phone.</p>
     <p class="tip"><b>So it never asks again:</b> open this link in <b>Safari</b> (iPhone) or <b>Chrome</b> (Android) — not inside WhatsApp's preview — then Share → <b>Add to Home Screen</b> and always open it from that icon.<br><span class="ar">افتح الرابط في سفاري أو كروم (وليس داخل واتساب) ثم «إضافة إلى الشاشة الرئيسية» وافتحه دائمًا من الأيقونة.</span></p>
     <a class="gold" id="auth">Connect Trello</a>
-    <p style="margin:14px 0 0;font-size:12.5px">Or paste a token by hand:</p>
+    <p id="alt" style="margin:14px 0 0;font-size:12.5px">Or paste a token by hand:</p>
     <input id="tok" placeholder="Paste token here" autocomplete="off">
     <button id="save" type="button">Save and load</button>
     <p id="seterr" class="warn"></p>
@@ -104,6 +104,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 <script>
 (function(){
 var KEY = '83fea3748717dd1e3fe28a15f2371759', LIST = '66254dc6f8ade3c3a0c9b7d4';
+var ONE_TAP = false;   // true once https://abbas911-prog.github.io is an allowed origin on the Trello key
 var API = window.TRELLO_API || 'https://api.trello.com';
 var $ = function(id){ return document.getElementById(id); };
 var token = ''; try { token = localStorage.getItem('sj_memo_token') || ''; } catch(e){}
@@ -340,7 +341,8 @@ $('send').onclick = async function(){
 $('copy').onclick = async function(){ try { await navigator.clipboard.writeText(orderText()); $('copy').textContent = 'Copied ✓'; setTimeout(function(){ $('copy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', orderText()); } };
 
 // ---------- setup / boot ----------
-$('auth').href = 'https://trello.com/1/authorize?expiration=never&scope=read&response_type=token&callback_method=fragment&name=SJ%20Order%20Memo&key=' + KEY + '&return_url=' + encodeURIComponent(location.origin + location.pathname);
+$('auth').href = 'https://trello.com/1/authorize?expiration=never&scope=read&response_type=token&name=SJ%20Order%20Memo&key=' + KEY + (ONE_TAP ? '&callback_method=fragment&return_url=' + encodeURIComponent(location.origin + location.pathname) : '');
+if (!ONE_TAP) { $('auth').target = '_blank'; $('auth').rel = 'noopener'; $('how').innerHTML = 'Tap <b>Connect Trello</b> → <b>Allow</b> → copy the code Trello shows → come back and paste it below → <b>Save</b>. Read-only; stays only on this phone.'; $('alt').textContent = 'Paste the code here:'; }
 $('save').onclick = function(){ var t = $('tok').value.trim(); if (!t) return; keepToken(t); boot(); };
 async function boot(){
   if (!token) { token = (await idb('get')) || ''; if (token) keepToken(token); }
