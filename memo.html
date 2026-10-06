@@ -161,7 +161,8 @@ function shrink(blob){ return new Promise(function(ok){
   im.onerror = function(){ URL.revokeObjectURL(u); ok(null); }; im.src = u; }); }
 async function fetchPhoto(p){
   var why = '';
-  var tries = p.srcs.map(function(u){ return [u, { headers: authHeader() }]; }).concat([['thumbs/' + p.att + '.jpg', {}]]);
+  // photos are copied to this site by the memo-thumbs job (every 20 min); Trello itself refuses photos to web pages (503)
+  var tries = [['thumbs/' + p.att + '.jpg', {}]].concat(p.srcs.map(function(u){ return [u, { headers: authHeader() }]; }));
   for (var i = 0; i < tries.length; i++){
     try { var r = await fetch(tries[i][0], tries[i][1]);
       if (r.ok && /^image\//.test(r.headers.get('content-type') || 'image/')) { var u = await shrink(await r.blob()); if (u) return u; why = 'decode'; }
@@ -173,10 +174,10 @@ async function fetchPhoto(p){
 function getPhoto(p){ if (!p.job) p.job = new Promise(function(ok){ queue.push(function(){ return fetchPhoto(p).then(function(u){ p.blob = u; if (u) pstat.ok++; else pstat.bad++; showPst(); ok(u); }); }); pump(); }); return p.job; }
 function pump(){ while (running < 4 && queue.length){ running++; queue.shift()().then(function(){ running--; pump(); }); } }
 function showPst(){ var el = $('pst'); if (!pstat.bad) { el.textContent = ''; el.className = ''; return; }
-  el.className = 'bad'; el.textContent = pstat.bad + ' photo' + (pstat.bad > 1 ? 's' : '') + ' could not load (' + pstat.why + ')' + (pstat.ok ? ' · ' + pstat.ok + ' loaded' : ''); }
+  el.className = 'bad'; el.textContent = pstat.bad + ' photo' + (pstat.bad > 1 ? 's' : '') + ' not ready yet (' + pstat.why + ') — new photos appear within 20 min' + (pstat.ok ? ' · ' + pstat.ok + ' loaded' : ''); }
 var io = 'IntersectionObserver' in window ? new IntersectionObserver(function(es){ es.forEach(function(e){ if (!e.isIntersecting) return; io.unobserve(e.target); loadInto(e.target); }); }, { rootMargin: '800px 0px' }) : null;
 function loadInto(img){ var d = byNo(img.dataset.no), p = d && d.photos[+img.dataset.i]; if (!p) return;
-  getPhoto(p).then(function(u){ if (u) img.src = u; else { var m = document.createElement('div'); m.className = 'pmsg'; m.textContent = 'Photo not available · open the card in Trello'; img.parentNode.appendChild(m); } }); }
+  getPhoto(p).then(function(u){ if (u) img.src = u; else { var m = document.createElement('div'); m.className = 'pmsg'; m.textContent = 'Photo coming — new photos appear within 20 minutes · الصورة قادمة خلال ٢٠ دقيقة'; img.parentNode.appendChild(m); } }); }
 async function loadCards(){
   var r = await fetch(API + '/1/lists/' + LIST + '/cards?fields=name,pos,idShort,dateLastActivity&attachments=true&attachment_fields=id,name,bytes,mimeType,date,url,previews&' + auth());
   if (r.status === 401) throw new Error('Token not accepted');
