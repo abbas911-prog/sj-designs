@@ -10,6 +10,7 @@ KEY = os.environ.get('TRELLO_KEY', '83fea3748717dd1e3fe28a15f2371759')
 TOKEN = os.environ['TRELLO_TOKEN'].strip()
 API = os.environ.get('TRELLO_API', 'https://api.trello.com')
 LIST = '66254dc6f8ade3c3a0c9b7d4'
+SAMPLES = '6824cdd97bb99de098f1b7ae'   # SAMPLES list (7 Oct 2026): one sample piece per card, shown in the memo's SAMPLES tab
 OUT = 'thumbs'
 PASSWORD = os.environ.get('MEMO_PASSWORD', '')
 DATA = 'memo-data.enc'
@@ -35,7 +36,7 @@ def publish(cards):
     if not PASSWORD:
         print('MEMO_PASSWORD not set - list not published')
         return
-    slim = [{'id': c['id'], 'name': c['name'], 'pos': c.get('pos'), 'idShort': c.get('idShort'),
+    slim = [{'id': c['id'], 'name': c['name'], 'pos': c.get('pos'), 'idShort': c.get('idShort'), **({'list': 's'} if c.get('_s') else {}),
              'attachments': [{'id': a['id'], 'name': a.get('name', ''), 'mimeType': a.get('mimeType', ''), 'date': a.get('date', '')}
                              for a in c.get('attachments', []) if str(a.get('mimeType', '')).startswith('image/')]} for c in cards]
     body = json.dumps(slim, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
@@ -64,6 +65,10 @@ def main():
     q = urllib.parse.urlencode({'fields': 'name,pos,idShort', 'attachments': 'true',
                                 'attachment_fields': 'id,name,mimeType,date,url,previews', 'key': KEY, 'token': TOKEN})
     cards = json.loads(get(f'{API}/1/lists/{LIST}/cards?{q}'))
+    samples = json.loads(get(f'{API}/1/lists/{SAMPLES}/cards?{q}'))
+    for c in samples:
+        c['_s'] = True
+    cards += samples
     want, made, failed = set(), 0, 0
     for c in cards:
         for a in c.get('attachments', []):

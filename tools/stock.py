@@ -11,6 +11,7 @@ import hashlib, hmac, json, os, re, sys, urllib.parse, urllib.request
 KEY = os.environ.get('TRELLO_KEY', '83fea3748717dd1e3fe28a15f2371759')
 API = 'https://api.trello.com/1'
 READY, FINISH = '66254dc6f8ade3c3a0c9b7d4', '66254dd30f4c624619d009d8'
+SAMPLES = '6824cdd97bb99de098f1b7ae'   # one sample piece per card (7 Oct 2026): selling it moves the card to FINISH, a return moves it back
 
 # ---------- the card title: same reading as memo.html parseTitle(), but keeping where each number sits ----------
 def parse(t):
@@ -84,6 +85,8 @@ def run(req):
                 sold = [n for n in notes if n.strip() and n.splitlines()[-1].strip() == '#memo sell %s %s' % (ref, dev)]
                 if not sold: r.update(err='no sale for %s on this card' % ref); out.append(r); continue
                 lines = [(int(a), int(b), r['no']) for a, b in re.findall(r'colour (\d+): \d+ → \d+ \(−(\d+)\)', sold[0])]
+            if card['idList'] == SAMPLES or (op == 'return' and any('SAMPLE' in n.splitlines()[0] for n in notes if n.strip() and n.splitlines()[-1].strip() == '#memo sell %s %s' % (ref, dev))):
+                out.append(sample(cid, card, op, ref, who, tag, r)); continue
             p = parse(card['name'])
             if not p['ok']:
                 r.update(err='card title does not add up (%s = %d, card says %s) — not changed' %
@@ -118,6 +121,23 @@ def run(req):
             r.update(err='%s: %s' % (type(e).__name__, str(e)[:200]))
         out.append(r)
     return out
+
+def sample(cid, card, op, ref, who, tag, r):
+    """A SAMPLES card is one piece and its title has no counts: a sale moves it to the TOP of FINISH, a return puts it back on SAMPLES."""
+    if op == 'check':
+        r.update(before=card['name'], after=card['name'], left=0, lines=['sample: 1 → 0 (−1)'], moved='(check only — would move to FINISH)'); return r
+    if op == 'sell':
+        if card['idList'] != SAMPLES:
+            r.update(skip='sample is not on the SAMPLES list any more'); return r
+        call('PUT', '/cards/' + cid, idList=FINISH, pos='top'); moved, line, left = 'moved to FINISH (sample sold)', 'sample: 1 → 0 (−1)', 0
+    else:
+        if card['idList'] == SAMPLES:
+            r.update(skip='sample is already on SAMPLES'); return r
+        call('PUT', '/cards/' + cid, idList=SAMPLES, pos='top'); moved, line, left = 'moved back to SAMPLES', 'sample: 0 → 1 (+1)', 1
+    head = ('SOLD SAMPLE' if op == 'sell' else 'RETURNED SAMPLE') + ' · %s%s · from the order memo' % (ref, ' · ' + who if who else '')
+    call('POST', '/cards/%s/actions/comments' % cid, text='\n'.join([head, line, moved, '%d pcs left' % left, tag]))
+    r.update(before=card['name'], after=card['name'], left=left, lines=[line], moved=moved)
+    return r
 
 def main():
     req_s, sig = os.environ.get('REQ', ''), os.environ.get('SIG', '')
