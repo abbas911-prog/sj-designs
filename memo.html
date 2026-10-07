@@ -674,7 +674,7 @@ $('bills').onclick = function(){ $('done').hidden = false; window.scrollTo(0, 0)
 // ---------- stock off Trello when an invoice is sent · catalogue builder (Abbas, 7 Oct 2026) ----------
 // Both run as GitHub jobs (memo-stock / memo-catalog). The memo cannot hold the GitHub key, so it asks the relay
 // (a Google Apps Script web app that keeps the key on Google's side); every request is signed with the shop password.
-var RELAY = '';   // the relay web-app URL, set once it is deployed
+var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (Apps Script, abbassayed033), deployed 7 Oct 2026
 var GH_RAW = 'https://raw.githubusercontent.com/abbas911-prog/sj-designs/main/';
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
 function devId(){ var d = ls('sj_dev'); if (!d) { d = Math.random().toString(36).slice(2, 8); ls('sj_dev', d); } return d; }
@@ -714,7 +714,7 @@ function stkLines(){ return invLines().filter(function(l){ return l.qty > 0; }).
 function stkShow(){ var el = $('stk'); if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
   if (s) { stkPaint(s); return; }
   el.hidden = false; el.className = 'stk';
-  el.innerHTML = RELAY ? 'Sending this invoice takes its pieces off Trello. <small>إرسال الفاتورة يخصم القطع من تريلو · a memo never does</small>'
+  el.innerHTML = RELAY ? 'Sending this invoice takes its pieces off Trello. <small>إرسال الفاتورة يخصم القطع من تريلو · a memo never does</small>' + (isOwner() ? '<button type="button" data-stk="check">Test — show what would change (Trello not touched)</button>' : '')
                        : 'Stock link not set up yet — sending will not change Trello. <small>لم يتم ربط المخزون بعد</small>'; }
 function stkPaint(s){ var el = $('stk'); if (B.mode !== 'inv' || !B.inv || stkKey(B.inv.ref) !== stkKey(s.ref)) return; el.hidden = false;
   var pcs = s.lines.reduce(function(a, l){ return a + l.pcs; }, 0), h = '';
@@ -725,7 +725,16 @@ function stkPaint(s){ var el = $('stk'); if (B.mode !== 'inv' || !B.inv || stkKe
   el.innerHTML = h; }
 function cardLines(res){ if (!res || !res.cards) return ''; return res.cards.map(function(c){
   return '<small><b>SJ-' + esc(c.no) + '</b> ' + (c.err ? '✗ ' + esc(c.err) : c.skip ? '(' + esc(c.skip) + ')' : esc((c.lines || []).join(' · ')) + ' · ' + c.left + ' pcs left' + (c.moved ? ' · ' + esc(c.moved) : '')) + '</small>'; }).join(''); }
+async function stkCheck(){
+  var d = B.inv, el = $('stk'), lines = stkLines(); if (!d || !lines.length) { el.innerHTML = 'Pick designs first, then open Invoice.'; return; }
+  var id = jobId('k'); el.className = 'stk'; el.innerHTML = 'Testing ' + lines.length + ' line(s)… <small>about a minute · Trello is not changed</small>';
+  try { await relay('stock', { id: id, op: 'check', ref: d.ref, dev: devId(), who: d.name || '', lines: lines }); } catch(e){ el.className = 'stk bad'; el.innerHTML = 'Test could not start: ' + esc(e.message); return; }
+  var res = await waitJob(id, 'stock', 8);
+  el.className = 'stk ' + (res.ok ? 'ok' : 'bad'); el.innerHTML = (res.ok ? 'Test OK ✓ — this is what sending would do (nothing changed):' : 'Test found a problem: ' + esc(res.error || '')) + (res.cards || []).map(function(c){
+    return '<small><b>SJ-' + esc(c.no) + '</b> ' + (c.err ? '✗ ' + esc(c.err) : esc(c.before) + ' → ' + esc(c.after) + ' · ' + esc((c.lines || []).join(' · '))) + '</small>'; }).join('');
+}
 async function stkRun(op){
+  if (op === 'check') return stkCheck();
   var d = B.inv; if (!d || !RELAY) { stkShow(); return; }
   var k = stkKey(d.ref), s = STK[k];
   if (op === 'sell' && s && (s.st === 'ok' || s.st === 'busy' || s.st === 'returned')) { stkPaint(s); return; }   // one invoice number is taken once
