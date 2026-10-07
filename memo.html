@@ -423,7 +423,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-07s7';
+var VER = '2026-10-07s8';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -917,7 +917,9 @@ var MY = [{ name: 'SJTC', sub: 'Slack · catch up', app: 'slack://open?team=' + 
           { name: 'BEEP', sub: 'Beeper app', app: 'beeper://', web: 'https://apps.apple.com/app/id6499013100', where: 'Beeper' },
           // ChatGPT Slack workspace (chatgpt-zqx1003.slack.com, id T09SC701XGQ): straight into the Slack app, same as the SJTC buttons
           { name: 'CHATGPT', sub: 'Slack · ChatGPT workspace', app: 'slack://open?team=T09SC701XGQ', web: 'https://app.slack.com/client/T09SC701XGQ' },
-          { name: 'SAMPLES', sub: '#samples-discuss · ChatGPT', ch: 'C09T1BGHC6L', team: 'T09SC701XGQ' }];
+          { name: 'SAMPLES', sub: '#samples-discuss · ChatGPT', ch: 'C09T1BGHC6L', team: 'T09SC701XGQ' },
+          // Tiimo has no public link into its Focus tab, so this runs the iPhone Shortcut "TIIMO FOCUS" that Abbas makes in the Shortcuts app
+          { name: 'TIIMO', sub: 'Tiimo · Focus', app: 'shortcuts://run-shortcut?name=' + encodeURIComponent('TIIMO FOCUS'), web: 'https://apps.apple.com/app/id1480220328', where: 'Tiimo' }];
 function myDraw(){ $('myg').innerHTML = MY.map(function(x, i){ return '<button type="button" data-i="' + i + '">' + x.name + '<small>' + x.sub + '</small></button>'; }).join(''); }
 $('mybtn').onclick = function(){ myDraw(); $('myst').textContent = ''; $('mysheet').hidden = false; };
 $('myx').onclick = function(){ $('mysheet').hidden = true; };
