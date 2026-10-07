@@ -518,14 +518,33 @@ function freshDoc(k){
   else { d.amount = ''; d.modeP = 'Cash'; d.chq = ''; }
   return d;
 }
-function invLines(){
+function colLines(){          // one line per chosen colour — used for the Trello stock job
   var out = [], bd = byDesign();
   Object.keys(bd).forEach(function(no){ var dz = byNo(no);
     Object.keys(bd[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(dz, +c)), rate = prices[no] > 0 ? prices[no] : 0;
       var ph = null, qi = 0; dz.photos.forEach(function(p){ if (!ph && p.nums) p.nums.forEach(function(x, i){ if (x.c === +c) { ph = p; qi = i; } }); });
-      out.push({ no: no, c: +c, desc: 'SJ-' + no, sub: 'Colour ' + c + ' · ' + L.en, qty: L.pcs, rate: rate, amount: r2(L.pcs * rate), photo: ph, qi: qi, n: ph ? ph.nums.length : 1 }); }); });
+      out.push({ no: no, c: +c, desc: 'SJ-' + no, sub: 'Colour ' + c + ' · ' + L.en, en: L.en, qty: L.pcs, rate: rate, amount: r2(L.pcs * rate), photo: ph, qi: qi, n: ph ? ph.nums.length : 1 }); }); });
   return out;
 }
+// ONE ROW PER DESIGN on the invoice (Abbas, 7 Oct 2026: "if I've chosen two colors you put both of the colors in the same column ...
+// if the customer has chosen the whole colors you just put the whole picture"). The chosen colours sit side by side in the photo cell;
+// every colour chosen -> the whole lineup photo.
+function invLines(){
+  var out = [], by = {}, order = [];
+  colLines().forEach(function(l){ if (!by[l.no]) { by[l.no] = []; order.push(l.no); } by[l.no].push(l); });
+  order.forEach(function(no){
+    var ls = by[no].sort(function(a, b){ return a.c - b.c; }), dz = byNo(no), qty = ls.reduce(function(a, l){ return a + l.qty; }, 0), rate = ls[0].rate;
+    var avail = dz.colours.filter(function(n){ return n.pcs > 0; }).map(function(n){ return n.c; });
+    var all = avail.length > 1 && avail.every(function(c){ return ls.some(function(l){ return l.c === c; }); });
+    var short = function(l){ return l.en.replace(/\s*\(\d+ pcs\)$/, ''); }, same = ls.every(function(l){ return l.en === ls[0].en; });
+    var sub = all && same ? 'All ' + ls.length + ' colours · ' + short(ls[0]) + ' each' : (all ? 'All colours · ' : '') + ls.map(function(l){ return 'C' + l.c + ' ' + short(l); }).join(' · ');
+    out.push({ no: no, desc: 'SJ-' + no, sub: sub, qty: qty, rate: rate, amount: r2(qty * rate), all: all,
+      parts: ls.map(function(l){ return { photo: l.photo, qi: l.qi, n: l.n }; }),
+      photos: all ? dz.photos.filter(function(p){ return p.nums && p.nums.length; }) : null });
+  });
+  return out;
+}
+function wrapText(g, t, maxW){ var words = String(t).split(' '), lines = [], cur = ''; words.forEach(function(w){ var nx = cur ? cur + ' ' + w : w; if (g.measureText(nx).width > maxW && cur) { lines.push(cur); cur = w; } else cur = nx; }); if (cur) lines.push(cur); return lines; }
 function invCalc(d){
   var lines = invLines(), sub = lines.reduce(function(a, l){ return a + l.amount; }, 0);
   var ex = d.extras.filter(function(e){ return e.d.trim() || n2(e.a); }), exSum = ex.reduce(function(a, e){ return a + n2(e.a); }, 0);
@@ -608,15 +627,26 @@ async function drawInvoice(d){
   var cv, g, y, i = 0;
   function newPage(first){ cv = document.createElement('canvas'); cv.width = W; cv.height = H; g = cv.getContext('2d'); pages.push(cv);
     if (first) y = head(g, 'inv', d, co); else { g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.fillStyle = MUT; g.font = '24px Arial'; g.fillText(co.name + ' · ' + d.ref + ' (continued)', P, P + 30); y = P + 70; }
-    g.fillStyle = MUT; g.font = 'bold 20px Arial'; g.fillText('PHOTO', P, y); g.fillText('ITEM', P + 170, y); g.textAlign = 'right'; g.fillText('QTY (PCS)', W - P - 420, y); g.fillText('RATE', W - P - 230, y); g.fillText('AMOUNT', W - P, y); g.textAlign = 'left';
+    g.fillStyle = MUT; g.font = 'bold 20px Arial'; g.fillText('PHOTO', P, y); g.fillText('ITEM', P + 330, y); g.textAlign = 'right'; g.fillText('QTY (PCS)', W - P - 420, y); g.fillText('RATE', W - P - 230, y); g.fillText('AMOUNT', W - P, y); g.textAlign = 'left';
     y += 14; g.fillStyle = INK; g.fillRect(P, y, W - 2 * P, 2); y += 12; }
   newPage(true);
   for (; i < c.lines.length; i++) {
     var l = c.lines[i]; if (y + RH > H - P - 60) newPage(false);
-    if (l.photo) { var u = await getPhoto(l.photo), im = u ? await loadImg(u) : null;
-      if (im) { var sw = im.naturalWidth / l.n, sx = l.qi * sw, bw = 140, bh = 168, k = Math.max(bw / sw, bh / im.naturalHeight), cw = bw / k, ch = bh / k;
-        g.save(); g.beginPath(); g.rect(P, y, bw, bh); g.clip(); g.drawImage(im, sx + (sw - cw) / 2, (im.naturalHeight - ch) / 2, cw, ch, P, y, bw, bh); g.restore(); g.strokeStyle = LINE; g.strokeRect(P, y, bw, bh); } }
-    g.fillStyle = INK; g.font = 'bold 30px Arial'; g.fillText(l.desc, P + 170, y + 50); g.font = '24px Arial'; g.fillStyle = MUT; g.fillText(l.sub, P + 170, y + 88);
+    var PW = 310, bh = 168;
+    if (l.all && l.photos && l.photos.length) {          // every colour chosen: the whole lineup picture(s)
+      var ims = []; for (var q = 0; q < l.photos.length; q++) { var uu = await getPhoto(l.photos[q]), ii = uu ? await loadImg(uu) : null; if (ii) ims.push(ii); }
+      var tw = ims.reduce(function(a, im){ return a + im.naturalWidth * bh / im.naturalHeight; }, 0), sc = tw > PW ? PW / tw : 1, x = P;
+      ims.forEach(function(im){ var w = im.naturalWidth * bh / im.naturalHeight * sc, h = bh * sc; g.drawImage(im, x, y + (bh - h) / 2, w, h); g.strokeStyle = LINE; g.strokeRect(x, y + (bh - h) / 2, w, h); x += w + 4; });
+    } else {                                              // the chosen colours side by side in one cell
+      var np = l.parts.length, gap = 6, bw = Math.min(140, (PW - gap * (np - 1)) / np), x2 = P;
+      for (var q2 = 0; q2 < np; q2++) { var pt = l.parts[q2]; if (!pt.photo) { x2 += bw + gap; continue; }
+        var u = await getPhoto(pt.photo), im = u ? await loadImg(u) : null;
+        if (im) { var sw = im.naturalWidth / pt.n, sx = pt.qi * sw, k = Math.max(bw / sw, bh / im.naturalHeight), cw = bw / k, ch = bh / k;
+          g.save(); g.beginPath(); g.rect(x2, y, bw, bh); g.clip(); g.drawImage(im, sx + (sw - cw) / 2, (im.naturalHeight - ch) / 2, cw, ch, x2, y, bw, bh); g.restore(); g.strokeStyle = LINE; g.strokeRect(x2, y, bw, bh); }
+        x2 += bw + gap; }
+    }
+    g.fillStyle = INK; g.font = 'bold 30px Arial'; g.fillText(l.desc, P + 330, y + 44); g.font = '21px Arial'; g.fillStyle = MUT;
+    wrapText(g, l.sub, W - P - 560 - (P + 330)).slice(0, 4).forEach(function(t, j){ g.fillText(t, P + 330, y + 78 + j * 26); });
     g.textAlign = 'right'; g.fillStyle = INK; g.font = '28px Arial'; g.fillText(String(l.qty), W - P - 420, y + 50); g.fillText(l.rate ? amt(l.rate) : '—', W - P - 230, y + 50); g.font = 'bold 28px Arial'; g.fillText(l.rate ? amt(l.amount) : '—', W - P, y + 50); g.textAlign = 'left';
     y += RH - 4; g.fillStyle = LINE; g.fillRect(P, y, W - 2 * P, 1); y += 8;
   }
@@ -737,7 +767,7 @@ async function waitJob(id, kind, maxMin, tick){
 var STK = {}; try { STK = JSON.parse(ls('sj_stock') || '{}'); } catch(e){}
 function stkSave(){ var ks = Object.keys(STK).sort(function(a, b){ return (STK[b].t || 0) - (STK[a].t || 0); }); ks.slice(40).forEach(function(k){ delete STK[k]; }); ls('sj_stock', JSON.stringify(STK)); }
 function stkKey(ref){ return devId() + '|' + ref; }
-function stkLines(){ return invLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var d = byNo(l.no); return { card: d.id, no: d.base, c: l.c, pcs: l.qty }; }); }
+function stkLines(){ return colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var d = byNo(l.no); return { card: d.id, no: d.base, c: l.c, pcs: l.qty }; }); }
 function stkShow(){ var el = $('stk'); $('dinc').hidden = B.mode !== 'inv'; if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
   if (s) { stkPaint(s); return; }
   el.hidden = false; el.className = 'stk';
