@@ -346,6 +346,18 @@ def og_meta(src, stem, customer, sub, n):
     src = src[:a] + '\n<meta charset="utf-8">\n' + tags + src[a:].replace('<meta charset="utf-8">', '', 1)
     return re.sub(r'<title>.*?</title>', lambda m: '<title>%s</title>' % H.escape(title), src, 1)
 
+def save_costs(req):
+    """Costs sync (7 Oct 2026: "from whichever device I upload the latest inventory, it is updated across all the other devices").
+    The phone sends the costs ALREADY LOCKED with his owner password (AES-GCM); this job only stores the locked file as costs.enc.
+    It cannot read it, and nor can anyone with only the shop password."""
+    blob = req.get('blob') or {}
+    if not all(isinstance(blob.get(k), str) and 8 <= len(blob[k]) <= 16000 for k in ('salt', 'iv', 'ct')):
+        return {'ok': False, 'error': 'bad cost file'}
+    out = {'v': 1, 'iter': int(req.get('iter', 200000)), 't': int(req.get('t', 0)), 'd': str(req.get('d', ''))[:10],
+           'n': int(req.get('n', 0)), 'salt': blob['salt'], 'iv': blob['iv'], 'ct': blob['ct']}
+    json.dump(out, open('costs.enc', 'w'))
+    return {'ok': True, 'kind': 'costs', 'd': out['d'], 'n': out['n'], 't': out['t']}
+
 def main():
     req_s, sig, pw = os.environ.get('REQ', ''), os.environ.get('SIG', ''), os.environ.get('MEMO_PASSWORD', '')
     req = json.loads(req_s)
@@ -353,7 +365,7 @@ def main():
     if not LOCAL and not (pw and hmac.compare_digest(hmac.new(pw.encode(), req_s.encode(), hashlib.sha256).hexdigest(), sig)):
         res = {'ok': False, 'error': 'not signed with the shop password'}
     else:
-        try: res = build(req)
+        try: res = save_costs(req) if req.get('kind') == 'costs' else build(req)
         except Exception as e:
             import traceback; traceback.print_exc(); res = {'ok': False, 'error': 'Build failed: %s: %s' % (type(e).__name__, str(e)[:300])}
     res['id'] = jid
