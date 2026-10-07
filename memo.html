@@ -126,11 +126,14 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .pl .r small{display:block;color:var(--mute);font-size:11.5px}.pl input{width:84px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font:inherit;font-size:15px;text-align:right}
 .pl .miss{color:#9a3b1e}.pl .btns{margin-top:8px}
 #chist a{display:block;font-size:13.5px;color:var(--gold);margin:4px 0}
+#rfr{border:1.5px solid var(--line);background:#fff;border-radius:999px;width:36px;height:36px;font-size:18px;color:var(--gold);flex:none}
+#rfst{max-width:720px;margin:4px auto 0;font-size:12.5px;color:var(--mute);text-align:center}#rfst:empty{display:none}
 .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:#efe9df;color:var(--mute);margin-left:6px;vertical-align:middle}
 </style></head><body>
 <header>
   <div class="top"><h1 id="ttl">ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button></div>
-  <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span></div>
+  <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span><button id="rfr" type="button" title="Check Trello for new cards now">↻</button></div>
+  <div id="rfst"></div>
   <div id="pst"></div>
 </header>
 <main>
@@ -483,7 +486,7 @@ async function boot(){
   if (!token) { $('setup').hidden = false; return; }
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
   $('setup').hidden = true; $('load').hidden = false;
-  try { designs = await loadCards(); $('load').hidden = true; render(); if (updated) { var d = new Date(updated); $('cnt').title = 'List updated ' + d.toLocaleString(); } }
+  try { designs = await loadCards(); $('load').hidden = true; render(); if (updated) { var d = new Date(updated); $('cnt').title = 'List updated ' + d.toLocaleString(); } setTimeout(function(){ refreshList(false); }, 1500); }
   catch (e) { $('load').hidden = true;
     if (/not accepted/.test(e.message)) { dropToken(); $('setup').hidden = false; $('tok').value = ''; $('seterr').textContent = 'Wrong password · كلمة السر غير صحيحة'; }
     else { $('load').hidden = false; $('load').innerHTML = 'Could not load the list (' + e.message.replace(/[<>]/g, '') + '). <a href="" style="color:var(--gold)">Try again</a>'; } }
@@ -1005,6 +1008,36 @@ $('cpinsave').onclick = async function(){ var v = $('cpin').value; if (v.length 
   if (COST && !COST.t) costPush(); };
 if (pinGet()) $('cpin').placeholder = 'saved on this device ✓';
 if (isOwner()) costPull(true);
+
+// ----- keep the READY list fresh (7 Oct 2026: new Trello cards did not show after 20 min — GitHub runs the 20-min timer only every few hours) -----
+// When the memo opens and the last update is older than 15 min, it asks for a fresh copy (through the relay -> memo-stock -> memo-thumbs).
+// The ↻ button does the same on demand. Nothing in Trello changes.
+function rfst(t){ $('rfst').textContent = t; }
+async function lastThumbsRun(){ try { var r = await fetch('https://api.github.com/repos/abbas911-prog/sj-designs/actions/workflows/memo-thumbs.yml/runs?per_page=1', { cache: 'no-store' }); if (!r.ok) return null;
+  var x = ((await r.json()).workflow_runs || [])[0]; return x ? { at: new Date(x.created_at).getTime(), done: new Date(x.updated_at).getTime(), status: x.status } : null; } catch(e){ return null; } }
+var RF = { busy: false, watch: null };
+async function refreshList(force){
+  if (RF.busy || RF.watch || !RELAY || !token) return;
+  var last = await lastThumbsRun();
+  if (last && last.status !== 'completed') { watchList(); return; }                      // one is already running
+  if (!force && last && Date.now() - last.at < 15 * 60000) return;                          // fresh enough
+  var lt = +(ls('sj_refresh_t') || 0); if (Date.now() - lt < (force ? 90000 : 10 * 60000)) { if (force) watchList(); return; }
+  ls('sj_refresh_t', String(Date.now())); RF.busy = true; rfst('Checking Trello for new cards…');
+  try { await relay('stock', { id: jobId('r'), op: 'refresh', dev: devId(), lines: [] }); } catch(e){ RF.busy = false; rfst('Could not refresh: ' + e.message); return; }
+  RF.busy = false; watchList();
+}
+function watchList(){
+  if (RF.watch) return; var start = Date.now(), base = updated; rfst('Updating from Trello… about 2–4 minutes');
+  RF.watch = setInterval(async function(){
+    if (Date.now() - start > 9 * 60000) { clearInterval(RF.watch); RF.watch = null; rfst(''); return; }
+    try { var box = await (await fetch('memo-data.enc?t=' + Date.now(), { cache: 'no-store' })).json(), dd = JSON.parse(await unlock(box, token));
+      if (dd.updated !== base) { clearInterval(RF.watch); RF.watch = null; designs = await loadCards(); render(); rfst('✓ List updated · ' + designs.length + ' designs'); setTimeout(function(){ rfst(''); }, 6000); return; }
+      var l = await lastThumbsRun();
+      if (l && l.status === 'completed' && l.at > start - 120000 && Date.now() - l.done > 120000) { clearInterval(RF.watch); RF.watch = null; rfst('✓ Up to date — nothing new in READY'); setTimeout(function(){ rfst(''); }, 5000); }
+    } catch(e){}
+  }, 20000);
+}
+$('rfr').onclick = function(){ refreshList(true); };
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
