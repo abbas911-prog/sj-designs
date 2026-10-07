@@ -110,6 +110,17 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 #load[hidden]{display:none}
 #catbtn{border:1.5px solid var(--gold);background:#fff;color:var(--gold);border-radius:999px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;white-space:nowrap}
 #catbtn[hidden],#mode button[hidden]{display:none}
+#mybtn{border:1.5px solid var(--gold);background:var(--gold);color:#fff;border-radius:999px;width:38px;height:38px;font:inherit;font-size:17px;font-weight:700;flex:none}
+#mybtn[hidden],#mysheet[hidden]{display:none}
+#mysheet{position:fixed;inset:0;z-index:50;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
+#mysheet .in{background:var(--bg);width:100%;max-width:720px;border-radius:20px 20px 0 0;padding:16px 16px calc(22px + env(safe-area-inset-bottom))}
+#mysheet .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+#mysheet .hd b{letter-spacing:.14em;color:var(--mute);font-size:13px}
+#mysheet .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700}
+#myg{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+#myg button{padding:20px 10px;border-radius:16px;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:16px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+#myg button small{display:block;font-size:11px;font-weight:500;color:var(--mute);letter-spacing:0;margin-top:4px}
+#myst{font-size:12px;color:var(--mute);margin-top:10px;min-height:16px}
 .stk{font-size:13.5px;line-height:1.45;background:#fff;border-radius:12px;padding:10px 12px;margin:8px 0;border-left:4px solid var(--gold)}
 .stk.ok{border-color:#2f7d4f}.stk.bad{border-color:#9a3b1e;color:#9a3b1e}.stk[hidden]{display:none}
 .stk small{display:block;color:var(--mute);margin-top:3px}
@@ -139,7 +150,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:#efe9df;color:var(--mute);margin-left:6px;vertical-align:middle}
 </style></head><body>
 <header>
-  <div class="top"><h1 id="ttl">ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button></div>
+  <div class="top"><h1 id="ttl">ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button><button id="mybtn" type="button" hidden title="My shortcuts">★</button></div>
   <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span><button id="rfr" type="button" title="Check Trello for new cards now">↻</button></div>
   <div class="tabs" id="tabs"><button type="button" data-t="r" class="on">READY <b id="nr"></b></button><button type="button" data-t="s">SAMPLES <b id="ns"></b></button></div>
   <div id="rfst"></div>
@@ -157,6 +168,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
   <div id="load" hidden>Loading READY list…</div>
   <div id="feed"></div>
 </main>
+<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><div id="myg"></div><div id="myst"></div></div></div>
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
 <div id="done" hidden><div class="in">
   <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
@@ -411,7 +423,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-07s2';
+var VER = '2026-10-07s3';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -886,13 +898,26 @@ $('stk').addEventListener('click', function(e){ var b = e.target.closest('button
 // ----- catalogue (his phone only): design numbers + SETS / COMPLETE -> customer catalogue link -----
 var CAT = { items: [], modes: {}, busy: false };
 function isOwner(){ return ls('sj_owner') === '1'; }
-function ownerUI(){ var o = isOwner(); $('catbtn').hidden = !o; document.querySelector('#mode button[data-m="cat"]').hidden = !o; }
+function ownerUI(){ var o = isOwner(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; document.querySelector('#mode button[data-m="cat"]').hidden = !o; }
 (function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
   function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
   function stop(){ clearTimeout(t); }
   el.addEventListener('touchstart', start, { passive: true }); el.addEventListener('mousedown', start);
   ['touchend', 'touchmove', 'mouseup', 'mouseleave'].forEach(function(ev){ el.addEventListener(ev, stop); }); })();
 ownerUI();
+// MY SHORTCUTS (Abbas, 7 Oct 2026): owner-only buttons that open a Slack channel straight in the Slack app. First one: ORDER -> #order-2.
+// Opens only; nothing is read or posted. Slack app first (slack://), the Slack website in a new tab if the app does not open.
+var SLACK_TEAM = 'T05UM6ZRY4S';
+var MY = [{ name: 'ORDER', sub: '#order-2', ch: 'C0BSNU60RM0' }];
+function myDraw(){ $('myg').innerHTML = MY.map(function(x, i){ return '<button type="button" data-i="' + i + '">' + x.name + '<small>' + x.sub + '</small></button>'; }).join(''); }
+$('mybtn').onclick = function(){ myDraw(); $('myst').textContent = ''; $('mysheet').hidden = false; };
+$('myx').onclick = function(){ $('mysheet').hidden = true; };
+$('mysheet').onclick = function(e){ if (e.target.id === 'mysheet') $('mysheet').hidden = true; };
+$('myg').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; var x = MY[+b.dataset.i]; if (!x) return;
+  $('myst').textContent = 'Opening ' + x.sub + ' in Slack…'; $('mysheet').hidden = true;
+  var left = false, onHide = function(){ if (document.hidden) left = true; }; document.addEventListener('visibilitychange', onHide);
+  location.href = 'slack://channel?team=' + SLACK_TEAM + '&id=' + x.ch;
+  setTimeout(function(){ document.removeEventListener('visibilitychange', onHide); if (!left && !document.hidden) window.open('https://app.slack.com/client/' + SLACK_TEAM + '/' + x.ch, '_blank'); }, 1800); };
 $('catbtn').onclick = function(){ $('done').hidden = false; window.scrollTo(0, 0); setMode('cat'); };
 function catOpen(){ if (!$('cname').value.trim()) $('cname').value = $('name').value.trim(); catParse(); catHist(); }
 function catParse(){
