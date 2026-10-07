@@ -1,0 +1,23 @@
+{
+ "id": "smuyghn6zuujv",
+ "op": "sell",
+ "ref": "INV-0005",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6ab51533176ae6caec75fae5",
+   "no": "47805",
+   "before": "Sj = **(47805)** (40) pcs __color = (8/8/8/8/8)",
+   "after": "Sj = **(47805)** (20) pcs __color = (4/4/4/4/4)",
+   "left": 20,
+   "lines": [
+    "colour 1: 8 → 4 (−4)",
+    "colour 2: 8 → 4 (−4)",
+    "colour 3: 8 → 4 (−4)",
+    "colour 4: 8 → 4 (−4)",
+    "colour 5: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  }
+ ]
+}
