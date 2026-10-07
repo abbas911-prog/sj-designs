@@ -171,7 +171,9 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
   <div id="cres"></div>
   <div id="chist"></div>
   <details class="bco" style="margin-top:14px"><summary>Costs · التكلفة <span id="cinfo"></span></summary>
-  <label class="bf"><span>Paste the cost code or link Claude gives you (kept on this phone only)</span><input id="ccode" placeholder="costs code"></label>
+  <label class="bf"><span><b>New inventory report?</b> Choose the PDF here — the memo reads it on this phone (nothing is uploaded)</span><input id="cpdf" type="file" accept="application/pdf,.pdf"></label>
+  <div id="cpdfst" class="sub" style="margin:6px 0"></div>
+  <label class="bf"><span>…or paste a cost code from Claude</span><input id="ccode" placeholder="costs code"></label>
   <div class="btns"><button id="cload" type="button">Load costs</button></div></details>
   </section>
 </div></div>
@@ -874,6 +876,47 @@ $('cprice').addEventListener('input', function(e){ var i = e.target.closest('inp
 $('cprice').addEventListener('change', catPrices);
 $('cprice').addEventListener('click', async function(e){ var b = e.target.closest('button[data-cp]'); if (!b) return; var t = priceText(b.dataset.cp === 'c');
   try { await navigator.clipboard.writeText(t); var o = b.textContent; b.textContent = 'Copied ✓'; setTimeout(function(){ b.textContent = o; }, 1500); } catch(e2){ prompt('Copy:', t); } });
+
+// ----- read the inventory PDF on the phone (Abbas, 7 Oct 2026: prices fluctuate, new designs get added — always use the latest report) -----
+// pdf.js is loaded from jsdelivr (pinned 5.7.284); the PDF is read on the phone, nothing is uploaded. Each row: NAME UNITS unit RATE VALUE; a row only counts when UNITS x RATE = VALUE.
+function invParse(lines){
+  var c = {}, units = {}, rows = 0, bad = [], d = '';
+  lines.forEach(function(l){
+    var m = l.match(/(\d{2})\/(\d{2})\/(\d{4})\s*To\s*(\d{2})\/(\d{2})\/(\d{4})/i); if (m && !d) d = m[6] + '-' + m[5] + '-' + m[4];
+    var r = l.match(/^\s*(?:SJ|Sj|sj|SH)\s*-?\s*([0-9]{2,7}[A-Za-z]?(?:-[A-Za-z0-9]+|\s?\([A-Za-z]\))?)\s+(-?[\d,]+\.\d+)\s+unit\s+(-?[\d,]+\.\d+)\s+(-?[\d,]+\.\d+)\s*$/);
+    if (!r) return;
+    var key = r[1].replace(/\s/g, '').toUpperCase(), u = +r[2].replace(/,/g, ''), rate = +r[3].replace(/,/g, ''), v = +r[4].replace(/,/g, '');
+    if (!(rate > 0)) return;
+    rows++;
+    if (Math.abs(u * rate - v) > Math.max(1, Math.abs(v) * 0.003)) { bad.push('SJ-' + key); return; }
+    if (key in c && units[key] >= u) return;
+    c[key] = rate; units[key] = u;
+  });
+  return { d: d || new Date().toISOString().slice(0, 10), c: c, rows: rows, bad: bad };
+}
+async function invRead(file){
+  var B = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/legacy/build/';   // pinned build, checked 7 Oct 2026; the PDF itself never leaves the phone
+  var pdfjs = await import(B + 'pdf.min.mjs'); pdfjs.GlobalWorkerOptions.workerSrc = B + 'pdf.worker.min.mjs';
+  var doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise, lines = [];
+  for (var i = 1; i <= doc.numPages; i++) {
+    var tc = await (await doc.getPage(i)).getTextContent(), by = {};
+    tc.items.forEach(function(it){ if (!it.str || !it.str.trim()) return; var y = Math.round(it.transform[5] / 2); (by[y] = by[y] || []).push(it); });
+    Object.keys(by).sort(function(a, b){ return b - a; }).forEach(function(y){ lines.push(by[y].sort(function(a, b){ return a.transform[4] - b.transform[4]; }).map(function(it){ return it.str.trim(); }).join(' ')); });
+  }
+  return invParse(lines);
+}
+$('cpdf').addEventListener('change', async function(){
+  var f = this.files && this.files[0], st = $('cpdfst'); if (!f) return;
+  st.textContent = 'Reading ' + f.name + '…';
+  try { var r = await invRead(f), n = Object.keys(r.c).length;
+    if (n < 20) { st.innerHTML = '<span class="miss">Only ' + n + ' designs found — is this the Inventory Summary PDF? Costs not changed.</span>'; return; }
+    var old = COST ? Object.keys(COST.c).length : 0;
+    COST = { d: r.d, c: r.c }; ls('sj_costs', JSON.stringify(COST)); ls('sj_owner', '1'); ownerUI(); costInfo(); catPrices();
+    st.innerHTML = '✓ Costs updated from the report of ' + esc(r.d) + ': ' + n + ' designs' + (old ? ' (was ' + old + ')' : '') + '.' +
+      (r.bad.length ? '<br><span class="miss">' + r.bad.length + ' row(s) skipped because units × rate ≠ value: ' + esc(r.bad.slice(0, 8).join(', ')) + '</span>' : ' Every row checked: units × rate = value.');
+  } catch(e){ st.innerHTML = '<span class="miss">Could not read the PDF: ' + esc(e.message) + '</span>'; }
+  this.value = '';
+});
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
