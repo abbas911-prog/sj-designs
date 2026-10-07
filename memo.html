@@ -96,6 +96,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 #dprev img{display:block;width:100%;border-radius:12px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.08)}
 #marks img{display:block;width:100%;border-radius:12px;margin:10px 0;box-shadow:0 1px 6px rgba(0,0,0,.08)}
 .btns{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.btns .inc{background:#2f6b4f;color:#fff;border:1.5px solid #2f6b4f;border-radius:999px;padding:9px 16px;font:inherit;font-weight:700}.btns .inc small{display:block;font-weight:500;font-size:11px;opacity:.85}.btns .inc[hidden]{display:none}
 .btns button{flex:1;min-width:140px;border-radius:999px;padding:12px;font:inherit;font-size:15px;border:1.5px solid var(--line);background:#fff}
 .btns .gold{background:var(--gold);color:#fff;border-color:var(--gold);font-weight:700}
 #setup{max-width:560px;margin:40px auto;background:#fff;border-radius:16px;padding:18px}
@@ -155,7 +156,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
   </section>
   <section id="p-doc" hidden>
   <div id="bform"></div>
-  <div class="btns"><button id="dsend" class="gold" type="button">Send PDF · أرسل PDF</button><button id="dcopy" type="button">Copy text · نسخ النص</button><button id="dnew" type="button">New number · رقم جديد</button></div>
+  <div class="btns"><button id="dinc" class="inc" type="button" hidden>Include &amp; share · تأكيد وإرسال<small>takes the pieces off Trello</small></button><button id="dsend" class="gold" type="button">Send PDF · أرسل PDF</button><button id="dcopy" type="button">Copy text · نسخ النص</button><button id="dnew" type="button">New number · رقم جديد</button></div>
   <div id="stk" class="stk" hidden></div>
   <div id="dprev"></div>
   </section>
@@ -676,9 +677,22 @@ $('bform').addEventListener('click', function(e){ var d = B[B.mode];
 $('dsend').onclick = async function(){
   var k = B.mode, d = B[k]; if (!d) return; clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
   var f = B.pdf, txt = docText(k, d);
-  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); if (k === 'inv') stkRun('sell'); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click();
-  if (k === 'inv') stkRun('sell');      // an invoice that is sent (or saved) takes its pieces off Trello
+};
+// INCLUDE & SHARE (Abbas, 7 Oct 2026): an invoice can still change (discount, add, less, other colour), so a plain Send PDF never touches stock.
+// Only "Include & share" shares the final invoice AND takes its pieces off Trello.
+$('dinc').onclick = async function(){
+  if (B.mode !== 'inv' || !B.inv) return; var d = B.inv; clearTimeout(B.timer); await preview(); if (!B.pdf) return;
+  var lines = stkLines(), pcs = lines.reduce(function(a, l){ return a + l.pcs; }, 0), s = STK[stkKey(d.ref)];
+  if (!lines.length) { alert('No designs on this invoice.'); return; }
+  if (s && (s.st === 'ok' || s.st === 'busy')) { alert(d.ref + ' is already included — its pieces were taken off Trello. To change it: press Undo first, then Include again.'); return; }
+  if (!confirm('Include ' + d.ref + ': share it and take ' + pcs + ' pcs off Trello?')) return;
+  keepNo('inv', d.ref);
+  var f = B.pdf, txt = docText('inv', d), shared = false;
+  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+  stkRun('sell');
 };
 $('dcopy').onclick = async function(){ var t = docText(B.mode, B[B.mode]); try { await navigator.clipboard.writeText(t); $('dcopy').textContent = 'Copied ✓'; setTimeout(function(){ $('dcopy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', t); } };
 $('dnew').onclick = function(){ var k = B.mode; keepNo(k, B[k].ref); B[k] = freshDoc(k); redraw(); stkShow(); };
@@ -724,10 +738,10 @@ var STK = {}; try { STK = JSON.parse(ls('sj_stock') || '{}'); } catch(e){}
 function stkSave(){ var ks = Object.keys(STK).sort(function(a, b){ return (STK[b].t || 0) - (STK[a].t || 0); }); ks.slice(40).forEach(function(k){ delete STK[k]; }); ls('sj_stock', JSON.stringify(STK)); }
 function stkKey(ref){ return devId() + '|' + ref; }
 function stkLines(){ return invLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var d = byNo(l.no); return { card: d.id, no: d.base, c: l.c, pcs: l.qty }; }); }
-function stkShow(){ var el = $('stk'); if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
+function stkShow(){ var el = $('stk'); $('dinc').hidden = B.mode !== 'inv'; if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
   if (s) { stkPaint(s); return; }
   el.hidden = false; el.className = 'stk';
-  el.innerHTML = RELAY ? 'Sending this invoice takes its pieces off Trello. <small>إرسال الفاتورة يخصم القطع من تريلو · a memo never does</small>' + (isOwner() ? '<button type="button" data-stk="check">Test — show what would change (Trello not touched)</button>' : '')
+  el.innerHTML = RELAY ? '<b>Send PDF</b> does not change stock. <b>Include &amp; share</b> sends the final invoice and takes its pieces off Trello. <small>فقط «تأكيد وإرسال» يخصم القطع من تريلو</small>' + (isOwner() ? '<button type="button" data-stk="check">Test — show what would change (Trello not touched)</button>' : '')
                        : 'Stock link not set up yet — sending will not change Trello. <small>لم يتم ربط المخزون بعد</small>'; }
 function stkPaint(s){ var el = $('stk'); if (B.mode !== 'inv' || !B.inv || stkKey(B.inv.ref) !== stkKey(s.ref)) return; el.hidden = false;
   var pcs = s.lines.reduce(function(a, l){ return a + l.pcs; }, 0), h = '';
