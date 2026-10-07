@@ -423,7 +423,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-07s5';
+var VER = '2026-10-07s6';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -914,13 +914,17 @@ var MY = [{ name: 'SJTC', sub: 'Slack · catch up', app: 'slack://open?team=' + 
           { name: 'ORDER', sub: '#order-2', ch: 'C0BSNU60RM0' },
           { name: 'PURCHASE', sub: '#purchase', ch: 'C09SCSQ0M6J' },
           { name: 'TRELLO ALM', sub: 'Trello · ALM board', app: 'trello://x-callback-url/showBoard?shortlink=5Su6h1WQ', web: 'https://trello.com/b/5Su6h1WQ/alm', where: 'Trello' },
-          { name: 'BEEP', sub: 'Beeper app', app: 'beeper://', web: 'https://apps.apple.com/app/id6499013100', where: 'Beeper' }];
+          { name: 'BEEP', sub: 'Beeper app', app: 'beeper://', web: 'https://apps.apple.com/app/id6499013100', where: 'Beeper' },
+          // ChatGPT Slack workspace (chatgpt-zqx1003.slack.com): its workspace id is not known, so these use Slack's own web links, which the phone hands to the Slack app
+          { name: 'CHATGPT', sub: 'Slack · ChatGPT workspace', link: 'https://chatgpt-zqx1003.slack.com/' },
+          { name: 'SAMPLES', sub: '#samples-discuss · ChatGPT', link: 'https://chatgpt-zqx1003.slack.com/archives/C09T1BGHC6L' }];
 function myDraw(){ $('myg').innerHTML = MY.map(function(x, i){ return '<button type="button" data-i="' + i + '">' + x.name + '<small>' + x.sub + '</small></button>'; }).join(''); }
 $('mybtn').onclick = function(){ myDraw(); $('myst').textContent = ''; $('mysheet').hidden = false; };
 $('myx').onclick = function(){ $('mysheet').hidden = true; };
 $('mysheet').onclick = function(e){ if (e.target.id === 'mysheet') $('mysheet').hidden = true; };
 $('myg').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; var x = MY[+b.dataset.i]; if (!x) return;
   $('myst').textContent = 'Opening ' + x.name + ' in ' + (x.where || 'Slack') + '…'; $('mysheet').hidden = true;
+  if (x.link) { window.open(x.link, '_blank'); return; }
   var left = false, onHide = function(){ if (document.hidden) left = true; }; document.addEventListener('visibilitychange', onHide);
   location.href = x.app || ('slack://channel?team=' + SLACK_TEAM + '&id=' + x.ch);
   setTimeout(function(){ document.removeEventListener('visibilitychange', onHide); if (!left && !document.hidden) window.open(x.web || ('https://app.slack.com/client/' + SLACK_TEAM + '/' + x.ch), '_blank'); }, 1800); };
