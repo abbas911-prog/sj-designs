@@ -171,6 +171,9 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
   <div id="cres"></div>
   <div id="chist"></div>
   <details class="bco" style="margin-top:14px"><summary>Costs · التكلفة <span id="cinfo"></span></summary>
+  <label class="bf"><span><b>Owner password</b> — same on all your phones/iPads; it locks your costs so only you can open them (not the shop password)</span><input id="cpin" type="password" autocomplete="off" placeholder="at least 8 characters"></label>
+  <div class="btns"><button id="cpinsave" type="button">Save owner password</button></div>
+  <div id="csync" class="sub" style="margin:6px 0"></div>
   <label class="bf"><span><b>New inventory report?</b> Choose the PDF here — the memo reads it on this phone (nothing is uploaded)</span><input id="cpdf" type="file" accept="application/pdf,.pdf"></label>
   <div id="cpdfst" class="sub" style="margin:6px 0"></div>
   <label class="bf"><span>…or paste a cost code from Claude</span><input id="ccode" placeholder="costs code"></label>
@@ -851,7 +854,7 @@ async function costDecode(t){
   if (!j || !j.c) throw new Error('not a cost code'); return j;
 }
 function costInfo(){ $('cinfo').textContent = COST ? '— report ' + COST.d + ', ' + Object.keys(COST.c).length + ' designs' : '— not loaded'; }
-async function costLoad(t){ try { COST = await costDecode(t); ls('sj_costs', JSON.stringify(COST)); ls('sj_owner', '1'); ownerUI(); costInfo(); catPrices(); return true; } catch(e){ alert('Cost code not accepted: ' + e.message); return false; } }
+async function costLoad(t){ try { COST = await costDecode(t); ls('sj_costs', JSON.stringify(COST)); ls('sj_owner', '1'); ownerUI(); costInfo(); catPrices(); setTimeout(costPush, 0); return true; } catch(e){ alert('Cost code not accepted: ' + e.message); return false; } }
 $('cload').onclick = function(){ costLoad($('ccode').value).then(function(ok){ if (ok) { $('ccode').value = ''; $('cload').textContent = 'Loaded ✓'; } }); };
 if (/costs=/.test(location.hash)) { costLoad(location.hash).then(function(){ try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} }); }
 costInfo();
@@ -911,12 +914,53 @@ $('cpdf').addEventListener('change', async function(){
   try { var r = await invRead(f), n = Object.keys(r.c).length;
     if (n < 20) { st.innerHTML = '<span class="miss">Only ' + n + ' designs found — is this the Inventory Summary PDF? Costs not changed.</span>'; return; }
     var old = COST ? Object.keys(COST.c).length : 0;
-    COST = { d: r.d, c: r.c }; ls('sj_costs', JSON.stringify(COST)); ls('sj_owner', '1'); ownerUI(); costInfo(); catPrices();
+    COST = { d: r.d, c: r.c }; ls('sj_costs', JSON.stringify(COST)); ls('sj_owner', '1'); ownerUI(); costInfo(); catPrices(); costPush();
     st.innerHTML = '✓ Costs updated from the report of ' + esc(r.d) + ': ' + n + ' designs' + (old ? ' (was ' + old + ')' : '') + '.' +
       (r.bad.length ? '<br><span class="miss">' + r.bad.length + ' row(s) skipped because units × rate ≠ value: ' + esc(r.bad.slice(0, 8).join(', ')) + '</span>' : ' Every row checked: units × rate = value.');
   } catch(e){ st.innerHTML = '<span class="miss">Could not read the PDF: ' + esc(e.message) + '</span>'; }
   this.value = '';
 });
+
+// ----- costs follow him across devices (7 Oct 2026: "from whichever device I upload the latest inventory, it is updated across all the other devices") -----
+// The costs are locked on the phone with his OWNER password (PBKDF2-SHA256 200k + AES-GCM) and stored as costs.enc on the site.
+// The relay/GitHub only ever see the locked file; the shop password alone cannot open it. Each device needs the owner password once.
+function pinGet(){ return ls('sj_owner_pin') || ''; }
+function b64e(u){ var s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
+async function zip(str, back){ var st = new Blob([str]).stream().pipeThrough(back ? new DecompressionStream('gzip') : new CompressionStream('gzip')); return new Uint8Array(await new Response(st).arrayBuffer()); }
+async function pinKey(pin, salt){ var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: 200000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']); }
+async function costLock(cost, pin){ var salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  var ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, await pinKey(pin, salt), await zip(JSON.stringify(cost))));
+  return { salt: b64e(salt), iv: b64e(iv), ct: b64e(ct) }; }
+async function costUnlock(box, pin){ var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(box.iv) }, await pinKey(pin, b64(box.salt)), b64(box.ct));
+  return JSON.parse(new TextDecoder().decode(await zip(new Uint8Array(pt), true))); }
+function syncMsg(h){ $('csync').innerHTML = h; }
+async function costPush(){        // after loading a report on THIS device: lock it and save it for the others
+  var pin = pinGet(); if (!COST) return;
+  if (!pin) { syncMsg('<span class="miss">Set your owner password above so these costs reach your other devices.</span>'); return; }
+  if (!RELAY) return;
+  COST.t = Date.now(); ls('sj_costs', JSON.stringify(COST));
+  syncMsg('Sending the costs to your other devices…');
+  try { var id = jobId('k'); await relay('catalog', { id: id, kind: 'costs', t: COST.t, d: COST.d, n: Object.keys(COST.c).length, iter: 200000, blob: await costLock(COST, pin) });
+    var res = await waitJob(id, 'catalog', 15);
+    syncMsg(res.ok ? '✓ Synced: your other devices get the report of ' + esc(COST.d) + ' next time they open the memo.' : '<span class="miss">Not synced: ' + esc(res.error || '') + '</span>');
+  } catch(e){ syncMsg('<span class="miss">Not synced: ' + esc(e.message) + '</span>'); }
+}
+async function costPull(quiet){    // on open: take the newest locked costs if they are newer than this device's
+  try { var r = await fetch('costs.enc?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return; var box = await r.json();
+    var mine = COST && COST.t ? COST.t : 0;
+    if (!pinGet()) { if (box.t > mine) syncMsg('Costs from the report of ' + esc(box.d) + ' are waiting — enter your owner password above to use them on this device.'); return; }
+    if (box.t <= mine) { if (!quiet) syncMsg('✓ This device has the latest costs (report ' + esc(COST.d) + ').'); return; }
+    var c = await costUnlock(box, pinGet()); c.t = box.t; COST = c; ls('sj_costs', JSON.stringify(COST)); costInfo(); catPrices();
+    syncMsg('✓ Costs updated from your other device: report ' + esc(COST.d) + ', ' + Object.keys(COST.c).length + ' designs.');
+  } catch(e){ ls('sj_owner_pin', null); $('cpin').placeholder = 'at least 8 characters'; syncMsg('<span class="miss">Synced costs could not be opened — that owner password does not match the one used on your other device. Type it again.</span>'); }
+}
+$('cpinsave').onclick = async function(){ var v = $('cpin').value; if (v.length < 8) { syncMsg('<span class="miss">Use at least 8 characters.</span>'); return; }
+  ls('sj_owner_pin', v); $('cpin').value = ''; $('cpin').placeholder = 'saved on this device ✓';
+  await costPull(false);
+  if (COST && !COST.t) costPush(); };
+if (pinGet()) $('cpin').placeholder = 'saved on this device ✓';
+if (isOwner()) costPull(true);
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
