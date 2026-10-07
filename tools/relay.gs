@@ -64,3 +64,20 @@ function setupWatch() {
   ScriptApp.newTrigger('watchTrello').timeBased().everyMinutes(1).create();
   watchTrello();
 }
+
+// RELIABLE 10-MINUTE UPDATE (7 Oct 2026). GitHub's own */20 timer is skipped for an hour or more at a time
+// (16:31 -> 17:40 UTC that day, while Abbas waited on his SJ-12985 edits). This timer simply starts memo-thumbs every 10 minutes.
+// It needs only the GH property (already there) - no Trello key. Run setupTimer() once and allow the permission.
+function kick() {
+  var gh = PropertiesService.getScriptProperties().getProperty('GH'); if (!gh) return;
+  var g = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/memo-thumbs.yml/dispatches', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + gh, Accept: 'application/vnd.github+json' }, payload: JSON.stringify({ ref: 'main' })
+  });
+  console.log(g.getResponseCode() === 204 ? 'memo-thumbs started' : 'GitHub said ' + g.getResponseCode() + ': ' + g.getContentText().slice(0, 200));
+}
+function setupTimer() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'kick') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('kick').timeBased().everyMinutes(10).create();
+  kick();
+}
