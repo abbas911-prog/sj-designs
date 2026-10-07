@@ -1,0 +1,25 @@
+{
+ "ok": true,
+ "page": "sj-1007.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sj-1007.html?v=1",
+ "cover": "og-sj-1007.jpg",
+ "name": "",
+ "country": "",
+ "designs": [
+  "47805",
+  "81016"
+ ],
+ "report": [
+  "SJ-47805 SETS  8+8+8+8+8 = 40 ✓ (card: 40) → 5 colours",
+  "SJ-81016 COMPLETE  12+10+10+10 = 42 ✓ (card: 42) → 2 complete sets + 10 pcs"
+ ],
+ "flags": [
+  "SJ-81016 has 2 READY cards — used the newest: Sj = **(81016)** (42) pcs color = (4)....(12/10/10/10)"
+ ],
+ "videos": [
+  "47805",
+  "81016"
+ ],
+ "bytes": 603323,
+ "id": "cmuxdk8fun8fh"
+}
