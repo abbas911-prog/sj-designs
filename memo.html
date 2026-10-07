@@ -337,6 +337,7 @@ function render(){
   });
   feed.querySelectorAll('.ph img').forEach(function(im){ if (io) io.observe(im); else loadInto(im); });
   $('cnt').textContent = designs.length + ' designs';
+  reapply();
   feed.onclick = function(e){
     var b = e.target.closest('button'); if (!b) return;
     var row = b.closest('.row'); if (!row) return; var k = row.dataset.k, d = byNo(k.split(':')[0]), c = +k.split(':')[1], pcs = colPcs(d, c), maxSets = Math.floor(pcs / 4);
@@ -356,8 +357,34 @@ function render(){
     if (n > pcs) { n = pcs; inp.value = pcs; }
     state[k] = { sets: 0, all: false, pcs: n }; paint(row, state[k], maxSets); refresh();
   };
-  applySearch();
+  applySearch(); refresh();
 }
+// KEEP THE WORK (Abbas, 7 Oct 2026: staff marked pieces + prices while packing, opened WhatsApp, came back and everything was gone).
+// Every tap is saved on this phone; when the page reloads (phone closed the tab, new list from Trello) the marks, prices,
+// customer name, open bill and place in the list come back. Only "clear" starts a new memo.
+function reapply(){
+  var gone = [];
+  Object.keys(state).forEach(function(k){ var p = k.split(':'), d = byNo(p[0]), c = +p[1], pcs = d ? colPcs(d, c) : 0;
+    if (!pcs) { if (gone.indexOf('SJ-' + p[0]) < 0) gone.push('SJ-' + p[0]); delete state[k]; return; }
+    var s = state[k]; if (s.pcs && s.pcs > pcs) s.pcs = pcs; if (s.sets && s.sets > Math.floor(pcs / 4)) s.sets = Math.floor(pcs / 4); if (!s.sets && !s.all && !s.pcs) delete state[k]; });
+  Object.keys(prices).forEach(function(no){ if (!byNo(no)) delete prices[no]; });
+  document.querySelectorAll('#feed .row[data-k]').forEach(function(r){ var k = r.dataset.k, s = state[k]; if (!s) return; var d = byNo(k.split(':')[0]);
+    paint(r, s, Math.floor(colPcs(d, +k.split(':')[1]) / 4)); var pc = r.querySelector('.pc'); if (pc && s.pcs) pc.value = s.pcs; });
+  document.querySelectorAll('#feed .design').forEach(function(a){ var v = prices[a.dataset.no], x = a.querySelector('.prc'); if (x && v > 0) x.value = v; });
+  if (gone.length) { rfst('No longer in READY, taken off this memo: ' + gone.join(', ')); setTimeout(function(){ rfst(''); }, 12000); }
+}
+var WK = 'sj_work', wkT = null;
+function topNo(){ var best = null; document.querySelectorAll('#feed .design').forEach(function(a){ if (a.hidden) return; var r = a.getBoundingClientRect(); if (r.bottom > 60 && !best) best = a.dataset.no; }); return best; }
+function saveWork(){ clearTimeout(wkT); wkT = null; if (!designs.length) return;
+  var w = { t: Date.now(), state: state, prices: prices, name: $('name').value, q: $('q').value, at: topNo(), open: !$('done').hidden && B.mode !== 'memo' && B.mode !== 'cat' ? B.mode : '', inv: B.inv, rv: B.rv, pv: B.pv };
+  try { localStorage.setItem(WK, JSON.stringify(w)); } catch(e){} }
+function saveSoon(){ if (!wkT) wkT = setTimeout(saveWork, 400); }
+function loadWork(){ var w; try { w = JSON.parse(localStorage.getItem(WK) || 'null'); } catch(e){} if (!w) return null;
+  state = w.state || {}; prices = w.prices || {}; if (w.name) $('name').value = w.name; if (w.q) $('q').value = w.q;
+  ['inv', 'rv', 'pv'].forEach(function(k){ if (w[k]) B[k] = w[k]; }); return w; }
+['input', 'change', 'click'].forEach(function(ev){ document.addEventListener(ev, saveSoon); });
+document.addEventListener('visibilitychange', function(){ if (document.hidden) saveWork(); });
+window.addEventListener('pagehide', saveWork);
 function byNo(no){ return designs.filter(function(d){ return d.no === no; })[0]; }
 function colPcs(d, c){ return (d.colours.filter(function(n){ return n.c === c; })[0] || {}).pcs || 0; }
 function paint(row, s, maxSets){
@@ -386,7 +413,7 @@ function applySearch(){
   $('cnt').textContent = n + ' / ' + designs.length;
 }
 $('q').oninput = applySearch;
-$('clr').onclick = function(){ state = {}; prices = {}; document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
+$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; B.inv = null; $('name').value = ''; try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
 
 // ---------- memo output ----------
 function orderText(){
@@ -486,7 +513,8 @@ async function boot(){
   if (!token) { $('setup').hidden = false; return; }
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
   $('setup').hidden = true; $('load').hidden = false;
-  try { designs = await loadCards(); $('load').hidden = true; render(); if (updated) { var d = new Date(updated); $('cnt').title = 'List updated ' + d.toLocaleString(); } setTimeout(function(){ refreshList(false); }, 1500); }
+  try { designs = await loadCards(); $('load').hidden = true; var w = loadWork(); render(); if (updated) { var d = new Date(updated); $('cnt').title = 'List updated ' + d.toLocaleString(); }
+    if (w) { if (w.open) { $('done').hidden = false; setMode(w.open); } else if (w.at) { var a = document.querySelector('#feed .design[data-no="' + w.at + '"]'); if (a) a.scrollIntoView(); } } }
   catch (e) { $('load').hidden = true;
     if (/not accepted/.test(e.message)) { dropToken(); $('setup').hidden = false; $('tok').value = ''; $('seterr').textContent = 'Wrong password · كلمة السر غير صحيحة'; }
     else { $('load').hidden = false; $('load').innerHTML = 'Could not load the list (' + e.message.replace(/[<>]/g, '') + '). <a href="" style="color:var(--gold)">Try again</a>'; } }
@@ -1038,13 +1066,6 @@ function watchList(){
   }, 20000);
 }
 $('rfr').onclick = function(){ refreshList(true); };
-// while the memo is open it looks for a newer list every minute and swaps it in by itself (the READY watcher publishes within ~2–3 min of a Trello change)
-setInterval(async function(){
-  if (document.hidden || RF.watch || !token || !designs.length) return;
-  try { var box = await (await fetch('memo-data.enc?t=' + Date.now(), { cache: 'no-store' })).json(), dd = JSON.parse(await unlock(box, token));
-    if (dd.updated && dd.updated !== updated) { designs = await loadCards(); render(); rfst('✓ New from Trello · ' + designs.length + ' designs'); setTimeout(function(){ rfst(''); }, 6000); }
-  } catch(e){}
-}, 60000);
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
