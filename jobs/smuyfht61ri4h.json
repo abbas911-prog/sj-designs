@@ -1,0 +1,305 @@
+{
+ "id": "smuyfht61ri4h",
+ "op": "sell",
+ "ref": "INV-0002",
+ "ok": false,
+ "cards": [
+  {
+   "card": "69a40a48992a07560494a150",
+   "no": "12985",
+   "before": "SJ = **12985** (76) pcs …colors (5),,,(16/14/12/12/22)",
+   "after": "SJ = **12985** (30) pcs …colors (5),,,(6/6/6/6/6)",
+   "left": 30,
+   "lines": [
+    "colour 1: 16 → 6 (−10)",
+    "colour 2: 14 → 6 (−8)",
+    "colour 3: 12 → 6 (−6)",
+    "colour 4: 12 → 6 (−6)",
+    "colour 5: 22 → 6 (−16)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69c6bdeb9452accc05b61b71",
+   "no": "15927",
+   "before": "SJ-15927 (70) pcs ,,, colors = (5) ,,,,,, (14/14/14/14/14)",
+   "after": "SJ-15927 (40) pcs ,,, colors = (5) ,,,,,, (8/8/8/8/8)",
+   "left": 40,
+   "lines": [
+    "colour 1: 14 → 8 (−6)",
+    "colour 2: 14 → 8 (−6)",
+    "colour 3: 14 → 8 (−6)",
+    "colour 4: 14 → 8 (−6)",
+    "colour 5: 14 → 8 (−6)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69c7e5f233adf312fdb6b96b",
+   "no": "20713",
+   "before": "SJ = **20713** (80)pcs ,,,,colors = (12) ,,,,,,,(8/8/4/0/8/4) (8/8/8/8/8/8)",
+   "after": "SJ = **20713** (56)pcs ,,,,colors = (12) ,,,,,,,(8/8/4/0/8/4) (4/4/4/4/4/4)",
+   "left": 56,
+   "lines": [
+    "colour 7: 8 → 4 (−4)",
+    "colour 8: 8 → 4 (−4)",
+    "colour 9: 8 → 4 (−4)",
+    "colour 10: 8 → 4 (−4)",
+    "colour 11: 8 → 4 (−4)",
+    "colour 12: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6aaa44da42d4418641287e59",
+   "no": "33418",
+   "before": "Sj = **(33418)** (40) pcs ,,, color (8/8/8/8/8)",
+   "after": "Sj = **(33418)** (28) pcs ,,, color (4/4/8/8/4)",
+   "left": 28,
+   "lines": [
+    "colour 1: 8 → 4 (−4)",
+    "colour 2: 8 → 4 (−4)",
+    "colour 5: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a3289ee73fe339da6d31b59",
+   "no": "34185",
+   "before": "SJ = **(34185)** (75) pcs color = (11) ,,,,,(5/4/4/12/10/8),,(4/8/4/8/8)",
+   "after": "SJ = **(34185)** (49) pcs color = (11) ,,,,,(1/0/0/8/4/4),,(4/8/4/8/8)",
+   "left": 49,
+   "lines": [
+    "colour 1: 5 → 1 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 12 → 8 (−4)",
+    "colour 5: 10 → 4 (−6)",
+    "colour 6: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69c6c47988acc78dd19a5de1",
+   "no": "35091",
+   "before": "SJ = **35091** (76) pcs ,,, colors = (12) ,,,,,(4/4/4/4/8/4),, (8/8/8/8/8/8)",
+   "after": "SJ = **35091** (52) pcs ,,, colors = (12) ,,,,,(4/4/4/4/8/4),, (4/4/4/4/4/4)",
+   "left": 52,
+   "lines": [
+    "colour 7: 8 → 4 (−4)",
+    "colour 8: 8 → 4 (−4)",
+    "colour 9: 8 → 4 (−4)",
+    "colour 10: 8 → 4 (−4)",
+    "colour 11: 8 → 4 (−4)",
+    "colour 12: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69c6c4735d0fe8a65be1465e",
+   "no": "35218",
+   "err": "card title does not add up (4+8+4+12+8+8+3+8+4+4+8 = 71, card says 79) — not changed"
+  },
+  {
+   "card": "6a6df0715eb57c9b9153550d",
+   "no": "46283",
+   "before": "Sj = **(46283)** (20) pcs color = (5) ,,,(4/4/4/4/4)",
+   "after": "Sj = **(46283)** (8) pcs color = (5) ,,,(0/0/4/0/4)",
+   "left": 8,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 4: 4 → 0 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a1fd3b6930a76e97752a37f",
+   "no": "48188",
+   "before": "Sj = **48188** (77) pcs color = (4),,,,(33/0/0/19/20/0),,(0/0/0/0/5)",
+   "after": "Sj = **48188** (59) pcs color = (4),,,,(28/0/0/15/16/0),,(0/0/0/0/0)",
+   "left": 59,
+   "lines": [
+    "colour 1: 33 → 28 (−5)",
+    "colour 4: 19 → 15 (−4)",
+    "colour 5: 20 → 16 (−4)",
+    "colour 11: 5 → 0 (−5)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a6e3da00811d5b0ae94414b",
+   "no": "58429",
+   "before": "SJ-**(58429)** (16) pcs color = (4) ,,,,(4/4/4/4)",
+   "after": "SJ-**(58429)** (15) pcs color = (4) ,,,,(4/3/4/4)",
+   "left": 15,
+   "lines": [
+    "colour 2: 4 → 3 (−1)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a30109d0c755cc6231749e1",
+   "no": "61924",
+   "before": "SJ = **61924** (62) pcs color = (7) (8/0/4/0/8)..(6/6/4/26)",
+   "after": "SJ = **61924** (44) pcs color = (7) (8/0/0/0/4)..(6/0/4/22)",
+   "left": 44,
+   "lines": [
+    "colour 3: 4 → 0 (−4)",
+    "colour 5: 8 → 4 (−4)",
+    "colour 7: 6 → 0 (−6)",
+    "colour 9: 26 → 22 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69d74789bcd77f0a7d7808ab",
+   "no": "67904",
+   "before": "Sj **67904** (36) pcs (6) colors.                         (4/0/4/4/4/12/8)",
+   "after": "Sj **67904** (12) pcs (6) colors.                         (0/0/0/0/0/8/4)",
+   "left": 12,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 4 → 0 (−4)",
+    "colour 5: 4 → 0 (−4)",
+    "colour 6: 12 → 8 (−4)",
+    "colour 7: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69988bae82bfc65e49631c47",
+   "no": "68424",
+   "before": "Sj = **68424,** (30) pcs,…colors = (5)....(6/6/6/6/6)",
+   "after": "Sj = **68424,** (0) pcs,…colors = (5)....(0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 6 → 0 (−6)",
+    "colour 2: 6 → 0 (−6)",
+    "colour 3: 6 → 0 (−6)",
+    "colour 4: 6 → 0 (−6)",
+    "colour 5: 6 → 0 (−6)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6a73706f2e41050fbc7a8ef1",
+   "no": "75308",
+   "before": "Sj = **(75308_B)** (84) pcs colour = (5),,(21/22/6/6/29)",
+   "after": "Sj = **(75308_B)** (56) pcs colour = (5),,(16/16/0/0/24)",
+   "left": 56,
+   "lines": [
+    "colour 1: 21 → 16 (−5)",
+    "colour 2: 22 → 16 (−6)",
+    "colour 3: 6 → 0 (−6)",
+    "colour 4: 6 → 0 (−6)",
+    "colour 5: 29 → 24 (−5)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6aad39e8d8513bbc3dd84ea5",
+   "no": "81016",
+   "before": "Sj = **(81016)** (42) pcs color = (4)....(12/10/10/10)",
+   "after": "Sj = **(81016)** (20) pcs color = (4)....(8/4/4/4)",
+   "left": 20,
+   "lines": [
+    "colour 1: 12 → 8 (−4)",
+    "colour 2: 10 → 4 (−6)",
+    "colour 3: 10 → 4 (−6)",
+    "colour 4: 10 → 4 (−6)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "697f568d9cc4b9881fff6e91",
+   "no": "86619",
+   "before": "Sj = **86619** (40) pcs …colors = (6) …..(8/4/8/4/12/4)…",
+   "after": "Sj = **86619** (24) pcs …colors = (6) …..(8/0/4/0/12/0)…",
+   "left": 24,
+   "lines": [
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 8 → 4 (−4)",
+    "colour 4: 4 → 0 (−4)",
+    "colour 6: 4 → 0 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69a40a4222d40add76242ac6",
+   "no": "12985",
+   "before": "SJ = **12985** (71) pcs …colors (5),,,,(15/12/14/14/16)",
+   "after": "SJ = **12985** (41) pcs …colors (5),,,,(9/6/8/8/10)",
+   "left": 41,
+   "lines": [
+    "colour 1: 15 → 9 (−6)",
+    "colour 2: 12 → 6 (−6)",
+    "colour 3: 14 → 8 (−6)",
+    "colour 4: 14 → 8 (−6)",
+    "colour 5: 16 → 10 (−6)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69b42d2ddf22ae3bef3eb575",
+   "no": "24719",
+   "before": "SJ = **24719** (60) pcs ,,, colors = (5),,,, (12/12/12/12/12)",
+   "after": "SJ = **24719** (30) pcs ,,, colors = (5),,,, (6/6/6/6/6)",
+   "left": 30,
+   "lines": [
+    "colour 1: 12 → 6 (−6)",
+    "colour 2: 12 → 6 (−6)",
+    "colour 3: 12 → 6 (−6)",
+    "colour 4: 12 → 6 (−6)",
+    "colour 5: 12 → 6 (−6)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "698c8bf24def16bf5a6cfe8d",
+   "no": "68424",
+   "before": "Sj = **68424** …(30) pcs …Colors = (5)...(6/6/6/6/6)",
+   "after": "Sj = **68424** …(0) pcs …Colors = (5)...(0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 6 → 0 (−6)",
+    "colour 2: 6 → 0 (−6)",
+    "colour 3: 6 → 0 (−6)",
+    "colour 4: 6 → 0 (−6)",
+    "colour 5: 6 → 0 (−6)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6a47c3b8fd6522dbe734fb61",
+   "no": "75308",
+   "before": "SJ = **75308-B** (28) pcs ,,, colors = (5) ,,,,(6/6/4/6/6)",
+   "after": "SJ = **75308-B** (0) pcs ,,, colors = (5) ,,,,(0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 6 → 0 (−6)",
+    "colour 2: 6 → 0 (−6)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 6 → 0 (−6)",
+    "colour 5: 6 → 0 (−6)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6a47c3b02c31a0f36c116062",
+   "no": "75308",
+   "before": "SJ = **75308-B** (22) pcs ,,, colors = (5) ,,,,(3/6/4/3/6)",
+   "after": "SJ = **75308-B** (0) pcs ,,, colors = (5) ,,,,(0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 3 → 0 (−3)",
+    "colour 2: 6 → 0 (−6)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 3 → 0 (−3)",
+    "colour 5: 6 → 0 (−6)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  }
+ ]
+}
