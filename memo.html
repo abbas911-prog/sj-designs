@@ -409,6 +409,12 @@ function loadWork(){ var w; try { w = JSON.parse(localStorage.getItem(WK) || 'nu
 ['input', 'change', 'click'].forEach(function(ev){ document.addEventListener(ev, saveSoon); });
 document.addEventListener('visibilitychange', function(){ if (document.hidden) saveWork(); });
 window.addEventListener('pagehide', saveWork);
+// SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
+// The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
+var VER = '2026-10-07s2';
+async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
+  if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
 function byNo(no){ return designs.filter(function(d){ return d.no === no; })[0]; }
 function colPcs(d, c){ return (d.colours.filter(function(n){ return n.c === c; })[0] || {}).pcs || 0; }
 function paint(row, s, maxSets){
@@ -544,6 +550,7 @@ async function boot(){
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
   $('setup').hidden = true; $('load').hidden = false;
   try { designs = await loadCards(); $('load').hidden = true; var w = loadWork(); render(); if (updated) { var d = new Date(updated); $('cnt').title = 'List updated ' + d.toLocaleString(); }
+    setTimeout(checkVer, 800);
     if (w) { if (w.open) { $('done').hidden = false; setMode(w.open); } else if (w.at) { var a = document.querySelector('#feed .design[data-no="' + w.at + '"]'); if (a) a.scrollIntoView(); } } }
   catch (e) { $('load').hidden = true;
     if (/not accepted/.test(e.message)) { dropToken(); $('setup').hidden = false; $('tok').value = ''; $('seterr').textContent = 'Wrong password · كلمة السر غير صحيحة'; }
@@ -1096,7 +1103,7 @@ function watchList(){
     } catch(e){}
   }, 20000);
 }
-$('rfr').onclick = function(){ refreshList(true); };
+$('rfr').onclick = function(){ checkVer(); refreshList(true); };
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
