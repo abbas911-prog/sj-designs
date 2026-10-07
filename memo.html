@@ -1038,6 +1038,13 @@ function watchList(){
   }, 20000);
 }
 $('rfr').onclick = function(){ refreshList(true); };
+// while the memo is open it looks for a newer list every minute and swaps it in by itself (the READY watcher publishes within ~2–3 min of a Trello change)
+setInterval(async function(){
+  if (document.hidden || RF.watch || !token || !designs.length) return;
+  try { var box = await (await fetch('memo-data.enc?t=' + Date.now(), { cache: 'no-store' })).json(), dd = JSON.parse(await unlock(box, token));
+    if (dd.updated && dd.updated !== updated) { designs = await loadCards(); render(); rfst('✓ New from Trello · ' + designs.length + ' designs'); setTimeout(function(){ rfst(''); }, 6000); }
+  } catch(e){}
+}, 60000);
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
