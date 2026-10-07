@@ -128,11 +128,20 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 #chist a{display:block;font-size:13.5px;color:var(--gold);margin:4px 0}
 #rfr{border:1.5px solid var(--line);background:#fff;border-radius:999px;width:36px;height:36px;font-size:18px;color:var(--gold);flex:none}
 #rfst{max-width:720px;margin:4px auto 0;font-size:12.5px;color:var(--mute);text-align:center}#rfst:empty{display:none}
+.tabs{display:flex;gap:8px;max-width:720px;margin:8px auto 0}
+.tabs button{flex:1;padding:8px 10px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font:inherit;font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--mute)}
+.tabs button.on{border-color:var(--gold);color:var(--ink);background:#fbf7ef}
+.tabs button b{font-weight:600;color:var(--gold);letter-spacing:0}
+.design.sample .ph .nums{display:none}
+.tag.smp{background:#A8864A;color:#fff}
+.one{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px}
+.one.on{border-color:var(--gold);background:var(--gold);color:#fff;font-weight:700}
 .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:#efe9df;color:var(--mute);margin-left:6px;vertical-align:middle}
 </style></head><body>
 <header>
   <div class="top"><h1 id="ttl">ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button></div>
   <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span><button id="rfr" type="button" title="Check Trello for new cards now">↻</button></div>
+  <div class="tabs" id="tabs"><button type="button" data-t="r" class="on">READY <b id="nr"></b></button><button type="button" data-t="s">SAMPLES <b id="ns"></b></button></div>
   <div id="rfst"></div>
   <div id="pst"></div>
 </header>
@@ -280,8 +289,21 @@ async function loadCards(){
   RAW = { cards: cards, roles: roles };
   return mkDesigns(cards, roles);
 }
+// SAMPLES list (Abbas, 7 Oct 2026: "add one more list ... SAMPLES. It's by default 1 pcs. Include those cards also").
+// A card there is one sample piece: no colour counts in its title, always 1 pc. Its key is <number>-S (e.g. 77399-S).
+function mkSample(c, roles){
+  var p = parseTitle(c.name), base = p.no || String(c.idShort);
+  function role(a){ var r = roles[a.id]; return r ? r[0] : 'detail'; }
+  var all = c.attachments.filter(function(a){ return /^image\//.test(a.mimeType) && role(a) !== 'shot'; })
+    .sort(function(a, b){ return new Date(b.date) - new Date(a.date); });
+  var real = all.filter(function(a){ return role(a) !== 'cover'; }), imgs = real.length ? real : all.slice(0, 1);
+  var photos = imgs.map(function(a, i){ return { srcs: imgSrcs(a), att: a.id, nums: i === 0 ? [{ c: 1, pcs: 1 }] : null, name: a.name }; });
+  var colours = photos.length ? [photos[0].nums[0]] : [{ c: 1, pcs: 1 }];
+  return { id: c.id, title: c.name, base: base, no: base + '-S', total: 1, ncol: 1, sum: 1, ok: true, warn: [], photos: photos, colours: colours, pos: c.pos, sample: true };
+}
 function mkDesigns(cards, roles){
   return uniq(cards.map(function(c){
+    if (c.list === 's') return mkSample(c, roles);
     var p = parseTitle(c.name);
     var all = c.attachments.filter(function(a){ return /^image\//.test(a.mimeType); })
       .sort(function(a, b){ return new Date(b.date) - new Date(a.date); });    // newest first = first colour group
@@ -319,14 +341,15 @@ function lab(sel, pcs){ if (sel.pcs) { return { en: sel.pcs + ' pc' + (sel.pcs >
 function render(){
   var feed = $('feed'); feed.innerHTML = '';
   designs.forEach(function(d){
-    var art = document.createElement('article'); art.className = 'design'; art.dataset.no = d.no;
+    var art = document.createElement('article'); art.className = 'design' + (d.sample ? ' sample' : ''); art.dataset.no = d.no;
     var meta = d.total != null ? '<b>' + d.total + ' pcs</b> · ' + d.colours.length + ' colours' : d.colours.length + ' colours';
+    if (d.sample) meta = '<span class="tag smp">SAMPLE</span> <b>1 pc</b> · عينة';
     if (!d.ok) meta += '<span class="tag warn">check card</span>';
     var ph = d.photos.map(function(p, i){
       var nums = p.nums ? '<div class="nums" style="grid-template-columns:repeat(' + p.nums.length + ',1fr)">' + p.nums.map(function(n){ return '<span data-c="' + n.c + '" class="' + (n.pcs ? '' : 'z') + '">' + n.c + '</span>'; }).join('') + '</div>' : '';
       return '<div class="ph"><img data-no="' + d.no + '" data-i="' + i + '" alt="SJ-' + d.no + '">' + nums + '</div>';
     }).join('');
-    var rows = d.colours.map(function(n){
+    var rows = d.sample ? '<div class="row" data-k="' + d.no + ':1"><div class="c">1</div><div class="p"><b>1 pc</b> · sample · عينة</div><button type="button" class="one">Add 1 pc · أضف</button></div>' : d.colours.map(function(n){
       var k = d.no + ':' + n.c, st = Math.floor(n.pcs / 4), r = n.pcs % 4;
       return '<div class="row' + (n.pcs ? '' : ' zero') + '" data-k="' + k + '"><div class="c">' + n.c + '</div><div class="p"><b>' + n.pcs + ' pcs</b> · ' + st + ' set' + (st === 1 ? '' : 's') + (r ? ' + ' + r : '') + '</div>' +
         (n.pcs ? '<div class="step"><button type="button" data-d="-1">−</button><span class="v">0</span><button type="button" data-d="1">+</button></div><input class="pc" type="number" inputmode="numeric" min="1" max="' + n.pcs + '" placeholder="pcs" aria-label="pieces"><button type="button" class="all">All</button>' : '') + '</div>';
@@ -341,6 +364,7 @@ function render(){
   feed.onclick = function(e){
     var b = e.target.closest('button'); if (!b) return;
     var row = b.closest('.row'); if (!row) return; var k = row.dataset.k, d = byNo(k.split(':')[0]), c = +k.split(':')[1], pcs = colPcs(d, c), maxSets = Math.floor(pcs / 4);
+    if (b.classList.contains('one')) { if (state[k]) delete state[k]; else state[k] = { sets: 0, all: false, pcs: 1 }; paint(row, state[k] || { sets: 0, all: false }, 0); refresh(); return; }
     var s = state[k] || { sets: 0, all: false }; if (s.pcs) s = { sets: 0, all: false };
     if (b.classList.contains('all')) { s = s.all ? { sets: 0, all: false } : { sets: maxSets, all: true }; }
     else { var n = Math.max(0, Math.min(maxSets, (s.all ? maxSets : s.sets) + (+b.dataset.d))); s = { sets: n, all: false }; }
@@ -388,6 +412,7 @@ window.addEventListener('pagehide', saveWork);
 function byNo(no){ return designs.filter(function(d){ return d.no === no; })[0]; }
 function colPcs(d, c){ return (d.colours.filter(function(n){ return n.c === c; })[0] || {}).pcs || 0; }
 function paint(row, s, maxSets){
+  var one = row.querySelector('.one'); if (one) { var on = !!(s && s.pcs); one.classList.toggle('on', on); one.textContent = on ? '✓ 1 pc added · تمت' : 'Add 1 pc · أضف'; return; }
   var v = row.querySelector('.v'), all = row.querySelector('.all'); if (!v) return;
   var pc = row.querySelector('.pc'); if (pc) { if (!s.pcs) pc.value = ''; pc.classList.toggle('on', !!s.pcs); }
   v.textContent = s.all ? 'All' : s.sets; v.classList.toggle('on', !!(s.sets || s.all)); all.classList.toggle('on', !!s.all);
@@ -407,11 +432,16 @@ function refresh(){
   var nd = Object.keys(ds).length; $('ok').disabled = !keys.length; $('clr').hidden = !keys.length;
   $('sum').innerHTML = keys.length ? '<b>' + nd + (nd === 1 ? ' design' : ' designs') + '</b> · ' + keys.length + (keys.length === 1 ? ' colour' : ' colours') + ' · <b>' + pcs + ' pcs</b>' + (priced() ? ' · <b>' + money(orderAmount()) + '</b>' : '') + '<span class="ar">' + arD(nd) + (nd === 1 ? ' تصميم' : ' تصاميم') + '، ' + arPcs(pcs) + '</span>' : 'Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span>';
 }
+var TAB = 'r';   // r = READY, s = SAMPLES. A number typed in search finds it in both lists.
 function applySearch(){
-  var q = $('q').value.trim(); var n = 0;
-  document.querySelectorAll('.design').forEach(function(a){ var show = !q || a.dataset.no.indexOf(q) >= 0; a.hidden = !show; if (show) n++; });
-  $('cnt').textContent = n + ' / ' + designs.length;
+  var q = $('q').value.trim(); var n = 0, nr = 0, ns = 0;
+  document.querySelectorAll('.design').forEach(function(a){ var smp = a.classList.contains('sample'); if (smp) ns++; else nr++;
+    var show = q ? a.dataset.no.indexOf(q) >= 0 : (TAB === 's') === smp; a.hidden = !show; if (show) n++; });
+  $('nr').textContent = nr; $('ns').textContent = ns;
+  $('cnt').textContent = n + ' / ' + (q ? designs.length : (TAB === 's' ? ns : nr));
 }
+$('tabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; TAB = b.dataset.t;
+  document.querySelectorAll('#tabs button').forEach(function(x){ x.classList.toggle('on', x === b); }); applySearch(); window.scrollTo(0, 0); };
 $('q').oninput = applySearch;
 $('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; B.inv = null; $('name').value = ''; try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
 
@@ -419,7 +449,7 @@ $('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one
 function orderText(){
   var name = $('name').value.trim(), d = new Date(), date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
   var lines = ['Order memo · مذكرة طلب', (name ? name + ' · ' : '') + date, ''], tp = 0;
-  Object.keys(byDesign()).forEach(function(no){ var d = byNo(no), parts = []; Object.keys(byDesign()[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(d, +c)); tp += L.pcs; parts.push('colour ' + c + ': ' + L.en); }); lines.push('SJ-' + no + ' — ' + parts.join(', ') + (prices[no] > 0 ? ' · ' + designPcs(no) + ' pcs × ' + prices[no] + ' AED = ' + money(designPcs(no) * prices[no]) : '')); });
+  Object.keys(byDesign()).forEach(function(no){ var d = byNo(no), parts = []; Object.keys(byDesign()[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(d, +c)); tp += L.pcs; parts.push(d.sample ? 'SAMPLE · 1 pc' : 'colour ' + c + ': ' + L.en); }); lines.push('SJ-' + no + ' — ' + parts.join(', ') + (prices[no] > 0 ? ' · ' + designPcs(no) + ' pcs × ' + prices[no] + ' AED = ' + money(designPcs(no) * prices[no]) : '')); });
   lines.push('', 'Total · الإجمالي: ' + tp + ' pcs' + (priced() ? ' · ' + money(orderAmount()) : ''));
   var unp = Object.keys(byDesign()).filter(function(x){ return !(prices[x] > 0); }); if (priced() && unp.length) lines.push('(amount covers priced designs only; no price: ' + unp.map(function(x){ return 'SJ-' + x; }).join(', ') + ')');
   return lines.join('\n');
@@ -438,7 +468,7 @@ async function drawPages(){
     g.textAlign = 'right'; g.font = '26px Arial'; g.fillStyle = '#6E675D'; g.fillText(date + '  ·  ' + (i + 1) + '/' + nos.length, W - P, P + 62); g.textAlign = 'left';
     g.fillStyle = '#1C1A17'; g.font = 'bold 54px Arial'; g.fillText('SJ-' + no, P, P + 140);
     var y = P + 196, lines = [];
-    Object.keys(bd[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push('Colour ' + c + '  ·  ' + L.en); });
+    Object.keys(bd[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push(dz.sample ? 'SAMPLE  ·  1 pc  ·  عينة' : 'Colour ' + c + '  ·  ' + L.en); });
     g.font = '30px Arial'; lines.forEach(function(t){ g.fillText(t, P, y); y += 40; });
     if (prices[no] > 0) { var dp = designPcs(no); g.font = 'bold 32px Arial'; g.fillText(dp + ' pcs × ' + prices[no] + ' AED = ' + money(dp * prices[no]), P, y + 4); y += 48; }
     if (i === nos.length - 1) {   // last page carries the order total
@@ -458,7 +488,7 @@ async function drawPages(){
       var p = phs[j], u = await getPhoto(p), im = u ? await loadImg(u) : null; if (!im) continue;
       var k = Math.min((W - 2 * P) / im.naturalWidth, slotH / im.naturalHeight), dw = im.naturalWidth * k, dh = im.naturalHeight * k, x0 = (W - dw) / 2;
       g.drawImage(im, x0, y, dw, dh);
-      if (p.nums){ var n = p.nums.length, cw = dw / n;
+      if (p.nums && !dz.sample){ var n = p.nums.length, cw = dw / n;
         p.nums.forEach(function(nn, q){ var x = x0 + q * cw; if (!bd[no][nn.c]) { g.fillStyle = 'rgba(236,233,226,0.78)'; g.fillRect(x, y, cw + 1, dh); }
           g.fillStyle = bd[no][nn.c] ? '#A8864A' : 'rgba(28,26,23,.5)'; g.fillRect(x, y + dh - 44, cw + 1, 44);
           g.fillStyle = '#fff'; g.font = 'bold 26px Arial'; g.textAlign = 'center'; g.fillText(String(nn.c), x + cw / 2, y + dh - 13); g.textAlign = 'left'; }); }
@@ -569,6 +599,7 @@ function invLines(){
     var all = avail.length > 1 && avail.every(function(c){ return ls.some(function(l){ return l.c === c; }); });
     var short = function(l){ return l.en.replace(/\s*\(\d+ pcs\)$/, ''); }, same = ls.every(function(l){ return l.en === ls[0].en; });
     var sub = all && same ? 'All ' + ls.length + ' colours · ' + short(ls[0]) + ' each' : (all ? 'All colours · ' : '') + ls.map(function(l){ return 'C' + l.c + ' ' + short(l); }).join(' · ');
+    if (dz.sample) sub = 'Sample · 1 pc';
     out.push({ no: no, desc: 'SJ-' + no, sub: sub, qty: qty, rate: rate, amount: r2(qty * rate), all: all,
       parts: ls.map(function(l){ return { photo: l.photo, qi: l.qi, n: l.n }; }),
       photos: all ? dz.photos.filter(function(p){ return p.nums && p.nums.length; }) : null });
