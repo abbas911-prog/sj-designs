@@ -120,6 +120,10 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .crow .sw button.on{background:var(--gold);color:#fff}
 #cres img{display:block;width:100%;border-radius:12px;margin:10px 0}
 #cres ul{margin:6px 0;padding-left:18px;font-size:13px;color:var(--mute)}
+.pl{background:#fff;border-radius:12px;padding:10px 12px;margin:10px 0;font-size:13.5px}
+.pl h3{margin:0 0 6px;font-size:14px}.pl .r{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;padding:5px 0;border-top:1px solid var(--line)}
+.pl .r small{display:block;color:var(--mute);font-size:11.5px}.pl input{width:84px;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font:inherit;font-size:15px;text-align:right}
+.pl .miss{color:#9a3b1e}.pl .btns{margin-top:8px}
 #chist a{display:block;font-size:13.5px;color:var(--gold);margin:4px 0}
 .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:#efe9df;color:var(--mute);margin-left:6px;vertical-align:middle}
 </style></head><body>
@@ -161,10 +165,14 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
   <div class="bgrid" style="margin-top:8px"><label class="bf"><span>Customer · العميل</span><input id="cname" placeholder="e.g. AHMAD AL WASTA"></label><label class="bf"><span>Country · البلد</span><input id="ccountry" placeholder="e.g. LIBYA"></label></div>
   <label class="bf" style="margin-top:8px"><span>Design numbers — one per line, add SETS or COMPLETE after the number · أرقام التصاميم</span><textarea id="cnos" placeholder="46209 complete&#10;38156 sets&#10;71352 c"></textarea></label>
   <div id="clist"></div>
+  <div id="cprice" class="pl" hidden></div>
   <div class="btns"><button id="cmake" class="gold" type="button">Make catalogue · اصنع الكتالوج</button></div>
   <div id="cst" class="stk" hidden></div>
   <div id="cres"></div>
   <div id="chist"></div>
+  <details class="bco" style="margin-top:14px"><summary>Costs · التكلفة <span id="cinfo"></span></summary>
+  <label class="bf"><span>Paste the cost code or link Claude gives you (kept on this phone only)</span><input id="ccode" placeholder="costs code"></label>
+  <div class="btns"><button id="cload" type="button">Load costs</button></div></details>
   </section>
 </div></div>
 <script>
@@ -775,7 +783,7 @@ function catParse(){
     var w = line.replace(m[0], '').toLowerCase().trim();
     var mode = /comp|^c\b|كامل/.test(w) ? 'C' : /set|^s\b|طقم|اطقم|أطقم/.test(w) ? 'S' : (CAT.modes[m[0]] || '');
     out.push({ no: m[0], mode: mode }); });
-  CAT.items = out;
+  CAT.items = out; setTimeout(catPrices, 0);
   $('clist').innerHTML = out.map(function(it, i){ var inR = designs.some(function(d){ return d.base === it.no; });
     return '<div class="crow"><span>SJ-' + it.no + ' <small style="font-weight:500;color:' + (inR ? 'var(--mute)' : '#9a3b1e') + '">' + (inR ? 'in READY' : 'not in READY') + '</small></span><span class="sw">' +
       '<button type="button" data-i="' + i + '" data-v="S" class="' + (it.mode === 'S' ? 'on' : '') + '">SETS</button><button type="button" data-i="' + i + '" data-v="C" class="' + (it.mode === 'C' ? 'on' : '') + '">COMPLETE</button></span></div>'; }).join('');
@@ -801,29 +809,71 @@ $('cmake').onclick = async function(){
   cst('', 'Made ✓ — waiting for the link to go live…<small>about a minute</small>');
   catShow(res, false);
   var live = false; for (var i = 0; i < 36 && !live; i++) { try { var r = await fetch(res.page + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); live = r.ok; } catch(e){} if (!live) await sleep(5000); }
-  cst(live ? 'ok' : '', live ? 'Catalogue ready ✓ — send the picture with the link.' : 'Made ✓ — the link may need another minute before it opens.');
+  cst(live ? 'ok' : '', live ? 'Catalogue ready ✓ — press Send link: WhatsApp shows the picture, and tapping it opens the catalogue.' : 'Made ✓ — the link may need another minute before it opens.');
   var h = []; try { h = JSON.parse(ls('sj_cat_hist') || '[]'); } catch(e){}
-  h.unshift({ name: res.name || 'NEW COLLECTION', country: res.country || '', url: res.url, cover: res.cover, page: res.page, t: Date.now(), report: res.report, flags: res.flags });
+  h.unshift({ name: res.name || 'NEW COLLECTION', country: res.country || '', url: res.url, cover: res.cover, page: res.page, t: Date.now(), report: res.report, flags: res.flags, designs: res.designs || CAT.items.map(function(x){ return x.no; }) });
   ls('sj_cat_hist', JSON.stringify(h.slice(0, 20))); catShow(res, true); catHist();
 };
 function catShow(res, ready){
   $('cres').innerHTML = '<img src="' + GH_RAW + res.cover + '?t=' + Date.now() + '" alt="cover">' +
-    '<div class="btns"><button type="button" class="gold" data-c="share">Send picture + link · أرسل</button><button type="button" data-c="copy">Copy link · نسخ الرابط</button><a href="' + esc(res.url) + '" target="_blank" style="align-self:center;color:var(--gold);font-weight:700">Open page ↗</a></div>' +
+    '<div class="btns"><button type="button" class="gold" data-c="share">Send link · أرسل الرابط</button><button type="button" data-c="pic">Send picture only</button><button type="button" data-c="copy">Copy link · نسخ الرابط</button><a href="' + esc(res.url) + '" target="_blank" style="align-self:center;color:var(--gold);font-weight:700">Open page ↗</a></div>' +
     '<div style="font-size:13px;word-break:break-all;margin:6px 0"><b>' + esc(res.url) + '</b></div>' +
     '<ul>' + (res.report || []).map(function(l){ return '<li>' + esc(l) + '</li>'; }).join('') + (res.flags || []).map(function(l){ return '<li style="color:#9a3b1e">' + esc(l) + '</li>'; }).join('') + '</ul>';
   $('cres').dataset.url = res.url; $('cres').dataset.cover = res.cover;
 }
 $('cres').addEventListener('click', async function(e){ var b = e.target.closest('button[data-c]'); if (!b) return; var url = $('cres').dataset.url;
   if (b.dataset.c === 'copy') { try { await navigator.clipboard.writeText(url); b.textContent = 'Copied ✓'; } catch(e2){ prompt('Copy:', url); } return; }
+  if (b.dataset.c === 'share') {      // the link alone: WhatsApp turns it into the picture card, and tapping the picture opens the catalogue
+    try { if (navigator.share) { await navigator.share({ url: url }); return; } } catch(e5){ if (e5 && e5.name === 'AbortError') return; }
+    location.href = 'https://wa.me/?text=' + encodeURIComponent(url); return;
+  }
   try { var blob = await (await fetch(GH_RAW + $('cres').dataset.cover + '?t=' + Date.now())).blob();
     var f = new File([blob], 'SJ-catalogue-' + $('cres').dataset.cover.replace(/^og-/, ''), { type: 'image/jpeg' });
-    if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: url }); return; }
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; }
   } catch(e3){ if (e3 && e3.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(url); } catch(e4){} window.open(url, '_blank'); });
 function catHist(){ var h = []; try { h = JSON.parse(ls('sj_cat_hist') || '[]'); } catch(e){}
   $('chist').innerHTML = h.length ? '<h3 style="font-size:14px;margin:16px 0 4px;color:var(--mute)">Made on this phone · السابقة</h3>' + h.map(function(x, i){
     return '<a href="#" data-h="' + i + '">' + esc(x.name) + (x.country ? ' · ' + esc(x.country) : '') + ' — ' + new Date(x.t).toLocaleDateString() + '</a>'; }).join('') : ''; }
-$('chist').addEventListener('click', function(e){ var a = e.target.closest('a[data-h]'); if (!a) return; e.preventDefault(); var h = JSON.parse(ls('sj_cat_hist') || '[]')[+a.dataset.h]; if (h) { cst('ok', 'Catalogue: ' + esc(h.name)); catShow(h, true); window.scrollTo(0, 0); } });
+$('chist').addEventListener('click', function(e){ var a = e.target.closest('a[data-h]'); if (!a) return; e.preventDefault(); var h = JSON.parse(ls('sj_cat_hist') || '[]')[+a.dataset.h]; if (h) { cst('ok', 'Catalogue: ' + esc(h.name)); catShow(h, true); if (h.designs) { $('cnos').value = h.designs.join('\n'); catParse(); } window.scrollTo(0, 0); } });
+
+// ----- costs + prices for the catalogue (Abbas, 7 Oct 2026: "give me also the cost and the prices in the app when generating, just for me to copy") -----
+// Costs come from the inventory report, are loaded from a code Claude hands him, and live ONLY on his phone (never published).
+// Price = cost per piece x 1.35, rounded to the whole AED (Rule Fourteen); his own number in the box always wins.
+var COST = null; try { COST = JSON.parse(ls('sj_costs') || 'null'); } catch(e){}
+async function costDecode(t){
+  t = String(t || '').trim(); var m = t.match(/costs=([A-Za-z0-9_-]+)/); if (m) t = m[1];
+  t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '=';
+  var bin = atob(t), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  var j = JSON.parse(new TextDecoder().decode(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()));
+  if (!j || !j.c) throw new Error('not a cost code'); return j;
+}
+function costInfo(){ $('cinfo').textContent = COST ? '— report ' + COST.d + ', ' + Object.keys(COST.c).length + ' designs' : '— not loaded'; }
+async function costLoad(t){ try { COST = await costDecode(t); ls('sj_costs', JSON.stringify(COST)); ls('sj_owner', '1'); ownerUI(); costInfo(); catPrices(); return true; } catch(e){ alert('Cost code not accepted: ' + e.message); return false; } }
+$('cload').onclick = function(){ costLoad($('ccode').value).then(function(ok){ if (ok) { $('ccode').value = ''; $('cload').textContent = 'Loaded ✓'; } }); };
+if (/costs=/.test(location.hash)) { costLoad(location.hash).then(function(){ try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} }); }
+costInfo();
+var PRICE = {};   // his own numbers, per design
+function costOf(no){ return COST && COST.c[no] != null ? +COST.c[no] : null; }
+function priceOf(no){ if (PRICE[no] > 0) return PRICE[no]; var c = costOf(no); return c != null ? Math.round(c * 1.35) : null; }
+function catPrices(){
+  var el = $('cprice'), items = CAT.items || [];
+  if (!items.length) { el.hidden = true; return; }
+  el.hidden = false;
+  if (!COST) { el.innerHTML = '<h3>Cost & price</h3><span class="miss">Costs not loaded on this phone — open "Costs" at the bottom and paste the code.</span>'; return; }
+  el.innerHTML = '<h3>Cost & price · for you only</h3>' + items.map(function(it){
+    var c = costOf(it.no), p = priceOf(it.no), vars = Object.keys(COST.c).filter(function(k){ return k.indexOf(it.no + '-') === 0; });
+    var sub = c != null ? 'cost ' + c.toFixed(2) + ' × 1.35 = ' + (c * 1.35).toFixed(3) + ' → ' + Math.round(c * 1.35) + (PRICE[it.no] > 0 ? ' · your price used' : '') : '<span class="miss">no cost in the report</span>';
+    if (vars.length) sub += ' · also ' + vars.map(function(k){ return 'SJ-' + k + ' cost ' + (+COST.c[k]).toFixed(2); }).join(', ');
+    return '<div class="r"><div><b>SJ-' + it.no + '</b><small>' + sub + '</small></div><input inputmode="decimal" data-pr="' + it.no + '" value="' + (p != null ? p : '') + '" placeholder="AED"></div>';
+  }).join('') + '<div class="btns"><button type="button" class="gold" data-cp="p">Copy prices · for the customer</button><button type="button" data-cp="c">Copy with costs · for me</button></div><small style="color:var(--mute)">Costs: inventory report ' + esc(COST.d) + '</small>';
+}
+function priceText(withCost){ return (CAT.items || []).map(function(it){ var p = priceOf(it.no), c = costOf(it.no);
+  return withCost ? 'SJ-' + it.no + '   cost ' + (c != null ? c.toFixed(2) : '—') + '   →  ' + (p != null ? p + ' AED' : '—') : 'SJ-' + it.no + '  —  ' + (p != null ? p + ' AED' : ''); }).join('\n'); }
+$('cprice').addEventListener('input', function(e){ var i = e.target.closest('input[data-pr]'); if (!i) return; var v = parseFloat(i.value); var no = i.dataset.pr; var auto = costOf(no) != null ? Math.round(costOf(no) * 1.35) : null; if (v > 0 && v !== auto) PRICE[no] = v; else delete PRICE[no]; });
+$('cprice').addEventListener('change', catPrices);
+$('cprice').addEventListener('click', async function(e){ var b = e.target.closest('button[data-cp]'); if (!b) return; var t = priceText(b.dataset.cp === 'c');
+  try { await navigator.clipboard.writeText(t); var o = b.textContent; b.textContent = 'Copied ✓'; setTimeout(function(){ b.textContent = o; }, 1500); } catch(e2){ prompt('Copy:', t); } });
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
