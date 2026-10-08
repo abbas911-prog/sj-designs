@@ -113,7 +113,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 #mybtn{border:1.5px solid var(--gold);background:var(--gold);color:#fff;border-radius:999px;width:38px;height:38px;font:inherit;font-size:17px;font-weight:700;flex:none}
 #mybtn[hidden],#mysheet[hidden]{display:none}
 #mysheet{position:fixed;inset:0;z-index:50;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
-#mysheet .in{background:var(--bg);width:100%;max-width:720px;border-radius:20px 20px 0 0;padding:16px 16px calc(22px + env(safe-area-inset-bottom))}
+#mysheet .in{background:var(--bg);width:100%;max-width:720px;border-radius:20px 20px 0 0;padding:16px 16px calc(22px + env(safe-area-inset-bottom));max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 #mysheet .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 #mysheet .hd b{letter-spacing:.14em;color:var(--mute);font-size:13px}
 #mysheet .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700}
@@ -132,6 +132,27 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 #clres tr.cost td{font-weight:700;color:var(--ink);background:#F6F2EC}
 #clres small{color:var(--mute);font-size:11px}
 #clres .miss{color:#9a3b1e;font-size:13px;margin-top:8px}
+#clres h4 a{color:var(--gold);margin-left:8px;font-size:12px}
+#clres .cgph{display:block;width:100%;max-height:360px;object-fit:contain;border-radius:12px;background:#f2eee7;margin:4px 0 8px}
+#clres .cgcard{margin:8px 0}
+#clres .cgcs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+#clres .cgcs button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font:inherit;font-size:12px}
+#clres .cgcs button.on{border-color:var(--gold);color:var(--gold);font-weight:700}
+#clres table.cgt th{font-size:11px;color:var(--mute);text-align:left;font-weight:600;padding:4px}
+#clres table.cgt th:last-child,#clres table.cgt td:nth-child(2),#clres table.cgt td:nth-child(3){text-align:right}
+#clres table.cgt td{font-size:14px}
+#clres table.cgt td:not(:last-child){font-weight:500}
+#clres tr.off td{text-decoration:line-through;color:#b9b0a4}
+#clres tr.chg td{color:var(--gold)}
+#clres tr.tot td{font-weight:800;border-top:2px solid var(--ink)}
+#clres tr.mh td{font-size:12px;color:var(--mute);padding-top:12px;border-top:0}
+#clres tr.pick td{background:#fbf3e3;color:var(--ink)}
+#clres .cglog{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+#clres .cglog .me{align-self:flex-end;background:var(--gold);color:#fff;border-radius:14px 14px 4px 14px;padding:6px 10px;font-size:13px;max-width:85%}
+#clres .cglog .it{align-self:flex-start;background:#F6F2EC;border-radius:14px 14px 14px 4px;padding:6px 10px;font-size:13px;max-width:90%}
+#clbar{display:flex;gap:6px;margin-top:10px}#clbar[hidden]{display:none}
+#clcmd{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--line);border-radius:999px;font:inherit;font-size:15px;background:#fff}
+#clgo{width:42px;border:0;border-radius:50%;background:var(--gold);color:#fff;font-size:18px;font-weight:700}
 .stk{font-size:13.5px;line-height:1.45;background:#fff;border-radius:12px;padding:10px 12px;margin:8px 0;border-left:4px solid var(--gold)}
 .stk.ok{border-color:#2f7d4f}.stk.bad{border-color:#9a3b1e;color:#9a3b1e}.stk[hidden]{display:none}
 .stk small{display:block;color:var(--mute);margin-top:3px}
@@ -179,7 +200,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
   <div id="load" hidden>Loading READY list…</div>
   <div id="feed"></div>
 </main>
-<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div></div><div id="myg"></div><div id="myst"></div></div></div>
+<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
 <div id="done" hidden><div class="in">
   <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
@@ -434,7 +455,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-08b';
+var VER = '2026-10-08c';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -932,19 +953,138 @@ var MY = [{ name: 'SJTC', sub: 'Slack · catch up', app: 'slack://open?team=' + 
           // Tiimo has no public link into its Focus tab, so this runs the iPhone Shortcut "TIIMO FOCUS" that Abbas makes in the Shortcuts app
           { name: 'TIIMO', sub: 'Tiimo · Focus', app: 'shortcuts://run-shortcut?name=' + encodeURIComponent('TIIMO FOCUS'), web: 'https://apps.apple.com/app/id1480220328', where: 'Tiimo' }];
 function myDraw(){ $('myg').innerHTML = MY.map(function(x, i){ return '<button type="button" data-i="' + i + '">' + x.name + '<small>' + x.sub + '</small></button>'; }).join(''); }
-$('mybtn').onclick = function(){ myDraw(); $('myst').textContent = ''; $('mysheet').hidden = false; clShow(); };
-// COST CHECK (Abbas, 8 Oct 2026): type a design number -> its cost from the latest inventory report, then cost + 20 / 30 / 40 / 50 %.
-// Owner only (inside the ★ sheet). Uses the same synced costs as the catalogue, so a report loaded on any device shows here.
-function clShow(){ var q = $('clq').value.replace(/\D/g, ''), el = $('clres');
-  if (!COST) { el.innerHTML = '<div class="miss">Costs not on this device yet — open Catalogue → Costs and enter your owner password (or choose the inventory PDF).</div>'; return; }
-  if (q.length < 2) { el.innerHTML = '<small>Inventory report ' + esc(COST.d) + ' · ' + Object.keys(COST.c).length + ' designs</small>'; return; }
-  var keys = Object.keys(COST.c).filter(function(k){ return k === q || k.indexOf(q + '-') === 0 || (q.length >= 3 && k.replace(/-.*/, '') === q); });
-  if (!keys.length) keys = Object.keys(COST.c).filter(function(k){ return q.length >= 3 && k.indexOf(q) === 0; }).slice(0, 4);
-  if (!keys.length) { el.innerHTML = '<div class="miss">SJ-' + esc(q) + ' is not in the inventory report of ' + esc(COST.d) + '.</div>'; return; }
-  el.innerHTML = keys.sort().map(function(k){ var c = +COST.c[k];
-    return '<div class="cd"><h4>SJ-' + esc(k) + '<span>report ' + esc(COST.d) + '</span></h4><table><tr class="cost"><td>Cost</td><td>' + c.toFixed(2) + ' AED</td></tr>' +
-      [20, 30, 40, 50].map(function(m){ var v = c * (1 + m / 100); return '<tr><td>+' + m + '% <small>(' + c.toFixed(2) + ' × ' + (1 + m / 100).toFixed(2) + ' = ' + v.toFixed(2) + ')</small></td><td>' + Math.round(v) + ' AED</td></tr>'; }).join('') + '</table></div>'; }).join(''); }
+$('mybtn').onclick = function(){ myDraw(); $('myst').textContent = ''; $('mysheet').hidden = false; clShow(); cgLoad(); };
+// ===== COST CHECK + BREAKDOWN (owner only, inside the ★ sheet) =====
+// 8 Oct 2026 (Abbas): type a design number -> its cost (inventory PDF) and its breakdown from the ALM board card
+// (fabric 1, fabric 2, lace 1, lace 2, LINK, LINK 2, RATE, STONE) with the photo, then a small command bar:
+// "remove lace 1", "+20", "lace 2 = 5", "rate 35", "add 10", "reset". Margins = cost + 20/30/40/50 % (x1.20 ...).
+// costing.enc is built by the memo-costing job and locked with the OWNER password (GitHub secret OWNER_PASSWORD).
+var CIPH = { A: 7, B: 2, C: 9, D: 4, E: 8, F: 1, G: 6, H: 5, I: 0, J: 3 };
+function cgDec(code){ var s = String(code || '').toUpperCase().replace(/[^A-J.]/g, ''); if (!/[A-J]/.test(s)) return null;
+  var n = parseFloat(s.replace(/[A-J]/g, function(c){ return CIPH[c]; })); return isNaN(n) ? null : n; }
+function cgAmt(v){ v = String(v || '').trim(); if (!v) return null; if (/\d/.test(v)) { var n = parseFloat((v.match(/\d+(?:\.\d+)?/) || [''])[0]); return isNaN(n) ? null : n; }
+  var m = v.match(/[A-J][A-J.]*/); return m ? cgDec(m[0]) : null; }
+function cgLine(v){
+  var s = String(v || '').replace(/^[\s~=:]+/, ''), r = { raw: s, qty: null, name: '', rate: null, code: '', photo: '' };
+  (s.match(/\(([^()]*)\)/g) || []).forEach(function(b){ b = b.slice(1, -1).trim(); if (/^(IN|CH)-?\d+$/i.test(b)) r.photo = r.photo || b.toUpperCase(); else if (/^(silver|gold)$/i.test(b)) {} else if (/[a-z]/i.test(b) && !r.name) r.name = b; });
+  var rest = s.replace(/\([^()]*\)/g, ' ');
+  var lead = rest.match(/^\s*([A-Za-z][A-Za-z ]*?)\s+(?=\d)/); if (lead) { if (!r.name) r.name = lead[1]; rest = rest.slice(lead[0].length); }
+  var q = rest.match(/\d+(?:\.\d+)?/); if (q) { r.qty = parseFloat(q[0]); rest = rest.slice(rest.indexOf(q[0]) + q[0].length); }
+  var un = rest.match(/^\s*([A-Za-z][A-Za-z ]*)\)/); if (un) { if (!r.name) r.name = un[1].trim(); rest = rest.slice(un[0].length); }
+  rest = rest.replace(/^[\s\-–—)]+/, '');
+  var c = rest.match(/^([A-J](?:[A-J.]*[A-J])?)(?![A-Za-z])/) || (/^[a-j.]+$/.test(rest.trim()) ? [0, rest.trim()] : null);
+  if (c) { r.code = String(c[1]).toUpperCase(); r.rate = cgDec(r.code); }
+  if (r.qty == null && r.rate == null) return null;
+  return r; }
+var CG = { st: 'idle', d: null, upd: '', msg: '' }, CL = { no: '', ci: 0, mods: null, log: [] };
+var CG_DIRECT = ['LINK', 'LINK 2', 'RATE', 'STONE'], CG_LINES = ['FABRIC', 'FABRIC 2', 'FABRIC 3', 'FABRIC 4', 'LAIS 1', 'LAIS 2', 'LAIS 3', 'BUTTONS', 'MAGHRIBI 1', 'MAGHRIBI 2', 'BELT'];
+function cgLabel(k){ return k === 'FABRIC' ? 'FABRIC 1' : k.replace(/^LAIS/, 'LACE'); }
+async function cgLoad(force){
+  if (CG.st === 'busy' || (CG.st === 'ok' && !force)) return; var pin = pinGet();
+  if (!pin) { CG.st = 'err'; CG.msg = 'Breakdowns need your owner password on this device — open Catalogue → Costs → Owner password.'; clShow(); return; }
+  CG.st = 'busy'; clShow();
+  try { var r = await fetch('costing.enc?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) { CG.st = 'err'; CG.msg = 'Breakdowns are not published yet (needs the OWNER_PASSWORD secret on GitHub).'; clShow(); return; }
+    var box = await r.json(), x;
+    try { x = JSON.parse(await unlock(box, pin)); } catch(e){ CG.st = 'err'; CG.msg = 'Your owner password on this device does not match the OWNER_PASSWORD secret on GitHub.'; clShow(); return; }
+    CG.d = x.d || {}; CG.upd = x.updated || ''; CG.st = 'ok';
+  } catch(e){ CG.st = 'err'; CG.msg = 'Could not load breakdowns: ' + e.message; }
+  clShow(); }
+function cgItems(card, mods){
+  var f = card.f || {}, out = [];
+  CG_DIRECT.forEach(function(k){ if (f[k] == null) return; var a = cgAmt(f[k]); out.push({ k: k, label: cgLabel(k), direct: true, amt: a, raw: f[k] }); });
+  CG_LINES.forEach(function(k){ if (f[k] == null) return; var L = cgLine(f[k]); if (!L) { out.push({ k: k, label: cgLabel(k), direct: false, qty: null, rate: null, raw: f[k], bad: true }); return; }
+    out.push({ k: k, label: cgLabel(k), name: L.name, direct: false, qty: L.qty, rate: L.rate, code: L.code, raw: f[k], bad: L.rate == null || L.qty == null }); });
+  (mods ? mods.extra : []).forEach(function(e, i){ out.push({ k: 'ADD' + i, label: e.label || 'ADDED', direct: true, amt: e.amt, extra: true }); });
+  out.forEach(function(it){ if (!mods) return;
+    if (mods.qty[it.k] != null) { it.qty = mods.qty[it.k]; it.chg = true; }
+    if (mods.rate[it.k] != null) { if (it.direct) it.amt = mods.rate[it.k]; else it.rate = mods.rate[it.k]; it.chg = true; }
+    if (mods.rm[it.k]) it.off = true; });
+  out.forEach(function(it){ it.cost = it.direct ? (it.amt || 0) : ((it.qty || 0) * (it.rate || 0)); if (!it.direct) it.bad = it.qty == null || it.rate == null; });
+  return out; }
+function cgTotal(items){ return items.reduce(function(a, it){ return a + (it.off ? 0 : it.cost); }, 0); }
+var CG_NUM = { one: 1, two: 2, three: 3, four: 4, five: 5, first: 1, second: 2, third: 3 };
+function cgTarget(t, items){
+  t = ' ' + t.toLowerCase().replace(/\b(one|two|three|four|five|first|second|third)\b/g, function(w){ return CG_NUM[w]; }) + ' ';
+  var m;
+  if ((m = t.match(/\b(lace|lais|laces|lase)\s*(\d)/))) return 'LAIS ' + m[2];
+  if ((m = t.match(/\b(lace|lais|lase)\b/))) return 'LAIS 1';
+  if ((m = t.match(/\bfab(?:ric)?\s*(\d)/))) return m[1] === '1' ? 'FABRIC' : 'FABRIC ' + m[1];
+  if (/\bfab(?:ric)?\b/.test(t)) return 'FABRIC';
+  if ((m = t.match(/\blink\s*(\d)/))) return m[1] === '1' ? 'LINK' : 'LINK ' + m[1];
+  if (/\blink\b/.test(t)) return 'LINK';
+  if ((m = t.match(/\bmaghribi\s*(\d)?/))) return 'MAGHRIBI ' + (m[1] || '1');
+  if (/\bstone/.test(t)) return 'STONE';
+  if (/\bbutton/.test(t)) return 'BUTTONS';
+  if (/\bbelt/.test(t)) return 'BELT';
+  if (/\b(rate|stitch\w*)\b/.test(t)) return 'RATE';
+  var hit = items.filter(function(it){ return it.name && t.indexOf(' ' + it.name.toLowerCase()) >= 0; })[0]; return hit ? hit.k : null; }
+function cgCmd(text){
+  var card = cgCard(); if (!card) return; var mods = CL.mods;
+  String(text).split(/[,;\n]|\band\b|\bthen\b/i).map(function(s){ return s.trim(); }).filter(Boolean).forEach(function(seg){
+    var s = seg.toLowerCase(), done = [], m, items = cgItems(card, mods);
+    if (/^(reset|clear|start again|undo all)$/.test(s)) { CL.mods = mods = { rm: {}, qty: {}, rate: {}, extra: [], margin: null }; CL.log.push({ q: seg, a: 'Back to the card as it is.' }); return; }
+    if ((m = s.match(/(\d+(?:\.\d+)?)\s*(%|percent|plus|\+)/) || s.match(/\+\s*(\d+(?:\.\d+)?)/) || s.match(/\bmargin\s*(\d+(?:\.\d+)?)/))) { mods.margin = parseFloat(m[1]); done.push('+' + mods.margin + '%'); s = s.replace(m[0], ' '); }
+    s = s.replace(/\b(at|with|on|by|please|the|of)\b/g, ' ').replace(/\s+/g, ' ').trim();
+    if ((m = s.match(/^(?:remove|without|no|minus|delete|cut|drop|take out|less|-)\s*(.+)$/))) {
+      var k = cgTarget(m[1], items), it = items.filter(function(x){ return x.k === k; })[0];
+      if (it) { mods.rm[k] = true; done.push('removed ' + it.label + (it.name ? ' · ' + it.name : '') + ' (−' + it.cost.toFixed(2) + ')'); } else done.push('?' + m[1]); }
+    else if ((m = s.match(/^(?:put back|bring back|restore|keep)\s*(.+)$/))) { var k2 = cgTarget(m[1], items); if (k2 && mods.rm[k2]) { delete mods.rm[k2]; done.push('put back ' + cgLabel(k2)); } else done.push('?' + m[1]); }
+    else if ((m = s.match(/^add\s*([a-z ]*?)\s*(\d+(?:\.\d+)?)\s*([a-z ]*)$/))) { var lab = (m[1] + ' ' + m[3]).trim().toUpperCase() || 'ADDED'; mods.extra.push({ label: lab, amt: parseFloat(m[2]) }); done.push('added ' + lab + ' ' + parseFloat(m[2]).toFixed(2)); }
+    else if (s && (m = s.match(/^(.+?)\s*(?:rate|@|price)\s*=?\s*(\d+(?:\.\d+)?)$/)) && cgTarget(m[1], items) && cgTarget(m[1], items) !== 'RATE') { var k3 = cgTarget(m[1], items); mods.rate[k3] = parseFloat(m[2]); done.push(cgLabel(k3) + ' rate → ' + m[2]); }
+    else if (s && (m = s.match(/^(.+?)\s*(?:=|to|is|qty)?\s*(\d+(?:\.\d+)?)\s*(?:yds|yards|yard|yd|y|pcs|pc)?$/))) {
+      var k4 = cgTarget(m[1], items), it4 = items.filter(function(x){ return x.k === k4; })[0];
+      if (!k4) done.push('?' + m[1]); else if (CG_DIRECT.indexOf(k4) >= 0) { mods.rate[k4] = parseFloat(m[2]); done.push(cgLabel(k4) + ' → ' + m[2]); }
+      else if (it4) { mods.qty[k4] = parseFloat(m[2]); done.push(cgLabel(k4) + ' → ' + m[2] + (k4 === 'BUTTONS' || /MAGHRIBI/.test(k4) ? '' : ' yds')); } else done.push('?' + m[1]); }
+    else if (s) done.push('?' + s);
+    var bad = done.filter(function(d){ return d[0] === '?'; });
+    CL.log.push({ q: seg, a: done.filter(function(d){ return d[0] !== '?'; }).join(' · ') + (bad.length ? (done.length > bad.length ? ' · ' : '') + 'Not understood: "' + bad.map(function(b){ return b.slice(1); }).join('", "') + '". Try: remove lace 1 · +20 · lace 2 = 5 · fabric 1 rate 7 · rate 35 · add 10 · reset' : '') });
+  }); clShow(); }
+function cgCard(){ var cs = CG.d && CG.d[CL.no]; return cs ? cs[Math.min(CL.ci, cs.length - 1)] : null; }
+function cgPhoto(no, card){
+  if (card && card.ph) return '<img class="cgph" src="cthumbs/' + esc(card.ph) + '.jpg" alt="SJ-' + esc(no) + '" onerror="this.remove()">';
+  var d = byNo(no) || byNo(no.replace(/-.*/, '')); if (d && d.photos && d.photos[0]) { var p = d.photos[0]; if (p.blob) return '<img class="cgph" src="' + p.blob + '">';
+    getPhoto(p).then(function(){ if (CL.no === no) clShow(); }); }
+  return ''; }
+function cgMargins(base, pick){
+  var ms = [20, 30, 40, 50]; if (pick != null && ms.indexOf(pick) < 0) ms.push(pick); ms.sort(function(a, b){ return a - b; });
+  return ms.map(function(m){ var v = base * (1 + m / 100); return '<tr class="' + (m === pick ? 'pick' : '') + '"><td>+' + m + '% <small>(' + base.toFixed(2) + ' × ' + (1 + m / 100).toFixed(2) + ' = ' + v.toFixed(2) + ')</small></td><td>' + Math.round(v) + ' AED</td></tr>'; }).join(''); }
+function clShow(){
+  var raw = $('clq').value.replace(/[^\dA-Za-z-]/g, '').toUpperCase(), q = raw.replace(/[^\d]/g, ''), el = $('clres');
+  if (q.length < 2) { el.innerHTML = '<small>' + (COST ? 'Inventory report ' + esc(COST.d) + ' · ' + Object.keys(COST.c).length + ' designs' : 'Costs not on this device yet') +
+      (CG.st === 'ok' ? ' · breakdowns of ' + Object.keys(CG.d).length + ' designs' : CG.st === 'busy' ? ' · loading breakdowns…' : '') + '</small>' + (CG.st === 'err' ? '<div class="miss">' + esc(CG.msg) + '</div>' : ''); $('clbar').hidden = true; return; }
+  var keys = {}; function addk(k){ keys[k] = 1; }
+  [COST ? COST.c : {}, CG.d || {}].forEach(function(src){ Object.keys(src).forEach(function(k){ var b = k.replace(/-.*/, ''); if (b === q) addk(k); }); });
+  var ks = Object.keys(keys).sort(); if (raw.indexOf('-') > 0) ks = ks.filter(function(k){ return k === raw; }).concat(ks.filter(function(k){ return k !== raw; }));
+  if (!ks.length) { el.innerHTML = '<div class="miss">SJ-' + esc(q) + ' is not in the inventory report' + (COST ? ' of ' + esc(COST.d) : '') + (CG.st === 'ok' ? ' or on the ALM board' : '') + '.</div>'; $('clbar').hidden = true; return; }
+  var no = ks[0]; if (CL.no !== no) { CL = { no: no, ci: 0, mods: { rm: {}, qty: {}, rate: {}, extra: [], margin: null }, log: [] }; }
+  var card = cgCard(), cs = (CG.d && CG.d[no]) || [], pdf = COST && COST.c[no] != null ? +COST.c[no] : null, h = '';
+  h += '<div class="cd"><h4>SJ-' + esc(no) + '<span>' + (ks.length > 1 ? ks.slice(1).map(function(k){ return '<a href="#" data-k="' + esc(k) + '">SJ-' + esc(k) + '</a>'; }).join(' ') : '') + '</span></h4>';
+  h += cgPhoto(no, card) + '<table>';
+  if (pdf != null) h += '<tr class="cost"><td>Inventory cost <small>(PDF ' + esc(COST.d) + ')</small></td><td>' + pdf.toFixed(2) + ' AED</td></tr>';
+  var base = pdf, onCard = false;
+  if (card) {
+    var items = cgItems(card, CL.mods), tot = cgTotal(items), orig = cgTotal(cgItems(card, null));
+    h += '</table><div class="cgcard">' + (cs.length > 1 ? '<div class="cgcs">' + cs.map(function(c, i){ return '<button type="button" data-ci="' + i + '" class="' + (i === CL.ci ? 'on' : '') + '">' + esc(c.list || 'card') + '</button>'; }).join('') + '</div>' : '<small>ALM card · ' + esc(card.list) + '</small>') +
+      '<table class="cgt"><tr><th>Component</th><th>Yds</th><th>Rate</th><th>Cost</th></tr>' + items.map(function(it){
+        return '<tr class="' + (it.off ? 'off' : '') + (it.chg ? ' chg' : '') + '"><td>' + esc(it.label) + (it.name ? ' <small>' + esc(it.name) + '</small>' : '') + (it.bad ? '<br><small class="miss">card says: ' + esc(it.raw) + '</small>' : '') + '</td><td>' + (it.direct ? '' : (it.qty != null ? it.qty : '?')) + '</td><td>' + (it.direct ? '' : (it.rate != null ? it.rate : '<span class="miss">?</span>')) + '</td><td>' + (it.bad ? '<span class="miss" title="' + esc(it.raw) + '">?</span>' : it.cost.toFixed(2)) + '</td></tr>'; }).join('') +
+      '<tr class="tot"><td colspan="3">TOTAL COST' + (Math.abs(tot - orig) > 0.004 ? ' <small>(card ' + orig.toFixed(2) + ')</small>' : '') + '</td><td>' + tot.toFixed(2) + '</td></tr></table></div><table>';
+    var inc = items.some(function(it){ return it.bad && !it.off; });
+    if (inc) h += '<tr><td colspan="2" class="miss">A line on the card has no price, so the card total is incomplete' + (pdf != null ? ' — prices below use the inventory cost.' : '.') + ' Fix the line on the ALM card, or set it here (e.g. "fabric 1 rate 7").</td></tr>';
+    base = inc && pdf != null ? pdf : tot; onCard = !(inc && pdf != null);
+  } else if (CG.st === 'ok') h += '<tr><td colspan="2"><small>No cost breakdown on the ALM board for this design.</small></td></tr>';
+  else if (CG.st === 'err') h += '<tr><td colspan="2" class="miss">' + esc(CG.msg) + '</td></tr>';
+  else if (CG.st === 'busy') h += '<tr><td colspan="2"><small>Loading the breakdown…</small></td></tr>';
+  if (base != null) h += '<tr class="mh"><td colspan="2">Prices on ' + (card && onCard ? 'the card total' : 'the inventory cost') + ' ' + base.toFixed(2) + '</td></tr>' + cgMargins(base, CL.mods.margin);
+  h += '</table>' + (CL.log.length ? '<div class="cglog">' + CL.log.map(function(l){ return '<div class="me">' + esc(l.q) + '</div><div class="it">' + esc(l.a) + '</div>'; }).join('') + '</div>' : '') + '</div>';
+  el.innerHTML = h; $('clbar').hidden = !card;
+}
 $('clq').oninput = clShow;
+$('clres').addEventListener('click', function(e){ var b = e.target.closest('[data-ci]'), a = e.target.closest('a[data-k]');
+  if (b) { CL.ci = +b.dataset.ci; CL.mods = { rm: {}, qty: {}, rate: {}, extra: [], margin: CL.mods.margin }; CL.log = []; clShow(); }
+  if (a) { e.preventDefault(); $('clq').value = a.dataset.k; CL.no = ''; clShow(); } });
+$('clgo').onclick = function(){ var v = $('clcmd').value.trim(); if (!v) return; $('clcmd').value = ''; cgCmd(v); };
+$('clcmd').onkeydown = function(e){ if (e.key === 'Enter') { e.preventDefault(); $('clgo').onclick(); } };
 $('myx').onclick = function(){ $('mysheet').hidden = true; };
 $('mysheet').onclick = function(e){ if (e.target.id === 'mysheet') $('mysheet').hidden = true; };
 $('myg').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; var x = MY[+b.dataset.i]; if (!x) return;
