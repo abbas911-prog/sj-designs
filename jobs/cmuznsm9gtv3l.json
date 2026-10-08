@@ -1,0 +1,14 @@
+{
+ "ok": false,
+ "error": "SJ-35218: 4+8+4+12+8+8+3+8+4+4+8 = 71 ✗ (card: 79) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.",
+ "errors": [
+  "SJ-35218: 4+8+4+12+8+8+3+8+4+4+8 = 71 ✗ (card: 79) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again."
+ ],
+ "report": [
+  "SJ-20713 SETS  8+8+4+0+8+4+4+4+4+4+4+4 = 56 ✓ (card: 56) → 11 colours",
+  "SJ-34185 SETS  1+0+0+8+4+4+4+8+4+8+8 = 49 ✓ (card: 49) → 9 colours",
+  "SJ-48293 SETS  8+8+4+7+8+4 = 39 ✓ (card: 39) → 6 colours",
+  "SJ-35091 SETS  4+4+4+4+8+4+4+4+4+4+4+4 = 52 ✓ (card: 52) → 12 colours"
+ ],
+ "id": "cmuznsm9gtv3l"
+}
