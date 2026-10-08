@@ -1,0 +1,30 @@
+name: memo-costing
+# Owner-only cost breakdowns for the order memo (ALM board -> costing.enc, locked with the owner password). No AI.
+on:
+  workflow_run:
+    workflows: [memo-thumbs]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: memo-costing
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -q pillow cryptography
+      - run: python tools/costing.py
+        env:
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          OWNER_PASSWORD: ${{ secrets.OWNER_PASSWORD }}
+      - run: |
+          git config user.name "memo-bot"
+          git config user.email "memo-bot@users.noreply.github.com"
+          mkdir -p cthumbs && git add -A cthumbs
+          if [ -f costing.enc ]; then git add costing.enc; fi
+          git diff --cached --quiet || (git commit -m "memo costing sync" && for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done)
