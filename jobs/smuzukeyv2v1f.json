@@ -1,0 +1,51 @@
+{
+ "id": "smuzukeyv2v1f",
+ "op": "sell",
+ "ref": "INV-0006",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6ab51533176ae6caec75fae5",
+   "no": "47805",
+   "before": "Sj = **(47805)** (20) pcs __color = (4/4/4/4/4)",
+   "after": "Sj = **(47805)** (0) pcs __color = (0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 4 → 0 (−4)",
+    "colour 5: 4 → 0 (−4)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6aa6536b56176a59b1ad296d",
+   "no": "53905",
+   "before": "Sj = **(53905)** (64) pcs  color =  (4)....(16/16/16/16)",
+   "after": "Sj = **(53905)** (48) pcs  color =  (4)....(12/12/12/12)",
+   "left": 48,
+   "lines": [
+    "colour 1: 16 → 12 (−4)",
+    "colour 2: 16 → 12 (−4)",
+    "colour 3: 16 → 12 (−4)",
+    "colour 4: 16 → 12 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6aaa44e4330c8a4e1d54aafa",
+   "no": "66038",
+   "before": "Sj = **(66038)** (79) pcs ..color = (4) __(19/20/20/20)",
+   "after": "Sj = **(66038)** (63) pcs ..color = (4) __(15/16/16/16)",
+   "left": 63,
+   "lines": [
+    "colour 1: 19 → 15 (−4)",
+    "colour 2: 20 → 16 (−4)",
+    "colour 3: 20 → 16 (−4)",
+    "colour 4: 20 → 16 (−4)"
+   ],
+   "moved": ""
+  }
+ ]
+}
