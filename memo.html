@@ -455,7 +455,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-08c';
+var VER = '2026-10-08d';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -976,7 +976,7 @@ function cgLine(v){
   if (c) { r.code = String(c[1]).toUpperCase(); r.rate = cgDec(r.code); }
   if (r.qty == null && r.rate == null) return null;
   return r; }
-var CG = { st: 'idle', d: null, upd: '', msg: '' }, CL = { no: '', ci: 0, mods: null, log: [] };
+var CG = { st: 'idle', d: null, upd: '', msg: '' }, CL = { no: '', ci: 0, mods: null, log: [], hist: [] };
 var CG_DIRECT = ['LINK', 'LINK 2', 'RATE', 'STONE'], CG_LINES = ['FABRIC', 'FABRIC 2', 'FABRIC 3', 'FABRIC 4', 'LAIS 1', 'LAIS 2', 'LAIS 3', 'BUTTONS', 'MAGHRIBI 1', 'MAGHRIBI 2', 'BELT'];
 function cgLabel(k){ return k === 'FABRIC' ? 'FABRIC 1' : k.replace(/^LAIS/, 'LACE'); }
 async function cgLoad(force){
@@ -990,55 +990,122 @@ async function cgLoad(force){
     CG.d = x.d || {}; CG.upd = x.updated || ''; CG.st = 'ok';
   } catch(e){ CG.st = 'err'; CG.msg = 'Could not load breakdowns: ' + e.message; }
   clShow(); }
+function cgNewMods(margin){ return { rm: {}, qty: {}, rate: {}, cost: {}, extra: [], lines: [], margin: margin == null ? null : margin }; }
 function cgItems(card, mods){
   var f = card.f || {}, out = [];
   CG_DIRECT.forEach(function(k){ if (f[k] == null) return; var a = cgAmt(f[k]); out.push({ k: k, label: cgLabel(k), direct: true, amt: a, raw: f[k] }); });
-  CG_LINES.forEach(function(k){ if (f[k] == null) return; var L = cgLine(f[k]); if (!L) { out.push({ k: k, label: cgLabel(k), direct: false, qty: null, rate: null, raw: f[k], bad: true }); return; }
-    out.push({ k: k, label: cgLabel(k), name: L.name, direct: false, qty: L.qty, rate: L.rate, code: L.code, raw: f[k], bad: L.rate == null || L.qty == null }); });
-  (mods ? mods.extra : []).forEach(function(e, i){ out.push({ k: 'ADD' + i, label: e.label || 'ADDED', direct: true, amt: e.amt, extra: true }); });
-  out.forEach(function(it){ if (!mods) return;
-    if (mods.qty[it.k] != null) { it.qty = mods.qty[it.k]; it.chg = true; }
-    if (mods.rate[it.k] != null) { if (it.direct) it.amt = mods.rate[it.k]; else it.rate = mods.rate[it.k]; it.chg = true; }
-    if (mods.rm[it.k]) it.off = true; });
-  out.forEach(function(it){ it.cost = it.direct ? (it.amt || 0) : ((it.qty || 0) * (it.rate || 0)); if (!it.direct) it.bad = it.qty == null || it.rate == null; });
+  CG_LINES.forEach(function(k){ if (f[k] == null) return; var L = cgLine(f[k]); if (!L) { out.push({ k: k, label: cgLabel(k), direct: false, qty: null, rate: null, raw: f[k] }); return; }
+    out.push({ k: k, label: cgLabel(k), name: L.name, direct: false, qty: L.qty, rate: L.rate, code: L.code, raw: f[k] }); });
+  if (mods) {
+    mods.lines.forEach(function(l){ if (out.some(function(x){ return x.k === l.k; })) return; var d = CG_DIRECT.indexOf(l.k) >= 0;
+      out.push({ k: l.k, label: cgLabel(l.k), name: l.name || '', direct: d, amt: d ? 0 : undefined, qty: l.qty, rate: l.rate, added: true }); });
+    mods.extra.forEach(function(e, i){ out.push({ k: 'ADD' + i, label: e.amt < 0 ? 'DIRECT CUT' : 'DIRECT ADD', name: e.label || '', direct: true, amt: e.amt, extra: true }); });
+    out.forEach(function(it){
+      if (mods.qty[it.k] != null) { it.qty = mods.qty[it.k]; it.chg = true; }
+      if (mods.rate[it.k] != null) { if (it.direct) it.amt = mods.rate[it.k]; else it.rate = mods.rate[it.k]; it.chg = true; }
+      if (mods.rm[it.k]) it.off = true; });
+  }
+  out.forEach(function(it){
+    if (mods && mods.cost[it.k] != null) { it.cost = mods.cost[it.k]; it.chg = true; it.bad = false; it.fixed = true; return; }
+    it.cost = it.direct ? (it.amt || 0) : ((it.qty || 0) * (it.rate || 0)); it.bad = it.direct ? it.amt == null : (it.qty == null || it.rate == null); });
   return out; }
 function cgTotal(items){ return items.reduce(function(a, it){ return a + (it.off ? 0 : it.cost); }, 0); }
-var CG_NUM = { one: 1, two: 2, three: 3, four: 4, five: 5, first: 1, second: 2, third: 3 };
-function cgTarget(t, items){
-  t = ' ' + t.toLowerCase().replace(/\b(one|two|three|four|five|first|second|third)\b/g, function(w){ return CG_NUM[w]; }) + ' ';
-  var m;
-  if ((m = t.match(/\b(lace|lais|laces|lase)\s*(\d)/))) return 'LAIS ' + m[2];
-  if ((m = t.match(/\b(lace|lais|lase)\b/))) return 'LAIS 1';
-  if ((m = t.match(/\bfab(?:ric)?\s*(\d)/))) return m[1] === '1' ? 'FABRIC' : 'FABRIC ' + m[1];
-  if (/\bfab(?:ric)?\b/.test(t)) return 'FABRIC';
-  if ((m = t.match(/\blink\s*(\d)/))) return m[1] === '1' ? 'LINK' : 'LINK ' + m[1];
-  if (/\blink\b/.test(t)) return 'LINK';
-  if ((m = t.match(/\bmaghribi\s*(\d)?/))) return 'MAGHRIBI ' + (m[1] || '1');
-  if (/\bstone/.test(t)) return 'STONE';
-  if (/\bbutton/.test(t)) return 'BUTTONS';
-  if (/\bbelt/.test(t)) return 'BELT';
-  if (/\b(rate|stitch\w*)\b/.test(t)) return 'RATE';
-  var hit = items.filter(function(it){ return it.name && t.indexOf(' ' + it.name.toLowerCase()) >= 0; })[0]; return hit ? hit.k : null; }
+// ---- the chat bar: plain words, the way Abbas writes them (8 Oct 2026: "add whatever possibilities there could be") ----
+var CG_NUM = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, forty: 40, fifty: 50, half: 0.5, quarter: 0.25, first: 1, second: 2, third: 3, fourth: 4 };
+function cgNorm(s){
+  s = ' ' + String(s).toLowerCase().replace(/[’'`]/g, '').replace(/×/g, ' x ').replace(/@/g, ' at ').replace(/½/g, '.5') + ' ';
+  s = s.replace(/\b(first|second|third|fourth)\s+(lace|lais|fabric)\b/g, function(_, o, w){ return w + ' ' + { first: 1, second: 2, third: 3, fourth: 4 }[o]; });
+  s = s.replace(/\b(\d)(?:st|nd|rd|th)\s+(lace|lais|fabric)\b/g, ' $2 $1 ');
+  s = s.replace(/\b(\d+)\s+and\s+(a\s+)?half\b/g, function(_, n){ return (+n + 0.5) + ''; });
+  s = s.replace(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|half|quarter|first|second|third|fourth)\b/g, function(w){ return CG_NUM[w]; });
+  s = s.replace(/\b(dhs?|dirhams?|aed)\b/g, ' ').replace(/\b(yards?|yrds?|yds?|yd|mtrs?|meters?)\b/g, ' yd ').replace(/\bper\s+yd\b/g, ' rate ').replace(/\b(price|rated?|cost per yd|each)\b/g, ' rate ');
+  s = s.replace(/\b(l|lace|lais|laise|lase|laces)\s*(?:no\.?|number|#)?\s*(\d)(?![\d.])/g, ' lace$2 ').replace(/\b(f|fab|fabric|fabrics|kapda)\s*(?:no\.?|number|#)?\s*(\d)(?![\d.])/g, ' fabric$2 ');
+  s = s.replace(/\blace(\d)\b/g, ' lace$1 ').replace(/\blais(\d)\b/g, ' lace$1 ').replace(/\blink\s*(\d)(?![\d.])/g, ' link$1 ').replace(/\bmaghribi\s*(\d)\b/g, ' maghribi$1 ');
+  return s.replace(/\s+/g, ' '); }
+var CG_KEYS = [[/\blace(\d)\b/, function(m){ return 'LAIS ' + m[1]; }], [/\blaces?\b|\blais\b/, function(){ return 'LAIS 1'; }], [/\bfabric(\d)\b/, function(m){ return m[1] === '1' ? 'FABRIC' : 'FABRIC ' + m[1]; }],
+  [/\bfabrics?\b|\bfab\b/, function(){ return 'FABRIC'; }], [/\blink2\b|\bhand ?work\b/, function(){ return 'LINK 2'; }], [/\blink(\d)\b/, function(m){ return m[1] === '1' ? 'LINK' : 'LINK ' + m[1]; }], [/\blink\b/, function(){ return 'LINK'; }],
+  [/\bmaghribi(\d)?\b/, function(m){ return 'MAGHRIBI ' + (m[1] || '1'); }], [/\bstones?\b/, function(){ return 'STONE'; }], [/\bbuttons?\b/, function(){ return 'BUTTONS'; }], [/\bbelts?\b/, function(){ return 'BELT'; }],
+  [/\b(stitch\w*|silai|tailor\w*|labou?r|making)\b|\brate\s*\/\//, function(){ return 'RATE'; }]];
+function cgFind(s, items){   // -> [{k, at}] every component named in the text, in order
+  var found = [];
+  CG_KEYS.forEach(function(p){ var re = new RegExp(p[0].source, 'g'), m; while ((m = re.exec(s))) found.push({ k: p[1](m), at: m.index, len: m[0].length }); });
+  items.forEach(function(it){ if (it.name && it.name.length > 2) { var i = s.indexOf(it.name.toLowerCase()); if (i >= 0) found.push({ k: it.k, at: i, len: it.name.length }); } });
+  if (/\ball (the )?laces?\b/.test(s)) items.forEach(function(it){ if (/^LAIS/.test(it.k)) found.push({ k: it.k, at: 0, len: 0 }); });
+  if (/\ball (the )?fabrics?\b/.test(s)) items.forEach(function(it){ if (/^FABRIC/.test(it.k)) found.push({ k: it.k, at: 0, len: 0 }); });
+  var seen = {}; return found.sort(function(a, b){ return a.at - b.at; }).filter(function(f){ if (seen[f.k]) return false; seen[f.k] = 1; return true; }); }
+function cgNums(s){ return (s.match(/-?\d+(?:\.\d+)?/g) || []).map(parseFloat); }
+function cgDo(seg, mods, card){
+  var s = cgNorm(seg), items = cgItems(card, mods), done = [], m, f;
+  function it(k){ return items.filter(function(x){ return x.k === k; })[0]; }
+  function nm(k){ var x = it(k); return cgLabel(k) + (x && x.name ? ' · ' + x.name : ''); }
+  if (/^\s*(reset|clear|start (again|over)|original|as it (is|was))\s*$/.test(s)) return { reset: true, a: 'Back to the card as it is.' };
+  if (/^\s*(undo|back|cancel( last)?|go back)\s*$/.test(s)) return { undo: true };
+  if (/^\s*(help|\?)\s*$/.test(s)) return { a: CG_HELP };
+  // margin / profit: "20 plus", "20%", "at 20 percent", "margin 25", "profit 30", "sell at 40%"
+  var mg = s.match(/(?:\bat\s+)?(\d+(?:\.\d+)?)\s*(?:%|percent\b|plus\b(?!\s*\d)|profit\b|margin\b)/) || s.match(/\b(?:margin|profit|markup|mark up)\s*(?:of|at|=|to)?\s*(\d+(?:\.\d+)?)/);
+  if (mg) { mods.margin = parseFloat(mg[1]); done.push('+' + mods.margin + '% price'); s = s.replace(mg[0], ' '); }
+  // "remove lace 1 at 20": a trailing "at N" after a removal is the margin too
+  if (!mg && /\b(remove|without|delete|drop|exclude)\b/.test(s) && (m = s.match(/\bat\s+(\d+(?:\.\d+)?)\s*$/))) { mods.margin = parseFloat(m[1]); done.push('+' + mods.margin + '% price'); s = s.replace(m[0], ' '); }
+  s = s.replace(/\b(please|the|of|it|make|change|set|for|by|is|its|from the card|on the card|can you|could you|i want to|i want|lets|let us)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  if (mg) s = s.replace(/^(sell|selling|price|prices|at|on|with|give|me|show|a|margin)(\s+(sell|selling|price|prices|at|on|with|give|me|show|a|margin))*$/, '').trim();
+  if (!s) return { a: done.join(' · ') };
+  f = cgFind(s, items);
+  if (!f.length && /^(rate|stitch)/.test(s)) f = [{ k: 'RATE', at: 0, len: s.match(/^\w+/)[0].length }];
+  var neg = /^(remove|without|no|delete|drop|take out|takeout|exclude|cancel|skip|minus|cut|less|-)\b/.test(s), back = /^(put back|put|bring back|restore|keep|include|add back|return|undo remove)\b/.test(s) && !/\d/.test(s.replace(/\b(lace|fabric|link|maghribi)\d\b/g, ''));
+  // direct money in or out with no component named: "plus 20", "+20", "minus 20", "-20", "add 15", "cut 10", "discount 5", "less 3"
+  if (!f.length && (m = s.match(/^(plus|\+|add|extra|minus|-|less|cut|discount|reduce|deduct|subtract)\s*(\d+(?:\.\d+)?)\s*([a-z ]*)$/))) {
+    var sign = /^(minus|-|less|cut|discount|reduce|deduct|subtract)$/.test(m[1]) ? -1 : 1, amt = sign * parseFloat(m[2]);
+    mods.extra.push({ amt: amt, label: (m[3] || '').trim().toUpperCase() }); done.push((amt < 0 ? 'cut ' : 'added ') + Math.abs(amt).toFixed(2) + ' direct'); return { a: done.join(' · ') }; }
+  if (!f.length) return { a: done.concat(['?' + seg]).join(' · ') };
+  if (back) { f.forEach(function(x){ if (mods.rm[x.k]) { delete mods.rm[x.k]; done.push('put back ' + nm(x.k)); } else done.push(nm(x.k) + ' was not removed'); }); return { a: done.join(' · ') }; }
+  if (neg && !/\d/.test(s.replace(/\b(lace|fabric|link|maghribi)\d\b/g, ''))) { f.forEach(function(x){ var y = it(x.k); if (!y) { done.push(cgLabel(x.k) + ' is not on this card'); return; } mods.rm[x.k] = true; done.push('removed ' + nm(x.k) + ' (−' + y.cost.toFixed(2) + ')'); }); return { a: done.join(' · ') }; }
+  // several components with numbers ("lace 1 price 2 lace 2 price 3") -> one at a time
+  if (f.length > 1 && !neg && !back) { var parts = [], said = done.slice(); f.forEach(function(x, i){ parts.push(s.slice(x.at, i + 1 < f.length ? f[i + 1].at : s.length)); });
+    parts.forEach(function(p){ var r2 = cgDo(p, mods, card); said.push(r2.a); }); return { a: said.filter(Boolean).join(' · ') }; }
+  // one component with numbers
+  var k = f[0].k, x = it(k), rest = (s.slice(0, f[0].at) + ' ' + s.slice(f[0].at + f[0].len)).replace(/\b(lace|fabric|link|maghribi)\d\b/g, ' '), n = cgNums(rest);
+  var add = /^(add|new|plus|extra|include)\b/.test(s);
+  if (!x && !add && !CG_DIRECT.includes(k)) { if (n.length) { add = true; } else return { a: done.concat([cgLabel(k) + ' is not on this card — to add it: "add ' + cgLabel(k).toLowerCase() + ' 3 yds at 5"']).join(' · ') }; }
+  if (!n.length) { if (neg && x) { mods.rm[k] = true; done.push('removed ' + nm(k)); } else done.push('?' + seg); return { a: done.join(' · ') }; }
+  // direct items (RATE, LINK, LINK 2, STONE): "rate 35", "stitching from 30 to 28", "link2 minus 5", "stone 0"
+  if (CG_DIRECT.indexOf(k) >= 0) {
+    var cur = x ? (x.amt || 0) : 0, v = n[n.length - 1];
+    if (/\b(minus|less|cut|reduce|-)\b/.test(rest) && n.length === 1) v = cur - Math.abs(n[0]); else if (/\b(plus|add|extra|more|\+)\b/.test(rest) && n.length === 1 && x) v = cur + n[0];
+    mods.rate[k] = v; if (!x) mods.lines.push({ k: k }); done.push(cgLabel(k) + ' ' + cur.toFixed(2) + ' → ' + v.toFixed(2)); return { a: done.join(' · ') }; }
+  // line items (fabric / lace / buttons / belt / maghribi)
+  var q = null, r = null, c = null, fromTo = rest.match(/\bfrom\s+(-?\d+(?:\.\d+)?)\s*(yd|rate)?\s*(?:to|into|->|→)\s*(-?\d+(?:\.\d+)?)/);
+  if (fromTo) { var a0 = parseFloat(fromTo[1]), b0 = parseFloat(fromTo[3]);
+    if (fromTo[2] === 'yd' || /\byd\b/.test(rest)) q = b0; else if (/\brate\b/.test(rest)) r = b0;
+    else if (x && x.qty === a0) q = b0; else if (x && x.rate === a0) r = b0; else if (x && Math.abs(x.cost - a0) < 0.01) c = b0; else r = b0; }
+  else {
+    var qa = rest.match(/(-?\d+(?:\.\d+)?)\s*yd\b/) || rest.match(/\byd\s*(?:=|to)?\s*(-?\d+(?:\.\d+)?)/);
+    var ra = rest.match(/\b(?:at|rate|x|\*)\s*(?:=|to|of)?\s*(-?\d+(?:\.\d+)?)/) || rest.match(/(-?\d+(?:\.\d+)?)\s*rate\b/);
+    var ca = rest.match(/\b(?:cost|total|amount|value|costs|=\s*aed)\s*(?:=|to|of)?\s*(-?\d+(?:\.\d+)?)/);
+    if (qa) q = parseFloat(qa[1]); if (ra) r = parseFloat(ra[1]); if (ca) c = parseFloat(ca[1]);
+    if (q == null && r == null && c == null) { var v1 = n[0];
+      if (n.length >= 2) { q = n[0]; r = n[1]; }                                     // "lace 1 5 2" = 5 yds at 2
+      else if (/\b(minus|less|cut|reduce)\b/.test(rest) && x) c = Math.max(0, x.cost - Math.abs(v1));
+      else if (/\b(plus|more|extra)\b/.test(rest) && x) c = x.cost + v1;
+      else if (x && x.rate == null && x.qty != null) r = v1;                          // card has yards but no price -> the number is the price
+      else q = v1; }
+  }
+  if (add && !x) mods.lines.push({ k: k, name: '', qty: q, rate: r });
+  if (q != null) mods.qty[k] = q; if (r != null) mods.rate[k] = r; if (c != null) mods.cost[k] = c;
+  if (c == null) delete mods.cost[k]; delete mods.rm[k];
+  var y = cgItems(card, mods).filter(function(z){ return z.k === k; })[0];
+  var unit = /BUTTONS|MAGHRIBI/.test(k) ? ' pcs × ' : ' yds × ';
+  done.push((add && !x ? 'added ' : '') + nm(k) + ': ' + (c != null ? 'cost ' + c.toFixed(2) : (y && y.qty != null ? y.qty : '?') + unit + (y && y.rate != null ? y.rate : '?') + ' = ' + (y && !y.bad ? y.cost.toFixed(2) : '?')));
+  return { a: done.join(' · ') }; }
+var CG_HELP = 'Try: remove lace 1 · lace one price 5 · lace 1 yard 1 · lace 1 from 10 to 5 · lace 2 = 4 yds at 2.5 · fabric 2 cost 15 · rate 30 · stitching minus 2 · add lace 3 2 yds at 4 · plus 20 / minus 20 (direct add / cut) · 20 plus / 20% / margin 25 (price) · put back lace 1 · undo · reset';
 function cgCmd(text){
-  var card = cgCard(); if (!card) return; var mods = CL.mods;
-  String(text).split(/[,;\n]|\band\b|\bthen\b/i).map(function(s){ return s.trim(); }).filter(Boolean).forEach(function(seg){
-    var s = seg.toLowerCase(), done = [], m, items = cgItems(card, mods);
-    if (/^(reset|clear|start again|undo all)$/.test(s)) { CL.mods = mods = { rm: {}, qty: {}, rate: {}, extra: [], margin: null }; CL.log.push({ q: seg, a: 'Back to the card as it is.' }); return; }
-    if ((m = s.match(/(\d+(?:\.\d+)?)\s*(%|percent|plus|\+)/) || s.match(/\+\s*(\d+(?:\.\d+)?)/) || s.match(/\bmargin\s*(\d+(?:\.\d+)?)/))) { mods.margin = parseFloat(m[1]); done.push('+' + mods.margin + '%'); s = s.replace(m[0], ' '); }
-    s = s.replace(/\b(at|with|on|by|please|the|of)\b/g, ' ').replace(/\s+/g, ' ').trim();
-    if ((m = s.match(/^(?:remove|without|no|minus|delete|cut|drop|take out|less|-)\s*(.+)$/))) {
-      var k = cgTarget(m[1], items), it = items.filter(function(x){ return x.k === k; })[0];
-      if (it) { mods.rm[k] = true; done.push('removed ' + it.label + (it.name ? ' · ' + it.name : '') + ' (−' + it.cost.toFixed(2) + ')'); } else done.push('?' + m[1]); }
-    else if ((m = s.match(/^(?:put back|bring back|restore|keep)\s*(.+)$/))) { var k2 = cgTarget(m[1], items); if (k2 && mods.rm[k2]) { delete mods.rm[k2]; done.push('put back ' + cgLabel(k2)); } else done.push('?' + m[1]); }
-    else if ((m = s.match(/^add\s*([a-z ]*?)\s*(\d+(?:\.\d+)?)\s*([a-z ]*)$/))) { var lab = (m[1] + ' ' + m[3]).trim().toUpperCase() || 'ADDED'; mods.extra.push({ label: lab, amt: parseFloat(m[2]) }); done.push('added ' + lab + ' ' + parseFloat(m[2]).toFixed(2)); }
-    else if (s && (m = s.match(/^(.+?)\s*(?:rate|@|price)\s*=?\s*(\d+(?:\.\d+)?)$/)) && cgTarget(m[1], items) && cgTarget(m[1], items) !== 'RATE') { var k3 = cgTarget(m[1], items); mods.rate[k3] = parseFloat(m[2]); done.push(cgLabel(k3) + ' rate → ' + m[2]); }
-    else if (s && (m = s.match(/^(.+?)\s*(?:=|to|is|qty)?\s*(\d+(?:\.\d+)?)\s*(?:yds|yards|yard|yd|y|pcs|pc)?$/))) {
-      var k4 = cgTarget(m[1], items), it4 = items.filter(function(x){ return x.k === k4; })[0];
-      if (!k4) done.push('?' + m[1]); else if (CG_DIRECT.indexOf(k4) >= 0) { mods.rate[k4] = parseFloat(m[2]); done.push(cgLabel(k4) + ' → ' + m[2]); }
-      else if (it4) { mods.qty[k4] = parseFloat(m[2]); done.push(cgLabel(k4) + ' → ' + m[2] + (k4 === 'BUTTONS' || /MAGHRIBI/.test(k4) ? '' : ' yds')); } else done.push('?' + m[1]); }
-    else if (s) done.push('?' + s);
-    var bad = done.filter(function(d){ return d[0] === '?'; });
-    CL.log.push({ q: seg, a: done.filter(function(d){ return d[0] !== '?'; }).join(' · ') + (bad.length ? (done.length > bad.length ? ' · ' : '') + 'Not understood: "' + bad.map(function(b){ return b.slice(1); }).join('", "') + '". Try: remove lace 1 · +20 · lace 2 = 5 · fabric 1 rate 7 · rate 35 · add 10 · reset' : '') });
+  var card = cgCard(); if (!card) return;
+  String(text).split(/[,;\n]|\band then\b|\bthen\b|\balso\b|\band\b(?=\s*(?:remove|put|add|plus|minus|change|make|set|\d+\s*(?:%|plus)|margin|profit))/i).map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(seg){
+    var before = JSON.stringify(CL.mods), r = cgDo(seg, CL.mods, card);
+    if (r.reset) { CL.hist.push(before); CL.mods = cgNewMods(); CL.log.push({ q: seg, a: r.a }); return; }
+    if (r.undo) { if (CL.hist.length) { CL.mods = JSON.parse(CL.hist.pop()); CL.log.push({ q: seg, a: 'Undone.' }); } else CL.log.push({ q: seg, a: 'Nothing to undo.' }); return; }
+    var bad = String(r.a).split(' · ').filter(function(d){ return d[0] === '?'; }), good = String(r.a).split(' · ').filter(function(d){ return d && d[0] !== '?'; });
+    if (JSON.stringify(CL.mods) !== before) CL.hist.push(before);
+    CL.log.push({ q: seg, a: good.join(' · ') + (bad.length ? (good.length ? ' · ' : '') + 'Not understood: "' + bad.map(function(b){ return b.slice(1); }).join('", "') + '". ' + CG_HELP : '') });
   }); clShow(); }
 function cgCard(){ var cs = CG.d && CG.d[CL.no]; return cs ? cs[Math.min(CL.ci, cs.length - 1)] : null; }
 function cgPhoto(no, card){
@@ -1057,7 +1124,7 @@ function clShow(){
   [COST ? COST.c : {}, CG.d || {}].forEach(function(src){ Object.keys(src).forEach(function(k){ var b = k.replace(/-.*/, ''); if (b === q) addk(k); }); });
   var ks = Object.keys(keys).sort(); if (raw.indexOf('-') > 0) ks = ks.filter(function(k){ return k === raw; }).concat(ks.filter(function(k){ return k !== raw; }));
   if (!ks.length) { el.innerHTML = '<div class="miss">SJ-' + esc(q) + ' is not in the inventory report' + (COST ? ' of ' + esc(COST.d) : '') + (CG.st === 'ok' ? ' or on the ALM board' : '') + '.</div>'; $('clbar').hidden = true; return; }
-  var no = ks[0]; if (CL.no !== no) { CL = { no: no, ci: 0, mods: { rm: {}, qty: {}, rate: {}, extra: [], margin: null }, log: [] }; }
+  var no = ks[0]; if (CL.no !== no) { CL = { no: no, ci: 0, mods: cgNewMods(), log: [], hist: [] }; }
   var card = cgCard(), cs = (CG.d && CG.d[no]) || [], pdf = COST && COST.c[no] != null ? +COST.c[no] : null, h = '';
   h += '<div class="cd"><h4>SJ-' + esc(no) + '<span>' + (ks.length > 1 ? ks.slice(1).map(function(k){ return '<a href="#" data-k="' + esc(k) + '">SJ-' + esc(k) + '</a>'; }).join(' ') : '') + '</span></h4>';
   h += cgPhoto(no, card) + '<table>';
@@ -1067,10 +1134,10 @@ function clShow(){
     var items = cgItems(card, CL.mods), tot = cgTotal(items), orig = cgTotal(cgItems(card, null));
     h += '</table><div class="cgcard">' + (cs.length > 1 ? '<div class="cgcs">' + cs.map(function(c, i){ return '<button type="button" data-ci="' + i + '" class="' + (i === CL.ci ? 'on' : '') + '">' + esc(c.list || 'card') + '</button>'; }).join('') + '</div>' : '<small>ALM card · ' + esc(card.list) + '</small>') +
       '<table class="cgt"><tr><th>Component</th><th>Yds</th><th>Rate</th><th>Cost</th></tr>' + items.map(function(it){
-        return '<tr class="' + (it.off ? 'off' : '') + (it.chg ? ' chg' : '') + '"><td>' + esc(it.label) + (it.name ? ' <small>' + esc(it.name) + '</small>' : '') + (it.bad ? '<br><small class="miss">card says: ' + esc(it.raw) + '</small>' : '') + '</td><td>' + (it.direct ? '' : (it.qty != null ? it.qty : '?')) + '</td><td>' + (it.direct ? '' : (it.rate != null ? it.rate : '<span class="miss">?</span>')) + '</td><td>' + (it.bad ? '<span class="miss" title="' + esc(it.raw) + '">?</span>' : it.cost.toFixed(2)) + '</td></tr>'; }).join('') +
-      '<tr class="tot"><td colspan="3">TOTAL COST' + (Math.abs(tot - orig) > 0.004 ? ' <small>(card ' + orig.toFixed(2) + ')</small>' : '') + '</td><td>' + tot.toFixed(2) + '</td></tr></table></div><table>';
+        return '<tr class="' + (it.off ? 'off' : '') + (it.chg ? ' chg' : '') + '"><td>' + esc(it.label) + (it.name ? ' <small>' + esc(it.name) + '</small>' : '') + (it.bad ? '<br><small class="miss">' + (it.qty != null && it.rate == null ? 'no price on the card' : 'card says: ' + esc(it.raw)) + '</small>' : '') + '</td><td>' + (it.direct ? '' : (it.qty != null ? it.qty : '?')) + '</td><td>' + (it.direct ? '' : (it.rate != null ? it.rate : '<span class="miss">?</span>')) + '</td><td>' + (it.bad ? '<span class="miss" title="' + esc(it.raw) + '">?</span>' : it.cost.toFixed(2)) + '</td></tr>'; }).join('') +
+      '<tr class="tot"><td colspan="3">TOTAL COST' + (items.some(function(it){ return it.bad && !it.off; }) ? ' <small class="miss">(incomplete)</small>' : '') + (Math.abs(tot - orig) > 0.004 ? ' <small>(card ' + orig.toFixed(2) + ')</small>' : '') + '</td><td>' + tot.toFixed(2) + '</td></tr></table></div><table>';
     var inc = items.some(function(it){ return it.bad && !it.off; });
-    if (inc) h += '<tr><td colspan="2" class="miss">A line on the card has no price, so the card total is incomplete' + (pdf != null ? ' — prices below use the inventory cost.' : '.') + ' Fix the line on the ALM card, or set it here (e.g. "fabric 1 rate 7").</td></tr>';
+    if (inc) h += '<tr><td colspan="2" class="miss">' + items.filter(function(it){ return it.bad && !it.off; }).map(function(it){ return it.label; }).join(', ') + ' — no price written on this ALM card (only the yards), so the card total is incomplete' + (pdf != null ? ' and the prices below use the inventory cost' : '') + '. Type the price in the bar, e.g. "' + items.filter(function(it){ return it.bad && !it.off; })[0].label.toLowerCase() + ' price 7".</td></tr>';
     base = inc && pdf != null ? pdf : tot; onCard = !(inc && pdf != null);
   } else if (CG.st === 'ok') h += '<tr><td colspan="2"><small>No cost breakdown on the ALM board for this design.</small></td></tr>';
   else if (CG.st === 'err') h += '<tr><td colspan="2" class="miss">' + esc(CG.msg) + '</td></tr>';
@@ -1081,7 +1148,7 @@ function clShow(){
 }
 $('clq').oninput = clShow;
 $('clres').addEventListener('click', function(e){ var b = e.target.closest('[data-ci]'), a = e.target.closest('a[data-k]');
-  if (b) { CL.ci = +b.dataset.ci; CL.mods = { rm: {}, qty: {}, rate: {}, extra: [], margin: CL.mods.margin }; CL.log = []; clShow(); }
+  if (b) { CL.ci = +b.dataset.ci; CL.mods = cgNewMods(CL.mods.margin); CL.log = []; CL.hist = []; clShow(); }
   if (a) { e.preventDefault(); $('clq').value = a.dataset.k; CL.no = ''; clShow(); } });
 $('clgo').onclick = function(){ var v = $('clcmd').value.trim(); if (!v) return; $('clcmd').value = ''; cgCmd(v); };
 $('clcmd').onkeydown = function(e){ if (e.key === 'Enter') { e.preventDefault(); $('clgo').onclick(); } };
