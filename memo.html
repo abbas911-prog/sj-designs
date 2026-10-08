@@ -455,7 +455,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-08e';
+var VER = '2026-10-08f';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -857,8 +857,21 @@ async function hmacHex(msg){
 async function relay(job, obj){
   if (!RELAY) throw new Error('the relay is not set up yet');
   var req = JSON.stringify(obj), sig = await hmacHex(req);
-  var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: job, req: req, sig: sig }) });
-  var j = await r.json(); if (!j.ok) throw new Error(j.error || 'refused'); return true;
+  // 8 Oct 2026: on his employee's phone Google once answered with a web page instead of the relay's reply
+  // ("Unexpected token '<' ... is not valid JSON"). Retry a few times, then say plainly what Google sent.
+  var last = '';
+  for (var n = 0; n < 4; n++) {
+    if (n) await sleep(2500 * n);
+    try {
+      var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: job, req: req, sig: sig }), cache: 'no-store', credentials: 'omit' });
+      var t = await r.text(), j = null;
+      try { j = JSON.parse(t); } catch(e){}
+      if (j) { if (!j.ok) throw Object.assign(new Error(j.error || 'refused'), { final: true }); return true; }
+      var tt = (t.match(/<title>([^<]*)/i) || [])[1] || t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+      last = 'Google sent a web page instead of an answer (' + r.status + (tt ? ': ' + tt : '') + ')';
+    } catch(e){ if (e.final) throw e; last = e.message; }
+  }
+  throw new Error(last + '. Tried 4 times — check the internet on this phone and press again.');
 }
 function sleep(ms){ return new Promise(function(ok){ setTimeout(ok, ms); }); }
 async function waitJob(id, kind, maxMin, tick){
