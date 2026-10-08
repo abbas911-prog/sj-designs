@@ -423,7 +423,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-07s8';
+var VER = '2026-10-08a';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1064,9 +1064,13 @@ $('cpdf').addEventListener('change', async function(){
   st.textContent = 'Reading ' + f.name + '…';
   try { var r = await invRead(f), n = Object.keys(r.c).length;
     if (n < 20) { st.innerHTML = '<span class="miss">Only ' + n + ' designs found — is this the Inventory Summary PDF? Costs not changed.</span>'; return; }
-    var old = COST ? Object.keys(COST.c).length : 0;
+    var old = COST ? Object.keys(COST.c).length : 0, oc = COST ? COST.c : {}, od = COST ? COST.d : '';
+    var added = Object.keys(r.c).filter(function(k){ return oc[k] == null; }).length, changed = Object.keys(r.c).filter(function(k){ return oc[k] != null && Math.abs(+oc[k] - +r.c[k]) > 0.005; }).length;
     COST = { d: r.d, c: r.c }; ls('sj_costs', JSON.stringify(COST)); ls('sj_owner', '1'); ownerUI(); costInfo(); catPrices(); costPush();
-    st.innerHTML = '✓ Costs updated from the report of ' + esc(r.d) + ': ' + n + ' designs' + (old ? ' (was ' + old + ')' : '') + '.' +
+    // 8 Oct 2026: he picked a file, saw "no file selected" and thought it had not loaded - say plainly which file, which report date, and what changed
+    st.innerHTML = '✓ Read <b>' + esc(f.name) + '</b> — report up to <b>' + esc(r.d) + '</b>: ' + n + ' designs. ' +
+      (od === r.d && !added && !changed ? '<span class="miss">This is the same report you already had — nothing changed. For new costs, export the Inventory Summary again with today as the end date.</span>'
+        : (added + ' new design' + (added === 1 ? '' : 's') + ', ' + changed + ' cost' + (changed === 1 ? '' : 's') + ' changed' + (old ? ' (was ' + old + ' designs, report ' + esc(od) + ')' : '') + '.')) +
       (r.bad.length ? '<br><span class="miss">' + r.bad.length + ' row(s) skipped because units × rate ≠ value: ' + esc(r.bad.slice(0, 8).join(', ')) + '</span>' : ' Every row checked: units × rate = value.');
   } catch(e){ st.innerHTML = '<span class="miss">Could not read the PDF: ' + esc(e.message) + '</span>'; }
   this.value = '';
