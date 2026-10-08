@@ -1,0 +1,14 @@
+{
+ "ok": false,
+ "error": "SJ-79284 is not in READY on Trello.",
+ "errors": [
+  "SJ-79284 is not in READY on Trello."
+ ],
+ "report": [
+  "SJ-7284 SETS  16+16+16+16 = 64 ✓ (card: 64) → 4 colours",
+  "SJ-34185 SETS  1+0+0+8+4+4+4+8+4+8+8 = 49 ✓ (card: 49) → 9 colours",
+  "SJ-46209 COMPLETE  16+16+14+16 = 62 ✓ (card: 62) → 3 complete sets + 14 pcs",
+  "SJ-75308 COMPLETE  16+16+0+0+24 = 56 ✓ (card: 56) → 4 complete sets + 8 pcs"
+ ],
+ "id": "cmuzlqtwvukcz"
+}
