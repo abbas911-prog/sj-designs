@@ -79,6 +79,8 @@ def main():
         no = design_no(c['name'])
         f = fields(c, cfname)
         if not no or not f: continue
+        if len(set(re.findall(r'(?:SJ|SH)\s*[-=:.]*\s*[*(\s]*(\d{3,6})', c['name'].upper()))) > 1 or re.match(r'\s*combine', c['name'], re.I):
+            continue                                               # a card that joins two designs (e.g. "Combine SJ-58429 and SJ-48188") is nobody's costing
         imgs = sorted([a for a in c.get('attachments') or [] if str(a.get('mimeType', '')).startswith('image/')], key=lambda a: a.get('date') or '')
         by.setdefault(no, []).append({'id': c['id'], 'name': c['name'][:80], 'list': lists.get(c['idList'], ''), 'at': c.get('dateLastActivity', ''),
                                       'f': f, 'ph': imgs[0]['id'] if imgs else '', '_img': imgs[0] if imgs else None})
@@ -86,7 +88,7 @@ def main():
     want, made, failed = set(), 0, 0
     for no, cs in by.items():
         cs.sort(key=lambda x: x['id'], reverse=True)               # newest card first (Trello ids grow with time)
-        del cs[4:]
+        del cs[1:]                                                 # Abbas 8 Oct 2026: "always give me the last created card" - only the newest
         for x in cs:
             a = x.pop('_img')
             if not a: continue
