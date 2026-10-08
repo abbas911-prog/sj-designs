@@ -1,0 +1,38 @@
+{
+ "ok": true,
+ "page": "sj-1008b.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sj-1008b.html?v=1",
+ "cover": "og-sj-1008b.jpg",
+ "name": "",
+ "country": "",
+ "designs": [
+  "7284",
+  "34185",
+  "79246",
+  "46209",
+  "75308"
+ ],
+ "report": [
+  "SJ-7284 SETS  16+16+16+16 = 64 ✓ (card: 64) → 4 colours",
+  "SJ-34185 SETS  1+0+0+8+4+4+4+8+4+8+8 = 49 ✓ (card: 49) → 9 colours",
+  "SJ-79246 SETS  0+4+4+4+4+8+4+4+8+8+8+8 = 64 ✓ (card: 64) → 11 colours",
+  "SJ-46209 COMPLETE  16+16+14+16 = 62 ✓ (card: 62) → 3 complete sets + 14 pcs",
+  "SJ-75308 COMPLETE  16+16+0+0+24 = 56 ✓ (card: 56) → 4 complete sets + 8 pcs"
+ ],
+ "flags": [
+  "SJ-34185: 2 sold-out colours cut out of the photo and the rest renumbered — check the photo.",
+  "SJ-79246: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-79246: 1 sold-out colour cut out of the photo and the rest renumbered — check the photo.",
+  "SJ-75308 has 3 READY cards — used the newest: Sj = **(75308_B)** (56) pcs colour = (5),,(16/16/0/0/24)",
+  "SJ-75308: 2 sold-out colours cut out of the photo and the rest renumbered — check the photo."
+ ],
+ "videos": [
+  "34185",
+  "46209",
+  "7284",
+  "75308",
+  "79246"
+ ],
+ "bytes": 1800356,
+ "id": "cmuzm1jzotmg6"
+}
