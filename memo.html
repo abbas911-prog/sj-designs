@@ -455,7 +455,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-08d';
+var VER = '2026-10-08e';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1107,6 +1107,7 @@ function cgCmd(text){
     if (JSON.stringify(CL.mods) !== before) CL.hist.push(before);
     CL.log.push({ q: seg, a: good.join(' · ') + (bad.length ? (good.length ? ' · ' : '') + 'Not understood: "' + bad.map(function(b){ return b.slice(1); }).join('", "') + '". ' + CG_HELP : '') });
   }); clShow(); }
+function cgMade(id){ var t = parseInt(String(id || '').slice(0, 8), 16); return t ? new Date(t * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; }
 function cgCard(){ var cs = CG.d && CG.d[CL.no]; return cs ? cs[Math.min(CL.ci, cs.length - 1)] : null; }
 function cgPhoto(no, card){
   if (card && card.ph) return '<img class="cgph" src="cthumbs/' + esc(card.ph) + '.jpg" alt="SJ-' + esc(no) + '" onerror="this.remove()">';
@@ -1132,7 +1133,7 @@ function clShow(){
   var base = pdf, onCard = false;
   if (card) {
     var items = cgItems(card, CL.mods), tot = cgTotal(items), orig = cgTotal(cgItems(card, null));
-    h += '</table><div class="cgcard">' + (cs.length > 1 ? '<div class="cgcs">' + cs.map(function(c, i){ return '<button type="button" data-ci="' + i + '" class="' + (i === CL.ci ? 'on' : '') + '">' + esc(c.list || 'card') + '</button>'; }).join('') + '</div>' : '<small>ALM card · ' + esc(card.list) + '</small>') +
+    h += '</table><div class="cgcard">' + (cs.length > 1 ? '<div class="cgcs">' + cs.map(function(c, i){ return '<button type="button" data-ci="' + i + '" class="' + (i === CL.ci ? 'on' : '') + '">' + esc(c.list || 'card') + '</button>'; }).join('') + '</div>' : '<small>Latest ALM card · ' + esc(card.list) + ' · made ' + cgMade(card.id) + '</small>') +
       '<table class="cgt"><tr><th>Component</th><th>Yds</th><th>Rate</th><th>Cost</th></tr>' + items.map(function(it){
         return '<tr class="' + (it.off ? 'off' : '') + (it.chg ? ' chg' : '') + '"><td>' + esc(it.label) + (it.name ? ' <small>' + esc(it.name) + '</small>' : '') + (it.bad ? '<br><small class="miss">' + (it.qty != null && it.rate == null ? 'no price on the card' : 'card says: ' + esc(it.raw)) + '</small>' : '') + '</td><td>' + (it.direct ? '' : (it.qty != null ? it.qty : '?')) + '</td><td>' + (it.direct ? '' : (it.rate != null ? it.rate : '<span class="miss">?</span>')) + '</td><td>' + (it.bad ? '<span class="miss" title="' + esc(it.raw) + '">?</span>' : it.cost.toFixed(2)) + '</td></tr>'; }).join('') +
       '<tr class="tot"><td colspan="3">TOTAL COST' + (items.some(function(it){ return it.bad && !it.off; }) ? ' <small class="miss">(incomplete)</small>' : '') + (Math.abs(tot - orig) > 0.004 ? ' <small>(card ' + orig.toFixed(2) + ')</small>' : '') + '</td><td>' + tot.toFixed(2) + '</td></tr></table></div><table>';
