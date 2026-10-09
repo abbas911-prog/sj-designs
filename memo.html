@@ -493,7 +493,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-09f';
+var VER = '2026-10-09g';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1523,6 +1523,7 @@ function ffCalc(b, E){
   var exS = (b.extras || []).reduce(function(a, x){ return a + n2(x.a); }, 0);
   if (exS || b.disc || b.vat) flags.push(['i', 'bill also had ' + [exS ? 'extras ' + fmt2(exS) : '', b.disc ? 'discount ' + fmt2(b.disc) : '', b.vat ? 'VAT ' + fmt2(b.vat) : ''].filter(Boolean).join(', ') + ' — the 50-50 bill has the designs only']);
   if (b.stock_ok === false) flags.push(['i', 'Trello stock was not fully updated for this bill']);
+  if (b.returned || b.st === 'returned') flags.push(['w', 'Undo was pressed on this invoice' + (b.returned ? ' (' + dmy(String(b.returned).slice(0, 10)) + ')' : '') + ' — its pieces went back on Trello. The bill stays here until you press Delete bill.']);
   var nSum = rows.reduce(function(a, r){ return a + (r.namt || 0); }, 0);
   return { rows: rows, flags: flags, block: block, wSum: wSum, wPcs: wPcs, nSum: nSum, out: !!e.out, ed: rows.some(function(r){ return r.ed; }) };
 }
@@ -1563,7 +1564,7 @@ function ffDraw(){
     (FF.st === 'busy' ? ' · reading bills…' : FF.st === 'ok' ? ' · bills read ' + new Date(FF.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '') + '</div>';
   if (FF.st === 'err') h += '<div class="miss">' + esc(FF.msg) + '</div>';
   if (FF.draft) { var kd = ffCalc(FF.draft, E); h += ffBillHtml(FF.draft, kd, E); }
-  var open = FF.L ? FF.L.bills.filter(function(b){ return b.st === 'open'; }).sort(function(a, b){ return a.t < b.t ? -1 : 1; }) : [];
+  var open = FF.L ? FF.L.bills.filter(function(b){ return b.st === 'open' || b.st === 'returned'; }).sort(function(a, b){ return a.t < b.t ? -1 : 1; }) : [];
   var list = open.map(function(b){ return { b: b, k: ffCalc(b, E) }; });
   if (FF.st === 'ok' && !open.length) h += '<div class="ffempty">No bills waiting. Every invoice sent with <b>Include &amp; share</b> lands here.</div>';
   list.forEach(function(x){ h += ffBillHtml(x.b, x.k, E); });
