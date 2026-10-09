@@ -173,7 +173,7 @@ def num(v):
 def ledger(req, pw, cards):
     """Returns a short note for the memo, or '' when the ledger is not touched."""
     op, ref, dev = req.get('op'), str(req.get('ref', '')).strip()[:40], str(req.get('dev', ''))[:16]
-    if op not in ('sell', 'return', 'billdone', 'billopen'):
+    if op not in ('sell', 'return', 'billdone', 'billopen', 'billdel'):
         return ''
     L = ledger_load(pw)
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
@@ -213,6 +213,11 @@ def ledger(req, pw, cards):
             for b in hit:
                 b['st'], b['batch'] = 'posted', bid
             note = '%d bills marked posted (%s)' % (len(hit), bid)
+        elif op == 'billdel':                                         # Abbas, 9 Oct 2026: "give an option of removing the whole bill"
+            for b in hit:
+                if b.get('st') == 'open':
+                    b['st'], b['deleted'] = 'deleted', now
+            note = '%d bill(s) removed from 50-50' % len([b for b in hit if b.get('st') == 'deleted'])
         else:
             for b in hit:
                 b['st'] = 'open'; b.pop('batch', None)
@@ -232,14 +237,14 @@ def main():
     if not good:
         res.update(ok=False, error='not signed with the shop password')
     else:
-        cards = run(req) if req.get('op') not in ('billdone', 'billopen') else []
+        cards = run(req) if req.get('op') not in ('billdone', 'billopen', 'billdel') else []
         res.update(ok=not any('err' in c for c in cards), cards=cards)
         try:
             note = ledger(req, pw, cards)
             if note: res['bill'] = note
         except Exception as e:
             res['bill_err'] = '%s: %s' % (type(e).__name__, str(e)[:160])
-            if req.get('op') in ('billdone', 'billopen'): res.update(ok=False, error='50-50 list not updated: ' + res['bill_err'])
+            if req.get('op') in ('billdone', 'billopen', 'billdel'): res.update(ok=False, error='50-50 list not updated: ' + res['bill_err'])
     os.makedirs('jobs', exist_ok=True)
     json.dump(res, open('jobs/%s.json' % jid, 'w'), ensure_ascii=False, indent=1)
     print(json.dumps(res, ensure_ascii=False, indent=1))
