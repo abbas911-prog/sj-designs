@@ -192,7 +192,7 @@ def ledger(req, pw, cards):
         if old:
             if old.get('st') == 'posted':
                 return 'bill already in a posted 50-50 batch'
-            old.update(rec)
+            old.update(rec); old.pop('returned', None); old.pop('deleted', None)   # a new Include (after Undo) is a fresh bill
         else:
             L['bills'].append(rec)
         note = 'bill kept for 50-50'
@@ -200,8 +200,8 @@ def ledger(req, pw, cards):
         b = find(ref, dev)
         if not b:
             return ''
-        b['st'], b['returned'] = 'returned', now
-        note = 'bill marked returned (out of 50-50)'
+        b['returned'] = now                                           # Abbas, 9 Oct 2026: a bill leaves 50-50 ONLY by his Delete button -
+        note = 'pieces returned - bill stays in 50-50 until Delete'   # an Undo on the invoice just notes it on the bill
     else:
         refs = [(str(r[0])[:40], str(r[1])[:16]) for r in req.get('refs', [])[:200] if isinstance(r, list) and len(r) == 2]
         hit = [b for b in L['bills'] if (b['ref'], b['dev']) in refs]
