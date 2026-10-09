@@ -111,6 +111,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 #catbtn{border:1.5px solid var(--gold);background:#fff;color:var(--gold);border-radius:999px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;white-space:nowrap}
 #catbtn[hidden],#mode button[hidden]{display:none}
 #mybtn{border:1.5px solid var(--gold);background:var(--gold);color:#fff;border-radius:999px;width:38px;height:38px;font:inherit;font-size:17px;font-weight:700;flex:none}
+#q{min-width:0}#ffbtn{border:1.5px solid var(--gold);background:#fff;color:var(--gold);border-radius:999px;height:38px;padding:0 9px;font:inherit;font-size:13px;font-weight:800;flex:none}#ffbtn[hidden]{display:none}
 #mybtn[hidden],#mysheet[hidden]{display:none}
 #mysheet{position:fixed;inset:0;z-index:50;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
 #mysheet .in{background:var(--bg);width:100%;max-width:720px;border-radius:20px 20px 0 0;padding:16px 16px calc(22px + env(safe-area-inset-bottom));max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -219,7 +220,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 </style></head><body>
 <header>
   <div class="top"><h1 id="ttl">ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button><button id="mybtn" type="button" hidden title="My shortcuts">★</button></div>
-  <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span><button id="rfr" type="button" title="Check Trello for new cards now">↻</button></div>
+  <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span><button id="ffbtn" type="button" hidden title="50-50 bills">50·50</button><button id="rfr" type="button" title="Check Trello for new cards now">↻</button></div>
   <div class="tabs" id="tabs"><button type="button" data-t="r" class="on">READY <b id="nr"></b></button><button type="button" data-t="s">SAMPLES <b id="ns"></b></button></div>
   <div id="rfst"></div>
   <div id="pst"></div>
@@ -492,7 +493,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-09a';
+var VER = '2026-10-09b';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -982,7 +983,7 @@ $('stk').addEventListener('click', function(e){ var b = e.target.closest('button
 // ----- catalogue (his phone only): design numbers + SETS / COMPLETE -> customer catalogue link -----
 var CAT = { items: [], modes: {}, busy: false };
 function isOwner(){ return ls('sj_owner') === '1'; }
-function ownerUI(){ var o = isOwner(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; document.querySelector('#mode button[data-m="cat"]').hidden = !o; }
+function ownerUI(){ var o = isOwner(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !o; document.querySelector('#mode button[data-m="cat"]').hidden = !o; }
 (function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
   function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
   function stop(){ clearTimeout(t); }
@@ -1550,6 +1551,7 @@ function ffDraw(){
 }
 function ffOpen(draft){ FF.draft = draft ? ffDraftBill() : null; $('ff').hidden = false; $('mysheet').hidden = true; ffDraw(); ffLoad(); }
 $('ffopen').onclick = function(){ ffOpen(false); };
+$('ffbtn').onclick = function(){ ffOpen(false); };
 $('dff').onclick = function(){ ffOpen(true); };
 $('ffx').onclick = function(){ $('ff').hidden = true; };
 $('ffre').onclick = function(){ ffLoad(); };
