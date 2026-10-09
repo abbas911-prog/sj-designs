@@ -16,6 +16,7 @@ SAMPLES = '6824cdd97bb99de098f1b7ae'   # one sample piece per card (7 Oct 2026):
 # ---------- the card title: same reading as memo.html parseTitle(), but keeping where each number sits ----------
 def parse(t):
     s = t.replace('**', '  ').replace('{', '(').replace('}', ')')          # same length as t, so spans point into t
+    s = re.sub(r'\(\s*rows?\b[^)]*\)', lambda m: ' ' * len(m.group()), s, flags=re.I)   # '(row 3)' is the godown row (9 Oct 2026), never a colour count
     m = re.search(r'(?:SJ|SH|Sj|sj)\s*[-=:]*\s*\(?\s*(\d{3,6})', s) or re.search(r'\b(\d{4,6})\b', s)
     no = m.group(1) if m else ''
     ci = re.search(r'colou?rs?', s, re.I); ci = ci.start() if ci else -1
