@@ -493,7 +493,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-09c';
+var VER = '2026-10-09d';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -634,7 +634,7 @@ async function boot(){
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
   $('setup').hidden = true; $('load').hidden = false;
   try { designs = await loadCards(); $('load').hidden = true; var w = loadWork(); render(); if (updated) { var d = new Date(updated); $('cnt').title = 'List updated ' + d.toLocaleString(); }
-    setTimeout(checkVer, 800);
+    setTimeout(checkVer, 800); setTimeout(liveSync, 300);
     if (w) { if (w.open) { $('done').hidden = false; setMode(w.open); } else if (w.at) { var a = document.querySelector('#feed .design[data-no="' + w.at + '"]'); if (a) a.scrollIntoView(); } } }
   catch (e) { $('load').hidden = true;
     if (/not accepted/.test(e.message)) { dropToken(); $('setup').hidden = false; $('tok').value = ''; $('seterr').textContent = 'Wrong password · كلمة السر غير صحيحة'; }
@@ -894,25 +894,26 @@ async function hmacHex(msg){
   var k = await crypto.subtle.importKey('raw', new TextEncoder().encode(token), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg)))).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
 }
-async function relay(job, obj){
+async function relayJson(job, obj, tries){
   if (!RELAY) throw new Error('the relay is not set up yet');
   var req = JSON.stringify(obj), sig = await hmacHex(req);
   // 8 Oct 2026: on his employee's phone Google once answered with a web page instead of the relay's reply
   // ("Unexpected token '<' ... is not valid JSON"). Retry a few times, then say plainly what Google sent.
-  var last = '';
-  for (var n = 0; n < 4; n++) {
+  var last = '', N = tries || 4;
+  for (var n = 0; n < N; n++) {
     if (n) await sleep(2500 * n);
     try {
       var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: job, req: req, sig: sig }), cache: 'no-store', credentials: 'omit' });
       var t = await r.text(), j = null;
       try { j = JSON.parse(t); } catch(e){}
-      if (j) { if (!j.ok) throw Object.assign(new Error(j.error || 'refused'), { final: true }); return true; }
+      if (j) return j;
       var tt = (t.match(/<title>([^<]*)/i) || [])[1] || t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
       last = 'Google sent a web page instead of an answer (' + r.status + (tt ? ': ' + tt : '') + ')';
-    } catch(e){ if (e.final) throw e; last = e.message; }
+    } catch(e){ last = e.message; }
   }
-  throw new Error(last + '. Tried 4 times — check the internet on this phone and press again.');
+  throw new Error(last + '. Tried ' + N + ' times — check the internet on this phone and press again.');
 }
+async function relay(job, obj){ var j = await relayJson(job, obj); if (!j.ok) throw new Error(j.error || 'refused'); return true; }
 function sleep(ms){ return new Promise(function(ok){ setTimeout(ok, ms); }); }
 async function waitJob(id, kind, maxMin, tick){
   var t0 = Date.now(), lastRun = 0;
@@ -1431,7 +1432,38 @@ function watchList(){
     } catch(e){}
   }, 20000);
 }
-$('rfr').onclick = function(){ checkVer(); refreshList(true); };
+
+// ===== LIVE LIST (Abbas, 9 Oct 2026: "I want the process to be instant ... I have multiple people using it ... anybody could be searching
+// at a specific moment how many quantity or colors are remaining in a specific design") =====
+// The memo asks the relay (Google Apps Script, holds the Trello key on Google's side) for the READY + SAMPLES cards right now — about 1 second,
+// signed with the shop password. Every 30 s while the memo is on screen, at once when it comes back to the screen, and on ↻.
+// Names/quantities/colours are live; a brand-new photo still needs the photo job (2–4 min), which this starts by itself.
+var LIVE = { busy: false, t: 0, err: '', kicked: 0, pending: null };
+function liveSig(cards){ return cards.map(function(c){ return c.id + '|' + c.name + '|' + (c.list || '') + '|' + (c.attachments || []).map(function(a){ return a.id; }).join(','); }).sort().join('\n'); }
+function liveShow(){ var el = $('cnt'); if (el) el.title = LIVE.t ? 'Live from Trello · ' + new Date(LIVE.t).toLocaleTimeString() : (updated ? 'List updated ' + new Date(updated).toLocaleString() : '');
+  if (LIVE.err && isOwner()) rfst('Live list off: ' + LIVE.err); }
+function liveApply(cards){
+  var known = {}; RAW.cards.forEach(function(c){ (c.attachments || []).forEach(function(a){ known[a.id] = 1; }); });
+  var fresh = cards.some(function(c){ return (c.attachments || []).some(function(a){ return /^image\//.test(a.mimeType || '') && !known[a.id]; }); });
+  RAW.cards = cards; designs = mkDesigns(RAW.cards, RAW.roles); render();
+  if (fresh && Date.now() - LIVE.kicked > 4 * 60000) { LIVE.kicked = Date.now(); relay('stock', { id: jobId('r'), op: 'refresh', dev: devId(), lines: [] }).catch(function(){}); }
+}
+async function liveSync(){
+  if (LIVE.busy || !RELAY || !token || !RAW || document.hidden) return; LIVE.busy = true;
+  try {
+    var j = await relayJson('live', { t: Date.now(), dev: devId() }, 2);
+    if (!j.ok) { LIVE.err = j.error || 'refused'; liveShow(); return; }
+    LIVE.err = ''; LIVE.t = Date.now();
+    var a = document.activeElement, typing = a && a.closest && a.closest('#feed') && /INPUT|TEXTAREA/.test(a.tagName);
+    if (liveSig(j.cards) !== liveSig(RAW.cards)) { if (typing) LIVE.pending = j.cards; else { LIVE.pending = null; liveApply(j.cards); } }
+    liveShow();
+  } catch(e){ LIVE.err = e.message; liveShow(); }
+  finally { LIVE.busy = false; }
+}
+document.addEventListener('focusout', function(){ setTimeout(function(){ if (LIVE.pending && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#feed') && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) { var c = LIVE.pending; LIVE.pending = null; if (liveSig(c) !== liveSig(RAW.cards)) liveApply(c); } }, 300); });
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) liveSync(); });
+setInterval(liveSync, 30000);
+$('rfr').onclick = function(){ checkVer(); liveSync(); refreshList(true); };
 
 // ===== 50-50 BILLS (owner only) — Abbas, 9 Oct 2026 =====
 // "when the bill is generated, do the 50-50 process, looking into the cost ledger ... break down the whole bill for me ... the original bill
