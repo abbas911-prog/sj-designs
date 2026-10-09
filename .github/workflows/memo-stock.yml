@@ -21,6 +21,8 @@ jobs:
         env:
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
           MEMO_PASSWORD: ${{ secrets.MEMO_PASSWORD }}
+          OWNER_PASSWORD: ${{ secrets.OWNER_PASSWORD }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           REQ: ${{ inputs.req }}
           SIG: ${{ inputs.sig }}
         run: python3 tools/stock.py
