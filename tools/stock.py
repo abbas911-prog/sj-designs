@@ -6,7 +6,7 @@
   - a card with every colour at 0 moves to the TOP of the FINISH list (his answer, 7 Oct 2026)
   - the same invoice from the same phone is never taken twice (marker in the comment); "return" puts it back once
 Runs on GitHub Actions (workflow memo-stock), started by memo.html. Secrets: TRELLO_TOKEN (read+write), MEMO_PASSWORD. No AI."""
-import hashlib, hmac, json, os, re, sys, urllib.parse, urllib.request
+import base64, datetime, hashlib, hmac, json, os, re, sys, urllib.parse, urllib.request
 
 KEY = os.environ.get('TRELLO_KEY', '83fea3748717dd1e3fe28a15f2371759')
 API = 'https://api.trello.com/1'
@@ -139,6 +139,89 @@ def sample(cid, card, op, ref, who, tag, r):
     r.update(before=card['name'], after=card['name'], left=left, lines=[line], moved=moved)
     return r
 
+# ---------- 50-50 bill ledger (Abbas, 9 Oct 2026: "when the bill is generated, do the 50-50 process ... I review it, then I press OK") ----------
+# Every invoice that goes out with "Include & share" is kept in bills.enc (locked with the shop password, because staff make the bills).
+# The owner's 50-50 screen in memo.html reads it, reprices it from the inventory costs ON HIS PHONE (costs never come here), and
+# when he presses MAKE BILL the batch is marked posted here (op "billdone"); "billopen" puts a posted batch back for a redo.
+BILLS, B_ITER = 'bills.enc', 200000
+
+def b_key(pw, salt):
+    return hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, B_ITER, 32)
+
+def ledger_load(pw):
+    if not os.path.exists(BILLS):
+        return {'bills': [], 'batches': []}
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    box = json.load(open(BILLS))
+    k = hashlib.pbkdf2_hmac('sha256', pw.encode(), base64.b64decode(box['salt']), box['iter'], 32)
+    return json.loads(AESGCM(k).decrypt(base64.b64decode(box['iv']), base64.b64decode(box['ct']), None))
+
+def ledger_save(pw, L):
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    L['updated'] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+    salt, iv = os.urandom(16), os.urandom(12)
+    ct = AESGCM(b_key(pw, salt)).encrypt(iv, json.dumps(L, ensure_ascii=False).encode(), None)
+    json.dump({'v': 1, 'iter': B_ITER, 'salt': base64.b64encode(salt).decode(), 'iv': base64.b64encode(iv).decode(),
+               'ct': base64.b64encode(ct).decode()}, open(BILLS, 'w'))
+
+def num(v):
+    try:
+        return round(float(v), 2)
+    except Exception:
+        return 0.0
+
+def ledger(req, pw, cards):
+    """Returns a short note for the memo, or '' when the ledger is not touched."""
+    op, ref, dev = req.get('op'), str(req.get('ref', '')).strip()[:40], str(req.get('dev', ''))[:16]
+    if op not in ('sell', 'return', 'billdone', 'billopen'):
+        return ''
+    L = ledger_load(pw)
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+    find = lambda r, d: next((b for b in L['bills'] if b['ref'] == r and b['dev'] == d), None)
+    if op == 'sell':
+        bill = req.get('bill')
+        if not isinstance(bill, dict):
+            return ''
+        lines = [{'no': str(l.get('no', ''))[:20], 'key': str(l.get('key', ''))[:24], 'qty': int(num(l.get('qty'))), 'rate': num(l.get('rate')),
+                  'amount': num(l.get('amount'))} for l in bill.get('lines', [])[:80]]
+        rec = {'ref': ref, 'dev': dev, 't': now, 'date': str(bill.get('date', ''))[:10], 'name': str(bill.get('name', ''))[:80],
+               'lines': lines, 'extras': [{'d': str(e.get('d', ''))[:60], 'a': num(e.get('a'))} for e in bill.get('extras', [])[:10]],
+               'disc': num(bill.get('disc')), 'vat': num(bill.get('vat')), 'total': num(bill.get('total')), 'sub': num(bill.get('sub')),
+               'pcs': sum(l['qty'] for l in lines), 'stock_ok': not any('err' in c for c in cards), 'st': 'open'}
+        old = find(ref, dev)
+        if old:
+            if old.get('st') == 'posted':
+                return 'bill already in a posted 50-50 batch'
+            old.update(rec)
+        else:
+            L['bills'].append(rec)
+        note = 'bill kept for 50-50'
+    elif op == 'return':
+        b = find(ref, dev)
+        if not b:
+            return ''
+        b['st'], b['returned'] = 'returned', now
+        note = 'bill marked returned (out of 50-50)'
+    else:
+        refs = [(str(r[0])[:40], str(r[1])[:16]) for r in req.get('refs', [])[:200] if isinstance(r, list) and len(r) == 2]
+        hit = [b for b in L['bills'] if (b['ref'], b['dev']) in refs]
+        if op == 'billdone':
+            bid = 'B' + now.replace('-', '').replace(':', '')[:15]
+            batch = req.get('batch') if isinstance(req.get('batch'), dict) else {}
+            L['batches'].append({'id': bid, 't': now, 'refs': [[b['ref'], b['dev']] for b in hit], 'total': num(batch.get('total')),
+                                 'pcs': int(num(batch.get('pcs'))), 'date': str(batch.get('date', ''))[:12], 'text': str(batch.get('text', ''))[:6000]})
+            for b in hit:
+                b['st'], b['batch'] = 'posted', bid
+            note = '%d bills marked posted (%s)' % (len(hit), bid)
+        else:
+            for b in hit:
+                b['st'] = 'open'; b.pop('batch', None)
+            note = '%d bills back in 50-50' % len(hit)
+    L['bills'] = L['bills'][-400:]
+    L['batches'] = L['batches'][-60:]
+    ledger_save(pw, L)
+    return note
+
 def main():
     req_s, sig = os.environ.get('REQ', ''), os.environ.get('SIG', '')
     pw = os.environ.get('MEMO_PASSWORD', '')
@@ -149,8 +232,14 @@ def main():
     if not good:
         res.update(ok=False, error='not signed with the shop password')
     else:
-        cards = run(req)
+        cards = run(req) if req.get('op') not in ('billdone', 'billopen') else []
         res.update(ok=not any('err' in c for c in cards), cards=cards)
+        try:
+            note = ledger(req, pw, cards)
+            if note: res['bill'] = note
+        except Exception as e:
+            res['bill_err'] = '%s: %s' % (type(e).__name__, str(e)[:160])
+            if req.get('op') in ('billdone', 'billopen'): res.update(ok=False, error='50-50 list not updated: ' + res['bill_err'])
     os.makedirs('jobs', exist_ok=True)
     json.dump(res, open('jobs/%s.json' % jid, 'w'), ensure_ascii=False, indent=1)
     print(json.dumps(res, ensure_ascii=False, indent=1))
