@@ -116,6 +116,42 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 #mysheet .in{background:var(--bg);width:100%;max-width:720px;border-radius:20px 20px 0 0;padding:16px 16px calc(22px + env(safe-area-inset-bottom));max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 #mysheet .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 #mysheet .hd b{letter-spacing:.14em;color:var(--mute);font-size:13px}
+#ff[hidden]{display:none}
+#ff{position:fixed;inset:0;z-index:55;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
+#ff .in{background:var(--bg);width:100%;max-width:760px;border-radius:20px 20px 0 0;padding:16px 12px calc(22px + env(safe-area-inset-bottom));max-height:94vh;max-height:94dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#ff .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#ff .hd b{letter-spacing:.14em;color:var(--mute);font-size:13px}
+#ff .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700;margin-left:12px}
+.ffbig{display:block;width:100%;margin:0 0 12px;padding:12px;border:1.5px solid var(--gold);background:#fff;color:var(--ink);border-radius:12px;font:inherit;font-weight:800;letter-spacing:.08em;text-align:left}
+.ffbig small{display:block;font-weight:500;letter-spacing:0;color:var(--mute);font-size:12px}
+.ffst{font-size:12px;color:var(--mute);margin:4px 2px 10px}
+.ffb{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;margin:0 0 12px}
+.ffb.out{opacity:.45}.ffb.draft{border-style:dashed}.ffb.all{border:1.5px solid var(--gold)}
+.ffh{font-size:14px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;justify-content:space-between}
+.ffh em{display:block;width:100%;font-size:11px;color:#9a3b1e;font-style:normal}
+.ffh button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;margin-left:4px}
+.ffs{font-size:11px;letter-spacing:.1em;color:var(--mute);margin:10px 0 4px;text-transform:uppercase;font-weight:700}
+.fft{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.fft th{font-size:10px;color:var(--mute);text-align:right;font-weight:700;padding:4px 3px;border-bottom:1px solid var(--line)}
+.fft td{padding:4px 3px;border-bottom:1px solid #f0ebe3;text-align:right;white-space:nowrap}
+.fft th:first-child,.fft td:first-child{text-align:left}
+.fft tr.tot td{font-weight:800;border-top:1.5px solid var(--ink)}
+.fft tr.bad td{background:#fbeee8}
+.ffi{width:58px;padding:4px 4px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:13px;text-align:right;background:#fffdf9}
+.ffv{font:inherit;font-size:12px;padding:2px;border:1px solid var(--gold);border-radius:6px;background:#fff}
+.ffn{font-size:11px;color:var(--mute);margin-top:4px}
+.ffw{margin-top:6px;font-size:14px;text-align:right}
+.fff{margin-top:8px;font-size:12px;display:grid;gap:3px}
+.fff .b{color:#9a3b1e;font-weight:700}.fff .w{color:#8a5a00}.fff .i{color:var(--mute)}
+.ffd{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mute);margin:8px 0}
+.ffd input{width:110px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px}
+.ffg{font-size:16px;font-weight:800;margin:10px 0 4px;text-align:right}.ffg small{display:block;font-size:11px;color:var(--mute);font-weight:500}
+.ffbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.ffbtns button{padding:12px;border-radius:12px;border:1.5px solid var(--gold);background:#fff;font:inherit;font-weight:800}
+.ffbtns button.gold{background:var(--gold);color:#fff}.ffbtns button[disabled]{opacity:.4}
+.ffempty{padding:18px;text-align:center;color:var(--mute);font-size:14px}
+.ffpost{font-size:12px;color:var(--mute);display:grid;gap:4px;margin-top:6px}
+.ffpost button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 8px;font:inherit;font-size:11px;margin-left:6px}
 #mysheet .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700}
 #myg{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
 #myg button{padding:20px 10px;border-radius:16px;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:16px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
@@ -200,7 +236,8 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
   <div id="load" hidden>Loading READY list…</div>
   <div id="feed"></div>
 </main>
-<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
+<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
+<div id="ff" hidden><div class="in"><div class="hd"><b>50-50 BILLS</b><span><button type="button" id="ffre">↻</button><button type="button" id="ffx">Close</button></span></div><div id="ffbody"></div></div></div>
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
 <div id="done" hidden><div class="in">
   <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
@@ -212,7 +249,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
   </section>
   <section id="p-doc" hidden>
   <div id="bform"></div>
-  <div class="btns"><button id="dinc" class="inc" type="button" hidden>Include &amp; share · تأكيد وإرسال<small>takes the pieces off Trello</small></button><button id="dsend" class="gold" type="button">Send PDF · أرسل PDF</button><button id="dcopy" type="button">Copy text · نسخ النص</button><button id="dnew" type="button">New number · رقم جديد</button></div>
+  <div class="btns"><button id="dinc" class="inc" type="button" hidden>Include &amp; share · تأكيد وإرسال<small>takes the pieces off Trello</small></button><button id="dsend" class="gold" type="button">Send PDF · أرسل PDF</button><button id="dcopy" type="button">Copy text · نسخ النص</button><button id="dnew" type="button">New number · رقم جديد</button><button id="dff" type="button" hidden>50-50 check · for me</button></div>
   <div id="stk" class="stk" hidden></div>
   <div id="dprev"></div>
   </section>
@@ -455,7 +492,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-08f';
+var VER = '2026-10-09a';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -894,7 +931,7 @@ var STK = {}; try { STK = JSON.parse(ls('sj_stock') || '{}'); } catch(e){}
 function stkSave(){ var ks = Object.keys(STK).sort(function(a, b){ return (STK[b].t || 0) - (STK[a].t || 0); }); ks.slice(40).forEach(function(k){ delete STK[k]; }); ls('sj_stock', JSON.stringify(STK)); }
 function stkKey(ref){ return devId() + '|' + ref; }
 function stkLines(){ return colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var d = byNo(l.no); return { card: d.id, no: d.base, c: l.c, pcs: l.qty }; }); }
-function stkShow(){ var el = $('stk'); $('dinc').hidden = B.mode !== 'inv'; if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
+function stkShow(){ var el = $('stk'); $('dinc').hidden = B.mode !== 'inv'; $('dff').hidden = B.mode !== 'inv' || !isOwner(); if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
   if (s) { stkPaint(s); return; }
   el.hidden = false; el.className = 'stk';
   el.innerHTML = RELAY ? '<b>Send PDF</b> does not change stock. <b>Include &amp; share</b> sends the final invoice and takes its pieces off Trello. <small>فقط «تأكيد وإرسال» يخصم القطع من تريلو</small>' + (isOwner() ? '<button type="button" data-stk="check">Test — show what would change (Trello not touched)</button>' : '')
@@ -925,7 +962,9 @@ async function stkRun(op){
   if (!lines.length) { stkShow(); return; }
   var id = jobId('s');
   s = STK[k] = { st: 'busy', op: op, ref: d.ref, lines: lines, id: id, who: d.name || $('name').value.trim(), t: Date.now() }; stkSave(); stkPaint(s);
-  try { await relay('stock', { id: id, op: op, ref: d.ref, dev: devId(), who: s.who, lines: lines }); }
+  var req = { id: id, op: op, ref: d.ref, dev: devId(), who: s.who, lines: lines };
+  if (op === 'sell') { var fb = ffDraftBill(); if (fb) req.bill = { date: fb.date, name: fb.name || s.who, lines: fb.lines, extras: fb.extras, disc: fb.disc, vat: fb.vat, total: fb.total, sub: fb.sub }; }   // kept for the owner's 50-50 screen
+  try { await relay('stock', req); }
   catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); stkPaint(s); return; }
   var res = await waitJob(id, 'stock', 8);
   s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
@@ -1390,6 +1429,163 @@ function watchList(){
   }, 20000);
 }
 $('rfr').onclick = function(){ checkVer(); refreshList(true); };
+
+// ===== 50-50 BILLS (owner only) — Abbas, 9 Oct 2026 =====
+// "when the bill is generated, do the 50-50 process, looking into the cost ledger ... break down the whole bill for me ... the original bill
+// and the revised bill with the breakdowns. Then I press OK." Same rule as the 50-50 Invoice Repricing Process doc:
+//   new price = cost + (sold - cost) / 2, rounded to whole AED (a loss halves the same way); costs only from the latest inventory report;
+//   a design missing from the report stops the bill; returns are left out; one combined bill per batch, same design + same new price merged;
+//   tables split at 9 rows, TOTAL in the last one; date 1/6/26 unless he types another.
+// Bills come from bills.enc (written by the memo-stock job on every "Include & share"); the costs never leave his phone. No AI.
+var FF = { L: null, st: '', msg: '', draft: null, busy: false, at: 0 };
+function ffEd(){ try { return JSON.parse(ls('sj_ff') || '{}'); } catch(e){ return {}; } }
+function ffSave(E){ ls('sj_ff', JSON.stringify(E)); }
+function ffKey(b){ return b.dev + '|' + b.ref; }
+function fmt(n){ return Math.round(n).toLocaleString('en-US'); }
+function fmt2(n){ return n == null ? '—' : (+n).toFixed(2).replace(/\.00$/, ''); }
+async function ffLoad(){
+  FF.st = 'busy'; FF.msg = ''; ffDraw();
+  try {
+    var box = null;
+    try { var c = await (await fetch('https://api.github.com/repos/abbas911-prog/sj-designs/commits?path=bills.enc&per_page=1', { cache: 'no-store' })).json();
+      if (c && c[0] && c[0].sha) { var r = await fetch('https://raw.githubusercontent.com/abbas911-prog/sj-designs/' + c[0].sha + '/bills.enc', { cache: 'no-store' }); if (r.ok) box = await r.json(); }
+      else if (Array.isArray(c) && !c.length) box = 'none'; } catch(e){}
+    if (!box) { var r2 = await fetch('bills.enc?t=' + Date.now(), { cache: 'no-store' }); box = r2.ok ? await r2.json() : 'none'; }
+    FF.L = box === 'none' ? { bills: [], batches: [] } : JSON.parse(await unlock(box, token));
+    FF.st = 'ok'; FF.at = Date.now();
+  } catch(e){ FF.st = 'err'; FF.msg = 'Could not read the bills: ' + e.message; }
+  ffDraw();
+}
+function ffDraftBill(){                 // the invoice open on this phone, as a preview (not saved, not in MAKE BILL)
+  var d = B.inv; if (!d) return null; var c = invCalc(d); if (!c.lines.length) return null;
+  return { ref: d.ref, dev: devId(), draft: true, date: d.date, name: d.name || $('name').value.trim(), st: 'open',
+    lines: c.lines.map(function(l){ var dz = byNo(l.no); return { no: dz ? dz.base : l.no, key: l.no, qty: l.qty, rate: l.rate, amount: l.amount }; }),
+    extras: c.ex.map(function(e){ return { d: e.d, a: n2(e.a) }; }), disc: c.disc, vat: c.vat, total: c.total, sub: c.sub, pcs: c.lines.reduce(function(a, l){ return a + l.qty; }, 0), stock_ok: true };
+}
+function ffVariants(no){ if (!COST) return []; return Object.keys(COST.c).filter(function(k){ return k === no || k.indexOf(no + '-') === 0; }).sort(function(a, b){ return a === no ? -1 : b === no ? 1 : a < b ? -1 : 1; }); }
+function ffCalc(b, E){
+  var e = E[ffKey(b)] || {}, le = e.l || {}, rows = [], flags = [], block = false, wSum = 0, wPcs = 0;
+  b.lines.forEach(function(l, i){
+    var x = le[i] || {}, vs = ffVariants(l.no), v = x.v || (COST && COST.c[l.no] != null ? l.no : (vs.length === 1 ? vs[0] : null));
+    var cost = x.cost != null ? x.cost : (v && COST ? +COST.c[v] : null), rate = x.rate != null ? x.rate : l.rate, qty = x.qty != null ? x.qty : l.qty;
+    var auto = cost != null ? Math.round(cost + (rate - cost) / 2) : null, nw = x.nw != null ? x.nw : auto;
+    var r = { i: i, no: l.no, lab: 'SJ-' + (v || l.no), v: v, vs: vs, qty: qty, rate: rate, amt: qty * rate, cost: cost, profit: cost != null ? rate - cost : null,
+      half: cost != null ? (rate - cost) / 2 : null, nw: nw, auto: auto, namt: nw != null ? qty * nw : null, ed: Object.keys(x).length > 0, f: [] };
+    wSum += r.amt; wPcs += qty;
+    if (Math.abs(l.qty * l.rate - l.amount) > 0.01) r.f.push(['w', 'line written ' + fmt2(l.amount) + ' but ' + l.qty + ' × ' + fmt2(l.rate) + ' = ' + fmt2(l.qty * l.rate)]);
+    if (!(rate > 0)) { r.f.push(['b', 'no price on the bill — type the sold price']); block = true; }
+    if (cost == null) { r.f.push(['b', (vs.length > 1 ? 'pick which ' + l.no + ' it is (' + vs.map(function(k){ return k + ' ' + fmt2(COST.c[k]); }).join(' · ') + ')' : 'not in the inventory report' + (COST ? ' of ' + COST.d : '') + ' — type the cost') ]); block = true; }
+    else {
+      if (rate > 0 && rate < cost) r.f.push(['w', 'sold below cost (' + fmt2(rate) + ' < ' + fmt2(cost) + ') — the loss is halved, so the new price goes UP to ' + nw]);
+      else if (rate > 0 && (rate - cost) / cost < 0.05) r.f.push(['i', 'very thin profit: ' + fmt2(rate - cost) + ' AED a piece']);
+      if (vs.length > 1 && !x.v) { var other = vs.filter(function(k){ return k !== v && Math.abs(COST.c[k] - cost) > 0.5; }); if (other.length) r.f.push(['w', 'variants cost differently — using ' + v + '; also ' + other.map(function(k){ return k + ' ' + fmt2(COST.c[k]); }).join(', ')]); }
+      if (x.nw != null && x.nw !== auto) r.f.push(['i', 'new price typed by you (rule gives ' + auto + ')']);
+    }
+    rows.push(r);
+  });
+  if (b.sub && Math.abs(b.lines.reduce(function(a, l){ return a + l.amount; }, 0) - b.sub) > 0.01) flags.push(['w', 'line amounts do not add up to the bill subtotal ' + fmt2(b.sub)]);
+  var exS = (b.extras || []).reduce(function(a, x){ return a + n2(x.a); }, 0);
+  if (exS || b.disc || b.vat) flags.push(['i', 'bill also had ' + [exS ? 'extras ' + fmt2(exS) : '', b.disc ? 'discount ' + fmt2(b.disc) : '', b.vat ? 'VAT ' + fmt2(b.vat) : ''].filter(Boolean).join(', ') + ' — the 50-50 bill has the designs only']);
+  if (b.stock_ok === false) flags.push(['i', 'Trello stock was not fully updated for this bill']);
+  var nSum = rows.reduce(function(a, r){ return a + (r.namt || 0); }, 0);
+  return { rows: rows, flags: flags, block: block, wSum: wSum, wPcs: wPcs, nSum: nSum, out: !!e.out, ed: rows.some(function(r){ return r.ed; }) };
+}
+function ffTable(head, rows, cls){ return '<table class="fft ' + (cls || '') + '"><tr>' + head.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '</tr>' + rows.join('') + '</table>'; }
+function ffIn(b, i, f, v){ return '<input class="ffi" inputmode="decimal" data-b="' + esc(ffKey(b)) + '" data-i="' + i + '" data-f="' + f + '" value="' + (v == null ? '' : +(+v).toFixed(2)) + '" placeholder="?">'; }
+function ffBillHtml(b, k, E){
+  var h = '<div class="ffb' + (k.out ? ' out' : '') + (b.draft ? ' draft' : '') + '"><div class="ffh"><b>' + esc(b.ref) + '</b> · ' + esc(dmy(b.date)) + ' · ' + esc(b.name || '—') + ' · ' + k.wPcs + ' pcs' +
+    (b.draft ? '<em>preview of the bill on screen — not included yet</em>' : '<span><button type="button" data-out="' + esc(ffKey(b)) + '">' + (k.out ? 'Put in' : 'Leave out') + '</button>' + (k.ed ? '<button type="button" data-reset="' + esc(ffKey(b)) + '">Reset</button>' : '') + '</span>') + '</div>';
+  h += '<div class="ffs">1 · Bill as written</div>' + ffTable(['Design', 'Qty', 'Price', 'Amount'], k.rows.map(function(r){ return '<tr><td>' + esc(r.lab) + '</td><td>' + ffIn(b, r.i, 'qty', r.qty) + '</td><td>' + ffIn(b, r.i, 'rate', r.rate) + '</td><td>' + fmt2(r.amt) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + k.wPcs + '</td><td></td><td>' + fmt(k.wSum) + '</td></tr>']));
+  h += '<div class="ffs">2 · Cost <small>(inventory report ' + esc(COST ? COST.d : '—') + ')</small></div>' + ffTable(['Design', 'Cost', 'Sold', 'Profit', 'Half', 'New'], k.rows.map(function(r){
+    var sel = r.vs.length > 1 ? '<select class="ffv" data-b="' + esc(ffKey(b)) + '" data-i="' + r.i + '">' + (r.v ? '' : '<option value="">which?</option>') + r.vs.map(function(x){ return '<option' + (x === r.v ? ' selected' : '') + ' value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('') + '</select>' : esc(r.lab);
+    return '<tr' + (r.cost == null || !(r.rate > 0) ? ' class="bad"' : '') + '><td>' + sel + '</td><td>' + ffIn(b, r.i, 'cost', r.cost) + '</td><td>' + fmt2(r.rate) + '</td><td>' + fmt2(r.profit) + '</td><td>' + (r.half == null ? '—' : r.half.toFixed(2)) + '</td><td>' + ffIn(b, r.i, 'nw', r.nw) + '</td></tr>'; }));
+  h += '<div class="ffn">New price = cost + half the profit, rounded to whole AED. Tap any box to change it.</div>';
+  h += '<div class="ffs">3 · Revised bill</div>' + ffTable(['Design', 'Qty', 'New', 'Amount'], k.rows.map(function(r){ return '<tr><td>' + esc(r.lab) + '</td><td>' + r.qty + '</td><td>' + (r.nw == null ? '?' : r.nw) + '</td><td>' + (r.namt == null ? '?' : fmt(r.namt)) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + k.wPcs + '</td><td></td><td>' + fmt(k.nSum) + (k.block ? '?' : '') + '</td></tr>']));
+  h += '<div class="ffw">Written ' + fmt(k.wSum) + ' → <b>Revised ' + (k.block ? 'incomplete' : fmt(k.nSum) + ' AED') + '</b></div>';
+  var fl = k.rows.reduce(function(a, r){ return a.concat(r.f.map(function(f){ return [f[0], r.lab + ': ' + f[1]]; })); }, []).concat(k.flags);
+  if (fl.length) h += '<div class="fff">' + fl.map(function(f){ return '<div class="' + f[0] + '">' + (f[0] === 'b' ? '⛔ ' : f[0] === 'w' ? '⚠️ ' : 'ℹ︎ ') + esc(f[1]) + '</div>'; }).join('') + '</div>';
+  return h + '</div>';
+}
+function ffMerge(list){
+  var m = {}, order = [];
+  list.forEach(function(x){ x.k.rows.forEach(function(r){ var key = r.lab + '|' + r.nw; if (!m[key]) { m[key] = { lab: r.lab, nw: r.nw, qty: 0 }; order.push(key); } m[key].qty += r.qty; }); });
+  return order.map(function(k){ return m[k]; });
+}
+function ffChunks(n){ var parts = Math.ceil((n + 1) / 9), out = [], base = Math.floor((n + 1) / parts), extra = (n + 1) % parts, s = 0; for (var i = 0; i < parts; i++) { var len = base + (i < extra ? 1 : 0); out.push([s, Math.min(n, s + len)]); s += len; } return out; }
+function ffText(lines, date, tot, pcs){
+  var t = '**' + date + '**\n\n';
+  ffChunks(lines.length).forEach(function(ch, ci, all){
+    t += '| **Design** | **Qty** | **Price** | **Amount** |\n|---|---|---|---|\n';
+    lines.slice(ch[0], ch[1]).forEach(function(l){ t += '| ' + l.lab + ' | ' + l.qty + ' | ' + l.nw + ' | ' + fmt(l.qty * l.nw) + ' |\n'; });
+    if (ci === all.length - 1) t += '| **TOTAL** | **' + pcs + '** | | **' + fmt(tot) + '** |\n';
+    t += '\n'; });
+  return t + '**GRAND TOTAL = ' + fmt(tot) + ' AED · ' + pcs + ' pcs**\n\nCustomer\'s Sign: ..........\n\nSignature: ..........';
+}
+function ffDraw(){
+  var el = $('ffbody'); if (!el || $('ff').hidden) return; var E = ffEd(), h = '';
+  h += '<div class="ffst">' + (COST ? 'Costs: inventory report ' + esc(COST.d) + ' · ' + Object.keys(COST.c).length + ' designs' : '<span class="miss">Costs are not on this phone — load the inventory report first (Costs, at the bottom of the memo).</span>') +
+    (FF.st === 'busy' ? ' · reading bills…' : FF.st === 'ok' ? ' · bills read ' + new Date(FF.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '') + '</div>';
+  if (FF.st === 'err') h += '<div class="miss">' + esc(FF.msg) + '</div>';
+  if (FF.draft) { var kd = ffCalc(FF.draft, E); h += ffBillHtml(FF.draft, kd, E); }
+  var open = FF.L ? FF.L.bills.filter(function(b){ return b.st === 'open'; }).sort(function(a, b){ return a.t < b.t ? -1 : 1; }) : [];
+  var list = open.map(function(b){ return { b: b, k: ffCalc(b, E) }; });
+  if (FF.st === 'ok' && !open.length) h += '<div class="ffempty">No bills waiting. Every invoice sent with <b>Include &amp; share</b> lands here.</div>';
+  list.forEach(function(x){ h += ffBillHtml(x.b, x.k, E); });
+  var inc = list.filter(function(x){ return !x.k.out; }), blocked = inc.filter(function(x){ return x.k.block; });
+  if (inc.length) {
+    var ml = ffMerge(inc), tot = inc.reduce(function(a, x){ return a + x.k.nSum; }, 0), pcs = inc.reduce(function(a, x){ return a + x.k.wPcs; }, 0), wt = inc.reduce(function(a, x){ return a + x.k.wSum; }, 0), date = ls('sj_ff_date') || '1/6/26';
+    h += '<div class="ffb all"><div class="ffh"><b>COMPLETE BILL</b> · ' + inc.map(function(x){ return esc(x.b.ref); }).join(', ') + '</div>';
+    h += '<label class="ffd">Date on the bill <input id="ffdate" value="' + esc(date) + '"></label>';
+    ffChunks(ml.length).forEach(function(ch, ci, all){ h += ffTable(['Design', 'Qty', 'Price', 'Amount'], ml.slice(ch[0], ch[1]).map(function(l){ return '<tr><td>' + esc(l.lab) + '</td><td>' + l.qty + '</td><td>' + (l.nw == null ? '?' : l.nw) + '</td><td>' + (l.nw == null ? '?' : fmt(l.qty * l.nw)) + '</td></tr>'; }).concat(ci === all.length - 1 ? ['<tr class="tot"><td>TOTAL</td><td>' + pcs + '</td><td></td><td>' + fmt(tot) + '</td></tr>'] : [])); });
+    h += '<div class="ffg">GRAND TOTAL = ' + (blocked.length ? '—' : fmt(tot) + ' AED') + ' · ' + pcs + ' pcs<small>as written ' + fmt(wt) + ' AED</small></div>';
+    if (blocked.length) h += '<div class="fff"><div class="b">⛔ Fix the red lines first: ' + blocked.map(function(x){ return esc(x.b.ref); }).join(', ') + ' (or Leave out that bill).</div></div>';
+    h += '<div class="ffbtns"><button type="button" class="gold" id="ffmake"' + (blocked.length || FF.busy ? ' disabled' : '') + '>MAKE BILL</button><button type="button" id="ffcopy"' + (blocked.length ? ' disabled' : '') + '>Copy bill text</button></div>';
+    h += '<div class="ffn">MAKE BILL takes these ' + inc.length + ' bill' + (inc.length > 1 ? 's' : '') + ' off this list as posted. Posting straight into #sales needs the Slack key — until then, Copy bill text gives the exact text.</div></div>';
+    FF.cur = { inc: inc, ml: ml, tot: tot, pcs: pcs, date: date };
+  } else FF.cur = null;
+  var bs = FF.L && FF.L.batches ? FF.L.batches.slice(-3).reverse() : [];
+  if (bs.length) h += '<div class="ffpost"><div class="ffs">Already posted</div>' + bs.map(function(x){ return '<div>' + esc(x.date || '') + ' · ' + x.refs.map(function(r){ return esc(r[0]); }).join(', ') + ' · ' + fmt(x.total) + ' AED · ' + x.pcs + ' pcs <button type="button" data-reopen="' + esc(x.id) + '">Redo</button></div>'; }).join('') + '</div>';
+  if (FF.note) h += '<div class="ffst">' + esc(FF.note) + '</div>';
+  el.innerHTML = h;
+}
+function ffOpen(draft){ FF.draft = draft ? ffDraftBill() : null; $('ff').hidden = false; $('mysheet').hidden = true; ffDraw(); ffLoad(); }
+$('ffopen').onclick = function(){ ffOpen(false); };
+$('dff').onclick = function(){ ffOpen(true); };
+$('ffx').onclick = function(){ $('ff').hidden = true; };
+$('ffre').onclick = function(){ ffLoad(); };
+$('ffbody').addEventListener('change', function(e){
+  var t = e.target, E = ffEd();
+  if (t.id === 'ffdate') { ls('sj_ff_date', t.value.trim() || '1/6/26'); ffDraw(); return; }
+  if (!t.dataset.b) return;
+  var k = t.dataset.b, i = t.dataset.i, e1 = E[k] = E[k] || {}, l = e1.l = e1.l || {}, x = l[i] = l[i] || {};
+  if (t.classList.contains('ffv')) { if (t.value) x.v = t.value; else delete x.v; delete x.cost; }
+  else { var v = parseFloat(String(t.value).replace(/[^\d.\-]/g, '')); if (isNaN(v) || t.value.trim() === '') delete x[t.dataset.f]; else x[t.dataset.f] = v; if (t.dataset.f !== 'nw' && x.nw != null && t.dataset.f !== 'qty') delete x.nw; }
+  if (!Object.keys(x).length) delete l[i];
+  ffSave(E); ffDraw();
+});
+$('ffbody').addEventListener('click', async function(e){
+  var b = e.target.closest('button'); if (!b) return; var E = ffEd();
+  if (b.dataset.out) { var o = E[b.dataset.out] = E[b.dataset.out] || {}; o.out = !o.out; ffSave(E); ffDraw(); return; }
+  if (b.dataset.reset) { if (E[b.dataset.reset]) delete E[b.dataset.reset].l; ffSave(E); ffDraw(); return; }
+  if (b.id === 'ffcopy' && FF.cur) { var t = ffText(FF.cur.ml, FF.cur.date, FF.cur.tot, FF.cur.pcs); try { await navigator.clipboard.writeText(t); b.textContent = 'Copied ✓'; } catch(e2){ prompt('Copy:', t); } return; }
+  if (b.id === 'ffmake' && FF.cur) {
+    var c = FF.cur; if (!confirm('MAKE BILL: ' + c.inc.length + ' bill(s), GRAND TOTAL ' + fmt(c.tot) + ' AED · ' + c.pcs + ' pcs?')) return;
+    FF.busy = true; FF.note = 'Saving the batch…'; ffDraw();
+    try { var id = jobId('f'); await relay('stock', { id: id, op: 'billdone', ref: 'MAKE BILL', dev: devId(), lines: [], refs: c.inc.map(function(x){ return [x.b.ref, x.b.dev]; }),
+        batch: { total: Math.round(c.tot), pcs: c.pcs, date: c.date, text: ffText(c.ml, c.date, c.tot, c.pcs) } });
+      var res = await waitJob(id, 'stock', 8);
+      FF.note = res.ok ? 'Posted batch saved ✓ ' + (res.bill || '') : 'Not saved: ' + (res.error || res.bill_err || 'unknown');
+      if (res.ok) { c.inc.forEach(function(x){ delete E[ffKey(x.b)]; }); ffSave(E); }
+    } catch(e3){ FF.note = 'Could not start: ' + e3.message; }
+    FF.busy = false; ffLoad(); return;
+  }
+  if (b.dataset.reopen) { var bt = (FF.L.batches || []).filter(function(x){ return x.id === b.dataset.reopen; })[0]; if (!bt || !confirm('Put ' + bt.refs.map(function(r){ return r[0]; }).join(', ') + ' back on the 50-50 list to redo?')) return;
+    FF.note = 'Putting it back…'; ffDraw();
+    try { var id2 = jobId('f'); await relay('stock', { id: id2, op: 'billopen', ref: 'REDO', dev: devId(), lines: [], refs: bt.refs }); var r2 = await waitJob(id2, 'stock', 8); FF.note = r2.ok ? 'Back on the list ✓' : 'Not done: ' + (r2.error || ''); }
+    catch(e4){ FF.note = 'Could not start: ' + e4.message; }
+    ffLoad(); }
+});
+window.__ff = { FF: FF, ffText: ffText };
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
