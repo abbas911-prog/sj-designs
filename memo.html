@@ -130,7 +130,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .ffb.out{opacity:.45}.ffb.draft{border-style:dashed}.ffb.all{border:1.5px solid var(--gold)}
 .ffh{font-size:14px;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;justify-content:space-between}
 .ffh em{display:block;width:100%;font-size:11px;color:#9a3b1e;font-style:normal}
-.ffh button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;margin-left:4px}
+.ffh button.ffdel{color:#9a3b1e;border-color:#e6c9bd}.ffh button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;margin-left:4px}
 .ffs{font-size:11px;letter-spacing:.1em;color:var(--mute);margin:10px 0 4px;text-transform:uppercase;font-weight:700}
 .fft{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .fft th{font-size:10px;color:var(--mute);text-align:right;font-weight:700;padding:4px 3px;border-bottom:1px solid var(--line)}
@@ -493,7 +493,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-09e';
+var VER = '2026-10-09f';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1530,7 +1530,7 @@ function ffTable(head, rows, cls){ return '<table class="fft ' + (cls || '') + '
 function ffIn(b, i, f, v){ return '<input class="ffi" inputmode="decimal" data-b="' + esc(ffKey(b)) + '" data-i="' + i + '" data-f="' + f + '" value="' + (v == null ? '' : +(+v).toFixed(2)) + '" placeholder="?">'; }
 function ffBillHtml(b, k, E){
   var h = '<div class="ffb' + (k.out ? ' out' : '') + (b.draft ? ' draft' : '') + '"><div class="ffh"><b>' + esc(b.ref) + '</b> · ' + esc(dmy(b.date)) + ' · ' + esc(b.name || '—') + ' · ' + k.wPcs + ' pcs' +
-    (b.draft ? '<em>preview of the bill on screen — not included yet</em>' : '<span><button type="button" data-out="' + esc(ffKey(b)) + '">' + (k.out ? 'Put in' : 'Leave out') + '</button>' + (k.ed ? '<button type="button" data-reset="' + esc(ffKey(b)) + '">Reset</button>' : '') + '</span>') + '</div>';
+    (b.draft ? '<em>preview of the bill on screen — not included yet</em>' : '<span><button type="button" data-out="' + esc(ffKey(b)) + '">' + (k.out ? 'Put in' : 'Leave out') + '</button><button type="button" class="ffdel" data-del="' + esc(ffKey(b)) + '">Delete bill</button>' + (k.ed ? '<button type="button" data-reset="' + esc(ffKey(b)) + '">Reset</button>' : '') + '</span>') + '</div>';
   h += '<div class="ffs">1 · Bill as written</div>' + ffTable(['Design', 'Qty', 'Price', 'Amount'], k.rows.map(function(r){ return '<tr><td>' + esc(r.lab) + '</td><td>' + ffIn(b, r.i, 'qty', r.qty) + '</td><td>' + ffIn(b, r.i, 'rate', r.rate) + '</td><td>' + fmt2(r.amt) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + k.wPcs + '</td><td></td><td>' + fmt(k.wSum) + '</td></tr>']));
   h += '<div class="ffs">2 · Cost <small>(inventory report ' + esc(COST ? COST.d : '—') + ')</small></div>' + ffTable(['Design', 'Cost', 'Sold', 'Profit', 'Half', 'New'], k.rows.map(function(r){
     var sel = r.vs.length > 1 ? '<select class="ffv" data-b="' + esc(ffKey(b)) + '" data-i="' + r.i + '">' + (r.v ? '' : '<option value="">which?</option>') + r.vs.map(function(x){ return '<option' + (x === r.v ? ' selected' : '') + ' value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('') + '</select>' : esc(r.lab);
@@ -1603,6 +1603,13 @@ $('ffbody').addEventListener('change', function(e){
 $('ffbody').addEventListener('click', async function(e){
   var b = e.target.closest('button'); if (!b) return; var E = ffEd();
   if (b.dataset.out) { var o = E[b.dataset.out] = E[b.dataset.out] || {}; o.out = !o.out; ffSave(E); ffDraw(); return; }
+  if (b.dataset.del) { var bl = (FF.L.bills || []).filter(function(x){ return ffKey(x) === b.dataset.del; })[0]; if (!bl) return;
+    if (!confirm('Delete ' + bl.ref + ' (' + (bl.name || 'no name') + ', ' + bl.pcs + ' pcs) from the 50-50 list?\n\nThis does NOT put pieces back on Trello — for that use Undo on the invoice.')) return;
+    bl.st = 'deleting'; FF.note = 'Deleting ' + bl.ref + '…'; ffDraw();
+    try { var id5 = jobId('f'); await relay('stock', { id: id5, op: 'billdel', ref: 'DELETE', dev: devId(), lines: [], refs: [[bl.ref, bl.dev]] }); var r5 = await waitJob(id5, 'stock', 8);
+      FF.note = r5.ok ? bl.ref + ' deleted ✓' : 'Not deleted: ' + (r5.error || r5.bill_err || ''); if (r5.ok) { delete E[ffKey(bl)]; ffSave(E); } }
+    catch(e5){ FF.note = 'Could not start: ' + e5.message; }
+    ffLoad(); return; }
   if (b.dataset.reset) { if (E[b.dataset.reset]) delete E[b.dataset.reset].l; ffSave(E); ffDraw(); return; }
   if (b.id === 'ffcopy' && FF.cur) { var t = ffText(FF.cur.ml, FF.cur.date, FF.cur.tot, FF.cur.pcs); try { await navigator.clipboard.writeText(t); b.textContent = 'Copied ✓'; } catch(e2){ prompt('Copy:', t); } return; }
   if (b.id === 'ffmake' && FF.cur) {
