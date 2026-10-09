@@ -493,7 +493,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-09d';
+var VER = '2026-10-09e';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1453,6 +1453,7 @@ async function liveSync(){
   try {
     var j = await relayJson('live', { t: Date.now(), dev: devId() }, 2);
     if (!j.ok) { LIVE.err = j.error || 'refused'; liveShow(); return; }
+    if (!Array.isArray(j.cards)) { LIVE.err = 'relay answered without the list: ' + JSON.stringify(j).slice(0, 160); liveShow(); return; }
     LIVE.err = ''; LIVE.t = Date.now();
     var a = document.activeElement, typing = a && a.closest && a.closest('#feed') && /INPUT|TEXTAREA/.test(a.tagName);
     if (liveSig(j.cards) !== liveSig(RAW.cards)) { if (typing) LIVE.pending = j.cards; else { LIVE.pending = null; liveApply(j.cards); } }
