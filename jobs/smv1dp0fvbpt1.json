@@ -1,0 +1,77 @@
+{
+ "id": "smv1dp0fvbpt1",
+ "op": "sell",
+ "ref": "INV-0009",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6ac7c1e4a8d183ead0c9da1e",
+   "no": "44278",
+   "before": "Sj = **(44278)** (12) pcs colour = __(4/4/4)",
+   "after": "Sj = **(44278)** (0) pcs colour = __(0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6a6e3da00811d5b0ae94414b",
+   "no": "58429",
+   "before": "SJ-**(58429)** (15) pcs color = (4) ,,,,(4/3/4/4)",
+   "after": "SJ-**(58429)** (0) pcs color = (4) ,,,,(0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 3 → 0 (−3)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 4 → 0 (−4)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6985ee9c955d50827a75ac1d",
+   "no": "60947",
+   "before": "Sj = **60947** (21)pcs …colors (5)….(4/4/4/4/5)",
+   "after": "Sj = **60947** (0)pcs …colors (5)….(0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 4 → 0 (−4)",
+    "colour 5: 5 → 0 (−5)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6a73706f2e41050fbc7a8ef1",
+   "no": "75308",
+   "before": "Sj = **(75308_B)** (56) pcs colour = (5),,(16/16/0/0/24)",
+   "after": "Sj = **(75308_B)** (36) pcs colour = (5),,(12/8/0/0/16)",
+   "left": 36,
+   "lines": [
+    "colour 1: 16 → 12 (−4)",
+    "colour 2: 16 → 8 (−8)",
+    "colour 5: 24 → 16 (−8)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "694916a706a3c558e469d899",
+   "no": "94638",
+   "before": "SJ-94638 , (66) pcs ,….color = (3)…1 sample(0/0/0/32/0)..(14/20)….) AED",
+   "after": "SJ-94638 , (54) pcs ,….color = (3)…1 sample(0/0/0/28/0)..(10/16)….) AED",
+   "left": 54,
+   "lines": [
+    "colour 4: 32 → 28 (−4)",
+    "colour 6: 14 → 10 (−4)",
+    "colour 7: 20 → 16 (−4)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
