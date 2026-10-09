@@ -85,6 +85,7 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .bprices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .bsec{font-weight:700;font-size:14px;margin-top:4px}.bsec small{font-weight:400;color:var(--mute)}
 .bex{display:grid;grid-template-columns:1fr 110px 40px;gap:6px}
+.bman{display:grid;grid-template-columns:1fr 64px 84px 40px;gap:6px;margin-bottom:6px}.bman input{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:#fff}.bman button,.bex button{border:0;background:none;font-size:18px;color:var(--mute)}
 .bex button,.badd{border:1.5px solid var(--line);background:#fff;border-radius:10px;font:inherit}
 .badd{padding:9px;color:var(--gold);font-weight:700}
 .bchk{font-size:14px;display:flex;gap:8px;align-items:center}.bchk input{width:20px;height:20px}.bchk em{color:#9a3b1e;font-style:normal;font-size:12.5px}
@@ -293,7 +294,7 @@ var designs = [], state = {}, prices = {};   // prices[no] = AED per piece (opti
 
 // ---------- parsing a card title ----------
 function parseTitle(t){
-  var s = t.replace(/\*\*/g, ' ').replace(/[{}]/g, function(m){ return m === '{' ? '(' : ')'; });
+  var s = t.replace(/\*\*/g, ' ').replace(/[{}]/g, function(m){ return m === '{' ? '(' : ')'; }).replace(/\(\s*rows?\b[^)]*\)/gi, function(m){ return ' '.repeat(m.length); });
   var no = (s.match(/(?:SJ|SH|Sj|sj)\s*[-=:]*\s*\(?\s*(\d{3,6})/) || s.match(/\b(\d{4,6})\b/) || [])[1] || '';
   var low = s.toLowerCase(), ci = low.search(/colou?rs?/);
   var head = ci >= 0 ? s.slice(0, ci) : s, tail = ci >= 0 ? s.slice(ci) : s;
@@ -493,13 +494,15 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-09h';
+var VER = '2026-10-10a';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
 function byNo(no){ return designs.filter(function(d){ return d.no === no; })[0]; }
 // 9 Oct 2026 (Abbas: "you mentioned S in front of it by yourself"): the -S is only the memo's own key for a SAMPLES card; bills, PDFs and texts print the real design number
 function shown(no){ var d = byNo(no); return d && d.sample ? d.base : no; }
+// GODOWN ROW (Abbas, 9 Oct 2026): every batch card says which godown row it sits in, in brackets — e.g. (row 3). Order memo PDF only.
+function rowOf(no){ var d = byNo(no), t = d ? String(d.title || '') : ''; var m = t.match(/\(\s*rows?\s*[-:=#.]?\s*([^)]*)\)/i) || t.match(/\brows?\s*[-:=#.]?\s*(\d+(?:\s*[,&+]\s*\d+)*)/i); return m ? m[1].trim() : ''; }
 function colPcs(d, c){ return (d.colours.filter(function(n){ return n.c === c; })[0] || {}).pcs || 0; }
 function paint(row, s, maxSets){
   var one = row.querySelector('.one'); if (one) { var on = !!(s && s.pcs); one.classList.toggle('on', on); one.textContent = on ? '✓ 1 pc added · تمت' : 'Add 1 pc · أضف'; return; }
@@ -557,6 +560,8 @@ async function drawPages(){
     g.fillStyle = '#1C1A17'; g.font = 'bold 40px Arial'; g.fillText(name || ' ', P, P + 62);
     g.textAlign = 'right'; g.font = '26px Arial'; g.fillStyle = '#6E675D'; g.fillText(date + '  ·  ' + (i + 1) + '/' + nos.length, W - P, P + 62); g.textAlign = 'left';
     g.fillStyle = '#1C1A17'; g.font = 'bold 54px Arial'; g.fillText('SJ-' + shown(no), P, P + 140);
+    var rw = rowOf(no); if (rw) { var rt = 'ROW ' + rw.toUpperCase(); g.font = 'bold 46px Arial'; var rwW = Math.max(220, g.measureText(rt).width + 60);
+      g.fillStyle = '#A8864A'; g.fillRect(W - P - rwW, P + 88, rwW, 72); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(rt, W - P - rwW / 2, P + 140); g.font = '22px Arial'; g.fillStyle = '#6E675D'; g.fillText('صف · godown row', W - P - rwW / 2, P + 186); g.textAlign = 'left'; }
     var y = P + 196, lines = [];
     Object.keys(bd[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push(dz.sample ? 'SAMPLE  ·  1 pc  ·  عينة' : 'Colour ' + c + '  ·  ' + L.en); });
     g.font = '30px Arial'; lines.forEach(function(t){ g.fillText(t, P, y); y += 40; });
@@ -568,6 +573,11 @@ async function drawPages(){
       g.fillStyle = '#1C1A17'; y += 80;
       var unp = nos.filter(function(x){ return !(prices[x] > 0); });
       if (priced() && unp.length) { g.font = '24px Arial'; g.fillStyle = '#9a3b1e'; g.fillText('Amount covers priced designs only · no price: ' + unp.map(function(x){ return 'SJ-' + shown(x); }).join(', '), P, y + 12); g.fillStyle = '#1C1A17'; y += 44; }
+      // 9 Oct 2026 (Abbas): two things done physically, written in by hand on the order memo
+      [['DELIVERY TIME IN OFFICE', 'وقت التسليم في المكتب'], ['DELIVERY TIME TO CUSTOMER / CARGO', 'وقت التسليم للعميل / الشحن']].forEach(function(dl){
+        g.strokeStyle = '#1C1A17'; g.lineWidth = 2; g.strokeRect(P, y, W - 2 * P, 84); g.fillStyle = '#1C1A17'; g.font = 'bold 26px Arial'; g.fillText(dl[0], P + 18, y + 36); g.font = '22px Arial'; g.fillStyle = '#6E675D'; g.fillText(dl[1], P + 18, y + 68);
+        g.fillStyle = '#6E675D'; g.font = '22px Arial'; g.fillText('Date ______________   Time __________', P + 620, y + 52); y += 98; });
+      g.fillStyle = '#1C1A17'; y += 6;
     }
     y += 10;
     // photos that carry selected colours, with the other colours faded
@@ -666,7 +676,7 @@ function dmy(s){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? m
 var B = { mode: 'memo', inv: null, rv: null, pv: null, pdf: null, timer: null };
 function freshDoc(k){
   var d = { ref: nextRef(k), date: today(), name: $('name').value.trim(), open: '', note: '' };
-  if (k === 'inv') { d.vat = false; d.extras = [{ d: '', a: '' }]; d.disc = ''; d.paid = ''; }
+  if (k === 'inv') { d.vat = false; d.extras = [{ d: '', a: '' }]; d.disc = ''; d.paid = ''; d.man = []; d.nophoto = false; }
   else { d.amount = ''; d.modeP = 'Cash'; d.chq = ''; }
   return d;
 }
@@ -698,8 +708,10 @@ function invLines(){
   return out;
 }
 function wrapText(g, t, maxW){ var words = String(t).split(' '), lines = [], cur = ''; words.forEach(function(w){ var nx = cur ? cur + ' ' + w : w; if (g.measureText(nx).width > maxW && cur) { lines.push(cur); cur = w; } else cur = nx; }); if (cur) lines.push(cur); return lines; }
+function manLines(d){ return (d.man || []).filter(function(m){ return String(m.d || '').trim() || n2(m.q) || n2(m.r); }).map(function(m){ var q = n2(m.q), r = n2(m.r);
+  return { no: '', desc: String(m.d || '').trim() || 'Item', sub: '', qty: q, rate: r, amount: r2(q * r), manual: true, parts: [], photos: null, all: false }; }); }
 function invCalc(d){
-  var lines = invLines(), sub = lines.reduce(function(a, l){ return a + l.amount; }, 0);
+  var lines = invLines().concat(manLines(d)), sub = lines.reduce(function(a, l){ return a + l.amount; }, 0);
   var ex = d.extras.filter(function(e){ return e.d.trim() || n2(e.a); }), exSum = ex.reduce(function(a, e){ return a + n2(e.a); }, 0);
   var disc = Math.abs(n2(d.disc)), taxable = sub + exSum - disc, vat = d.vat ? r2(taxable * 0.05) : 0, total = r2(taxable + vat);
   var open = n2(d.open), due = r2(open + total), paid = Math.abs(n2(d.paid));
@@ -720,6 +732,11 @@ function drawForm(){
     if (!c.lines.length) h += '<p class="bwarn">No designs selected. Go back, pick the designs and colours, then open Invoice. · اختر التصاميم أولاً</p>';
     h += '<div class="blines" id="blines"></div>';
     if (c.lines.length) h += '<div class="bprices">' + Object.keys(byDesign()).map(function(no){ return field('SJ-' + shown(no) + (byNo(no) && byNo(no).sample ? ' sample' : '') + ' price / pc (AED)', '<input data-p="' + no + '" inputmode="decimal" value="' + (prices[no] > 0 ? prices[no] : '') + '" placeholder="AED">'); }).join('') + '</div>';
+    // 9 Oct 2026 (Abbas): a bill can also be made by hand — typed lines (not taken off Trello) — and sent without photos
+    h += '<div class="bsec">Lines typed by hand · بنود يدوية <small>(design or item, qty, rate — not taken off Trello)</small></div>';
+    h += (d.man || []).map(function(m, i){ return '<div class="bman"><input data-mn="' + i + '" data-f="d" value="' + String(m.d || '').replace(/"/g, '&quot;') + '" placeholder="Design / item"><input data-mn="' + i + '" data-f="q" inputmode="decimal" value="' + (m.q || '') + '" placeholder="Qty"><input data-mn="' + i + '" data-f="r" inputmode="decimal" value="' + (m.r || '') + '" placeholder="Rate"><button type="button" data-rmm="' + i + '" aria-label="remove">✕</button></div>'; }).join('');
+    h += '<button type="button" class="badd" id="addman">+ Add line</button>';
+    h += '<label class="bchk"><input type="checkbox" data-k="nophoto"' + (d.nophoto ? ' checked' : '') + '> Invoice without photos · فاتورة بدون صور</label>';
     h += '<div class="bsec">Extras · إضافات <small>(e.g. packing, delivery, old item)</small></div>';
     h += d.extras.map(function(e, i){ return '<div class="bex"><input data-x="' + i + '" data-f="d" value="' + e.d.replace(/"/g, '&quot;') + '" placeholder="Description"><input data-x="' + i + '" data-f="a" inputmode="decimal" value="' + e.a + '" placeholder="AED"><button type="button" data-rm="' + i + '" aria-label="remove">✕</button></div>'; }).join('');
     h += '<button type="button" class="badd" id="addex">+ Add extra</button>';
@@ -740,7 +757,7 @@ function row(k2, v2, cls){ return '<div class="br ' + (cls || '') + '"><span>' +
 function drawDyn(){   // only the figures change while typing; the boxes being typed in are never rebuilt
   var k = B.mode, d = B[k]; if (!d || !$('btot')) return;
   if (k === 'inv') { var c = invCalc(d);
-    $('blines').innerHTML = c.lines.map(function(l){ return '<div class="bl"><b>' + l.desc + '</b> · ' + l.sub + '<span>' + l.qty + ' × ' + (l.rate ? amt(l.rate) : '<i>no price</i>') + ' = ' + (l.rate ? amt(l.amount) : '—') + '</span></div>'; }).join('');
+    $('blines').innerHTML = c.lines.map(function(l){ return '<div class="bl"><b>' + esc(l.desc) + '</b>' + (l.manual ? ' · <i>typed</i>' : ' · ' + l.sub) + '<span>' + l.qty + ' × ' + (l.rate ? amt(l.rate) : '<i>no price</i>') + ' = ' + (l.rate ? amt(l.amount) : '—') + '</span></div>'; }).join('');
     $('btot').innerHTML = row('Items', c.sub) + c.ex.map(function(e){ return row(e.d || 'Extra', n2(e.a)); }).join('') + (c.disc ? row('Discount', -c.disc) : '') + (d.vat ? row('VAT 5%', c.vat) : '') + row('Invoice total', c.total, 'b') + row('Old balance', c.open) + row('Total due', c.due) + (c.paid ? row('Received', -c.paid) : '') + row('Balance', c.bal, 'big');
     $('bunp').textContent = c.unpriced.length ? 'No price yet: ' + c.unpriced.map(function(x){ return 'SJ-' + shown(x); }).join(', ') : '';
   } else { var v = vchCalc(d); $('btot').innerHTML = row('Opening balance', v.open) + row(k === 'rv' ? 'Received' : 'Paid', -v.amount) + row('Remaining', v.bal, 'big'); }
@@ -750,6 +767,7 @@ function onForm(e){
   if (t.dataset.co) { var co = coGet(); co[t.dataset.co] = t.value; coSet(co); }
   else if (t.dataset.p) { var v = parseFloat(t.value); if (v > 0) prices[t.dataset.p] = v; else delete prices[t.dataset.p]; refresh(); }
   else if (t.dataset.x != null) { d.extras[+t.dataset.x][t.dataset.f] = t.value; }
+  else if (t.dataset.mn != null) { (d.man = d.man || [])[+t.dataset.mn][t.dataset.f] = t.value; }
   else if (t.dataset.k) { d[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value; }
   else return;
   if (t.type === 'checkbox') { redraw(); return; }
@@ -776,17 +794,19 @@ function head(g, k, d, co){
 function tline(g, y, k2, v2, opt){ opt = opt || {}; var x0 = W - P - 520; g.font = (opt.bold ? 'bold ' : '') + (opt.size || 26) + 'px Arial'; g.fillStyle = opt.lc || MUT; g.textAlign = 'left'; g.fillText(k2, x0, y); g.textAlign = 'right'; g.fillStyle = opt.color || INK; g.fillText(amt(v2) + ' AED', W - P, y); g.textAlign = 'left'; return y + (opt.gap || 42); }
 function signs(g, y, a, b){ var half = (W - 2 * P - 80) / 2; g.fillStyle = INK; g.fillRect(P, y, half, 2); g.fillRect(P + half + 80, y, half, 2); g.fillStyle = MUT; g.font = 'bold 20px Arial'; g.fillText(a, P, y + 30); g.fillText(b, P + half + 80, y + 30); }
 async function drawInvoice(d){
-  var co = coGet(), c = invCalc(d), pages = [], H = 1754, RH = 180, totH = 120 + 42 * (8 + c.ex.length) + 210;
+  var co = coGet(), c = invCalc(d), pages = [], H = 1754, RH = 180, noPh = !!d.nophoto, TX = noPh ? P : P + 330, totH = 120 + 42 * (8 + c.ex.length) + 210;
   var cv, g, y, i = 0;
   function newPage(first){ cv = document.createElement('canvas'); cv.width = W; cv.height = H; g = cv.getContext('2d'); pages.push(cv);
     if (first) y = head(g, 'inv', d, co); else { g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.fillStyle = MUT; g.font = '24px Arial'; g.fillText(co.name + ' · ' + d.ref + ' (continued)', P, P + 30); y = P + 70; }
-    g.fillStyle = MUT; g.font = 'bold 20px Arial'; g.fillText('PHOTO', P, y); g.fillText('ITEM', P + 330, y); g.textAlign = 'right'; g.fillText('QTY (PCS)', W - P - 420, y); g.fillText('RATE', W - P - 230, y); g.fillText('AMOUNT', W - P, y); g.textAlign = 'left';
+    g.fillStyle = MUT; g.font = 'bold 20px Arial'; if (!noPh) g.fillText('PHOTO', P, y); g.fillText('ITEM', TX, y); g.textAlign = 'right'; g.fillText('QTY (PCS)', W - P - 420, y); g.fillText('RATE', W - P - 230, y); g.fillText('AMOUNT', W - P, y); g.textAlign = 'left';
     y += 14; g.fillStyle = INK; g.fillRect(P, y, W - 2 * P, 2); y += 12; }
   newPage(true);
   for (; i < c.lines.length; i++) {
-    var l = c.lines[i]; if (y + RH > H - P - 60) newPage(false);
+    var l = c.lines[i], subL = l.sub ? wrapText((g.font = '21px Arial', g), l.sub, W - P - 560 - TX).slice(0, 4) : [], small = noPh || l.manual, rh = small ? Math.max(76, 66 + 26 * subL.length) : RH;
+    if (y + rh > H - P - 60) newPage(false);
     var PW = 310, bh = 168;
-    if (l.all && l.photos && l.photos.length) {          // every colour chosen: the whole lineup picture(s)
+    if (small) {}
+    else if (l.all && l.photos && l.photos.length) {          // every colour chosen: the whole lineup picture(s)
       var ims = []; for (var q = 0; q < l.photos.length; q++) { var uu = await getPhoto(l.photos[q]), ii = uu ? await loadImg(uu) : null; if (ii) ims.push(ii); }
       var tw = ims.reduce(function(a, im){ return a + im.naturalWidth * bh / im.naturalHeight; }, 0), sc = tw > PW ? PW / tw : 1, x = P;
       ims.forEach(function(im){ var w = im.naturalWidth * bh / im.naturalHeight * sc, h = bh * sc; g.drawImage(im, x, y + (bh - h) / 2, w, h); g.strokeStyle = LINE; g.strokeRect(x, y + (bh - h) / 2, w, h); x += w + 4; });
@@ -798,10 +818,10 @@ async function drawInvoice(d){
           g.save(); g.beginPath(); g.rect(x2, y, bw, bh); g.clip(); g.drawImage(im, sx + (sw - cw) / 2, (im.naturalHeight - ch) / 2, cw, ch, x2, y, bw, bh); g.restore(); g.strokeStyle = LINE; g.strokeRect(x2, y, bw, bh); }
         x2 += bw + gap; }
     }
-    g.fillStyle = INK; g.font = 'bold 30px Arial'; g.fillText(l.desc, P + 330, y + 44); g.font = '21px Arial'; g.fillStyle = MUT;
-    wrapText(g, l.sub, W - P - 560 - (P + 330)).slice(0, 4).forEach(function(t, j){ g.fillText(t, P + 330, y + 78 + j * 26); });
+    g.fillStyle = INK; g.font = 'bold 30px Arial'; g.fillText(l.desc, TX, y + 44); g.font = '21px Arial'; g.fillStyle = MUT;
+    subL.forEach(function(t, j){ g.fillText(t, TX, y + 78 + j * 26); });
     g.textAlign = 'right'; g.fillStyle = INK; g.font = '28px Arial'; g.fillText(String(l.qty), W - P - 420, y + 50); g.fillText(l.rate ? amt(l.rate) : '—', W - P - 230, y + 50); g.font = 'bold 28px Arial'; g.fillText(l.rate ? amt(l.amount) : '—', W - P, y + 50); g.textAlign = 'left';
-    y += RH - 4; g.fillStyle = LINE; g.fillRect(P, y, W - 2 * P, 1); y += 8;
+    y += rh - 4; g.fillStyle = LINE; g.fillRect(P, y, W - 2 * P, 1); y += 8;
   }
   if (y + totH > H - P) newPage(false);
   y += 36;
@@ -856,6 +876,8 @@ $('mode').onclick = function(e){ var b = e.target.closest('button'); if (b) setM
 $('bform').addEventListener('input', onForm); $('bform').addEventListener('change', onForm);
 $('bform').addEventListener('click', function(e){ var d = B[B.mode];
   if (e.target.id === 'addex') { d.extras.push({ d: '', a: '' }); redraw(); }
+  if (e.target.id === 'addman') { (d.man = d.man || []).push({ d: '', q: '', r: '' }); redraw(); var ins = document.querySelectorAll('#bform input[data-mn][data-f="d"]'); if (ins.length) ins[ins.length - 1].focus(); }
+  if (e.target.dataset.rmm != null) { d.man.splice(+e.target.dataset.rmm, 1); redraw(); }
   if (e.target.dataset.rm != null) { d.extras.splice(+e.target.dataset.rm, 1); if (!d.extras.length) d.extras.push({ d: '', a: '' }); redraw(); } });
 $('dsend').onclick = async function(){
   var k = B.mode, d = B[k]; if (!d) return; clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
@@ -868,9 +890,10 @@ $('dsend').onclick = async function(){
 $('dinc').onclick = async function(){
   if (B.mode !== 'inv' || !B.inv) return; var d = B.inv; clearTimeout(B.timer); await preview(); if (!B.pdf) return;
   var lines = stkLines(), pcs = lines.reduce(function(a, l){ return a + l.pcs; }, 0), s = STK[stkKey(d.ref)];
-  if (!lines.length) { alert('No designs on this invoice.'); return; }
+  var hasMan = manLines(d).length > 0;
+  if (!lines.length && !hasMan) { alert('No designs on this invoice.'); return; }
   if (s && (s.st === 'ok' || s.st === 'busy')) { alert(d.ref + ' is already included — its pieces were taken off Trello. To change it: press Undo first, then Include again.'); return; }
-  if (!confirm('Include ' + d.ref + ': share it and take ' + pcs + ' pcs off Trello?')) return;
+  if (!confirm('Include ' + d.ref + ': share it' + (pcs ? ' and take ' + pcs + ' pcs off Trello?' : ' (typed lines only — nothing comes off Trello)?'))) return;
   keepNo('inv', d.ref);
   var f = B.pdf, txt = docText('inv', d), shared = false;
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
@@ -963,7 +986,7 @@ async function stkRun(op){
   var k = stkKey(d.ref), s = STK[k];
   if (op === 'sell' && s && (s.st === 'ok' || s.st === 'busy' || s.st === 'returned')) { stkPaint(s); return; }   // one invoice number is taken once
   var lines = op === 'sell' ? stkLines() : (s ? s.lines : []);
-  if (!lines.length) { stkShow(); return; }
+  if (!lines.length && !(op === 'sell' && manLines(d).length)) { stkShow(); return; }
   var id = jobId('s');
   s = STK[k] = { st: 'busy', op: op, ref: d.ref, lines: lines, id: id, who: d.name || $('name').value.trim(), t: Date.now() }; stkSave(); stkPaint(s);
   var req = { id: id, op: op, ref: d.ref, dev: devId(), who: s.who, lines: lines };
@@ -1495,7 +1518,7 @@ async function ffLoad(){
 function ffDraftBill(){                 // the invoice open on this phone, as a preview (not saved, not in MAKE BILL)
   var d = B.inv; if (!d) return null; var c = invCalc(d); if (!c.lines.length) return null;
   return { ref: d.ref, dev: devId(), draft: true, date: d.date, name: d.name || $('name').value.trim(), st: 'open',
-    lines: c.lines.map(function(l){ var dz = byNo(l.no); return { no: dz ? dz.base : l.no, key: l.no, qty: l.qty, rate: l.rate, amount: l.amount }; }),
+    lines: c.lines.map(function(l){ var dz = l.no ? byNo(l.no) : null; return { no: dz ? dz.base : (l.no || (String(l.desc).match(/\d{3,6}/) || [''])[0] || String(l.desc).slice(0, 20)), key: l.no || '', qty: l.qty, rate: l.rate, amount: l.amount }; }),
     extras: c.ex.map(function(e){ return { d: e.d, a: n2(e.a) }; }), disc: c.disc, vat: c.vat, total: c.total, sub: c.sub, pcs: c.lines.reduce(function(a, l){ return a + l.qty; }, 0), stock_ok: true };
 }
 function ffVariants(no){ if (!COST) return []; return Object.keys(COST.c).filter(function(k){ return k === no || k.indexOf(no + '-') === 0; }).sort(function(a, b){ return a === no ? -1 : b === no ? 1 : a < b ? -1 : 1; }); }
@@ -1636,7 +1659,7 @@ $('ffbody').addEventListener('click', async function(e){
 window.__ff = { FF: FF, ffText: ffText };
 
 boot();
-window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, designs: function(){ return designs; }, state: function(){ return state; } };
+window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; } };
 })();
 </script>
 </body></html>
