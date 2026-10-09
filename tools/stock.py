@@ -170,6 +170,32 @@ def num(v):
     except Exception:
         return 0.0
 
+SALES = 'C05UZRSS9RP'   # #sales on the SJTC Slack
+
+def post_sales(text, osig):
+    """MAKE BILL (Abbas, 9 Oct 2026: "when I enter make bill" it goes to Slack). Posts the complete bill to #sales with the
+    SLACK_BOT_TOKEN secret (added by Abbas). Only his phones can post: the text must be signed with the OWNER password.
+    Returns the Slack message ts. Raises on any problem (no key, not the owner, Slack refused), so nothing is marked posted."""
+    tok = os.environ.get('SLACK_BOT_TOKEN', '').strip()
+    if not tok:
+        raise ValueError('the Slack key (GitHub secret SLACK_BOT_TOKEN) is not set yet - nothing posted')
+    opw = os.environ.get('OWNER_PASSWORD', '')
+    if not text.strip():
+        raise ValueError('empty bill text - nothing posted')
+    if not (opw and hmac.compare_digest(hmac.new(opw.encode(), text.encode(), hashlib.sha256).hexdigest(), osig)):
+        raise ValueError('MAKE BILL must come from a phone with the owner password - nothing posted')
+    def send(body):
+        rq = urllib.request.Request('https://slack.com/api/chat.postMessage', data=json.dumps(body).encode(), method='POST',
+                                    headers={'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json; charset=utf-8'})
+        with urllib.request.urlopen(rq, timeout=60) as r:
+            return json.loads(r.read())
+    r = send({'channel': SALES, 'markdown_text': text, 'unfurl_links': False})
+    if not r.get('ok') and r.get('error') in ('invalid_arguments', 'invalid_blocks', 'markdown_text_conflict'):
+        r = send({'channel': SALES, 'text': text, 'mrkdwn': True})
+    if not r.get('ok'):
+        raise ValueError('Slack said ' + str(r.get('error')) + ' - nothing posted')
+    return r.get('ts', '')
+
 def ledger(req, pw, cards):
     """Returns a short note for the memo, or '' when the ledger is not touched."""
     op, ref, dev = req.get('op'), str(req.get('ref', '')).strip()[:40], str(req.get('dev', ''))[:16]
@@ -208,11 +234,12 @@ def ledger(req, pw, cards):
         if op == 'billdone':
             bid = 'B' + now.replace('-', '').replace(':', '')[:15]
             batch = req.get('batch') if isinstance(req.get('batch'), dict) else {}
+            ts = post_sales(str(batch.get('text', '')), str(req.get('osig', '')))   # raises -> nothing marked posted
             L['batches'].append({'id': bid, 't': now, 'refs': [[b['ref'], b['dev']] for b in hit], 'total': num(batch.get('total')),
-                                 'pcs': int(num(batch.get('pcs'))), 'date': str(batch.get('date', ''))[:12], 'text': str(batch.get('text', ''))[:6000]})
+                                 'pcs': int(num(batch.get('pcs'))), 'date': str(batch.get('date', ''))[:12], 'text': str(batch.get('text', ''))[:6000], 'slack': ts})
             for b in hit:
                 b['st'], b['batch'] = 'posted', bid
-            note = '%d bills marked posted (%s)' % (len(hit), bid)
+            note = '%d bill(s) posted to #sales (%s)' % (len(hit), bid)
         elif op == 'billdel':                                         # Abbas, 9 Oct 2026: "give an option of removing the whole bill"
             for b in hit:
                 if b.get('st') == 'open':
