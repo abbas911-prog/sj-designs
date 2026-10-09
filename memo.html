@@ -493,7 +493,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-09g';
+var VER = '2026-10-09h';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1577,7 +1577,7 @@ function ffDraw(){
     h += '<div class="ffg">GRAND TOTAL = ' + (blocked.length ? '—' : fmt(tot) + ' AED') + ' · ' + pcs + ' pcs<small>as written ' + fmt(wt) + ' AED</small></div>';
     if (blocked.length) h += '<div class="fff"><div class="b">⛔ Fix the red lines first: ' + blocked.map(function(x){ return esc(x.b.ref); }).join(', ') + ' (or Leave out that bill).</div></div>';
     h += '<div class="ffbtns"><button type="button" class="gold" id="ffmake"' + (blocked.length || FF.busy ? ' disabled' : '') + '>MAKE BILL</button><button type="button" id="ffcopy"' + (blocked.length ? ' disabled' : '') + '>Copy bill text</button></div>';
-    h += '<div class="ffn">MAKE BILL takes these ' + inc.length + ' bill' + (inc.length > 1 ? 's' : '') + ' off this list as posted. Posting straight into #sales needs the Slack key — until then, Copy bill text gives the exact text.</div></div>';
+    h += '<div class="ffn">MAKE BILL posts this complete bill to #sales and moves ' + (inc.length > 1 ? 'these ' + inc.length + ' bills' : 'this bill') + ' to Already posted.' + (blocked.length ? ' It stays grey until every red line is fixed or that bill is left out.' : '') + '</div></div>';
     FF.cur = { inc: inc, ml: ml, tot: tot, pcs: pcs, date: date };
   } else FF.cur = null;
   var bs = FF.L && FF.L.batches ? FF.L.batches.slice(-3).reverse() : [];
@@ -1614,12 +1614,15 @@ $('ffbody').addEventListener('click', async function(e){
   if (b.dataset.reset) { if (E[b.dataset.reset]) delete E[b.dataset.reset].l; ffSave(E); ffDraw(); return; }
   if (b.id === 'ffcopy' && FF.cur) { var t = ffText(FF.cur.ml, FF.cur.date, FF.cur.tot, FF.cur.pcs); try { await navigator.clipboard.writeText(t); b.textContent = 'Copied ✓'; } catch(e2){ prompt('Copy:', t); } return; }
   if (b.id === 'ffmake' && FF.cur) {
-    var c = FF.cur; if (!confirm('MAKE BILL: ' + c.inc.length + ' bill(s), GRAND TOTAL ' + fmt(c.tot) + ' AED · ' + c.pcs + ' pcs?')) return;
-    FF.busy = true; FF.note = 'Saving the batch…'; ffDraw();
-    try { var id = jobId('f'); await relay('stock', { id: id, op: 'billdone', ref: 'MAKE BILL', dev: devId(), lines: [], refs: c.inc.map(function(x){ return [x.b.ref, x.b.dev]; }),
-        batch: { total: Math.round(c.tot), pcs: c.pcs, date: c.date, text: ffText(c.ml, c.date, c.tot, c.pcs) } });
+    var c = FF.cur; if (!confirm('MAKE BILL — post this complete bill to #sales?\n\n' + c.inc.length + ' bill(s) · GRAND TOTAL ' + fmt(c.tot) + ' AED · ' + c.pcs + ' pcs · date ' + c.date)) return;
+    FF.busy = true; FF.note = 'Posting to #sales…'; ffDraw();
+    try { var id = jobId('f'), txt = ffText(c.ml, c.date, c.tot, c.pcs), pin = pinGet(), osig = '';
+      if (pin) { var ok2 = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+        osig = Array.from(new Uint8Array(await crypto.subtle.sign('HMAC', ok2, new TextEncoder().encode(txt)))).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join(''); }
+      await relay('stock', { id: id, op: 'billdone', ref: 'MAKE BILL', dev: devId(), lines: [], refs: c.inc.map(function(x){ return [x.b.ref, x.b.dev]; }), osig: osig,
+        batch: { total: Math.round(c.tot), pcs: c.pcs, date: c.date, text: txt } });
       var res = await waitJob(id, 'stock', 8);
-      FF.note = res.ok ? 'Posted batch saved ✓ ' + (res.bill || '') : 'Not saved: ' + (res.error || res.bill_err || 'unknown');
+      FF.note = res.ok ? '✓ ' + (res.bill || 'done') : 'NOT posted: ' + (res.error || res.bill_err || 'unknown');
       if (res.ok) { c.inc.forEach(function(x){ delete E[ffKey(x.b)]; }); ffSave(E); }
     } catch(e3){ FF.note = 'Could not start: ' + e3.message; }
     FF.busy = false; ffLoad(); return;
