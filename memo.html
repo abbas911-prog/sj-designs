@@ -493,11 +493,13 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-09b';
+var VER = '2026-10-09c';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
 function byNo(no){ return designs.filter(function(d){ return d.no === no; })[0]; }
+// 9 Oct 2026 (Abbas: "you mentioned S in front of it by yourself"): the -S is only the memo's own key for a SAMPLES card; bills, PDFs and texts print the real design number
+function shown(no){ var d = byNo(no); return d && d.sample ? d.base : no; }
 function colPcs(d, c){ return (d.colours.filter(function(n){ return n.c === c; })[0] || {}).pcs || 0; }
 function paint(row, s, maxSets){
   var one = row.querySelector('.one'); if (one) { var on = !!(s && s.pcs); one.classList.toggle('on', on); one.textContent = on ? '✓ 1 pc added · تمت' : 'Add 1 pc · أضف'; return; }
@@ -537,9 +539,9 @@ $('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one
 function orderText(){
   var name = $('name').value.trim(), d = new Date(), date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
   var lines = ['Order memo · مذكرة طلب', (name ? name + ' · ' : '') + date, ''], tp = 0;
-  Object.keys(byDesign()).forEach(function(no){ var d = byNo(no), parts = []; Object.keys(byDesign()[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(d, +c)); tp += L.pcs; parts.push(d.sample ? 'SAMPLE · 1 pc' : 'colour ' + c + ': ' + L.en); }); lines.push('SJ-' + no + ' — ' + parts.join(', ') + (prices[no] > 0 ? ' · ' + designPcs(no) + ' pcs × ' + prices[no] + ' AED = ' + money(designPcs(no) * prices[no]) : '')); });
+  Object.keys(byDesign()).forEach(function(no){ var d = byNo(no), parts = []; Object.keys(byDesign()[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(d, +c)); tp += L.pcs; parts.push(d.sample ? 'SAMPLE · 1 pc' : 'colour ' + c + ': ' + L.en); }); lines.push('SJ-' + shown(no) + ' — ' + parts.join(', ') + (prices[no] > 0 ? ' · ' + designPcs(no) + ' pcs × ' + prices[no] + ' AED = ' + money(designPcs(no) * prices[no]) : '')); });
   lines.push('', 'Total · الإجمالي: ' + tp + ' pcs' + (priced() ? ' · ' + money(orderAmount()) : ''));
-  var unp = Object.keys(byDesign()).filter(function(x){ return !(prices[x] > 0); }); if (priced() && unp.length) lines.push('(amount covers priced designs only; no price: ' + unp.map(function(x){ return 'SJ-' + x; }).join(', ') + ')');
+  var unp = Object.keys(byDesign()).filter(function(x){ return !(prices[x] > 0); }); if (priced() && unp.length) lines.push('(amount covers priced designs only; no price: ' + unp.map(function(x){ return 'SJ-' + shown(x); }).join(', ') + ')');
   return lines.join('\n');
 }
 function byDesign(){ var o = {}; Object.keys(state).sort().forEach(function(k){ var p = k.split(':'); (o[p[0]] = o[p[0]] || {})[p[1]] = state[k]; }); return o; }
@@ -554,7 +556,7 @@ async function drawPages(){
     g.fillStyle = '#6E675D'; g.font = '600 26px Arial'; g.fillText('SJ TRADING · ORDER MEMO', P, P + 10);
     g.fillStyle = '#1C1A17'; g.font = 'bold 40px Arial'; g.fillText(name || ' ', P, P + 62);
     g.textAlign = 'right'; g.font = '26px Arial'; g.fillStyle = '#6E675D'; g.fillText(date + '  ·  ' + (i + 1) + '/' + nos.length, W - P, P + 62); g.textAlign = 'left';
-    g.fillStyle = '#1C1A17'; g.font = 'bold 54px Arial'; g.fillText('SJ-' + no, P, P + 140);
+    g.fillStyle = '#1C1A17'; g.font = 'bold 54px Arial'; g.fillText('SJ-' + shown(no), P, P + 140);
     var y = P + 196, lines = [];
     Object.keys(bd[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push(dz.sample ? 'SAMPLE  ·  1 pc  ·  عينة' : 'Colour ' + c + '  ·  ' + L.en); });
     g.font = '30px Arial'; lines.forEach(function(t){ g.fillText(t, P, y); y += 40; });
@@ -565,7 +567,7 @@ async function drawPages(){
       g.fillText('TOTAL  ·  ' + nos.length + (nos.length === 1 ? ' design' : ' designs') + '  ·  ' + tpcs + ' pcs' + (priced() ? '  ·  ' + money(orderAmount()) : ''), P + 20, y + 42);
       g.fillStyle = '#1C1A17'; y += 80;
       var unp = nos.filter(function(x){ return !(prices[x] > 0); });
-      if (priced() && unp.length) { g.font = '24px Arial'; g.fillStyle = '#9a3b1e'; g.fillText('Amount covers priced designs only · no price: ' + unp.map(function(x){ return 'SJ-' + x; }).join(', '), P, y + 12); g.fillStyle = '#1C1A17'; y += 44; }
+      if (priced() && unp.length) { g.font = '24px Arial'; g.fillStyle = '#9a3b1e'; g.fillText('Amount covers priced designs only · no price: ' + unp.map(function(x){ return 'SJ-' + shown(x); }).join(', '), P, y + 12); g.fillStyle = '#1C1A17'; y += 44; }
     }
     y += 10;
     // photos that carry selected colours, with the other colours faded
@@ -673,7 +675,7 @@ function colLines(){          // one line per chosen colour — used for the Tre
   Object.keys(bd).forEach(function(no){ var dz = byNo(no);
     Object.keys(bd[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(dz, +c)), rate = prices[no] > 0 ? prices[no] : 0;
       var ph = null, qi = 0; dz.photos.forEach(function(p){ if (!ph && p.nums) p.nums.forEach(function(x, i){ if (x.c === +c) { ph = p; qi = i; } }); });
-      out.push({ no: no, c: +c, desc: 'SJ-' + no, sub: 'Colour ' + c + ' · ' + L.en, en: L.en, qty: L.pcs, rate: rate, amount: r2(L.pcs * rate), photo: ph, qi: qi, n: ph ? ph.nums.length : 1 }); }); });
+      out.push({ no: no, c: +c, desc: 'SJ-' + shown(no), sub: 'Colour ' + c + ' · ' + L.en, en: L.en, qty: L.pcs, rate: rate, amount: r2(L.pcs * rate), photo: ph, qi: qi, n: ph ? ph.nums.length : 1 }); }); });
   return out;
 }
 // ONE ROW PER DESIGN on the invoice (Abbas, 7 Oct 2026: "if I've chosen two colors you put both of the colors in the same column ...
@@ -689,7 +691,7 @@ function invLines(){
     var short = function(l){ return l.en.replace(/\s*\(\d+ pcs\)$/, ''); }, same = ls.every(function(l){ return l.en === ls[0].en; });
     var sub = all && same ? 'All ' + ls.length + ' colours · ' + short(ls[0]) + ' each' : (all ? 'All colours · ' : '') + ls.map(function(l){ return 'C' + l.c + ' ' + short(l); }).join(' · ');
     if (dz.sample) sub = 'Sample · 1 pc';
-    out.push({ no: no, desc: 'SJ-' + no, sub: sub, qty: qty, rate: rate, amount: r2(qty * rate), all: all,
+    out.push({ no: no, desc: 'SJ-' + shown(no), sub: sub, qty: qty, rate: rate, amount: r2(qty * rate), all: all,
       parts: ls.map(function(l){ return { photo: l.photo, qi: l.qi, n: l.n }; }),
       photos: all ? dz.photos.filter(function(p){ return p.nums && p.nums.length; }) : null });
   });
@@ -717,7 +719,7 @@ function drawForm(){
     var c = invCalc(d);
     if (!c.lines.length) h += '<p class="bwarn">No designs selected. Go back, pick the designs and colours, then open Invoice. · اختر التصاميم أولاً</p>';
     h += '<div class="blines" id="blines"></div>';
-    if (c.lines.length) h += '<div class="bprices">' + Object.keys(byDesign()).map(function(no){ return field('SJ-' + no + ' price / pc (AED)', '<input data-p="' + no + '" inputmode="decimal" value="' + (prices[no] > 0 ? prices[no] : '') + '" placeholder="AED">'); }).join('') + '</div>';
+    if (c.lines.length) h += '<div class="bprices">' + Object.keys(byDesign()).map(function(no){ return field('SJ-' + shown(no) + (byNo(no) && byNo(no).sample ? ' sample' : '') + ' price / pc (AED)', '<input data-p="' + no + '" inputmode="decimal" value="' + (prices[no] > 0 ? prices[no] : '') + '" placeholder="AED">'); }).join('') + '</div>';
     h += '<div class="bsec">Extras · إضافات <small>(e.g. packing, delivery, old item)</small></div>';
     h += d.extras.map(function(e, i){ return '<div class="bex"><input data-x="' + i + '" data-f="d" value="' + e.d.replace(/"/g, '&quot;') + '" placeholder="Description"><input data-x="' + i + '" data-f="a" inputmode="decimal" value="' + e.a + '" placeholder="AED"><button type="button" data-rm="' + i + '" aria-label="remove">✕</button></div>'; }).join('');
     h += '<button type="button" class="badd" id="addex">+ Add extra</button>';
@@ -740,7 +742,7 @@ function drawDyn(){   // only the figures change while typing; the boxes being t
   if (k === 'inv') { var c = invCalc(d);
     $('blines').innerHTML = c.lines.map(function(l){ return '<div class="bl"><b>' + l.desc + '</b> · ' + l.sub + '<span>' + l.qty + ' × ' + (l.rate ? amt(l.rate) : '<i>no price</i>') + ' = ' + (l.rate ? amt(l.amount) : '—') + '</span></div>'; }).join('');
     $('btot').innerHTML = row('Items', c.sub) + c.ex.map(function(e){ return row(e.d || 'Extra', n2(e.a)); }).join('') + (c.disc ? row('Discount', -c.disc) : '') + (d.vat ? row('VAT 5%', c.vat) : '') + row('Invoice total', c.total, 'b') + row('Old balance', c.open) + row('Total due', c.due) + (c.paid ? row('Received', -c.paid) : '') + row('Balance', c.bal, 'big');
-    $('bunp').textContent = c.unpriced.length ? 'No price yet: ' + c.unpriced.map(function(x){ return 'SJ-' + x; }).join(', ') : '';
+    $('bunp').textContent = c.unpriced.length ? 'No price yet: ' + c.unpriced.map(function(x){ return 'SJ-' + shown(x); }).join(', ') : '';
   } else { var v = vchCalc(d); $('btot').innerHTML = row('Opening balance', v.open) + row(k === 'rv' ? 'Received' : 'Paid', -v.amount) + row('Remaining', v.bal, 'big'); }
 }
 function onForm(e){
@@ -810,7 +812,7 @@ async function drawInvoice(d){
   y = tline(g, y, 'Old balance', c.open); y = tline(g, y, 'Total due', c.due); if (c.paid) y = tline(g, y, 'Received', -c.paid);
   g.fillStyle = GOLD; g.fillRect(W - P - 540, y - 32, 540, 66); g.fillStyle = '#fff'; g.font = 'bold 32px Arial'; g.fillText('BALANCE', W - P - 520, y + 12); g.textAlign = 'right'; g.fillText(amt(c.bal) + ' AED', W - P - 18, y + 12); g.textAlign = 'left'; y += 80;
   g.fillStyle = MUT; g.font = '22px Arial'; g.fillText('Invoice total in words: ' + inWords(c.total), P, y); y += 30;
-  if (c.unpriced.length) { g.fillStyle = '#9a3b1e'; g.fillText('No price entered for: ' + c.unpriced.map(function(x){ return 'SJ-' + x; }).join(', '), P, y); y += 30; }
+  if (c.unpriced.length) { g.fillStyle = '#9a3b1e'; g.fillText('No price entered for: ' + c.unpriced.map(function(x){ return 'SJ-' + shown(x); }).join(', '), P, y); y += 30; }
   signs(g, Math.min(y + 110, H - P - 40), 'RECEIVED BY · المستلم', 'AUTHORISED SIGNATURE · التوقيع');
   pages.forEach(function(p, j){ var q = p.getContext('2d'); q.fillStyle = MUT; q.font = '20px Arial'; q.textAlign = 'right'; q.fillText('Page ' + (j + 1) + ' / ' + pages.length, W - P, H - 24); q.textAlign = 'left'; });
   return pages;
