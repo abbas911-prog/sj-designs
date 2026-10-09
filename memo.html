@@ -218,9 +218,58 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .one{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px}
 .one.on{border-color:var(--gold);background:var(--gold);color:#fff;font-weight:700}
 .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:999px;background:#efe9df;color:var(--mute);margin-left:6px;vertical-align:middle}
+/* ===== 10 Oct 2026 visual refresh (layout and behaviour unchanged) ===== */
+:root{--gold:#A07D3F;--goldbg:#FAF5EA;--bg:#F5F1EA;--line:#E6DED2;--sh:0 1px 2px rgba(40,30,15,.05),0 4px 14px rgba(40,30,15,.06)}
+body{-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:0;box-shadow:0 1px 0 var(--line),0 6px 16px rgba(40,30,15,.04);padding:10px 12px 8px}
+.top h1{display:flex;flex-direction:column;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#B8955A,#8E6C33);color:#fff;font-size:17px;letter-spacing:.06em;line-height:1;flex:none;user-select:none;-webkit-user-select:none;box-shadow:0 2px 6px rgba(142,108,51,.3)}
+.top h1 small{font-size:7.5px;letter-spacing:.22em;font-weight:700;margin-top:3px;opacity:.9}
+#name,#q{height:42px;border-radius:12px;border:1.5px solid var(--line);transition:border-color .15s,box-shadow .15s}
+#name:focus,#q:focus,.bf input:focus,.bf select:focus,.bman input:focus,.bex input:focus,.pc:focus,.price input:focus,.dlvr input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(160,125,63,.15);outline:0}
+#catbtn{height:42px;padding:0 12px;border-radius:12px}#mybtn{width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#B8955A,#8E6C33);border:0;box-shadow:0 2px 6px rgba(142,108,51,.3)}
+#ffbtn,#rfr{height:42px;border-radius:12px}#rfr{width:42px}
+.tabs{background:#EAE3D7;border-radius:12px;padding:3px;gap:3px}
+.tabs button{border:0;border-radius:9px;background:none;padding:8px 10px;font-size:12.5px}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(40,30,15,.12)}
+.design{border-radius:20px;box-shadow:var(--sh);margin:14px 0}
+.head{padding:14px 16px 8px}.no{font-size:28px;letter-spacing:.01em}.no::before{content:'SJ-';font-size:14px;color:var(--mute);font-weight:600;margin-right:1px}
+.photos{padding:0 12px 8px}.ph{border-radius:14px}
+.rows{padding:2px 14px 12px}
+.row{gap:8px;padding:9px 0}
+.row .c{width:32px;height:32px;background:var(--goldbg);color:var(--gold);border:1px solid #EADFC9;flex:none}
+.row .p{line-height:1.2;min-width:0}.row .p b{display:block;font-size:15px}.row .p small{display:block;font-size:12px;color:var(--mute);white-space:nowrap}
+.step button{width:36px;height:36px;font-size:19px;color:var(--ink)}.step button:active,.all:active,.btns button:active,#ok:active{transform:scale(.96)}
+.pc{width:56px;height:36px}
+.all{height:36px;padding:0 12px}
+.price{background:var(--goldbg);border:1px solid #EFE4CF;margin:0 14px 14px}
+#bar{border-top:0;box-shadow:0 -1px 0 var(--line),0 -8px 24px rgba(40,30,15,.07)}
+#ok{padding:13px 26px;box-shadow:0 3px 10px rgba(160,125,63,.35)}#ok:disabled{box-shadow:none}
+#bills{border-radius:14px}
+#mode{border:0;background:#EAE3D7;border-radius:14px;padding:3px;gap:3px}
+#mode button{white-space:nowrap;font-size:13px;padding:8px 2px 7px;border-radius:11px}
+#mode button.on{background:#fff;color:var(--gold);box-shadow:0 1px 3px rgba(40,30,15,.14)}
+#mode button.on small{color:var(--mute)}
+#done h2{font-size:21px;letter-spacing:-.01em}
+.btns{gap:8px}
+.btns button{min-height:48px;padding:10px 14px;font-size:14.5px;font-weight:600;border-radius:14px}
+.btns .gold{flex-basis:100%;font-size:16px;box-shadow:0 3px 10px rgba(160,125,63,.3)}
+.btns .inc{flex-basis:100%;border-radius:14px}
+#marks img,#dprev img{border-radius:14px;box-shadow:var(--sh)}
+.blines,.btot,.bco,.pl,.stk{border-radius:14px;box-shadow:var(--sh)}
+.bf input,.bf select,.bex input,.bman input{border-radius:12px}
+#mysheet .in,#ff .in{border-radius:24px 24px 0 0}
+#myg button{border:0;box-shadow:var(--sh)}
+/* delivery times on the order memo */
+.dlv{background:#fff;border-radius:16px;box-shadow:var(--sh);padding:12px 12px 6px;margin:10px 0 4px}
+.dlvh{font-weight:700;font-size:14.5px;margin-bottom:8px}.dlvh small{display:block;font-weight:400;font-size:12px;color:var(--mute);margin-top:2px}
+.dlvr{display:grid;grid-template-columns:1.35fr 1fr auto;gap:6px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.dlvr span{grid-column:1/-1}
+.dlvr span{font-size:13px;font-weight:700;line-height:1.15}.dlvr span small{display:inline;font-weight:400;color:var(--mute);font-size:12px;margin-left:6px}
+.dlvr input{width:100%;min-width:0;height:40px;padding:0 9px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:#fff}
+.dlnow{height:40px;border:1.5px solid var(--gold);color:var(--gold);background:#fff;border-radius:10px;font:inherit;font-size:12.5px;font-weight:700;padding:0 9px}
+#ffopen[hidden],#clk[hidden]{display:none}
 </style></head><body>
 <header>
-  <div class="top"><h1 id="ttl">ORDER MEMO</h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button><button id="mybtn" type="button" hidden title="My shortcuts">★</button></div>
+  <div class="top"><h1 id="ttl">SJ<small>MEMO</small></h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button><button id="mybtn" type="button" hidden title="My shortcuts">★</button></div>
   <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span><button id="ffbtn" type="button" hidden title="50-50 bills">50·50</button><button id="rfr" type="button" title="Check Trello for new cards now">↻</button></div>
   <div class="tabs" id="tabs"><button type="button" data-t="r" class="on">READY <b id="nr"></b></button><button type="button" data-t="s">SAMPLES <b id="ns"></b></button></div>
   <div id="rfst"></div>
@@ -243,10 +292,13 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
 <div id="done" hidden><div class="in">
   <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
-  <div id="mode"><button type="button" data-m="memo" class="on">Order memo<small>مذكرة طلب</small></button><button type="button" data-m="inv">Invoice<small>فاتورة</small></button><button type="button" data-m="rv">Receipt<small>سند قبض</small></button><button type="button" data-m="pv">Payment<small>سند صرف</small></button><button type="button" data-m="cat" hidden>Catalogue<small>كتالوج</small></button></div>
+  <div id="mode"><button type="button" data-m="memo" class="on">Memo<small>مذكرة طلب</small></button><button type="button" data-m="inv">Invoice<small>فاتورة</small></button><button type="button" data-m="rv">Receipt<small>سند قبض</small></button><button type="button" data-m="pv">Payment<small>سند صرف</small></button><button type="button" data-m="cat" hidden>Catalogue<small>كتالوج</small></button></div>
   <section id="p-memo">
   <h2 id="dh">Order memo</h2><div class="sub" id="ds"></div>
-  <div class="btns"><button id="send" class="gold" type="button">Send PDF to customer · أرسل PDF</button><button id="copy" type="button">Copy text · نسخ النص</button></div>
+  <div class="dlv"><div class="dlvh">Delivery time · وقت التسليم<small>Type here — it prints on page 1 of the PDF. Leave empty to write by hand.</small></div>
+  <div class="dlvr"><span>In office<small>في المكتب</small></span><input id="dl_od" autocomplete="off" placeholder="Date"><input id="dl_ot" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="o">Now</button></div>
+  <div class="dlvr"><span>To customer / cargo<small>للعميل / الشحن</small></span><input id="dl_cd" autocomplete="off" placeholder="Date"><input id="dl_ct" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="c">Now</button></div></div>
+  <div class="btns"><button id="send" class="gold" type="button">Send PDF · أرسل PDF</button><button id="copy" type="button">Copy text · نسخ النص</button></div>
   <div id="marks"></div>
   </section>
   <section id="p-doc" hidden>
@@ -432,9 +484,9 @@ function render(){
       var nums = p.nums ? '<div class="nums" style="grid-template-columns:repeat(' + p.nums.length + ',1fr)">' + p.nums.map(function(n){ return '<span data-c="' + n.c + '" class="' + (n.pcs ? '' : 'z') + '">' + n.c + '</span>'; }).join('') + '</div>' : '';
       return '<div class="ph"><img data-no="' + d.no + '" data-i="' + i + '" alt="SJ-' + d.no + '">' + nums + '</div>';
     }).join('');
-    var rows = d.sample ? '<div class="row" data-k="' + d.no + ':1"><div class="c">1</div><div class="p"><b>1 pc</b> · sample · عينة</div><button type="button" class="one">Add 1 pc · أضف</button></div>' : d.colours.map(function(n){
+    var rows = d.sample ? '<div class="row" data-k="' + d.no + ':1"><div class="c">1</div><div class="p"><b>1 pc</b><small>sample · عينة</small></div><button type="button" class="one">Add 1 pc · أضف</button></div>' : d.colours.map(function(n){
       var k = d.no + ':' + n.c, st = Math.floor(n.pcs / 4), r = n.pcs % 4;
-      return '<div class="row' + (n.pcs ? '' : ' zero') + '" data-k="' + k + '"><div class="c">' + n.c + '</div><div class="p"><b>' + n.pcs + ' pcs</b> · ' + st + ' set' + (st === 1 ? '' : 's') + (r ? ' + ' + r : '') + '</div>' +
+      return '<div class="row' + (n.pcs ? '' : ' zero') + '" data-k="' + k + '"><div class="c">' + n.c + '</div><div class="p"><b>' + n.pcs + ' pcs</b><small>' + st + ' set' + (st === 1 ? '' : 's') + (r ? ' + ' + r : '') + '</small></div>' +
         (n.pcs ? '<div class="step"><button type="button" data-d="-1">−</button><span class="v">0</span><button type="button" data-d="1">+</button></div><input class="pc" type="number" inputmode="numeric" min="1" max="' + n.pcs + '" placeholder="pcs" aria-label="pieces"><button type="button" class="all">All</button>' : '') + '</div>';
     }).join('');
     art.innerHTML = '<div class="head"><div class="no">' + d.no + '</div><div class="meta">' + meta + '</div></div><div class="photos">' + ph + '</div><div class="rows">' + rows + '</div>' +
@@ -483,18 +535,18 @@ function reapply(){
 var WK = 'sj_work', wkT = null;
 function topNo(){ var best = null; document.querySelectorAll('#feed .design').forEach(function(a){ if (a.hidden) return; var r = a.getBoundingClientRect(); if (r.bottom > 60 && !best) best = a.dataset.no; }); return best; }
 function saveWork(){ clearTimeout(wkT); wkT = null; if (!designs.length) return;
-  var w = { t: Date.now(), state: state, prices: prices, name: $('name').value, q: $('q').value, at: topNo(), open: !$('done').hidden && B.mode !== 'memo' && B.mode !== 'cat' ? B.mode : '', inv: B.inv, rv: B.rv, pv: B.pv };
+  var w = { t: Date.now(), state: state, prices: prices, dl: dlv(), name: $('name').value, q: $('q').value, at: topNo(), open: !$('done').hidden && B.mode !== 'memo' && B.mode !== 'cat' ? B.mode : '', inv: B.inv, rv: B.rv, pv: B.pv };
   try { localStorage.setItem(WK, JSON.stringify(w)); } catch(e){} }
 function saveSoon(){ if (!wkT) wkT = setTimeout(saveWork, 400); }
 function loadWork(){ var w; try { w = JSON.parse(localStorage.getItem(WK) || 'null'); } catch(e){} if (!w) return null;
-  state = w.state || {}; prices = w.prices || {}; if (w.name) $('name').value = w.name; if (w.q) $('q').value = w.q;
+  state = w.state || {}; prices = w.prices || {}; if (w.name) $('name').value = w.name; if (w.q) $('q').value = w.q; if (w.dl) Object.keys(w.dl).forEach(function(k){ if ($('dl_' + k)) $('dl_' + k).value = w.dl[k] || ''; });
   ['inv', 'rv', 'pv'].forEach(function(k){ if (w[k]) B[k] = w[k]; }); return w; }
 ['input', 'change', 'click'].forEach(function(ev){ document.addEventListener(ev, saveSoon); });
 document.addEventListener('visibilitychange', function(){ if (document.hidden) saveWork(); });
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-10a';
+var VER = '2026-10-10b';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -536,7 +588,7 @@ function applySearch(){
 $('tabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; TAB = b.dataset.t;
   document.querySelectorAll('#tabs button').forEach(function(x){ x.classList.toggle('on', x === b); }); applySearch(); window.scrollTo(0, 0); };
 $('q').oninput = applySearch;
-$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; B.inv = null; $('name').value = ''; try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
+$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; B.inv = null; $('name').value = ''; ['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).value = ''; }); try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
 
 // ---------- memo output ----------
 function orderText(){
@@ -544,6 +596,7 @@ function orderText(){
   var lines = ['Order memo · مذكرة طلب', (name ? name + ' · ' : '') + date, ''], tp = 0;
   Object.keys(byDesign()).forEach(function(no){ var d = byNo(no), parts = []; Object.keys(byDesign()[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(d, +c)); tp += L.pcs; parts.push(d.sample ? 'SAMPLE · 1 pc' : 'colour ' + c + ': ' + L.en); }); lines.push('SJ-' + shown(no) + ' — ' + parts.join(', ') + (prices[no] > 0 ? ' · ' + designPcs(no) + ' pcs × ' + prices[no] + ' AED = ' + money(designPcs(no) * prices[no]) : '')); });
   lines.push('', 'Total · الإجمالي: ' + tp + ' pcs' + (priced() ? ' · ' + money(orderAmount()) : ''));
+  var dv = dlv(); if (dv.od || dv.ot) lines.push('Delivery in office · التسليم في المكتب: ' + [dv.od, dv.ot].filter(Boolean).join(' · ')); if (dv.cd || dv.ct) lines.push('Delivery to customer / cargo · التسليم للعميل / الشحن: ' + [dv.cd, dv.ct].filter(Boolean).join(' · '));
   var unp = Object.keys(byDesign()).filter(function(x){ return !(prices[x] > 0); }); if (priced() && unp.length) lines.push('(amount covers priced designs only; no price: ' + unp.map(function(x){ return 'SJ-' + shown(x); }).join(', ') + ')');
   return lines.join('\n');
 }
@@ -559,6 +612,7 @@ async function drawPages(){
     g.fillStyle = '#6E675D'; g.font = '600 26px Arial'; g.fillText('SJ TRADING · ORDER MEMO', P, P + 10);
     g.fillStyle = '#1C1A17'; g.font = 'bold 40px Arial'; g.fillText(name || ' ', P, P + 62);
     g.textAlign = 'right'; g.font = '26px Arial'; g.fillStyle = '#6E675D'; g.fillText(date + '  ·  ' + (i + 1) + '/' + nos.length, W - P, P + 62); g.textAlign = 'left';
+    var T = 0; if (i === 0) { T = 182; drawDelivery(g, P, P + 88, W - 2 * P); g.translate(0, T); }   // 10 Oct 2026 (Abbas): delivery times typed in the memo, printed on page 1
     g.fillStyle = '#1C1A17'; g.font = 'bold 54px Arial'; g.fillText('SJ-' + shown(no), P, P + 140);
     var rw = rowOf(no); if (rw) { var rt = 'ROW ' + rw.toUpperCase(); g.font = 'bold 46px Arial'; var rwW = Math.max(220, g.measureText(rt).width + 60);
       g.fillStyle = '#A8864A'; g.fillRect(W - P - rwW, P + 88, rwW, 72); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(rt, W - P - rwW / 2, P + 140); g.font = '22px Arial'; g.fillStyle = '#6E675D'; g.fillText('صف · godown row', W - P - rwW / 2, P + 186); g.textAlign = 'left'; }
@@ -573,17 +627,12 @@ async function drawPages(){
       g.fillStyle = '#1C1A17'; y += 80;
       var unp = nos.filter(function(x){ return !(prices[x] > 0); });
       if (priced() && unp.length) { g.font = '24px Arial'; g.fillStyle = '#9a3b1e'; g.fillText('Amount covers priced designs only · no price: ' + unp.map(function(x){ return 'SJ-' + shown(x); }).join(', '), P, y + 12); g.fillStyle = '#1C1A17'; y += 44; }
-      // 9 Oct 2026 (Abbas): two things done physically, written in by hand on the order memo
-      [['DELIVERY TIME IN OFFICE', 'وقت التسليم في المكتب'], ['DELIVERY TIME TO CUSTOMER / CARGO', 'وقت التسليم للعميل / الشحن']].forEach(function(dl){
-        g.strokeStyle = '#1C1A17'; g.lineWidth = 2; g.strokeRect(P, y, W - 2 * P, 84); g.fillStyle = '#1C1A17'; g.font = 'bold 26px Arial'; g.fillText(dl[0], P + 18, y + 36); g.font = '22px Arial'; g.fillStyle = '#6E675D'; g.fillText(dl[1], P + 18, y + 68);
-        g.fillStyle = '#6E675D'; g.font = '22px Arial'; g.fillText('Date ______________   Time __________', P + 620, y + 52); y += 98; });
-      g.fillStyle = '#1C1A17'; y += 6;
     }
     y += 10;
     // photos that carry selected colours, with the other colours faded
     var phs = dz.photos.filter(function(p){ return p.nums && p.nums.some(function(n){ return bd[no][n.c]; }); });
     if (!phs.length) phs = dz.photos.slice(0, 1);
-    var slotH = Math.floor((H - y - P) / Math.max(1, phs.length)) - 16;
+    var slotH = Math.floor((H - T - y - P) / Math.max(1, phs.length)) - 16;
     for (var j = 0; j < phs.length; j++){
       var p = phs[j], u = await getPhoto(p), im = u ? await loadImg(u) : null; if (!im) continue;
       var k = Math.min((W - 2 * P) / im.naturalWidth, slotH / im.naturalHeight), dw = im.naturalWidth * k, dh = im.naturalHeight * k, x0 = (W - dw) / 2;
@@ -594,9 +643,24 @@ async function drawPages(){
           g.fillStyle = '#fff'; g.font = 'bold 26px Arial'; g.textAlign = 'center'; g.fillText(String(nn.c), x + cw / 2, y + dh - 13); g.textAlign = 'left'; }); }
       y += dh + 16;
     }
-    pages.push(cv);
+    g.setTransform(1, 0, 0, 1, 0, 0); pages.push(cv);
   }
   return pages;
+}
+// delivery times (10 Oct 2026): typed in the memo screen; empty = blank lines to fill by hand
+function dlv(){ var o = {}; ['od', 'ot', 'cd', 'ct'].forEach(function(k){ o[k] = ($('dl_' + k).value || '').trim(); }); return o; }
+function drawDelivery(g, x, y, w){
+  var d = dlv(), bw = (w - 20) / 2, rows = [['DELIVERY IN OFFICE', 'وقت التسليم في المكتب', d.od, d.ot], ['DELIVERY TO CUSTOMER / CARGO', 'وقت التسليم للعميل / الشحن', d.cd, d.ct]];
+  rows.forEach(function(r, n){ var bx = x + n * (bw + 20);
+    g.strokeStyle = '#A8864A'; g.lineWidth = 2.5; g.strokeRect(bx, y, bw, 160);
+    g.fillStyle = '#A8864A'; g.fillRect(bx, y, bw, 66); g.fillStyle = '#fff'; g.font = 'bold 23px Arial'; g.fillText(r[0], bx + 14, y + 28);
+    g.font = '21px Arial'; g.fillText(r[1], bx + 14, y + 56);
+    g.fillStyle = '#6E675D'; g.font = '20px Arial'; g.fillText('Date · التاريخ', bx + 14, y + 96); g.fillText('Time · الوقت', bx + 14 + bw * 0.58, y + 96);
+    g.fillStyle = '#1C1A17'; g.font = 'bold 30px Arial';
+    if (r[2]) g.fillText(r[2], bx + 14, y + 140); else { g.fillStyle = '#9b9287'; g.fillRect(bx + 14, y + 142, bw * 0.5, 2); g.fillStyle = '#1C1A17'; }
+    if (r[3]) g.fillText(r[3], bx + 14 + bw * 0.58, y + 140); else { g.fillStyle = '#9b9287'; g.fillRect(bx + 14 + bw * 0.58, y + 142, bw * 0.38, 2); }
+  });
+  g.fillStyle = '#1C1A17';
 }
 function b64bytes(dataUrl){ var s = atob(dataUrl.split(',')[1]), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
 function makePDF(canvases){
@@ -620,15 +684,25 @@ var pdfFile = null;
 $('ok').onclick = async function(){
   $('done').hidden = false; setMode('memo'); B.inv = null; window.scrollTo(0, 0); $('dh').textContent = 'Order memo' + ($('name').value.trim() ? ' · ' + $('name').value.trim() : '');
   $('ds').textContent = 'Preparing…'; $('marks').innerHTML = '';
-  var pages = await drawPages();
-  pages.forEach(function(cv){ var im = document.createElement('img'); im.src = cv.toDataURL('image/jpeg', 0.7); $('marks').appendChild(im); });
+  memoP = memoRender(); await memoP;
+};
+var memoP = null, dlT = null;
+async function memoRender(){
+  var pages = await drawPages(), box = document.createDocumentFragment();
+  pages.forEach(function(cv){ var im = document.createElement('img'); im.src = cv.toDataURL('image/jpeg', 0.7); box.appendChild(im); });
+  $('marks').innerHTML = ''; $('marks').appendChild(box);
   var nm = ($('name').value.trim() || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-');
   pdfFile = new File([makePDF(pages)], nm + '-SJ-memo.pdf', { type: 'application/pdf' });
   $('ds').textContent = orderText().split('\n').filter(function(l){ return /^Total/.test(l); })[0] + ' · ' + pages.length + (pages.length === 1 ? ' page' : ' pages');
-};
+}
+function dlChanged(){ clearTimeout(dlT); dlT = setTimeout(function(){ if (!$('done').hidden && B.mode === 'memo') memoP = memoRender(); }, 500); }
+['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).addEventListener('input', dlChanged); });
+document.querySelectorAll('.dlnow').forEach(function(b){ b.onclick = function(){ var d = new Date(), k = b.dataset.dl, h = d.getHours(), m = d.getMinutes();
+  $('dl_' + k + 'd').value = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
+  $('dl_' + k + 't').value = ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' AM' : ' PM'); dlChanged(); saveSoon(); }; });
 $('back').onclick = function(){ $('done').hidden = true; };
 $('send').onclick = async function(){
-  if (!pdfFile) return;
+  if (memoP) await memoP; if (!pdfFile) return;
   try { if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) { await navigator.share({ files: [pdfFile], text: orderText() }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   var a = document.createElement('a'); a.href = URL.createObjectURL(pdfFile); a.download = pdfFile.name; a.click();
   window.open('https://wa.me/?text=' + encodeURIComponent(orderText()), '_blank');
@@ -958,7 +1032,7 @@ var STK = {}; try { STK = JSON.parse(ls('sj_stock') || '{}'); } catch(e){}
 function stkSave(){ var ks = Object.keys(STK).sort(function(a, b){ return (STK[b].t || 0) - (STK[a].t || 0); }); ks.slice(40).forEach(function(k){ delete STK[k]; }); ls('sj_stock', JSON.stringify(STK)); }
 function stkKey(ref){ return devId() + '|' + ref; }
 function stkLines(){ return colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var d = byNo(l.no); return { card: d.id, no: d.base, c: l.c, pcs: l.qty }; }); }
-function stkShow(){ var el = $('stk'); $('dinc').hidden = B.mode !== 'inv'; $('dff').hidden = B.mode !== 'inv' || !isOwner(); if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
+function stkShow(){ var el = $('stk'); $('dinc').hidden = B.mode !== 'inv'; $('dff').hidden = B.mode !== 'inv' || !isBoss(); if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
   if (s) { stkPaint(s); return; }
   el.hidden = false; el.className = 'stk';
   el.innerHTML = RELAY ? '<b>Send PDF</b> does not change stock. <b>Include &amp; share</b> sends the final invoice and takes its pieces off Trello. <small>فقط «تأكيد وإرسال» يخصم القطع من تريلو</small>' + (isOwner() ? '<button type="button" data-stk="check">Test — show what would change (Trello not touched)</button>' : '')
@@ -1009,7 +1083,8 @@ $('stk').addEventListener('click', function(e){ var b = e.target.closest('button
 // ----- catalogue (his phone only): design numbers + SETS / COMPLETE -> customer catalogue link -----
 var CAT = { items: [], modes: {}, busy: false };
 function isOwner(){ return ls('sj_owner') === '1'; }
-function ownerUI(){ var o = isOwner(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !o; document.querySelector('#mode button[data-m="cat"]').hidden = !o; }
+function isBoss(){ return isOwner() && !!COST && !!pinGet(); }   // 10 Oct 2026 (Abbas): staff phones with the catalogue on must NOT see 50-50 or cost check
+function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
 (function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
   function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
   function stop(){ clearTimeout(t); }
@@ -1306,7 +1381,7 @@ $('chist').addEventListener('click', function(e){ var a = e.target.closest('a[da
 // ----- costs + prices for the catalogue (Abbas, 7 Oct 2026: "give me also the cost and the prices in the app when generating, just for me to copy") -----
 // Costs come from the inventory report, are loaded from a code Claude hands him, and live ONLY on his phone (never published).
 // Price = cost per piece x 1.35, rounded to the whole AED (Rule Fourteen); his own number in the box always wins.
-var COST = null; try { COST = JSON.parse(ls('sj_costs') || 'null'); } catch(e){}
+var COST = null; try { COST = JSON.parse(ls('sj_costs') || 'null'); } catch(e){} ownerUI();
 async function costDecode(t){
   t = String(t || '').trim(); var m = t.match(/costs=([A-Za-z0-9_-]+)/); if (m) t = m[1];
   t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '=';
@@ -1417,12 +1492,12 @@ async function costPull(quiet){    // on open: take the newest locked costs if t
     if (!pinGet()) { if (box.t > mine) syncMsg('Costs from the report of ' + esc(box.d) + ' are waiting — enter your owner password above to use them on this device.'); return; }
     if (box.t <= mine) { if (!quiet) syncMsg('✓ This device has the latest costs (report ' + esc(COST.d) + ').'); return; }
     var c = await costUnlock(box, pinGet()); c.t = box.t; COST = c; ls('sj_costs', JSON.stringify(COST)); costInfo(); catPrices();
-    syncMsg('✓ Costs updated from your other device: report ' + esc(COST.d) + ', ' + Object.keys(COST.c).length + ' designs.');
-  } catch(e){ ls('sj_owner_pin', null); $('cpin').placeholder = 'at least 8 characters'; syncMsg('<span class="miss">Synced costs could not be opened — that owner password does not match the one used on your other device. Type it again.</span>'); }
+    syncMsg('✓ Costs updated from your other device: report ' + esc(COST.d) + ', ' + Object.keys(COST.c).length + ' designs.'); ownerUI();
+  } catch(e){ ls('sj_owner_pin', null); ownerUI(); $('cpin').placeholder = 'at least 8 characters'; syncMsg('<span class="miss">Synced costs could not be opened — that owner password does not match the one used on your other device. Type it again.</span>'); }
 }
 $('cpinsave').onclick = async function(){ var v = $('cpin').value; if (v.length < 8) { syncMsg('<span class="miss">Use at least 8 characters.</span>'); return; }
   ls('sj_owner_pin', v); $('cpin').value = ''; $('cpin').placeholder = 'saved on this device ✓';
-  await costPull(false);
+  await costPull(false); ownerUI();
   if (COST && !COST.t) costPush(); };
 if (pinGet()) $('cpin').placeholder = 'saved on this device ✓';
 if (isOwner()) costPull(true);
@@ -1608,7 +1683,7 @@ function ffDraw(){
   if (FF.note) h += '<div class="ffst">' + esc(FF.note) + '</div>';
   el.innerHTML = h;
 }
-function ffOpen(draft){ FF.draft = draft ? ffDraftBill() : null; $('ff').hidden = false; $('mysheet').hidden = true; ffDraw(); ffLoad(); }
+function ffOpen(draft){ if (!isBoss()) return; FF.draft = draft ? ffDraftBill() : null; $('ff').hidden = false; $('mysheet').hidden = true; ffDraw(); ffLoad(); }
 $('ffopen').onclick = function(){ ffOpen(false); };
 $('ffbtn').onclick = function(){ ffOpen(false); };
 $('dff').onclick = function(){ ffOpen(true); };
