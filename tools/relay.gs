@@ -8,7 +8,7 @@
  * Script properties (Project Settings → Script properties) — typed in by Abbas, never in this code:
  *   GH             the GitHub token (sj-designs only, Actions: read and write)
  *   MEMO_PASSWORD  the shop password (same as the GitHub secret)
- *   TRELLO         a Trello token (read is enough) — only for the READY watcher below
+ *   TRELLO         a Trello token (read is enough) — for the LIVE LIST (job "live") and the READY watcher below
  * Deploy → New deployment → Web app → Execute as: Me · Who has access: Anyone.
  *
  * READY WATCHER (7 Oct 2026: "if you see any changes in Trello let it trigger right away"):
@@ -23,10 +23,13 @@ function doPost(e) {
     var b = JSON.parse(e.postData.contents);
     var P = PropertiesService.getScriptProperties();
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
-    if (!pw || !gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
-    var wf = JOBS[b.job];
-    if (!wf || typeof b.req !== 'string' || b.req.length > 20000) return out({ ok: false, error: 'bad request' });
+    if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
+    if (typeof b.req !== 'string' || b.req.length > 20000) return out({ ok: false, error: 'bad request' });
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
+    if (b.job === 'live') return live(b.req, P);
+    var wf = JOBS[b.job];
+    if (!wf) return out({ ok: false, error: 'bad request' });
+    if (!gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
     var r = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/' + wf + '/dispatches', {
       method: 'post', contentType: 'application/json', muteHttpExceptions: true,
       headers: { Authorization: 'Bearer ' + gh, Accept: 'application/vnd.github+json' },
@@ -37,6 +40,30 @@ function doPost(e) {
   } catch (err) {
     return out({ ok: false, error: String(err).slice(0, 200) });
   }
+}
+// LIVE LIST (Abbas, 9 Oct 2026: "I want the process to be instant ... anybody could be searching at a specific moment how many
+// quantity or colors are remaining"). The memo asks for the READY + SAMPLES cards right now; this reads them from Trello with the
+// TRELLO script property (a read token, typed in by Abbas) and returns the same card shape as memo-data.enc. Only a request signed
+// with the shop password gets an answer, and only if it is less than 10 minutes old. The Trello key never leaves Google.
+var LIVE_LISTS = { r: '66254dc6f8ade3c3a0c9b7d4', s: '6824cdd97bb99de098f1b7ae' };
+function live(reqText, P) {
+  var req = JSON.parse(reqText);
+  if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  var tok = P.getProperty('TRELLO');
+  if (!tok) return out({ ok: false, error: 'the relay has no TRELLO key yet' });
+  var q = '/cards?fields=name,pos,idShort&attachments=true&attachment_fields=id,name,mimeType,date&key=' + TKEY + '&token=' + tok;
+  var rs = UrlFetchApp.fetchAll([LIVE_LISTS.r, LIVE_LISTS.s].map(function (id) { return { url: 'https://api.trello.com/1/lists/' + id + q, muteHttpExceptions: true }; }));
+  var cards = [];
+  for (var i = 0; i < rs.length; i++) {
+    if (rs[i].getResponseCode() !== 200) return out({ ok: false, error: 'Trello said ' + rs[i].getResponseCode() });
+    JSON.parse(rs[i].getContentText()).forEach(function (c) {
+      var o = { id: c.id, name: c.name, pos: c.pos, idShort: c.idShort, attachments: (c.attachments || []).filter(function (a) { return /^image\//.test(a.mimeType || ''); })
+        .map(function (a) { return { id: a.id, name: a.name || '', mimeType: a.mimeType || '', date: a.date || '' }; }) };
+      if (i === 1) o.list = 's';
+      cards.push(o);
+    });
+  }
+  return out({ ok: true, t: new Date().toISOString(), cards: cards });
 }
 function doGet() { return out({ ok: true, relay: 'sj-memo' }); }
 function hex(bytes) { return bytes.map(function (x) { return ('0' + (x & 255).toString(16)).slice(-2); }).join(''); }
