@@ -302,6 +302,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 
 .ohd{position:relative}.opv{float:right;width:58px;height:72px;object-fit:cover;border-radius:10px;margin:0 0 4px 10px;background:#EFE9DF}
 .opvbig{display:block;width:100%;border-radius:12px;margin:6px 0 10px;box-shadow:var(--sh)}.opvno{font-size:12px;color:var(--mute);margin:6px 0 10px}
+.slk{font-size:12.5px;color:var(--mute);margin:-4px 2px 8px}.slk:empty{display:none}.slk.ok{color:#2f6b4f;font-weight:700}.slk.bad{color:#9a3b1e}.slk button{margin-left:6px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px}
 /* small vendors */
 #svopen[hidden],#sv[hidden]{display:none}
 #sv{position:fixed;inset:0;z-index:56;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -356,6 +357,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
   <div class="dlvr"><span>In office<small>في المكتب</small></span><input id="dl_od" autocomplete="off" placeholder="Date"><input id="dl_ot" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="o">Now</button></div>
   <div class="dlvr"><span>To customer / cargo<small>للعميل / الشحن</small></span><input id="dl_cd" autocomplete="off" placeholder="Date"><input id="dl_ct" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="c">Now</button></div></div>
   <div class="btns"><button id="send" class="gold" type="button">Send PDF · أرسل PDF</button><button id="copy" type="button">Copy text · نسخ النص</button></div>
+  <div id="slk" class="slk"></div>
   <div id="marks"></div>
   </section>
   <section id="p-doc" hidden>
@@ -603,7 +605,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-10g';
+var VER = '2026-10-10h';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -740,6 +742,7 @@ function makePDF(canvases){
 var pdfFile = null;
 $('ok').onclick = async function(){
   askMe();   // once per phone: the name that shows on the order steps
+  slkMsg('');
   $('done').hidden = false; setMode('memo'); B.inv = null; window.scrollTo(0, 0); $('dh').textContent = 'Order memo' + ($('name').value.trim() ? ' · ' + $('name').value.trim() : '');
   $('ds').textContent = 'Preparing…'; $('marks').innerHTML = '';
   memoP = memoRender(); await memoP;
@@ -761,7 +764,8 @@ document.querySelectorAll('.dlnow').forEach(function(b){ b.onclick = function(){
 $('back').onclick = function(){ $('done').hidden = true; };
 $('send').onclick = async function(){
   if (memoP) await memoP; if (!pdfFile) return;
-  ordFromMemo();   // 10 Oct 2026: the memo going out starts its order (step 1 ticked)
+  var again = !!ls('sj_oid'); ordFromMemo();   // 10 Oct 2026: the memo going out starts its order (step 1 ticked)
+  memoSlack(pdfFile, again);                    // ... and goes to #godown and #customer
   try { if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) { await navigator.share({ files: [pdfFile], text: orderText() }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   var a = document.createElement('a'); a.href = URL.createObjectURL(pdfFile); a.download = pdfFile.name; a.click();
   window.open('https://wa.me/?text=' + encodeURIComponent(orderText()), '_blank');
@@ -2004,6 +2008,25 @@ $('svbody').addEventListener('click', function(ev){
     svEntries(v.id).forEach(function(e){ run += e.k === 'b' ? +e.a : -e.a; L.push(svDate(e.d) + ' · ' + (e.k === 'b' ? 'Bill ' : 'Paid ') + svAmt(+e.a) + (e.n ? ' · ' + e.n : '') + ' → ' + svAmt(run)); });
     L.push('Balance: ' + svAmt(run) + ' AED'); var txt = L.join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ t.textContent = 'Copied ✓'; setTimeout(function(){ t.textContent = 'Copy statement'; }, 1500); }, function(){ prompt('Copy:', txt); }); }
 });
+
+
+// ORDER MEMO PDF -> SLACK (Abbas, 10 Oct 2026): every Send PDF also posts the same PDF to #godown and #customer (SJ Memo bot, via the relay).
+function slkMsg(h, cls){ var el = $('slk'); el.className = 'slk' + (cls ? ' ' + cls : ''); el.innerHTML = h; }
+async function memoSlack(file, again){
+  if (!RELAY || !file) return;
+  slkMsg('Sending the PDF to Slack #godown and #customer…');
+  try {
+    var b64 = await new Promise(function(ok, no){ var r = new FileReader(); r.onload = function(){ ok(String(r.result).split(',')[1]); }; r.onerror = no; r.readAsDataURL(file); });
+    var nos = Object.keys(byDesign()), dv = dlv(), d = new Date();
+    var text = '*ORDER MEMO' + (again ? ' (updated)' : '') + '* — ' + ($('name').value.trim() || 'no name') + '\n' + d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear() +
+      ' · ' + nos.length + (nos.length === 1 ? ' design' : ' designs') + ' · ' + nos.reduce(function(a, x){ return a + designPcs(x); }, 0) + ' pcs' + (me() ? ' · sent by ' + me() : '') +
+      '\n' + nos.map(function(x){ var r = rowOf(x); return 'SJ-' + shown(x) + (r ? ' (row ' + r + ')' : ''); }).join(' · ') +
+      ((dv.od || dv.ot) ? '\nDelivery in office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '') + ((dv.cd || dv.ct) ? '\nDelivery to customer / cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : '');
+    var j = await relayJson('slackpdf', { t: Date.now(), dev: devId(), name: file.name, text: text, pdf: b64 }, 2);
+    if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version' : (j.error || 'refused'));
+    slkMsg('✓ Sent to Slack #godown and #customer', 'ok');
+  } catch(e){ slkMsg('Not sent to Slack: ' + esc(e.message) + ' <button type="button" id="slkre">Try again</button>', 'bad'); var b = $('slkre'); if (b) b.onclick = function(){ memoSlack(file, again); }; }
+}
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; } };
