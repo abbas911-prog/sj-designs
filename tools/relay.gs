@@ -15,6 +15,8 @@
  *
  * SMALL VENDORS (job "vault") keeps the owner-locked ledger of the small office vendors — see vault() below.
  *
+ * ORDER MEMO PDF (job "slackpdf") posts every order memo PDF to #godown and #customer — see slackPdf() below.
+ *
  * READY WATCHER (7 Oct 2026: "if you see any changes in Trello let it trigger right away"):
  * every minute it looks at the READY list (one small Trello call). When a card is added, removed, renamed or gets a new photo,
  * it starts memo-thumbs at once, so the order memo shows it 2–3 minutes later. Run setupWatch() once to switch it on.
@@ -28,11 +30,12 @@ function doPost(e) {
     var P = PropertiesService.getScriptProperties();
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
-    if (typeof b.req !== 'string' || b.req.length > 20000) return out({ ok: false, error: 'bad request' });
+    if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' ? 25000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
     if (b.job === 'live') return live(b.req, P);
     if (b.job === 'orders') return orders(b.req, P);
     if (b.job === 'vault') return vault(b.req, P);
+    if (b.job === 'slackpdf') return slackPdf(b.req, P);
     var wf = JOBS[b.job];
     if (!wf) return out({ ok: false, error: 'bad request' });
     if (!gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
@@ -151,6 +154,28 @@ function vRead(P, pre) {
   var n = +(P.getProperty(pre + '_N') || 0); if (!n) return null; var s = '';
   for (var i = 0; i < n; i++) s += P.getProperty(pre + '_' + i) || '';
   try { return JSON.parse(s); } catch (e) { return null; }
+}
+// ORDER MEMO PDF TO SLACK (Abbas, 10 Oct 2026: "whenever an order memo is being sent through PDF, automatically send it to two
+// Slack groups: #godown and #customer"). The memo sends its PDF here; this uploads it with the SJ Memo bot to both channels.
+// The channels are fixed here - a request cannot send a file anywhere else. Needs the SLACK_BOT_TOKEN script property (typed in by
+// Abbas, never in this code), the bot's files:write permission, and the bot invited to both channels.
+var MEMO_PDF_CHANNELS = ['C08EDKV94SV', 'C0BP6DSUHSA'];   // #godown, #customer
+function slackPdf(reqText, P) {
+  var req = JSON.parse(reqText);
+  if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return out({ ok: false, error: 'the relay has no SLACK_BOT_TOKEN yet' });
+  var bytes = Utilities.base64Decode(String(req.pdf || '')); if (bytes.length < 100 || bytes.length > 18000000) return out({ ok: false, error: 'bad PDF' });
+  var name = String(req.name || 'SJ-memo.pdf').replace(/[^\w.\- ]+/g, '-').slice(0, 80); if (!/\.pdf$/i.test(name)) name += '.pdf';
+  var H = { Authorization: 'Bearer ' + tok };
+  var a = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: H, muteHttpExceptions: true,
+    payload: { filename: name, length: String(bytes.length) } }).getContentText());
+  if (!a.ok) return out({ ok: false, error: 'Slack said ' + a.error + (a.error === 'missing_scope' ? ' (the SJ Memo app needs files:write)' : '') });
+  var up = UrlFetchApp.fetch(a.upload_url, { method: 'post', payload: Utilities.newBlob(bytes, 'application/pdf', name), muteHttpExceptions: true });
+  if (up.getResponseCode() !== 200) return out({ ok: false, error: 'Slack upload said ' + up.getResponseCode() });
+  var c = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: H, muteHttpExceptions: true,
+    payload: { files: JSON.stringify([{ id: a.file_id, title: name.replace(/\.pdf$/i, '') }]), channels: MEMO_PDF_CHANNELS.join(','), initial_comment: String(req.text || '').slice(0, 3000) } }).getContentText());
+  if (!c.ok) return out({ ok: false, error: 'Slack said ' + c.error + (c.error === 'not_in_channel' || c.error === 'channel_not_found' ? ' (invite @SJ Memo to #godown and #customer)' : '') });
+  return out({ ok: true, file: a.file_id });
 }
 function doGet() { return out({ ok: true, relay: 'sj-memo' }); }
 function hex(bytes) { return bytes.map(function (x) { return ('0' + (x & 255).toString(16)).slice(-2); }).join(''); }
