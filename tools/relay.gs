@@ -13,6 +13,8 @@
  *
  * ORDER TRACKER (job "orders") keeps the 4-step checklist of every memo order — see orders() below.
  *
+ * SMALL VENDORS (job "vault") keeps the owner-locked ledger of the small office vendors — see vault() below.
+ *
  * READY WATCHER (7 Oct 2026: "if you see any changes in Trello let it trigger right away"):
  * every minute it looks at the READY list (one small Trello call). When a card is added, removed, renamed or gets a new photo,
  * it starts memo-thumbs at once, so the order memo shows it 2–3 minutes later. Run setupWatch() once to switch it on.
@@ -30,6 +32,7 @@ function doPost(e) {
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
     if (b.job === 'live') return live(b.req, P);
     if (b.job === 'orders') return orders(b.req, P);
+    if (b.job === 'vault') return vault(b.req, P);
     var wf = JOBS[b.job];
     if (!wf) return out({ ok: false, error: 'bad request' });
     if (!gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
@@ -112,6 +115,42 @@ function ordList(P) {
     if (!o.del) list.push(o);
   });
   return list.sort(function (a, b) { return b.created - a.created; });
+}
+// SMALL VENDORS (Abbas, 10 Oct 2026: small office-expense vendors kept OUT of the main SJ vendor list, "I don't want it to be lost.
+// It should stay there as cloud based"). The memo locks the whole ledger with the OWNER password on the phone (AES-GCM) and keeps
+// the locked box here; Google never sees the names or amounts. Only a request carrying the owner key-check can read or replace it
+// (staff know the shop password but not the owner password). The previous version is kept as a spare copy.
+function vault(reqText, P) {
+  var req = JSON.parse(reqText);
+  if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  var chk = String(req.chk || ''); if (chk.length < 32) return out({ ok: false, error: 'owner password missing' });
+  var h = hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, chk, Utilities.Charset.UTF_8));
+  var lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    var have = P.getProperty('VAULT_CHK');
+    if (have && have !== h) return out({ ok: false, error: 'owner password does not match the one used before' });
+    var cur = vRead(P, 'VAULT');
+    if (req.op === 'get') return out({ ok: true, box: cur ? cur.box : null, v: cur ? cur.v : 0 });
+    if (req.op !== 'put') return out({ ok: false, error: 'bad request' });
+    var curV = cur ? cur.v : 0;
+    if ((+req.base || 0) !== curV) return out({ ok: false, conflict: true, box: cur ? cur.box : null, v: curV });   // someone saved in between - the phone merges and tries again
+    if (!req.box || typeof req.box.ct !== 'string' || req.box.ct.length > 400000) return out({ ok: false, error: 'bad box' });
+    if (cur) vWrite(P, 'VAULTP', cur);        // spare copy of the previous version
+    var v = curV + 1; vWrite(P, 'VAULT', { v: v, box: req.box });
+    if (!have) P.setProperty('VAULT_CHK', h);
+    return out({ ok: true, v: v });
+  } finally { lock.releaseLock(); }
+}
+function vWrite(P, pre, o) {      // one property holds 9 KB at most, so the box is split into pieces
+  var s = JSON.stringify(o), n = Math.ceil(s.length / 8000), old = +(P.getProperty(pre + '_N') || 0), m = {};
+  for (var i = 0; i < n; i++) m[pre + '_' + i] = s.slice(i * 8000, (i + 1) * 8000);
+  m[pre + '_N'] = String(n); P.setProperties(m);
+  for (var j = n; j < old; j++) P.deleteProperty(pre + '_' + j);
+}
+function vRead(P, pre) {
+  var n = +(P.getProperty(pre + '_N') || 0); if (!n) return null; var s = '';
+  for (var i = 0; i < n; i++) s += P.getProperty(pre + '_' + i) || '';
+  try { return JSON.parse(s); } catch (e) { return null; }
 }
 function doGet() { return out({ ok: true, relay: 'sj-memo' }); }
 function hex(bytes) { return bytes.map(function (x) { return ('0' + (x & 255).toString(16)).slice(-2); }).join(''); }
