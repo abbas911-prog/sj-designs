@@ -299,6 +299,9 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .oitems{margin-top:10px;font-size:13px;line-height:1.6;background:var(--goldbg);border-radius:12px;padding:8px 10px}.oitems small{color:var(--mute)}.orow{color:var(--gold)}.odl{color:var(--ink);font-weight:600}
 .odel{margin-top:10px;width:100%;border:1.5px solid #e6c9bd;color:#9a3b1e;background:#fff;border-radius:12px;padding:10px;font:inherit;font-weight:700}
 
+
+.ohd{position:relative}.opv{float:right;width:58px;height:72px;object-fit:cover;border-radius:10px;margin:0 0 4px 10px;background:#EFE9DF}
+.opvbig{display:block;width:100%;border-radius:12px;margin:6px 0 10px;box-shadow:var(--sh)}.opvno{font-size:12px;color:var(--mute);margin:6px 0 10px}
 /* small vendors */
 #svopen[hidden],#sv[hidden]{display:none}
 #sv{position:fixed;inset:0;z-index:56;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -600,7 +603,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-10f';
+var VER = '2026-10-10g';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1798,7 +1801,7 @@ window.__ff = { FF: FF, ffText: ffText };
 // ----- ORDER TRACKER (Abbas, 10 Oct 2026): every order memo sent becomes an order with 4 steps that staff tick off.
 // 1 memo sent to godown · 2 goods arrived in office · 3 packed completely · 4 sent = bill made + delivery note + sent to customer.
 // Kept on the relay (job "orders"), shared live by every phone; each tick shows who and when. No prices are kept.
-var ORD = { list: null, tab: 'open', open: {}, busy: false, err: '', timer: null };
+var ORD = { list: null, tab: 'open', open: {}, busy: false, err: '', timer: null, pv: {} };
 var OSTEPS = [['s1', 'Memo sent to godown', 'أرسلت المذكرة إلى المستودع'], ['s2', 'Goods arrived in office', 'وصلت البضاعة إلى المكتب'], ['s3', 'Packed completely', 'تم التغليف بالكامل']];
 var OSUB = [['bill', 'Bill made', 'تم عمل الفاتورة'], ['dn', 'Delivery note given', 'تم تسليم إذن التسليم'], ['sent', 'Bill & goods sent to customer', 'تم الإرسال للعميل']];
 var OKEYS = ['s1', 's2', 's3', 'bill', 'dn', 'sent'];
@@ -1832,12 +1835,13 @@ function ordDraw(){
   if (!show.length) h += '<div class="ffempty">' + (ORD.tab === 'done' ? 'No completed orders yet.' : 'No open orders. An order appears here when its memo PDF is sent.') + '</div>';
   show.forEach(function(o){
     var stg = ordStage(o), dn = ordDone(o), isOpen = !!ORD.open[o.id], nos = (o.items || []).map(function(x){ return 'SJ-' + x.no; });
-    h += '<div class="ocard' + (dn ? ' done' : '') + '"><button type="button" class="ohd" data-ot="' + esc(o.id) + '"><span class="on1"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + '</small></span>' +
+    var pvs = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o.id) + '.jpg?v=' + (o.upd || o.created || 0));
+    h += '<div class="ocard' + (dn ? ' done' : '') + '"><button type="button" class="ohd" data-ot="' + esc(o.id) + '"><img class="opv" loading="lazy" alt="" src="' + pvs + '" onerror="this.remove()"><span class="on1"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + '</small></span>' +
       '<span class="on2">' + esc(nos.slice(0, 4).join(' · ')) + (nos.length > 4 ? ' +' + (nos.length - 4) : '') + ' · ' + (o.pcs || 0) + ' pcs</span>' +
       '<span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span>' +
       '<span class="onx">' + (dn ? '✓ Complete · ' + ordWhen(o.done) : 'Next: ' + esc(ordNext(o))) + '</span></button>';
     if (isOpen) {
-      h += '<div class="obody">';
+      h += '<div class="obody"><img class="opvbig" alt="Order photos" src="' + pvs + '" onerror="this.outerHTML=\'<div class=opvno>Order picture not saved yet — it appears a minute after the memo is sent.</div>\'">';
       OSTEPS.forEach(function(s, i){ h += '<div class="ostep"><u>' + (i + 1) + '</u>' + ordRow(o, s[0], s[1], s[2]) + '</div>'; });
       h += '<div class="ostep"><u>4</u><div class="o4"><div class="o4h">Sent to customer <small class="ar">أرسل للعميل</small></div>' + OSUB.map(function(s){ return ordRow(o, s[0], s[1], s[2], true); }).join('') + '</div></div>';
       h += '<div class="oitems">' + (o.items || []).map(function(x){ return '<div><b>SJ-' + esc(x.no) + '</b> · ' + x.pcs + ' pcs' + (x.c ? ' <small>(' + esc(x.c) + ')</small>' : '') + (x.row ? ' · <b class="orow">ROW ' + esc(String(x.row).toUpperCase()) + '</b>' : '') + '</div>'; }).join('') +
@@ -1874,7 +1878,41 @@ function ordFromMemo(){
   var items = nos.map(function(no){ var d = byNo(no); return { no: shown(no), pcs: designPcs(no), row: rowOf(no), c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs; }).join(', ') }; });
   var dv = dlv(), dl = [(dv.od || dv.ot) ? 'Office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '', (dv.cd || dv.ct) ? 'Customer/cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : ''].filter(Boolean).join(' · ');
   ordCall({ op: 'add', id: oid, name: $('name').value.trim(), items: items, pcs: items.reduce(function(a, x){ return a + x.pcs; }, 0), dl: dl, s1: true, by: me() }).catch(function(e){ ORD.err = e.message; });
+  ordKeep(oid, bd).catch(function(){});
 }
+// 10 Oct 2026 (Abbas): "a small preview of the PDF in the orders ... or the photos that have been ordered".
+// One small picture per order - each design's photo with the chosen colours lit and the rest faded, as on the memo PDF -
+// saved on the site (keep/<order>.jpg) by the stock job, so it stays after the cards leave READY. No names or prices on it.
+async function ordPreview(bd){
+  var nos = Object.keys(bd).slice(0, 12), tiles = [];
+  for (var i = 0; i < nos.length; i++){
+    var no = nos[i], dz = byNo(no); if (!dz) continue;
+    var phs = dz.photos.filter(function(p){ return p.nums && p.nums.some(function(n){ return bd[no][n.c]; }); }); if (!phs.length) phs = dz.photos.slice(0, 1);
+    var p = phs[0], u = p ? await getPhoto(p) : null, im = u ? await loadImg(u) : null; tiles.push({ no: no, p: p, im: im });
+  }
+  if (!tiles.length) return null;
+  var cols = tiles.length <= 3 ? 1 : 2, TW = cols === 1 ? 440 : 230, LH = 26, W = TW * cols, rowsH = [], H = 0;   // each row as tall as its photos need (lineups are wide)
+  tiles.forEach(function(t, k){ var r = Math.floor(k / cols), ar = t.im ? Math.min(1.4, t.im.naturalHeight / t.im.naturalWidth) : 0.6; rowsH[r] = Math.max(rowsH[r] || 0, Math.round((TW - 8) * ar) + 4); });
+  var rowY = rowsH.map(function(h){ var y = H; H += h + LH; return y; });
+  var cv = document.createElement('canvas'); cv.width = W; cv.height = H; var g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+  tiles.forEach(function(t, k){ var r = Math.floor(k / cols), x0 = (k % cols) * TW, y0 = rowY[r], TH = rowsH[r];
+    g.fillStyle = '#1C1A17'; g.font = 'bold 17px Arial'; g.fillText('SJ-' + shown(t.no) + '  ·  ' + designPcs(t.no) + ' pcs', x0 + 6, y0 + 19);
+    if (!t.im) { g.fillStyle = '#EFE9DF'; g.fillRect(x0 + 4, y0 + LH, TW - 8, TH - 4); return; }
+    var sc = Math.min((TW - 8) / t.im.naturalWidth, (TH - 4) / t.im.naturalHeight), dw = t.im.naturalWidth * sc, dh = t.im.naturalHeight * sc, ix = x0 + (TW - dw) / 2, iy = y0 + LH;
+    g.drawImage(t.im, ix, iy, dw, dh);
+    var nn = t.p && t.p.nums, dz = byNo(t.no);
+    if (nn && nn.length && !dz.sample) { var cw = dw / nn.length; nn.forEach(function(n, q){ var x = ix + q * cw, on = !!bd[t.no][n.c];
+      if (!on) { g.fillStyle = 'rgba(236,233,226,0.8)'; g.fillRect(x, iy, cw + 1, dh); }
+      g.fillStyle = on ? '#A8864A' : 'rgba(28,26,23,.45)'; g.fillRect(x, iy + dh - 18, cw + 1, 18); g.fillStyle = '#fff'; g.font = 'bold 12px Arial'; g.textAlign = 'center'; g.fillText(String(n.c), x + cw / 2, iy + dh - 5); g.textAlign = 'left'; }); }
+  });
+  for (var z = 0; z < 6; z++) {               // the relay takes up to 20,000 characters: lower the quality, then the size, until it fits
+    for (var qv = 0.6; qv >= 0.3; qv -= 0.1) { var url = cv.toDataURL('image/jpeg', qv); if (url.length < 18500) return url; }
+    var c2 = document.createElement('canvas'); c2.width = Math.round(cv.width * 0.8); c2.height = Math.round(cv.height * 0.8); c2.getContext('2d').drawImage(cv, 0, 0, c2.width, c2.height); cv = c2;
+  }
+  return null;
+}
+async function ordKeep(oid, bd){ var url = await ordPreview(bd); if (!url) return; ORD.pv[oid] = url; if (!$('ords').hidden) ordDraw();
+  await relay('stock', { id: jobId('k'), op: 'keep', ref: oid, dev: devId(), lines: [], img: url.split(',')[1] }); }
 // the bill of this memo was included: tick "Bill made" on its order
 function ordBillMade(ref){ var oid = ls('sj_oid'); if (oid && RELAY) ordCall({ op: 'tick', id: oid, step: 'bill', on: true, by: me(), note: ref || '' }).catch(function(){}); }
 setTimeout(ordLoad, 2500);
