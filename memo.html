@@ -298,6 +298,27 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .o4h{font-weight:700;font-size:14px;padding:10px 0 2px}.o4h small{font-weight:400;color:var(--mute);margin-left:6px}
 .oitems{margin-top:10px;font-size:13px;line-height:1.6;background:var(--goldbg);border-radius:12px;padding:8px 10px}.oitems small{color:var(--mute)}.orow{color:var(--gold)}.odl{color:var(--ink);font-weight:600}
 .odel{margin-top:10px;width:100%;border:1.5px solid #e6c9bd;color:#9a3b1e;background:#fff;border-radius:12px;padding:10px;font:inherit;font-weight:700}
+
+/* small vendors */
+#svopen[hidden],#sv[hidden]{display:none}
+#sv{position:fixed;inset:0;z-index:56;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
+#sv .in{background:var(--bg);width:100%;max-width:720px;border-radius:24px 24px 0 0;padding:16px 12px calc(22px + env(safe-area-inset-bottom));max-height:94vh;max-height:94dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#sv .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#sv .hd b{letter-spacing:.12em;color:var(--mute);font-size:13px}#sv .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700}
+.svst{font-size:12px;color:var(--mute);margin:0 2px 8px}.svst.ok{color:#2f6b4f}.svst.bad{color:#9a3b1e;font-weight:700}
+.svtot{background:#fff;border-radius:16px;box-shadow:var(--sh);padding:14px;margin-bottom:10px}.svtot small{display:block;color:var(--mute);font-size:12px}.svtot b{display:block;font-size:26px;margin:2px 0}.neg{color:#2f6b4f}
+.svv{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:0;border-radius:14px;box-shadow:var(--sh);padding:12px 14px;margin:0 0 8px;font:inherit;color:var(--ink)}
+.svv b{display:block;font-size:15.5px}.svv small{color:var(--mute);font-size:12px}.svv em{font-style:normal;font-weight:800;font-size:16px;white-space:nowrap}
+.svf{background:#fff;border-radius:16px;box-shadow:var(--sh);padding:12px;margin:10px 0;display:grid;gap:8px}.svf small{color:var(--mute);font-size:12px}
+.svf input{width:100%;min-width:0;height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px;background:#fff}
+.svg2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.svf button.gold{height:46px;border:0;border-radius:12px;background:var(--gold);color:#fff;font:inherit;font-weight:800}
+.svk{display:grid;grid-template-columns:1fr 1fr;gap:6px}.svk button{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:8px;font:inherit;font-weight:700;font-size:14px}.svk button small{display:block;font-weight:400}
+.svk button.on{border-color:var(--gold);background:var(--goldbg);color:var(--gold)}
+.svback{border:0;background:none;color:var(--gold);font:inherit;font-weight:700;padding:0 2px 8px}
+.svt{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;font-size:12.5px;box-shadow:var(--sh)}
+.svt th{font-size:10.5px;color:var(--mute);text-align:right;padding:7px 5px;border-bottom:1px solid var(--line)}.svt td{padding:7px 5px;border-bottom:1px solid #f0ebe3;text-align:right;white-space:nowrap}
+.svt th:nth-child(-n+2),.svt td:nth-child(-n+2){text-align:left}.svt td:nth-child(2){white-space:normal}.svt tr.op td{background:var(--goldbg);font-weight:700}
+.svt td button{border:0;background:none;color:#b9b0a4;font-size:14px;padding:0 2px}
 </style></head><body>
 <header>
   <div class="top"><h1 id="ttl">SJ<small>MEMO</small></h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button><button id="mybtn" type="button" hidden title="My shortcuts">★</button></div>
@@ -318,8 +339,9 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
   <div id="load" hidden>Loading READY list…</div>
   <div id="feed"></div>
 </main>
-<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
+<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><button type="button" id="svopen" class="ffbig">SMALL VENDORS<small>office expenses · opening balances · kept in the cloud</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
 <div id="ff" hidden><div class="in"><div class="hd"><b>50-50 BILLS</b><span><button type="button" id="ffre">↻</button><button type="button" id="ffx">Close</button></span></div><div id="ffbody"></div></div></div>
+<div id="sv" hidden><div class="in"><div class="hd"><b>SMALL VENDORS · موردين صغار</b><button type="button" id="svx">Close</button></div><div id="svbody"></div></div></div>
 <div id="ords" hidden><div class="in"><div class="hd"><b>ORDERS · الطلبات</b><span><button type="button" id="ordre">↻</button><button type="button" id="ordx">Close</button></span></div><div class="otabs"><button type="button" data-o="open" class="on">Open</button><button type="button" data-o="done">Complete</button></div><div id="ordbody"></div></div></div>
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
 <div id="done" hidden><div class="in">
@@ -578,7 +600,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-10e';
+var VER = '2026-10-10f';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1121,7 +1143,7 @@ $('stk').addEventListener('click', function(e){ var b = e.target.closest('button
 var CAT = { items: [], modes: {}, busy: false };
 function isOwner(){ return ls('sj_owner') === '1'; }
 function isBoss(){ return isOwner() && !!COST && !!pinGet(); }   // 10 Oct 2026 (Abbas): staff phones with the catalogue on must NOT see 50-50 or cost check
-function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
+function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('svopen').hidden = !bo; $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
 (function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
   function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
   function stop(){ clearTimeout(t); }
@@ -1857,6 +1879,93 @@ function ordFromMemo(){
 function ordBillMade(ref){ var oid = ls('sj_oid'); if (oid && RELAY) ordCall({ op: 'tick', id: oid, step: 'bill', on: true, by: me(), note: ref || '' }).catch(function(){}); }
 setTimeout(ordLoad, 2500);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && Date.now() - (ORD.last || 0) > 60000) { ORD.last = Date.now(); ordLoad(); } });
+
+// ----- SMALL VENDORS (Abbas, 10 Oct 2026): 3-4 small office-expense vendors kept OUT of the main SJ vendor list.
+// Owner phones only. Opening balance + bills (we owe more) + payments (we owe less) = running balance.
+// Saved to the cloud (relay job "vault"), locked with the OWNER password on the phone; every change is saved within a second.
+// Nothing is ever really removed: deletes are marks, so two phones editing at once merge instead of losing work.
+var SV = { v: 0, d: null, view: '', busy: false, dirty: false, msg: '', t: 0, form: {} };
+function svNew(){ return { vendors: [], entries: [] }; }
+function svId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function svMerge(a, b){ var out = svNew(); ['vendors', 'entries'].forEach(function(k){ var m = {}; (a[k] || []).concat(b[k] || []).forEach(function(x){ if (!m[x.id] || (x.ts || 0) > (m[x.id].ts || 0)) m[x.id] = x; }); out[k] = Object.keys(m).map(function(i){ return m[i]; }); }); return out; }
+async function svChk(){ var k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pinGet()), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return [].map.call(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode('sj-vault-owner'))), function(x){ return ('0' + x.toString(16)).slice(-2); }).join(''); }
+async function svCall(o){ o.t = Date.now(); o.dev = devId(); o.chk = await svChk(); var j = await relayJson('vault', o, 3);
+  if (j.error === 'bad request' && !j.conflict) throw new Error('the relay needs its new version — Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy'); return j; }
+async function svCacheSave(){ try { ls('sj_sv', JSON.stringify({ v: SV.v, dirty: SV.dirty, box: await costLock(SV.d, pinGet()) })); } catch(e){} }
+async function svCacheLoad(){ try { var c = JSON.parse(ls('sj_sv') || 'null'); if (!c || !c.box) return false; SV.d = await costUnlock(c.box, pinGet()); SV.v = c.v || 0; SV.dirty = !!c.dirty; return true; } catch(e){ return false; } }
+async function svPull(){
+  try { var j = await svCall({ op: 'get' }); if (!j.ok) throw new Error(j.error || 'refused');
+    if (j.box) { var their = await costUnlock(j.box, pinGet()); SV.d = SV.d ? svMerge(their, SV.d) : their; }
+    else if (!SV.d) SV.d = svNew();
+    var mine = SV.v; SV.v = j.v || 0;
+    if (SV.dirty || (j.v || 0) < mine) { SV.dirty = true; await svPush(); } else { SV.msg = 'ok'; SV.t = Date.now(); await svCacheSave(); }
+  } catch(e){ SV.msg = 'Could not reach the cloud: ' + e.message; if (!SV.d) SV.d = svNew(); }
+  svDraw();
+}
+var svT = null;
+function svChanged(){ SV.dirty = true; SV.msg = 'saving'; svCacheSave(); svDraw(); clearTimeout(svT); svT = setTimeout(svPush, 700); }
+async function svPush(){
+  if (SV.busy) { clearTimeout(svT); svT = setTimeout(svPush, 800); return; } SV.busy = true;
+  try {
+    for (var n = 0; n < 4; n++) {
+      var j = await svCall({ op: 'put', base: SV.v, box: await costLock(SV.d, pinGet()) });
+      if (j.ok) { SV.v = j.v; SV.dirty = false; SV.msg = 'ok'; SV.t = Date.now(); break; }
+      if (j.conflict) { if (j.box) SV.d = svMerge(await costUnlock(j.box, pinGet()), SV.d); SV.v = j.v; continue; }   // another phone saved first: merge and try again
+      throw new Error(j.error || 'refused');
+    }
+    if (SV.dirty) throw new Error('kept changing on another phone — try again');
+  } catch(e){ SV.msg = 'NOT saved to the cloud yet (' + e.message + ') — it is kept on this phone and will be sent next time.'; }
+  finally { SV.busy = false; await svCacheSave(); svDraw(); }
+}
+function svLive(k){ return ((SV.d || {})[k] || []).filter(function(x){ return !x.del; }); }
+function svEntries(vid){ return svLive('entries').filter(function(e){ return e.vid === vid; }).sort(function(a, b){ return a.d < b.d ? -1 : a.d > b.d ? 1 : (a.ts || 0) - (b.ts || 0); }); }
+function svBal(v){ return svEntries(v.id).reduce(function(s, e){ return s + (e.k === 'b' ? +e.a : -e.a); }, +v.open || 0); }
+function svDate(iso){ if (!iso) return ''; var p = iso.split('-'); return +p[2] + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1] - 1] + ' ' + p[0].slice(2); }
+function svToday(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function svAmt(n){ return (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function svStatus(){ if (SV.msg === 'saving' || SV.busy) return '<div class="svst">Saving to the cloud…</div>'; if (SV.msg === 'ok') return '<div class="svst ok">✓ Saved in the cloud · ' + ordWhen(SV.t) + '</div>'; return SV.msg ? '<div class="svst bad">' + esc(SV.msg) + '</div>' : ''; }
+function svDraw(){
+  if ($('sv').hidden) return; var el = $('svbody'), h = svStatus();
+  if (!SV.d) { el.innerHTML = h + '<div class="ffempty">Opening…</div>'; return; }
+  var vs = svLive('vendors').sort(function(a, b){ return a.name.localeCompare(b.name); });
+  var v = SV.view && vs.filter(function(x){ return x.id === SV.view; })[0];
+  if (!v) { SV.view = '';
+    var tot = vs.reduce(function(s, x){ return s + svBal(x); }, 0);
+    h += '<div class="svtot"><small>Total we owe · المجموع المستحق</small><b>' + svAmt(tot) + ' AED</b><small>' + vs.length + ' small vendor' + (vs.length === 1 ? '' : 's') + ' · not in the main SJ vendor list</small></div>';
+    vs.forEach(function(x){ var b = svBal(x); h += '<button type="button" class="svv" data-svv="' + x.id + '"><span><b>' + esc(x.name) + '</b><small>' + svEntries(x.id).length + ' entries · opening ' + svAmt(+x.open || 0) + '</small></span><em class="' + (b < 0 ? 'neg' : '') + '">' + svAmt(b) + '</em></button>'; });
+    h += '<div class="svf"><div class="ffs">Add a vendor · إضافة مورد</div><input id="svn" placeholder="Name · الاسم" autocomplete="off"><div class="svg2"><input id="svo" inputmode="decimal" placeholder="Opening balance (AED)"><input id="svod" type="date" value="' + svToday() + '"></div><small>Opening balance = what we owe them on that date (minus if they owe us).</small><button type="button" class="gold" id="svadd">Add vendor</button></div>';
+  } else {
+    var es = svEntries(v.id), run = +v.open || 0;
+    h += '<button type="button" class="svback" data-svv="">← All vendors</button><div class="svtot"><small>' + esc(v.name) + ' · balance we owe</small><b class="' + (svBal(v) < 0 ? 'neg' : '') + '">' + svAmt(svBal(v)) + ' AED</b></div>';
+    var f = SV.form; h += '<div class="svf"><div class="svk"><button type="button" data-svk="b" class="' + (f.k !== 'p' ? 'on' : '') + '">Bill / purchase<small>فاتورة · نزيد</small></button><button type="button" data-svk="p" class="' + (f.k === 'p' ? 'on' : '') + '">Paid them<small>دفعنا · ننقص</small></button></div>' +
+      '<div class="svg2"><input id="sva" inputmode="decimal" placeholder="Amount (AED)"><input id="svd" type="date" value="' + (f.d || svToday()) + '"></div><input id="svnote" placeholder="Details (e.g. tea, stationery, bill no.)" autocomplete="off"><button type="button" class="gold" id="svent">Add entry</button></div>';
+    h += '<table class="svt"><tr><th>Date</th><th>Details</th><th>Bill</th><th>Paid</th><th>Balance</th><th></th></tr><tr class="op"><td>' + svDate(v.odate) + '</td><td>Opening balance</td><td></td><td></td><td>' + svAmt(run) + '</td><td></td></tr>';
+    es.forEach(function(e){ run += e.k === 'b' ? +e.a : -e.a; h += '<tr><td>' + svDate(e.d) + '</td><td>' + esc(e.n || '') + '</td><td>' + (e.k === 'b' ? svAmt(+e.a) : '') + '</td><td>' + (e.k === 'p' ? svAmt(+e.a) : '') + '</td><td><b>' + svAmt(run) + '</b></td><td><button type="button" data-svx="' + e.id + '">✕</button></td></tr>'; });
+    h += '</table><div class="ffbtns"><button type="button" id="svcopy">Copy statement</button><button type="button" id="svedit">Rename / opening</button></div><button type="button" class="odel" id="svdel">Delete this vendor</button>';
+  }
+  el.innerHTML = h;
+}
+async function svOpen(){ if (!isBoss()) return; $('mysheet').hidden = true; $('sv').hidden = false; SV.view = ''; if (!SV.d) await svCacheLoad(); svDraw(); svPull(); }
+$('svopen').onclick = svOpen;
+$('svx').onclick = function(){ $('sv').hidden = true; };
+$('svbody').addEventListener('click', function(ev){
+  var t = ev.target, b;
+  if ((b = t.closest('[data-svv]'))) { SV.view = b.dataset.svv; SV.form = {}; svDraw(); $('sv').querySelector('.in').scrollTop = 0; return; }
+  if ((b = t.closest('[data-svk]'))) { SV.form.k = b.dataset.svk; SV.form.a = $('sva').value; SV.form.n = $('svnote').value; SV.form.d = $('svd').value; svDraw(); $('sva').value = SV.form.a || ''; $('svnote').value = SV.form.n || ''; return; }
+  if (t.id === 'svadd') { var nm = $('svn').value.trim(), op = parseFloat(($('svo').value || '0').replace(/,/g, '')); if (!nm) { $('svn').focus(); return; } if (isNaN(op)) { alert('Opening balance must be a number'); return; }
+    SV.d.vendors.push({ id: svId(), name: nm.slice(0, 60), open: op, odate: $('svod').value || svToday(), ts: Date.now() }); svChanged(); return; }
+  var v = svLive('vendors').filter(function(x){ return x.id === SV.view; })[0]; if (!v) return;
+  if (t.id === 'svent') { var a = parseFloat(($('sva').value || '').replace(/,/g, '')); if (!(a > 0)) { alert('Type the amount'); return; }
+    SV.d.entries.push({ id: svId(), vid: v.id, d: $('svd').value || svToday(), k: SV.form.k === 'p' ? 'p' : 'b', a: Math.round(a * 100) / 100, n: $('svnote').value.trim().slice(0, 120), by: me(), ts: Date.now() }); SV.form = { k: SV.form.k, d: $('svd').value }; svChanged(); return; }
+  if ((b = t.closest('[data-svx]'))) { var e = SV.d.entries.filter(function(x){ return x.id === b.dataset.svx; })[0]; if (!e || !confirm('Remove this entry: ' + svDate(e.d) + ' ' + (e.n || '') + ' ' + svAmt(+e.a) + '?')) return; e.del = 1; e.ts = Date.now(); svChanged(); return; }
+  if (t.id === 'svedit') { var n2 = prompt('Vendor name', v.name); if (n2 === null) return; var o2 = prompt('Opening balance (AED)', String(v.open)); if (o2 === null) return; var d2 = prompt('Opening balance date (YYYY-MM-DD)', v.odate) || v.odate; var on = parseFloat(String(o2).replace(/,/g, ''));
+    if (isNaN(on)) { alert('Opening balance must be a number'); return; } v.name = (n2.trim() || v.name).slice(0, 60); v.open = on; v.odate = /^\d{4}-\d\d-\d\d$/.test(d2) ? d2 : v.odate; v.ts = Date.now(); svChanged(); return; }
+  if (t.id === 'svdel') { if (!confirm('Delete ' + v.name + ' and all its entries?')) return; v.del = 1; v.ts = Date.now(); SV.view = ''; svChanged(); return; }
+  if (t.id === 'svcopy') { var run = +v.open || 0, L = [v.name + ' — statement', 'Opening ' + svDate(v.odate) + ': ' + svAmt(run)];
+    svEntries(v.id).forEach(function(e){ run += e.k === 'b' ? +e.a : -e.a; L.push(svDate(e.d) + ' · ' + (e.k === 'b' ? 'Bill ' : 'Paid ') + svAmt(+e.a) + (e.n ? ' · ' + e.n : '') + ' → ' + svAmt(run)); });
+    L.push('Balance: ' + svAmt(run) + ' AED'); var txt = L.join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ t.textContent = 'Copied ✓'; setTimeout(function(){ t.textContent = 'Copy statement'; }, 1500); }, function(){ prompt('Copy:', txt); }); }
+});
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; } };
