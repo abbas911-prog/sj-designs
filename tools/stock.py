@@ -264,6 +264,17 @@ def main():
     res = {'id': jid, 'op': req.get('op'), 'ref': req.get('ref')}
     if not good:
         res.update(ok=False, error='not signed with the shop password')
+    elif req.get('op') == 'keep':                                     # 10 Oct 2026: small picture of an order for the memo's Orders list
+        oid = re.sub(r'[^A-Za-z0-9_-]', '', str(req.get('ref', '')))[:40]
+        try:
+            img = base64.b64decode(str(req.get('img', '')), validate=True)
+            if not oid or not img.startswith(b'\xff\xd8') or len(img) > 60000:
+                raise ValueError('not a small JPEG')
+            os.makedirs('keep', exist_ok=True)
+            open('keep/%s.jpg' % oid, 'wb').write(img)
+            res.update(ok=True, kept='keep/%s.jpg' % oid, bytes=len(img))
+        except Exception as e:
+            res.update(ok=False, error='preview not saved: %s' % str(e)[:120])
     else:
         cards = run(req) if req.get('op') not in ('billdone', 'billopen', 'billdel') else []
         res.update(ok=not any('err' in c for c in cards), cards=cards)
