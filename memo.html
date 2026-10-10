@@ -267,6 +267,37 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .dlvr input{width:100%;min-width:0;height:40px;padding:0 9px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:#fff}
 .dlnow{height:40px;border:1.5px solid var(--gold);color:var(--gold);background:#fff;border-radius:10px;font:inherit;font-size:12.5px;font-weight:700;padding:0 9px}
 #ffopen[hidden],#clk[hidden]{display:none}
+
+/* order tracker */
+#bar .in{gap:7px}#sum{font-size:13px;line-height:1.3;min-width:0}#sum .ar{font-size:11.5px}#ok{padding:13px 18px}#bills,#ordbtn{padding:7px 8px;font-size:12.5px}#clr{font-size:12px}
+#ordbtn{position:relative;border:1.5px solid var(--gold);background:#fff;color:var(--gold);border-radius:14px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;line-height:1.1}
+#ordbtn small{display:block;font-size:10.5px;font-weight:500}
+#ordn{position:absolute;top:-7px;right:-7px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#b4472a;color:#fff;font-style:normal;font-size:11.5px;font-weight:800;line-height:20px;text-align:center}#ordn:empty{display:none}
+#ords[hidden]{display:none}
+#ords{position:fixed;inset:0;z-index:55;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
+#ords .in{background:var(--bg);width:100%;max-width:720px;border-radius:24px 24px 0 0;padding:16px 12px calc(22px + env(safe-area-inset-bottom));max-height:94vh;max-height:94dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#ords .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#ords .hd b{letter-spacing:.14em;color:var(--mute);font-size:13px}
+#ords .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700;margin-left:12px}
+.otabs{display:flex;background:#EAE3D7;border-radius:12px;padding:3px;gap:3px;margin-bottom:12px}
+.otabs button{flex:1;border:0;background:none;border-radius:9px;padding:9px 6px;font:inherit;font-size:13px;font-weight:700;color:var(--mute)}
+.otabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(40,30,15,.12)}.otabs b{color:var(--gold)}
+.ocard{background:#fff;border-radius:16px;box-shadow:var(--sh);margin:0 0 10px;overflow:hidden}.ocard.done{opacity:.92}
+.ohd{display:block;width:100%;text-align:left;border:0;background:none;font:inherit;color:var(--ink);padding:12px 14px}
+.on1{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.on1 b{font-size:16px}.on1 small{color:var(--mute);font-size:12px;white-space:nowrap}
+.on2{display:block;font-size:12.5px;color:var(--mute);margin-top:2px}
+.obar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:10px}
+.obar i{font-style:normal;text-align:center;font-size:11px;font-weight:800;color:#b9b0a4;background:#EFE9DF;border-radius:6px;padding:3px 0}.obar i.on{background:var(--gold);color:#fff}
+.onx{display:block;font-size:12.5px;margin-top:7px;color:var(--gold);font-weight:700}.ocard.done .onx{color:#2f6b4f}
+.obody{border-top:1px solid var(--line);padding:8px 12px 12px}
+.ostep{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;padding:4px 0}.ostep u{text-decoration:none;font-weight:800;color:var(--gold);text-align:center;padding-top:12px}
+.ock{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:9px 10px;font:inherit;color:var(--ink);margin:2px 0}
+.ock i{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid #cfc5b6;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;color:#fff}
+.ock.on{border-color:#cfe3d6;background:#f3faf5}.ock.on i{background:#2f6b4f;border-color:#2f6b4f}
+.ock span{min-width:0}.ock b{display:block;font-size:14px}.ock small{display:block;font-size:12px;color:var(--mute)}.ock em{display:block;font-style:normal;font-size:11.5px;color:#2f6b4f;margin-top:2px}
+.ock.sub b{font-size:13.5px}
+.o4h{font-weight:700;font-size:14px;padding:10px 0 2px}.o4h small{font-weight:400;color:var(--mute);margin-left:6px}
+.oitems{margin-top:10px;font-size:13px;line-height:1.6;background:var(--goldbg);border-radius:12px;padding:8px 10px}.oitems small{color:var(--mute)}.orow{color:var(--gold)}.odl{color:var(--ink);font-weight:600}
+.odel{margin-top:10px;width:100%;border:1.5px solid #e6c9bd;color:#9a3b1e;background:#fff;border-radius:12px;padding:10px;font:inherit;font-weight:700}
 </style></head><body>
 <header>
   <div class="top"><h1 id="ttl">SJ<small>MEMO</small></h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button><button id="mybtn" type="button" hidden title="My shortcuts">★</button></div>
@@ -289,7 +320,8 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 </main>
 <div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
 <div id="ff" hidden><div class="in"><div class="hd"><b>50-50 BILLS</b><span><button type="button" id="ffre">↻</button><button type="button" id="ffx">Close</button></span></div><div id="ffbody"></div></div></div>
-<div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
+<div id="ords" hidden><div class="in"><div class="hd"><b>ORDERS · الطلبات</b><span><button type="button" id="ordre">↻</button><button type="button" id="ordx">Close</button></span></div><div class="otabs"><button type="button" data-o="open" class="on">Open</button><button type="button" data-o="done">Complete</button></div><div id="ordbody"></div></div></div>
+<div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
 <div id="done" hidden><div class="in">
   <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
   <div id="mode"><button type="button" data-m="memo" class="on">Memo<small>مذكرة طلب</small></button><button type="button" data-m="inv">Invoice<small>فاتورة</small></button><button type="button" data-m="rv">Receipt<small>سند قبض</small></button><button type="button" data-m="pv">Payment<small>سند صرف</small></button><button type="button" data-m="cat" hidden>Catalogue<small>كتالوج</small></button></div>
@@ -546,7 +578,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-10d';
+var VER = '2026-10-10e';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -588,7 +620,7 @@ function applySearch(){
 $('tabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; TAB = b.dataset.t;
   document.querySelectorAll('#tabs button').forEach(function(x){ x.classList.toggle('on', x === b); }); applySearch(); window.scrollTo(0, 0); };
 $('q').oninput = applySearch;
-$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; B.inv = null; $('name').value = ''; ['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).value = ''; }); try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
+$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; B.inv = null; $('name').value = ''; ls('sj_oid', null); ['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).value = ''; }); try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
 
 // ---------- memo output ----------
 function orderText(){
@@ -682,6 +714,7 @@ function makePDF(canvases){
 }
 var pdfFile = null;
 $('ok').onclick = async function(){
+  askMe();   // once per phone: the name that shows on the order steps
   $('done').hidden = false; setMode('memo'); B.inv = null; window.scrollTo(0, 0); $('dh').textContent = 'Order memo' + ($('name').value.trim() ? ' · ' + $('name').value.trim() : '');
   $('ds').textContent = 'Preparing…'; $('marks').innerHTML = '';
   memoP = memoRender(); await memoP;
@@ -703,6 +736,7 @@ document.querySelectorAll('.dlnow').forEach(function(b){ b.onclick = function(){
 $('back').onclick = function(){ $('done').hidden = true; };
 $('send').onclick = async function(){
   if (memoP) await memoP; if (!pdfFile) return;
+  ordFromMemo();   // 10 Oct 2026: the memo going out starts its order (step 1 ticked)
   try { if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) { await navigator.share({ files: [pdfFile], text: orderText() }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   var a = document.createElement('a'); a.href = URL.createObjectURL(pdfFile); a.download = pdfFile.name; a.click();
   window.open('https://wa.me/?text=' + encodeURIComponent(orderText()), '_blank');
@@ -1071,7 +1105,7 @@ async function stkRun(op){
   try { await relay('stock', req); }
   catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); stkPaint(s); return; }
   var res = await waitJob(id, 'stock', 8);
-  s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
+  s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; if (res.ok && op === 'sell') ordBillMade(B.inv && B.inv.ref); s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
   applyCards(res.cards || []);
 }
 function applyCards(cs){ if (!RAW) return; var ch = false;     // show the new numbers at once; the full list refreshes within a few minutes
@@ -1738,6 +1772,91 @@ $('ffbody').addEventListener('click', async function(e){
     ffLoad(); }
 });
 window.__ff = { FF: FF, ffText: ffText };
+
+// ----- ORDER TRACKER (Abbas, 10 Oct 2026): every order memo sent becomes an order with 4 steps that staff tick off.
+// 1 memo sent to godown · 2 goods arrived in office · 3 packed completely · 4 sent = bill made + delivery note + sent to customer.
+// Kept on the relay (job "orders"), shared live by every phone; each tick shows who and when. No prices are kept.
+var ORD = { list: null, tab: 'open', open: {}, busy: false, err: '', timer: null };
+var OSTEPS = [['s1', 'Memo sent to godown', 'أرسلت المذكرة إلى المستودع'], ['s2', 'Goods arrived in office', 'وصلت البضاعة إلى المكتب'], ['s3', 'Packed completely', 'تم التغليف بالكامل']];
+var OSUB = [['bill', 'Bill made', 'تم عمل الفاتورة'], ['dn', 'Delivery note given', 'تم تسليم إذن التسليم'], ['sent', 'Bill & goods sent to customer', 'تم الإرسال للعميل']];
+var OKEYS = ['s1', 's2', 's3', 'bill', 'dn', 'sent'];
+function me(){ return ls('sj_me') || ''; }
+function askMe(){ var n = me(); if (!n) { n = (prompt('Your name — it shows who ticked each step · اكتب اسمك') || '').trim().slice(0, 30); if (n) ls('sj_me', n); } return n; }
+async function ordCall(o){
+  o.t = Date.now(); o.dev = devId();
+  var j = await relayJson('orders', o, 3);
+  if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version — Abbas: Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy' : (j.error || 'refused'));
+  if (!Array.isArray(j.orders)) throw new Error('the relay answered without the orders');
+  ORD.list = j.orders; ORD.err = ''; ordBadge(); return j;
+}
+function ordDone(o){ var s = o.steps || {}; return OKEYS.every(function(k){ return s[k]; }); }
+function ordStage(o){ var s = o.steps || {}; return (s.s1 ? 1 : 0) + (s.s2 ? 1 : 0) + (s.s3 ? 1 : 0) + (OSUB.every(function(x){ return s[x[0]]; }) ? 1 : 0); }
+function ordNext(o){ var s = o.steps || {}; for (var i = 0; i < OSTEPS.length; i++) if (!s[OSTEPS[i][0]]) return OSTEPS[i][1]; var left = OSUB.filter(function(x){ return !s[x[0]]; }); return left.length ? left.map(function(x){ return x[1]; }).join(', ') : ''; }
+function ordWhen(t){ var d = new Date(t), h = d.getHours(), m = d.getMinutes(); return d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' · ' + ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' am' : ' pm'); }
+function ordBadge(){ var n = (ORD.list || []).filter(function(o){ return !ordDone(o); }).length; $('ordn').textContent = n ? String(n) : ''; }
+function ordRow(o, k, en, ar, sub){
+  var st = (o.steps || {})[k];
+  return '<button type="button" class="ock' + (st ? ' on' : '') + (sub ? ' sub' : '') + '" data-ok="' + k + '" data-oid="' + esc(o.id) + '"><i>' + (st ? '✓' : '') + '</i><span><b>' + en + '</b><small class="ar">' + ar + '</small>' +
+    (st ? '<em>' + esc(st.by || 'someone') + ' · ' + ordWhen(st.t) + (st.n ? ' · ' + esc(st.n) : '') + '</em>' : '') + '</span></button>';
+}
+function ordDraw(){
+  var el = $('ordbody'), L = ORD.list, h = '';
+  var open = (L || []).filter(function(o){ return !ordDone(o); }), done = (L || []).filter(ordDone);
+  document.querySelector('#ords .otabs [data-o="open"]').innerHTML = 'Open · قيد التنفيذ <b>' + open.length + '</b>';
+  document.querySelector('#ords .otabs [data-o="done"]').innerHTML = 'Complete · مكتمل <b>' + done.length + '</b>';
+  if (ORD.err) h += '<div class="stk bad">Orders: ' + esc(ORD.err) + '</div>';
+  if (!L) { el.innerHTML = h + '<div class="ffempty">' + (ORD.err ? '' : 'Loading orders…') + '</div>'; return; }
+  var show = ORD.tab === 'done' ? done.slice().sort(function(a, b){ return b.done - a.done; }) : open;
+  if (!show.length) h += '<div class="ffempty">' + (ORD.tab === 'done' ? 'No completed orders yet.' : 'No open orders. An order appears here when its memo PDF is sent.') + '</div>';
+  show.forEach(function(o){
+    var stg = ordStage(o), dn = ordDone(o), isOpen = !!ORD.open[o.id], nos = (o.items || []).map(function(x){ return 'SJ-' + x.no; });
+    h += '<div class="ocard' + (dn ? ' done' : '') + '"><button type="button" class="ohd" data-ot="' + esc(o.id) + '"><span class="on1"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + '</small></span>' +
+      '<span class="on2">' + esc(nos.slice(0, 4).join(' · ')) + (nos.length > 4 ? ' +' + (nos.length - 4) : '') + ' · ' + (o.pcs || 0) + ' pcs</span>' +
+      '<span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span>' +
+      '<span class="onx">' + (dn ? '✓ Complete · ' + ordWhen(o.done) : 'Next: ' + esc(ordNext(o))) + '</span></button>';
+    if (isOpen) {
+      h += '<div class="obody">';
+      OSTEPS.forEach(function(s, i){ h += '<div class="ostep"><u>' + (i + 1) + '</u>' + ordRow(o, s[0], s[1], s[2]) + '</div>'; });
+      h += '<div class="ostep"><u>4</u><div class="o4"><div class="o4h">Sent to customer <small class="ar">أرسل للعميل</small></div>' + OSUB.map(function(s){ return ordRow(o, s[0], s[1], s[2], true); }).join('') + '</div></div>';
+      h += '<div class="oitems">' + (o.items || []).map(function(x){ return '<div><b>SJ-' + esc(x.no) + '</b> · ' + x.pcs + ' pcs' + (x.c ? ' <small>(' + esc(x.c) + ')</small>' : '') + (x.row ? ' · <b class="orow">ROW ' + esc(String(x.row).toUpperCase()) + '</b>' : '') + '</div>'; }).join('') +
+        (o.dl ? '<div class="odl">' + esc(o.dl) + '</div>' : '') + '<small>Order made by ' + esc(o.by || 'someone') + ' · ' + ordWhen(o.created) + '</small></div>';
+      if (isBoss()) h += '<button type="button" class="odel" data-od="' + esc(o.id) + '">Delete order</button>';
+      h += '</div>';
+    }
+    h += '</div>';
+  });
+  el.innerHTML = h;
+}
+async function ordLoad(){ if (!RELAY || ORD.busy) return; ORD.busy = true; try { await ordCall({ op: 'list' }); } catch(e){ ORD.err = e.message; } finally { ORD.busy = false; } if (!$('ords').hidden) ordDraw(); }
+function ordOpen(){ $('ords').hidden = false; ordDraw(); ordLoad(); clearInterval(ORD.timer); ORD.timer = setInterval(function(){ if (!$('ords').hidden && !document.hidden) ordLoad(); }, 15000); }
+$('ordbtn').onclick = ordOpen;
+$('ordx').onclick = function(){ $('ords').hidden = true; clearInterval(ORD.timer); };
+$('ordre').onclick = ordLoad;
+document.querySelectorAll('#ords .otabs button').forEach(function(b){ b.onclick = function(){ ORD.tab = b.dataset.o; document.querySelectorAll('#ords .otabs button').forEach(function(x){ x.classList.toggle('on', x === b); }); ordDraw(); }; });
+$('ordbody').addEventListener('click', async function(ev){
+  var t = ev.target.closest('[data-ot]'); if (t) { ORD.open[t.dataset.ot] = !ORD.open[t.dataset.ot]; ordDraw(); return; }
+  var d = ev.target.closest('[data-od]'); if (d) { if (!confirm('Delete this order from the list? (Trello and bills are not touched)')) return; try { await ordCall({ op: 'del', id: d.dataset.od, by: me() }); } catch(e){ ORD.err = e.message; } ordDraw(); return; }
+  var c = ev.target.closest('[data-ok]'); if (!c) return;
+  var o = (ORD.list || []).filter(function(x){ return x.id === c.dataset.oid; })[0]; if (!o) return;
+  var k = c.dataset.ok, was = (o.steps || {})[k], name = askMe();
+  if (was && !confirm('Untick "' + c.querySelector('b').textContent + '"? · إلغاء؟')) return;
+  o.steps = o.steps || {}; o.steps[k] = was ? null : { by: name || 'this phone', t: Date.now() }; ordDraw();   // show the tick at once, then save it
+  try { await ordCall({ op: 'tick', id: o.id, step: k, on: !was, by: name }); } catch(e){ o.steps[k] = was; ORD.err = e.message; }
+  if (ordDone(o) && !was) ORD.open[o.id] = false;
+  ordDraw();
+});
+// the memo just went out: make (or update) its order, with step 1 ticked
+function ordFromMemo(){
+  if (!RELAY) return; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) return;
+  var oid = ls('sj_oid'); if (!oid) { oid = 'o' + Date.now().toString(36) + devId(); ls('sj_oid', oid); }
+  var items = nos.map(function(no){ var d = byNo(no); return { no: shown(no), pcs: designPcs(no), row: rowOf(no), c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs; }).join(', ') }; });
+  var dv = dlv(), dl = [(dv.od || dv.ot) ? 'Office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '', (dv.cd || dv.ct) ? 'Customer/cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : ''].filter(Boolean).join(' · ');
+  ordCall({ op: 'add', id: oid, name: $('name').value.trim(), items: items, pcs: items.reduce(function(a, x){ return a + x.pcs; }, 0), dl: dl, s1: true, by: me() }).catch(function(e){ ORD.err = e.message; });
+}
+// the bill of this memo was included: tick "Bill made" on its order
+function ordBillMade(ref){ var oid = ls('sj_oid'); if (oid && RELAY) ordCall({ op: 'tick', id: oid, step: 'bill', on: true, by: me(), note: ref || '' }).catch(function(){}); }
+setTimeout(ordLoad, 2500);
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && Date.now() - (ORD.last || 0) > 60000) { ORD.last = Date.now(); ordLoad(); } });
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; } };
