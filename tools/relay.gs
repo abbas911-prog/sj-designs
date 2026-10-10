@@ -11,6 +11,8 @@
  *   TRELLO         a Trello token (read is enough) — for the LIVE LIST (job "live") and the READY watcher below
  * Deploy → New deployment → Web app → Execute as: Me · Who has access: Anyone.
  *
+ * ORDER TRACKER (job "orders") keeps the 4-step checklist of every memo order — see orders() below.
+ *
  * READY WATCHER (7 Oct 2026: "if you see any changes in Trello let it trigger right away"):
  * every minute it looks at the READY list (one small Trello call). When a card is added, removed, renamed or gets a new photo,
  * it starts memo-thumbs at once, so the order memo shows it 2–3 minutes later. Run setupWatch() once to switch it on.
@@ -27,6 +29,7 @@ function doPost(e) {
     if (typeof b.req !== 'string' || b.req.length > 20000) return out({ ok: false, error: 'bad request' });
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
     if (b.job === 'live') return live(b.req, P);
+    if (b.job === 'orders') return orders(b.req, P);
     var wf = JOBS[b.job];
     if (!wf) return out({ ok: false, error: 'bad request' });
     if (!gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
@@ -64,6 +67,51 @@ function live(reqText, P) {
     });
   }
   return out({ ok: true, t: new Date().toISOString(), cards: cards });
+}
+// ORDER TRACKER (Abbas, 10 Oct 2026: "four processes for a sale to be done ... checkers, in which I click ... I get to know that
+// this order has been processed by my employee completely"). Each order sent from the memo is kept here (script properties,
+// one per order, ORD_<id>) with 4 steps: 1 memo to godown, 2 goods in office, 3 packed, 4 sent = bill made + delivery note +
+// sent to customer. Every tick records who and when. Only requests signed with the shop password get in (checked above).
+// No prices are stored - only customer, designs and pieces.
+var ORD_STEPS = ['s1', 's2', 's3', 'bill', 'dn', 'sent'];
+function orders(reqText, P) {
+  var req = JSON.parse(reqText);
+  if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  var op = req.op || 'list', now = Date.now();
+  if (op !== 'list') {
+    var lock = LockService.getScriptLock(); lock.waitLock(15000);
+    try {
+      var id = String(req.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40); if (!id) return out({ ok: false, error: 'no order id' });
+      var key = 'ORD_' + id, o = JSON.parse(P.getProperty(key) || 'null'), by = String(req.by || '').slice(0, 40);
+      if (op === 'add') {
+        var items = (Array.isArray(req.items) ? req.items : []).slice(0, 60).map(function (x) { return { no: String(x.no || '').slice(0, 20), pcs: +x.pcs || 0, c: String(x.c || '').slice(0, 80), row: String(x.row || '').slice(0, 20) }; });
+        if (!o) o = { id: id, created: now, by: by, steps: {} };
+        o.name = String(req.name || '').slice(0, 80); o.items = items; o.pcs = +req.pcs || 0; o.dl = String(req.dl || '').slice(0, 160); o.upd = now; o.del = 0;
+        if (req.s1 && !o.steps.s1) o.steps.s1 = { by: by, t: now };
+      } else if (op === 'tick') {
+        if (!o) return out({ ok: false, error: 'that order is not on the list any more' });
+        if (ORD_STEPS.indexOf(req.step) < 0) return out({ ok: false, error: 'bad step' });
+        o.steps[req.step] = req.on ? { by: by, t: now, n: String(req.note || '').slice(0, 60) } : null; o.upd = now;
+        o.done = ORD_STEPS.every(function (k) { return o.steps[k]; }) ? (o.done || now) : 0;
+      } else if (op === 'del') {
+        if (!o) return out({ ok: true, orders: ordList(P) });
+        o.del = now; o.delby = by; o.upd = now;
+      } else return out({ ok: false, error: 'bad request' });
+      P.setProperty(key, JSON.stringify(o));
+    } finally { lock.releaseLock(); }
+  }
+  return out({ ok: true, orders: ordList(P) });
+}
+function ordList(P) {
+  var all = P.getProperties(), list = [], now = Date.now();
+  Object.keys(all).forEach(function (k) {
+    if (k.indexOf('ORD_') !== 0) return;
+    var o; try { o = JSON.parse(all[k]); } catch (e) { return; }
+    // tidy up: deleted orders after 7 days, completed ones after 60 days
+    if ((o.del && now - o.del > 7 * 864e5) || (o.done && now - o.done > 60 * 864e5)) { P.deleteProperty(k); return; }
+    if (!o.del) list.push(o);
+  });
+  return list.sort(function (a, b) { return b.created - a.created; });
 }
 function doGet() { return out({ ok: true, relay: 'sj-memo' }); }
 function hex(bytes) { return bytes.map(function (x) { return ('0' + (x & 255).toString(16)).slice(-2); }).join(''); }
