@@ -1,0 +1,20 @@
+{
+ "id": "smv2iyvtu7go1",
+ "op": "sell",
+ "ref": "INV-0011",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6aca491b4a0bbdd5dcee40aa",
+   "no": "34571",
+   "before": "SJ-34571(1) pcs",
+   "after": "SJ-34571(1) pcs",
+   "left": 0,
+   "lines": [
+    "sample: 1 → 0 (−1)"
+   ],
+   "moved": "moved to FINISH (sample sold)"
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
