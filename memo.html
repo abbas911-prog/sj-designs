@@ -546,7 +546,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-10c';
+var VER = '2026-10-10d';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1490,11 +1490,14 @@ async function costPush(){        // after loading a report on THIS device: lock
   } catch(e){ syncMsg('<span class="miss">Not synced: ' + esc(e.message) + '</span>'); }
 }
 async function costPull(quiet){    // on open: take the newest locked costs if they are newer than this device's
-  try { var r = await fetch('costs.enc?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return; var box = await r.json();
+  // 10 Oct 2026: a network hiccup here used to WIPE the saved owner password (and with it the 50-50 button).
+  // Now only a real wrong-password failure clears it; a failed download just tries again next time.
+  var box; try { var r = await fetch('costs.enc?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return; box = await r.json(); } catch(e){ return; }
+  try {
     var mine = COST && COST.t ? COST.t : 0;
     if (!pinGet()) { if (box.t > mine) syncMsg('Costs from the report of ' + esc(box.d) + ' are waiting — enter your owner password above to use them on this device.'); return; }
     if (box.t <= mine) { if (!quiet) syncMsg('✓ This device has the latest costs (report ' + esc(COST.d) + ').'); return; }
-    var c = await costUnlock(box, pinGet()); c.t = box.t; COST = c; ls('sj_costs', JSON.stringify(COST)); costInfo(); catPrices();
+    var c; try { c = await costUnlock(box, pinGet()); } catch(e){ if (e && e.name === 'OperationError') throw e; return; } c.t = box.t; COST = c; ls('sj_costs', JSON.stringify(COST)); costInfo(); catPrices();
     syncMsg('✓ Costs updated from your other device: report ' + esc(COST.d) + ', ' + Object.keys(COST.c).length + ' designs.'); ownerUI();
   } catch(e){ ls('sj_owner_pin', null); ownerUI(); $('cpin').placeholder = 'at least 8 characters'; syncMsg('<span class="miss">Synced costs could not be opened — that owner password does not match the one used on your other device. Type it again.</span>'); }
 }
