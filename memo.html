@@ -309,13 +309,14 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 #dor{position:fixed;inset:0;z-index:57;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
 #dor .in{background:var(--bg);width:100%;max-width:720px;border-radius:24px 24px 0 0;padding:16px 12px calc(22px + env(safe-area-inset-bottom));max-height:94vh;max-height:94dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 #dor .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#dor .hd b{letter-spacing:.12em;color:var(--mute);font-size:13px}#dor .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700}
-.dorseg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:#EAE3D7;border-radius:14px;padding:3px;margin-bottom:10px}
+.dorseg{display:grid;grid-template-columns:repeat(2,1fr);gap:3px;background:#EAE3D7;border-radius:14px;padding:3px;margin-bottom:10px}
 .dorseg button{border:0;background:none;border-radius:11px;padding:8px 2px;font:inherit;font-weight:800;font-size:13.5px;color:var(--mute)}.dorseg button small{display:block;font-weight:500;font-size:10.5px}
 .dorseg button.on{background:#fff;color:var(--gold);box-shadow:0 1px 3px rgba(40,30,15,.14)}
 .dorf{background:#fff;border-radius:16px;box-shadow:var(--sh);padding:12px;display:grid;gap:8px}
 .dorf input:not([type=checkbox]),.dorf textarea{width:100%;min-width:0;height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px;background:#fff}
 .dorf textarea{height:64px;padding:8px 10px}
 .dorno{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.dorus{display:flex;align-items:center;gap:10px;background:#F6F1E7;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14.5px;font-weight:800}.dorus input{width:22px;height:22px;flex:none}.dorus small{display:block;font-weight:500;font-size:11.5px;color:var(--mute)}.dorus.on{border-color:var(--gold);background:#fff8ea}
 .dorchk{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;white-space:nowrap}.dorchk input{width:20px;height:20px}
 .dorlabs{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center}
 .dorhint{font-size:12.5px;color:var(--mute);line-height:1.35}.dorhint a{color:var(--gold);font-weight:700}
@@ -374,11 +375,12 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 <div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="doropen" class="ffbig">NEW DESIGN ORDER<small>Trello card + factory Slack · instead of #order-2</small></button><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><button type="button" id="svopen" class="ffbig">SMALL VENDORS<small>office expenses · opening balances · kept in the cloud</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
 <div id="ff" hidden><div class="in"><div class="hd"><b>50-50 BILLS</b><span><button type="button" id="ffre">↻</button><button type="button" id="ffx">Close</button></span></div><div id="ffbody"></div></div></div>
 <div id="dor" hidden><div class="in"><div class="hd"><b>NEW DESIGN ORDER</b><button type="button" id="dorx">Close</button></div>
-<div class="dorseg"><button type="button" data-dm="alm" class="on">Normal<small>ALM START · #cutting</small></button><button type="button" data-dm="hand">Hand work<small>Usman · #usmancutting</small></button><button type="button" data-dm="out">Outsourced<small>name · #emaan</small></button></div>
+<div class="dorseg"><button type="button" data-dm="alm" class="on">Normal<small>ALM START · #cutting</small></button><button type="button" data-dm="out">Outsourced<small>name · #emaan</small></button></div>
 <div class="dorf">
 <div id="dorout" hidden><div class="svg2"><input id="dorperson" placeholder="Person (e.g. ALI)" autocomplete="off"><input id="dorcost" inputmode="decimal" placeholder="COST"></div><input id="dorsale" inputmode="decimal" placeholder="SALE"></div>
 <div id="dornorow" class="dorno"><input id="dorno" inputmode="text" autocomplete="off" placeholder="Design number (e.g. 41862)"><label class="dorchk"><input type="checkbox" id="dorfresh"> /N new fabric</label></div>
 <div id="dorfind" class="dorhint"></div>
+<label class="dorus" id="dorusrow"><input type="checkbox" id="dorus"><span>+ USMAN HAND WORK<small>same card also on USMAN board → ORDER · Slack #cutting + #usmancutting</small></span></label>
 <div class="svg2"><input id="dorpcs" autocomplete="off" placeholder="Pieces (e.g. 96) or OP"><input id="dorcol" autocomplete="off" placeholder="Colours (e.g. 6)" class="dorcol"></div>
 <div id="dorcolrow"><input id="dorsize" autocomplete="off" placeholder="Size (e.g. M,L,XL,XXL (ALL SILVER))"></div>
 <div id="dorlabs" class="dorlabs"><label class="dorchk"><input type="checkbox" id="dorrate"> RATE</label><label class="dorchk"><input type="checkbox" id="dorhis"> HISAAB</label><input id="dorcust" autocomplete="off" placeholder="Customer label (optional)"></div>
@@ -651,7 +653,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-11a';
+var VER = '2026-10-11b';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -2077,7 +2079,7 @@ async function memoSlack(file, again){
 // ----- NEW DESIGN ORDER (Abbas, 11 Oct 2026): the #order-2 process inside the app, owner only.
 // One order = order line + photos + voice notes + videos -> Trello card (copy of the newest ALM card, a fresh /N card, or an
 // outsourced US- card) + ONE factory Slack message with every file + "SJ-x SAMPLE" in #samplesneed. Done by the relay (job "dorder").
-var DOR = { mode: 'alm', fresh: false, media: [], src: null, findT: null, busy: false, run: null, nameEdited: false, rec: null };
+var DOR = { mode: 'alm', usman: false, fresh: false, media: [], src: null, findT: null, busy: false, run: null, nameEdited: false, rec: null };
 var DOR_MAX = 17 * 1024 * 1024;                           // per file: the relay takes up to ~25 MB of text per request
 async function dorCall(o, tries){ o.t = Date.now(); o.dev = devId(); o.chk = await svChk(); var j = await relayJson('dorder', o, tries || 2);
   if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version — Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy' : (j.error || 'refused')); return j; }
@@ -2093,24 +2095,26 @@ function dorSyncName(){ if (!DOR.nameEdited) $('dorname').value = dorName(); }
 function dorDraw(){
   var m = DOR.mode;
   document.querySelectorAll('#dor [data-dm]').forEach(function(b){ b.classList.toggle('on', b.dataset.dm === m); });
+  $('dorusrow').hidden = m === 'out'; $('dorus').checked = DOR.usman && m !== 'out'; $('dorusrow').classList.toggle('on', DOR.usman && m !== 'out');
   $('dorout').hidden = m !== 'out'; $('dornorow').hidden = m === 'out'; $('dorlabs').hidden = m === 'out'; $('dorcolrow').hidden = m === 'out';
   if (DOR.fresh) { $('dorrate').checked = true; $('dorhis').checked = true; }
   dorSyncName(); dorMedia(); dorFindShow();
 }
 function dorFindShow(){
   var el = $('dorfind'); if (DOR.mode === 'out') { el.innerHTML = 'A new <b>US-#####</b> card goes on USMAN HAND WORK → ORDER, with the person\'s label, COST and SALE. Slack: #emaan only.'; return; }
-  if (DOR.fresh) { el.innerHTML = '<b>/N</b> — a fresh SJ number is made when you send. New card on ALM START with RATE + HISAAB, your design photo as the cover.'; return; }
-  var s = DOR.src;
+  var us = DOR.usman ? ' + USMAN HAND WORK · ORDER' : '';
+  if (DOR.fresh) { el.innerHTML = '<b>/N</b> — a fresh SJ number is made when you send. New card on ALM START' + (DOR.usman ? ' and on USMAN HAND WORK · ORDER' : '') + ' with RATE + HISAAB, your design photo as the cover.'; return; }
+  var s = DOR.src, kw = DOR.w && DOR.w.write === false ? '<br><span class="miss">⚠ The relay\'s Trello key (' + esc(DOR.w.key) + ') can only READ — Send will stop. Add TRELLO_W (a read + write token) in the relay\'s Script properties.</span>' : '';
   if (!dorV('dorno')) el.innerHTML = 'Type the design number — the newest ALM card for it is copied (custom fields + design picture).';
   else if (s === 'wait') el.innerHTML = 'Looking for the ALM card…';
   else if (s && s.err) el.innerHTML = '<span class="miss">' + esc(s.err) + '</span>';
   else if (s) el.innerHTML = '✓ Will copy: <a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.name) + '</a> · made ' + new Date(s.made).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) +
-    ' → ' + (DOR.mode === 'hand' ? 'USMAN HAND WORK · ORDER' : 'ALM · START');
+    ' → ALM · START' + us + kw;
   else el.innerHTML = '<span class="miss">No ALM card found for SJ-' + esc(dorV('dorno')) + '. Tick /N if it is a new fabric, or check the number.</span>';
 }
 function dorFind(){
   clearTimeout(DOR.findT); var no = dorV('dorno').replace(/^SJ-?/i, ''); DOR.src = no ? 'wait' : null; dorFindShow(); if (!no || DOR.fresh) return;
-  DOR.findT = setTimeout(async function(){ try { var j = await dorCall({ op: 'find', no: no }); if (dorV('dorno').replace(/^SJ-?/i, '') !== no) return; DOR.src = j.card; }
+  DOR.findT = setTimeout(async function(){ try { var j = await dorCall({ op: 'find', no: no }); if (dorV('dorno').replace(/^SJ-?/i, '') !== no) return; DOR.src = j.card; DOR.w = j.w || null; }
     catch(e){ DOR.src = { err: 'Could not check Trello: ' + e.message }; } dorFindShow(); }, 700);
 }
 function dorMedia(){
@@ -2186,7 +2190,7 @@ async function dorSend(){
     try { var pr = v.play(); if (pr && pr.then) pr.then(function(){ v.pause(); }).catch(function(){}); } catch(e){} } });
   if (!confirm('Send this order now? It goes to Trello and the factory Slack.')) return;
   DOR.busy = true; $('dorsend').disabled = true;
-  var run = DOR.run && DOR.run.sig === dorName() + DOR.media.length ? DOR.run : (DOR.run = { oid: 'd' + Date.now().toString(36) + devId(), sig: dorName() + DOR.media.length, no: null, card: null, sent: {} });
+  var run = DOR.run && DOR.run.sig === dorName() + DOR.media.length + (DOR.usman && m !== 'out') ? DOR.run : (DOR.run = { oid: 'd' + Date.now().toString(36) + devId(), sig: dorName() + DOR.media.length + (DOR.usman && m !== 'out'), no: null, card: null, sent: {} });
   var lines = [];
   function show(extra){ dorProg(lines.join('<br>') + (extra ? '<br>' + extra : '')); }
   try {
@@ -2199,9 +2203,9 @@ async function dorSend(){
     var shownNo = m === 'out' ? run.no : 'SJ-' + run.no;
     var name = $('dorname').value.trim().replace(/US-\(new number\)|SJ-\(new number\)/, shownNo) || dorName().replace(/US-\(new number\)|SJ-\(new number\)/, shownNo);
     lines = ['Number: <b>' + esc(shownNo) + '</b>']; lines.push('Trello card…'); show();
-    var j = await dorCall({ op: 'card', oid: run.oid, mode: m, fresh: fresh, no: run.no, src: DOR.src && DOR.src.id, name: name, rate: $('dorrate').checked, hisaab: $('dorhis').checked,
+    var j = await dorCall({ op: 'card', oid: run.oid, mode: m, usman: m !== 'out' && DOR.usman, fresh: fresh, no: run.no, src: DOR.src && DOR.src.id, name: name, rate: $('dorrate').checked, hisaab: $('dorhis').checked,
       customer: dorV('dorcust'), person: dorV('dorperson'), cost: dorV('dorcost'), sale: dorV('dorsale') });
-    run.card = j.card; lines[lines.length - 1] = '✓ Trello card: <a href="' + esc(j.card.url) + '" target="_blank" rel="noopener">' + esc(j.card.name) + '</a>'; (j.notes || []).forEach(function(n){ lines.push('<span class="miss">' + esc(n) + '</span>'); }); show();
+    run.card = j.card; lines[lines.length - 1] = '✓ Trello card: <a href="' + esc(j.card.url) + '" target="_blank" rel="noopener">' + esc(j.card.name) + '</a>' + (j.ucard ? '<br>✓ USMAN HAND WORK card: <a href="' + esc(j.ucard.url) + '" target="_blank" rel="noopener">' + esc(j.ucard.name) + '</a>' : ''); (j.notes || []).forEach(function(n){ lines.push('<span class="miss">' + esc(n) + '</span>'); }); show();
     var order = DOR.media.map(function(x, i){ return { x: x, i: i }; }).sort(function(a, b){ var r = function(o){ return o.x.design ? 0 : o.x.kind === 'photo' ? 1 : o.x.kind === 'voice' ? 2 : 3; }; return r(a) - r(b) || a.i - b.i; });
     for (var q = 0; q < order.length; q++){
       var x = order[q].x; if (x.sent) continue; var blob = x.blob, mime = x.mime, fname = x.name;
@@ -2214,21 +2218,22 @@ async function dorSend(){
     lines.push('✓ ' + order.length + ' file' + (order.length === 1 ? '' : 's') + ' uploaded'); show('Posting to the factory Slack…');
     var sep = '//////////////////////', txt = [sep, '', j.card.name];
     if (m !== 'out') { if ($('dorrate').checked) txt.push('RATE'); if ($('dorhis').checked) txt.push('HISAAB'); }
-    dorV('dornotes').split('\n').forEach(function(l){ if (l.trim()) txt.push(l.trim()); }); txt.push(j.card.url);
+    dorV('dornotes').split('\n').forEach(function(l){ if (l.trim()) txt.push(l.trim()); }); txt.push(j.card.url); if (j.ucard) txt.push('USMAN: ' + j.ucard.url);
     var sj = await dorCall({ op: 'send', oid: run.oid, text: txt.join('\n'), sample: shownNo + ' SAMPLE' });
-    lines.push('✓ Posted to ' + (m === 'out' ? '#emaan' : m === 'hand' ? '#cutting + #usmancutting' : '#cutting') + (m === 'out' ? '' : ' and #samplesneed'));
+    lines.push('✓ Posted to ' + (m === 'out' ? '#emaan' : j.ucard ? '#cutting + #usmancutting' : '#cutting') + (m === 'out' ? '' : ' and #samplesneed'));
     show('<b class="okc">Done ✓</b>');
     DOR.run = null; DOR.media = []; DOR.nameEdited = false; ['dorno', 'dorpcs', 'dorcol', 'dorsize', 'dorcust', 'dornotes', 'dorperson', 'dorcost', 'dorsale'].forEach(function(id){ $(id).value = ''; });
-    DOR.fresh = false; $('dorfresh').checked = false; $('dorrate').checked = false; $('dorhis').checked = false; DOR.src = null; dorDraw(); dorLog();
+    DOR.fresh = false; DOR.usman = false; $('dorfresh').checked = false; $('dorrate').checked = false; $('dorhis').checked = false; DOR.src = null; dorDraw(); dorLog();
   } catch(e){ show('<span class="miss">Stopped: ' + esc(e.message) + '</span> — press <b>Send order</b> again to carry on from here (nothing is sent twice).'); }
   finally { DOR.busy = false; $('dorsend').disabled = false; }
 }
 async function dorLog(){ try { var j = await dorCall({ op: 'list' }); $('dorlog').innerHTML = (j.log || []).length ? '<div class="ffs">Sent from the app</div>' + j.log.map(function(x){
-  return '<div class="dorl"><a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><small>' + ordWhen(x.t) + ' · ' + (x.mode === 'out' ? '#emaan' : x.mode === 'hand' ? '#cutting + #usmancutting' : '#cutting') + ' · ' + x.files + ' file' + (x.files === 1 ? '' : 's') + '</small></div>'; }).join('') : ''; } catch(e){} }
+  return '<div class="dorl"><a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><small>' + ordWhen(x.t) + ' · ' + (x.mode === 'out' ? '#emaan' : x.usman || x.mode === 'hand' ? '#cutting + #usmancutting' : '#cutting') + ' · ' + x.files + ' file' + (x.files === 1 ? '' : 's') + '</small></div>'; }).join('') : ''; } catch(e){} }
 function dorOpen(){ if (!isBoss()) return; $('mysheet').hidden = true; $('dor').hidden = false; dorDraw(); dorLog(); }
 $('doropen').onclick = dorOpen;
 $('dorx').onclick = function(){ $('dor').hidden = true; };
 document.querySelectorAll('#dor [data-dm]').forEach(function(b){ b.onclick = function(){ DOR.mode = b.dataset.dm; if (DOR.mode === 'out') DOR.fresh = false; dorDraw(); if (DOR.mode !== 'out') dorFind(); }; });
+$('dorus').onchange = function(){ DOR.usman = this.checked; dorDraw(); };
 $('dorfresh').onchange = function(){ DOR.fresh = this.checked; if (!DOR.fresh) { $('dorrate').checked = false; $('dorhis').checked = false; } dorDraw(); if (!DOR.fresh) dorFind(); };
 $('dorno').addEventListener('input', function(){ dorSyncName(); dorFind(); });
 ['dorpcs', 'dorcol', 'dorsize'].forEach(function(id){ $(id).addEventListener('input', dorSyncName); });
