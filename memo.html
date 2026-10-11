@@ -347,6 +347,13 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .svf button.gold{height:46px;border:0;border-radius:12px;background:var(--gold);color:#fff;font:inherit;font-weight:800}
 .svk{display:grid;grid-template-columns:1fr 1fr;gap:6px}.svk button{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:8px;font:inherit;font-weight:700;font-size:14px}.svk button small{display:block;font-weight:400}
 .svk button.on{border-color:var(--gold);background:var(--goldbg);color:var(--gold)}
+.bcust{font-size:13px;line-height:1.45;color:var(--mute);margin:-2px 2px 10px;padding:8px 10px;background:#fff;border-radius:12px;box-shadow:var(--sh)}.bcust:empty{display:none}.bcust b{color:var(--ink)}.bcust .miss{display:block}
+#cbopen[hidden],#cb[hidden]{display:none}
+#cb{position:fixed;inset:0;z-index:56;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
+#cb .in{background:var(--bg);width:100%;max-width:720px;border-radius:24px 24px 0 0;padding:16px 12px calc(22px + env(safe-area-inset-bottom));max-height:94vh;max-height:94dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#cb .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cb .hd b{letter-spacing:.12em;color:var(--mute);font-size:13px}#cb .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700}
+#cbq{width:100%;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px;margin-bottom:8px;background:#fff}
+.cbsheet{display:block;text-align:center;font-size:13px;color:var(--gold);font-weight:700;margin:8px 0 2px}
 .svback{border:0;background:none;color:var(--gold);font:inherit;font-weight:700;padding:0 2px 8px}
 .svt{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;font-size:12.5px;box-shadow:var(--sh)}
 .svt th{font-size:10.5px;color:var(--mute);text-align:right;padding:7px 5px;border-bottom:1px solid var(--line)}.svt td{padding:7px 5px;border-bottom:1px solid #f0ebe3;text-align:right;white-space:nowrap}
@@ -372,7 +379,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
   <div id="load" hidden>Loading READY list…</div>
   <div id="feed"></div>
 </main>
-<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="doropen" class="ffbig">NEW DESIGN ORDER<small>Trello card + factory Slack · instead of #order-2</small></button><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><button type="button" id="svopen" class="ffbig">SMALL VENDORS<small>office expenses · opening balances · kept in the cloud</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
+<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="doropen" class="ffbig">NEW DESIGN ORDER<small>Trello card + factory Slack · instead of #order-2</small></button><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><button type="button" id="cbopen" class="ffbig">CUSTOMER BALANCES<small>opening balance once · every sale and receipt continues from it</small></button><button type="button" id="svopen" class="ffbig">SMALL VENDORS<small>office expenses · opening balances · kept in the cloud</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
 <div id="ff" hidden><div class="in"><div class="hd"><b>50-50 BILLS</b><span><button type="button" id="ffre">↻</button><button type="button" id="ffx">Close</button></span></div><div id="ffbody"></div></div></div>
 <div id="dor" hidden><div class="in"><div class="hd"><b>NEW DESIGN ORDER</b><button type="button" id="dorx">Close</button></div>
 <div class="dorseg"><button type="button" data-dm="alm" class="on">Normal<small>ALM START · #cutting</small></button><button type="button" data-dm="out">Outsourced<small>name · #emaan</small></button></div>
@@ -393,6 +400,8 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 <div id="dorprog" class="dorprog"></div>
 <div id="dorlog"></div>
 </div></div>
+<div id="cb" hidden><div class="in"><div class="hd"><b>CUSTOMER BALANCES · أرصدة العملاء</b><button type="button" id="cbx">Close</button></div><div id="cbbody"></div></div></div>
+<datalist id="custnames"></datalist>
 <div id="sv" hidden><div class="in"><div class="hd"><b>SMALL VENDORS · موردين صغار</b><button type="button" id="svx">Close</button></div><div id="svbody"></div></div></div>
 <div id="ords" hidden><div class="in"><div class="hd"><b>ORDERS · الطلبات</b><span><button type="button" id="ordre">↻</button><button type="button" id="ordx">Close</button></span></div><div class="otabs"><button type="button" data-o="open" class="on">Open</button><button type="button" data-o="done">Complete</button></div><div id="ordbody"></div></div></div>
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
@@ -653,7 +662,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-11b';
+var VER = '2026-10-11c';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -912,6 +921,7 @@ function drawForm(){
   var k = B.mode, d = B[k] || (B[k] = freshDoc(k)), f = $('bform'), co = coGet(), h = '';
   var who = k === 'inv' ? 'Bill to · العميل' : (k === 'rv' ? 'Received from · استلمنا من' : 'Paid to · دفعنا إلى');
   h += '<div class="bgrid">' + field(who, inp('name', d.name)) + field((k === 'inv' ? 'Invoice no.' : 'Voucher no.') + ' · رقم', inp('ref', d.ref)) + field('Date · التاريخ', inp('date', d.date, 'date')) + '</div>';
+  if (k !== 'pv') h += '<div class="bcust" id="bcust"></div>';
   if (k === 'inv') {
     var c = invCalc(d);
     if (!c.lines.length) h += '<p class="bwarn">No designs selected. Go back, pick the designs and colours, then open Invoice. · اختر التصاميم أولاً</p>';
@@ -937,6 +947,7 @@ function drawForm(){
   }
   h += '<details class="bco"><summary>Company details on bills · بيانات الشركة</summary>' + field('Company name', '<input data-co="name" value="' + co.name.replace(/"/g, '&quot;') + '">') + field('Address / phone', '<input data-co="line" value="' + co.line.replace(/"/g, '&quot;') + '">') + field('TRN (for VAT invoices)', '<input data-co="trn" value="' + co.trn.replace(/"/g, '&quot;') + '" inputmode="numeric">') + '</details>';
   f.innerHTML = h; drawDyn();
+  if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); if (d.name && d.cust === undefined) custLook(); }
 }
 function row(k2, v2, cls){ return '<div class="br ' + (cls || '') + '"><span>' + k2 + '</span><span>' + amt(v2) + ' AED</span></div>'; }
 function drawDyn(){   // only the figures change while typing; the boxes being typed in are never rebuilt
@@ -953,7 +964,9 @@ function onForm(e){
   else if (t.dataset.p) { var v = parseFloat(t.value); if (v > 0) prices[t.dataset.p] = v; else delete prices[t.dataset.p]; refresh(); }
   else if (t.dataset.x != null) { d.extras[+t.dataset.x][t.dataset.f] = t.value; }
   else if (t.dataset.mn != null) { (d.man = d.man || [])[+t.dataset.mn][t.dataset.f] = t.value; }
-  else if (t.dataset.k) { d[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value; }
+  else if (t.dataset.k) { d[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value;
+    if (k !== 'pv' && t.dataset.k === 'open') { d.openTyped = true; custHint(); }
+    if (k !== 'pv' && t.dataset.k === 'name' && (d.name || '').trim().toUpperCase() !== (d.lookName || '')) { d.cust = undefined; d.saved = null; clearTimeout(CU.t); CU.t = setTimeout(custLook, 700); custHint(); } }
   else return;
   if (t.type === 'checkbox') { redraw(); return; }
   if (e.type === 'change' && t.tagName !== 'SELECT') return;
@@ -1065,10 +1078,13 @@ $('bform').addEventListener('click', function(e){ var d = B[B.mode];
   if (e.target.dataset.rmm != null) { d.man.splice(+e.target.dataset.rmm, 1); redraw(); }
   if (e.target.dataset.rm != null) { d.extras.splice(+e.target.dataset.rm, 1); if (!d.extras.length) d.extras.push({ d: '', a: '' }); redraw(); } });
 $('dsend').onclick = async function(){
-  var k = B.mode, d = B[k]; if (!d) return; clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
-  var f = B.pdf, txt = docText(k, d);
-  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
-  var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click();
+  var k = B.mode, d = B[k]; if (!d) return;
+  if (k === 'rv' && !custBefore(k, d)) return;
+  clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
+  var f = B.pdf, txt = docText(k, d), done = false;
+  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); done = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  if (!done) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+  if (k === 'rv') custAfter(k, d);      // a receipt counts once it is sent; an invoice only on Include & share
 };
 // INCLUDE & SHARE (Abbas, 7 Oct 2026): an invoice can still change (discount, add, less, other colour), so a plain Send PDF never touches stock.
 // Only "Include & share" shares the final invoice AND takes its pieces off Trello.
@@ -1078,16 +1094,18 @@ $('dinc').onclick = async function(){
   var hasMan = manLines(d).length > 0;
   if (!lines.length && !hasMan) { alert('No designs on this invoice.'); return; }
   if (s && (s.st === 'ok' || s.st === 'busy')) { alert(d.ref + ' is already included — its pieces were taken off Trello. To change it: press Undo first, then Include again.'); return; }
+  if (!custBefore('inv', d)) return;
   if (!confirm('Include ' + d.ref + ': share it' + (pcs ? ' and take ' + pcs + ' pcs off Trello?' : ' (typed lines only — nothing comes off Trello)?'))) return;
   keepNo('inv', d.ref);
   var f = B.pdf, txt = docText('inv', d), shared = false;
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+  custAfter('inv', d);
   stkRun('sell');
 };
 $('dcopy').onclick = async function(){ var t = docText(B.mode, B[B.mode]); try { await navigator.clipboard.writeText(t); $('dcopy').textContent = 'Copied ✓'; setTimeout(function(){ $('dcopy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', t); } };
 $('dnew').onclick = function(){ var k = B.mode; keepNo(k, B[k].ref); B[k] = freshDoc(k); redraw(); stkShow(); };
-$('bills').onclick = function(){ $('done').hidden = false; window.scrollTo(0, 0); setMode(Object.keys(state).length ? 'inv' : 'rv'); };
+$('bills').onclick = function(){ custNames(); custFlush(); $('done').hidden = false; window.scrollTo(0, 0); setMode(Object.keys(state).length ? 'inv' : 'rv'); };
 
 // ---------- stock off Trello when an invoice is sent · catalogue builder (Abbas, 7 Oct 2026) ----------
 // Both run as GitHub jobs (memo-stock / memo-catalog). The memo cannot hold the GitHub key, so it asks the relay
@@ -1182,7 +1200,7 @@ async function stkRun(op){
   try { await relay('stock', req); }
   catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); stkPaint(s); return; }
   var res = await waitJob(id, 'stock', 8);
-  s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; if (res.ok && op === 'sell') ordBillMade(B.inv && B.inv.ref); s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
+  s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; if (res.ok && op === 'sell') ordBillMade(B.inv && B.inv.ref); if (res.ok && op === 'return' && B.inv) custVoid(B.inv); s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
   applyCards(res.cards || []);
 }
 function applyCards(cs){ if (!RAW) return; var ch = false;     // show the new numbers at once; the full list refreshes within a few minutes
@@ -1198,7 +1216,7 @@ $('stk').addEventListener('click', function(e){ var b = e.target.closest('button
 var CAT = { items: [], modes: {}, busy: false };
 function isOwner(){ return ls('sj_owner') === '1'; }
 function isBoss(){ return isOwner() && !!COST && !!pinGet(); }   // 10 Oct 2026 (Abbas): staff phones with the catalogue on must NOT see 50-50 or cost check
-function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('doropen').hidden = !bo; if (!bo && $('dor')) $('dor').hidden = true; $('svopen').hidden = !bo; $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
+function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('doropen').hidden = !bo; if (!bo && $('dor')) $('dor').hidden = true; $('svopen').hidden = !bo; $('cbopen').hidden = !bo; if (!bo && $('cb')) $('cb').hidden = true; $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
 (function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
   function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
   function stop(){ clearTimeout(t); }
@@ -2247,6 +2265,106 @@ $('dormedia').addEventListener('click', function(ev){
 });
 $('dorsend').onclick = dorSend;
 window.__dor = { shrink: dorShrink };
+
+// ----- CUSTOMER BALANCES (Abbas, 11 Oct 2026): "save the opening balances within the app ... when I make a receipt of a particular
+// customer once with the given opening balance, you should continue from there on, be it sales or receipt, from now onwards".
+// Kept by the relay (job "cust") in one Google Sheet in his Drive. The first invoice / receipt for a name sets its opening balance
+// (what was typed as Old balance / Opening balance); after that the box fills itself with the balance from the app.
+// An invoice counts on Include & share (Send PDF stays a draft), a receipt when it is sent. Undo on an invoice takes its line out.
+// Sending the same invoice / receipt number again replaces its line (never counted twice).
+var CU = { t: null, list: null, view: '', q: '' };
+async function custCall(o, tries){ o.t = Date.now(); o.dev = devId(); if (isBoss()) o.chk = await svChk(); var j = await relayJson('cust', o, tries || 3);
+  if (!j.ok) throw new Error(j.error === 'bad request' && o.op !== 'post' ? 'the relay needs its new version — Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy' : (j.error || 'refused')); return j; }
+function custId(k, d){ return (k === 'inv' ? 'inv' : 'rv') + ':' + d.ref + ':' + devId(); }
+function custHint(){
+  var k = B.mode, d = B[k], el = $('bcust'); if (!el || !d || k === 'pv') return;
+  var nm = (d.name || '').trim(), h = '';
+  if (!nm) h = 'Type the customer\'s name — their balance in the app fills the ' + (k === 'inv' ? 'old balance' : 'opening balance') + ' by itself.';
+  else if (d.saved) h = '<b class="okc">✓ Saved to the app — ' + esc(d.saved.name) + '\'s balance is now ' + amt(d.saved.bal) + ' AED</b><br><small>' + (k === 'inv' ? 'Old balance' : 'Opening') + ' on this ' + (k === 'inv' ? 'invoice' : 'receipt') + ': ' + amt(n2(d.open)) + ' · sending it again replaces it, never counts it twice.</small>';
+  else if (d.cust === undefined) h = 'Looking up ' + esc(nm) + '\'s balance…';
+  else if (d.cust && d.cust.err) h = '<span class="miss">Balance not checked: ' + esc(d.cust.err) + '</span>';
+  else if (d.cust && d.cust.found) { h = '✓ <b>' + esc(d.cust.name) + '</b> — balance in the app: <b>' + amt(d.cust.bal) + ' AED</b> (' + d.cust.n + ' entr' + (d.cust.n === 1 ? 'y' : 'ies') + ').';
+    if (Math.abs(n2(d.open) - d.cust.bal) > 0.004) h += '<span class="miss">You typed ' + amt(n2(d.open)) + ' — on ' + (k === 'inv' ? 'Include & share' : 'Send') + ' you\'ll be asked to change their balance to it.</span>'; }
+  else h = 'New customer — the ' + (k === 'inv' ? 'old balance' : 'opening balance') + ' you type becomes <b>' + esc(nm) + '</b>\'s opening balance in the app.';
+  if (nm && k === 'inv' && !d.saved) h += ' <small>Saved to the balance on <b>Include & share</b> (Send PDF is only a draft).</small>';
+  if (d.saveErr) h += '<span class="miss">Not saved to the balance yet (' + esc(d.saveErr) + ') — it will be sent again automatically.</span>';
+  el.innerHTML = h;
+}
+async function custLook(){
+  var k = B.mode, d = B[k]; if (!d || k === 'pv') return; var nm = (d.name || '').trim();
+  if (!nm) { d.cust = null; custHint(); return; }
+  d.lookName = nm.toUpperCase();
+  try { var j = await custCall({ op: 'get', name: nm, except: custId(k, d) });
+    if (B[k] !== d || (d.name || '').trim() !== nm) return;
+    d.cust = j.found ? { found: true, name: j.name, bal: j.bal, n: j.n } : { found: false };
+    if (j.found && !d.openTyped && !d.saved) { d.open = String(j.bal); var oi = document.querySelector('#bform input[data-k="open"]'); if (oi && B.mode === k) oi.value = d.open; drawDyn(); soon(); }
+  } catch(e){ if (B[k] === d) d.cust = { err: e.message }; }
+  if (B.mode === k) custHint();
+}
+function custBefore(k, d){     // ask before changing a known customer's balance; false = stop the send
+  var nm = (d.name || '').trim(); d.adj = 0;
+  if (nm && d.cust === undefined) { alert('Still checking ' + nm + '\'s balance — press again in a second.'); if (!CU.t) custLook(); return false; }
+  if (!nm || !d.cust || !d.cust.found) return true;
+  var diff = Math.round((n2(d.open) - d.cust.bal) * 100) / 100; if (Math.abs(diff) < 0.005) return true;
+  if (confirm(d.cust.name + '\'s balance in the app is ' + amt(d.cust.bal) + ' AED, but this ' + (k === 'inv' ? 'invoice' : 'receipt') + ' shows ' + amt(n2(d.open)) + ' AED.\n\nOK = change their balance to ' + amt(n2(d.open)) + ' (an adjustment line of ' + amt(diff) + ' is added).\nCancel = go back and use ' + amt(d.cust.bal) + '.')) { d.adj = diff; return true; }
+  d.open = String(d.cust.bal); d.openTyped = false; redraw(); return false;
+}
+function custQ(v){ if (v === undefined) { try { return JSON.parse(ls('sj_custq') || '[]'); } catch(e){ return []; } } ls('sj_custq', JSON.stringify(v)); }
+async function custSend(o){ try { var j = await custCall(Object.assign({}, o)); custQ(custQ().filter(function(x){ return x.id !== o.id; })); return j; }
+  catch(e){ var q = custQ().filter(function(x){ return x.id !== o.id; }); q.push(o); custQ(q); throw e; } }
+async function custFlush(){ var q = custQ(); for (var i = 0; i < q.length; i++) { try { await custCall(Object.assign({}, q[i])); custQ(custQ().filter(function(x){ return x.id !== q[i].id; })); } catch(e){ return; } } }
+async function custAfter(k, d){
+  var nm = (d.name || '').trim(); if (!nm) return;
+  var by = ls('sj_me') || '', base = { name: nm, date: d.date, by: by, open: n2(d.open) }, last = null; d.saveErr = ''; d.saved = null; custHint();
+  try {
+    if (d.adj) last = await custSend(Object.assign({ op: 'post', id: 'adj:' + d.ref + ':' + devId(), type: 'adj', ref: d.ref + ' adjust', adj: d.adj }, base));
+    if (k === 'inv') { var c = invCalc(d); last = await custSend(Object.assign({ op: 'post', id: custId(k, d), type: 'inv', ref: d.ref, sale: c.total, recv: c.paid }, base)); }
+    else last = await custSend(Object.assign({ op: 'post', id: custId(k, d), type: 'rv', ref: d.ref, recv: vchCalc(d).amount, note: d.note || '' }, base));
+    d.saved = { name: last.name, bal: last.bal }; d.cust = { found: true, name: last.name, bal: Math.round(n2(d.open) * 100) / 100, n: last.n }; d.openTyped = false; custNames();
+  } catch(e){ d.saveErr = e.message; }
+  if (B[k] === d && B.mode === k) custHint(); try { saveWork(); } catch(e){}
+}
+async function custVoid(d){ if (!(d.name || '').trim()) return; try { var j = await custCall({ op: 'void', id: custId('inv', d), by: ls('sj_me') || '' }); d.saved = j.name ? { name: j.name, bal: j.bal } : null; d.cust = undefined; if (B.mode === 'inv') custHint(); } catch(e){} }
+async function custNames(){ try { var j = await custCall({ op: 'names' }, 2); $('custnames').innerHTML = (j.names || []).map(function(n){ return '<option value="' + esc(n) + '">'; }).join(''); } catch(e){} }
+// owner screen: every customer's balance, and a statement per customer
+function cbDate(s){ return dmy(s); }
+async function cbOpen(){ if (!isBoss()) return; $('mysheet').hidden = true; $('cb').hidden = false; CU.view = ''; cbDraw(); try { var j = await custCall({ op: 'list' }); CU.list = j.list || []; CU.sheet = j.sheet; } catch(e){ CU.list = { err: e.message }; } cbDraw(); }
+async function cbView(name){ CU.view = name; CU.st = null; cbDraw(); try { CU.st = await custCall({ op: 'get', name: name }); } catch(e){ CU.st = { err: e.message }; } cbDraw(); }
+function cbDraw(){
+  var el = $('cbbody'), h = '';
+  if (!CU.view) {
+    if (!CU.list) { el.innerHTML = '<div class="ffempty">Opening…</div>'; return; }
+    if (CU.list.err) { el.innerHTML = '<p class="miss">' + esc(CU.list.err) + '</p>'; return; }
+    var ls2 = CU.list.slice().sort(function(a, b){ return a.name.localeCompare(b.name); }), q = CU.q.trim().toUpperCase(), tot = ls2.reduce(function(a, c){ return a + c.bal; }, 0);
+    h += '<div class="svtot"><small>Total customers owe · مجموع أرصدة العملاء</small><b>' + amt(tot) + ' AED</b><small>' + ls2.length + ' customer' + (ls2.length === 1 ? '' : 's') + ' · new names are added by their first invoice or receipt</small></div>';
+    h += '<input id="cbq" placeholder="Search customer · بحث" autocomplete="off" value="' + esc(CU.q) + '">';
+    ls2.filter(function(c){ return !q || c.name.toUpperCase().indexOf(q) >= 0; }).forEach(function(c){ h += '<button type="button" class="svv" data-cbv="' + esc(c.name) + '"><span><b>' + esc(c.name) + '</b><small>' + c.n + ' entr' + (c.n === 1 ? 'y' : 'ies') + ' · last ' + cbDate(c.last) + '</small></span><em class="' + (c.bal < 0 ? 'neg' : '') + '">' + amt(c.bal) + '</em></button>'; });
+    if (!ls2.length) h += '<div class="ffempty">No customers yet. Make a receipt or include an invoice with the customer\'s name and opening balance — they appear here.</div>';
+    if (CU.sheet) h += '<a class="cbsheet" href="' + esc(CU.sheet) + '" target="_blank" rel="noopener">Open the Google Sheet</a>';
+    el.innerHTML = h; var qi = $('cbq'); if (qi && CU.focus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); } CU.focus = false; return;
+  }
+  h += '<button type="button" class="svback" data-cbv="">← All customers</button>';
+  var st = CU.st; if (!st) { el.innerHTML = h + '<div class="ffempty">Opening…</div>'; return; } if (st.err) { el.innerHTML = h + '<p class="miss">' + esc(st.err) + '</p>'; return; }
+  h += '<div class="svtot"><small>' + esc(st.name) + ' · balance · الرصيد</small><b class="' + (st.bal < 0 ? 'neg' : '') + '">' + amt(st.bal) + ' AED</b><small>opening ' + amt(st.open) + ' on ' + cbDate(st.odate) + '</small></div>';
+  var run = st.open, es = (st.entries || []).slice().sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  h += '<table class="svt"><tr><th>Date</th><th>Ref</th><th>Sale</th><th>Received</th><th>Balance</th></tr><tr class="op"><td>' + cbDate(st.odate) + '</td><td>Opening</td><td></td><td></td><td>' + amt(run) + '</td></tr>';
+  es.forEach(function(e){ run += e.sale - e.recv + e.adj; h += '<tr><td>' + cbDate(e.date) + '</td><td>' + esc(e.ref) + '</td><td>' + (e.sale ? amt(e.sale) : e.adj ? (e.adj > 0 ? '+' : '') + amt(e.adj) : '') + '</td><td>' + (e.recv ? amt(e.recv) : '') + '</td><td><b>' + amt(run) + '</b></td></tr>'; });
+  h += '</table><div class="ffbtns"><button type="button" id="cbcopy">Copy statement</button><button type="button" id="cbopenbal">Change opening</button></div>';
+  el.innerHTML = h;
+}
+function cbText(){ var st = CU.st, run = st.open, L = ['STATEMENT — ' + st.name, 'Opening ' + cbDate(st.odate) + ': ' + amt(st.open) + ' AED'];
+  (st.entries || []).slice().sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }).forEach(function(e){ run += e.sale - e.recv + e.adj;
+    L.push(cbDate(e.date) + '  ' + e.ref + '  ' + (e.sale ? 'sale ' + amt(e.sale) : '') + (e.recv ? (e.sale ? ' · ' : '') + 'received ' + amt(e.recv) : '') + (e.adj ? 'adjust ' + amt(e.adj) : '') + '  → ' + amt(run)); });
+  L.push('', '*Balance: ' + amt(st.bal) + ' AED*'); return L.join('\n'); }
+$('cbopen').onclick = cbOpen;
+$('cbx').onclick = function(){ $('cb').hidden = true; };
+$('cbbody').addEventListener('input', function(e){ if (e.target.id === 'cbq') { CU.q = e.target.value; CU.focus = true; cbDraw(); } });
+$('cbbody').addEventListener('click', async function(e){
+  var b = e.target.closest('[data-cbv]'); if (b) { if (b.dataset.cbv) cbView(b.dataset.cbv); else { CU.view = ''; cbDraw(); } return; }
+  if (e.target.id === 'cbcopy') { var t = cbText(); try { await navigator.clipboard.writeText(t); e.target.textContent = 'Copied ✓'; } catch(er){ prompt('Copy:', t); } return; }
+  if (e.target.id === 'cbopenbal') { var st = CU.st, o = prompt('Opening balance for ' + st.name + ' (AED)', String(st.open)); if (o === null) return; var dt = prompt('Opening balance date (YYYY-MM-DD)', st.odate) || st.odate;
+    try { await custCall({ op: 'setopen', name: st.name, open: n2(o), odate: dt }); } catch(er){ alert('Not changed: ' + er.message); return; } cbView(st.name); }
+});
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; } };
