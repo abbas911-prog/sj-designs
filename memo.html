@@ -358,7 +358,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .svt{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;font-size:12.5px;box-shadow:var(--sh)}
 .svt th{font-size:10.5px;color:var(--mute);text-align:right;padding:7px 5px;border-bottom:1px solid var(--line)}.svt td{padding:7px 5px;border-bottom:1px solid #f0ebe3;text-align:right;white-space:nowrap}
 .svt th:nth-child(-n+2),.svt td:nth-child(-n+2){text-align:left}.svt td:nth-child(2){white-space:normal}.svt tr.op td{background:var(--goldbg);font-weight:700}
-.svt td button{border:0;background:none;color:#b9b0a4;font-size:14px;padding:0 2px}
+.svt td button{border:0;background:#fbe9e6;color:#b4472a;font-size:13px;font-weight:800;width:28px;height:28px;border-radius:8px;padding:0}
 </style></head><body>
 <header>
   <div class="top"><h1 id="ttl">SJ<small>MEMO</small></h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button><button id="mybtn" type="button" hidden title="My shortcuts">★</button></div>
@@ -662,7 +662,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-11d';
+var VER = '2026-10-11e';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -2351,9 +2351,9 @@ function cbDraw(){
   var st = CU.st; if (!st) { el.innerHTML = h + '<div class="ffempty">Opening…</div>'; return; } if (st.err) { el.innerHTML = h + '<p class="miss">' + esc(st.err) + '</p>'; return; }
   h += '<div class="svtot"><small>' + esc(st.name) + ' · balance · الرصيد</small><b class="' + (st.bal < 0 ? 'neg' : '') + '">' + amt(st.bal) + ' AED</b><small>opening ' + amt(st.open) + ' on ' + cbDate(st.odate) + '</small></div>';
   var run = st.open, es = (st.entries || []).slice().sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-  h += '<table class="svt"><tr><th>Date</th><th>Ref</th><th>Sale</th><th>Received</th><th>Balance</th></tr><tr class="op"><td>' + cbDate(st.odate) + '</td><td>Opening</td><td></td><td></td><td>' + amt(run) + '</td></tr>';
-  es.forEach(function(e){ run += e.sale - e.recv + e.adj; h += '<tr><td>' + cbDate(e.date) + '</td><td>' + esc(e.ref) + '</td><td>' + (e.sale ? amt(e.sale) : e.adj ? (e.adj > 0 ? '+' : '') + amt(e.adj) : '') + '</td><td>' + (e.recv ? amt(e.recv) : '') + '</td><td><b>' + amt(run) + '</b></td></tr>'; });
-  h += '</table><div class="ffbtns"><button type="button" id="cbcopy">Copy statement</button><button type="button" id="cbopenbal">Change opening</button></div>';
+  h += '<table class="svt"><tr><th>Date</th><th>Ref</th><th>Sale</th><th>Received</th><th>Balance</th><th></th></tr><tr class="op"><td>' + cbDate(st.odate) + '</td><td>Opening</td><td></td><td></td><td>' + amt(run) + '</td><td></td></tr>';
+  es.forEach(function(e){ run += e.sale - e.recv + e.adj; h += '<tr><td>' + cbDate(e.date) + '</td><td>' + esc(e.ref) + '</td><td>' + (e.sale ? amt(e.sale) : e.adj ? (e.adj > 0 ? '+' : '') + amt(e.adj) : '') + '</td><td>' + (e.recv ? amt(e.recv) : '') + '</td><td><b>' + amt(run) + '</b></td><td><button type="button" data-cbx="' + esc(e.id) + '" data-cbr="' + esc(e.ref) + '" aria-label="delete line">✕</button></td></tr>'; });
+  h += '</table><div class="ffbtns"><button type="button" id="cbcopy">Copy statement</button><button type="button" id="cbopenbal">Change opening</button></div><button type="button" class="odel" id="cbdel">Delete this customer</button>';
   el.innerHTML = h;
 }
 function cbText(){ var st = CU.st, run = st.open, L = ['STATEMENT — ' + st.name, 'Opening ' + cbDate(st.odate) + ': ' + amt(st.open) + ' AED'];
@@ -2366,6 +2366,12 @@ $('cbbody').addEventListener('input', function(e){ if (e.target.id === 'cbq') { 
 $('cbbody').addEventListener('click', async function(e){
   var b = e.target.closest('[data-cbv]'); if (b) { if (b.dataset.cbv) cbView(b.dataset.cbv); else { CU.view = ''; cbDraw(); } return; }
   if (e.target.id === 'cbcopy') { var t = cbText(); try { await navigator.clipboard.writeText(t); e.target.textContent = 'Copied ✓'; } catch(er){ prompt('Copy:', t); } return; }
+  var x = e.target.closest('[data-cbx]');
+  if (x) { if (!confirm('Delete ' + x.dataset.cbr + ' from ' + CU.st.name + '\'s balance?')) return;
+    try { await custCall({ op: 'void', id: x.dataset.cbx, by: ls('sj_me') || '' }); } catch(er){ alert('Not deleted: ' + er.message); return; } cbView(CU.st.name); return; }
+  if (e.target.id === 'cbdel') { var nm = CU.st.name; if (!confirm('Delete ' + nm + ' and all their lines? Their balance (' + amt(CU.st.bal) + ' AED) is removed from the app.')) return;
+    try { await custCall({ op: 'delcust', name: nm, by: ls('sj_me') || '' }); } catch(er){ alert('Not deleted: ' + er.message); return; }
+    CU.view = ''; CU.list = null; cbDraw(); try { var j = await custCall({ op: 'list' }); CU.list = j.list || []; CU.sheet = j.sheet; } catch(er){ CU.list = { err: er.message }; } cbDraw(); custNames(); return; }
   if (e.target.id === 'cbopenbal') { var st = CU.st, o = prompt('Opening balance for ' + st.name + ' (AED)', String(st.open)); if (o === null) return; var dt = prompt('Opening balance date (YYYY-MM-DD)', st.odate) || st.odate;
     try { await custCall({ op: 'setopen', name: st.name, open: n2(o), odate: dt }); } catch(er){ alert('Not changed: ' + er.message); return; } cbView(st.name); }
 });
