@@ -443,7 +443,8 @@ function custBook(P) {
 }
 function custLoad(ss) {
   var C = ss.getSheetByName('CUSTOMERS'), E = ss.getSheetByName('ENTRIES');
-  var cs = C.getDataRange().getDisplayValues().slice(1).map(function (r, i) { return { row: i + 2, key: r[0], name: r[1], open: custNum(r[2]), odate: r[3] }; });
+  var cs = C.getDataRange().getDisplayValues().slice(1).map(function (r, i) { return { row: i + 2, key: r[0], name: r[1], open: custNum(r[2]), odate: r[3], gone: !!r[6] }; })
+    .filter(function (c) { return !c.gone; });                        // a deleted customer keeps its row, marked in column G
   var es = E.getDataRange().getDisplayValues().slice(1).map(function (r, i) { return { row: i + 2, id: r[0], key: r[1], name: r[2], type: r[3], ref: r[4], date: r[5],
     sale: custNum(r[6]), recv: custNum(r[7]), adj: custNum(r[8]), by: r[9], dev: r[10], saved: r[11], voided: !!r[12] }; });
   return { C: C, E: E, cs: cs, es: es };
@@ -460,7 +461,7 @@ function cust(reqText, P) {
   var op = req.op, owner = req.chk ? ownerOk(P, req.chk) : false;
   try {
     var ss = custBook(P), lock = null;
-    if (op === 'post' || op === 'void' || op === 'setopen') { lock = LockService.getScriptLock(); lock.waitLock(15000); }
+    if (op === 'post' || op === 'void' || op === 'setopen' || op === 'delcust') { lock = LockService.getScriptLock(); lock.waitLock(15000); }
     try {
       var L = custLoad(ss), key = custKey(req.name);
       if (op === 'names') return out({ ok: true, names: L.cs.map(function (c) { return c.name; }).sort() });
@@ -497,6 +498,13 @@ function cust(reqText, P) {
         if (hv && !hv.voided) L.E.getRange(hv.row, 13).setValue(new Date().toISOString() + ' ' + String(req.by || '').slice(0, 30));
         var b3 = hv ? custBal(custLoad(ss), hv.key) : null;
         return out({ ok: true, name: b3 && b3.name, bal: b3 && b3.bal });
+      }
+      if (op === 'delcust') {                // 11 Oct 2026 (Abbas): customers can be deleted; the rows stay in the sheet, marked
+        var dc = L.cs.filter(function (x) { return x.key === key; })[0]; if (!dc) return out({ ok: false, error: 'no such customer' });
+        var mark = new Date().toISOString() + ' ' + String(req.by || '').slice(0, 30);
+        L.es.forEach(function (e) { if (e.key === key && !e.voided) L.E.getRange(e.row, 13).setValue(mark + ' (customer deleted)'); });
+        L.C.getRange(dc.row, 7).setValue(mark);
+        return out({ ok: true });
       }
       if (op === 'setopen') {
         var cc = L.cs.filter(function (x) { return x.key === key; })[0]; if (!cc) return out({ ok: false, error: 'no such customer' });
