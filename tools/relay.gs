@@ -130,21 +130,26 @@ function ordList(P) {
 function vault(reqText, P) {
   var req = JSON.parse(reqText);
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
-  var chk = String(req.chk || ''); if (chk.length < 32) return out({ ok: false, error: 'owner password missing' });
-  var h = hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, chk, Utilities.Charset.UTF_8));
+  // 11 Oct 2026 (Abbas): his employee uses Small Vendors too. The ledger is now kept as "VAULT2", locked with the SHOP password on the
+  // phone (the request is already signed with it); the old owner-locked "VAULT" stays untouched as a backup and is only read once
+  // by an owner phone to move the data across.
+  var v2 = !!req.v2, pre = v2 ? 'VAULT2' : 'VAULT', h = '', have = null;
+  if (!v2) {
+    var chk = String(req.chk || ''); if (chk.length < 32) return out({ ok: false, error: 'owner password missing' });
+    h = hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, chk, Utilities.Charset.UTF_8));
+  }
   var lock = LockService.getScriptLock(); lock.waitLock(15000);
   try {
-    var have = P.getProperty('VAULT_CHK');
-    if (have && have !== h) return out({ ok: false, error: 'owner password does not match the one used before' });
-    var cur = vRead(P, 'VAULT');
+    if (!v2) { have = P.getProperty('VAULT_CHK'); if (have && have !== h) return out({ ok: false, error: 'owner password does not match the one used before' }); }
+    var cur = vRead(P, pre);
     if (req.op === 'get') return out({ ok: true, box: cur ? cur.box : null, v: cur ? cur.v : 0 });
     if (req.op !== 'put') return out({ ok: false, error: 'bad request' });
     var curV = cur ? cur.v : 0;
     if ((+req.base || 0) !== curV) return out({ ok: false, conflict: true, box: cur ? cur.box : null, v: curV });   // someone saved in between - the phone merges and tries again
     if (!req.box || typeof req.box.ct !== 'string' || req.box.ct.length > 400000) return out({ ok: false, error: 'bad box' });
-    if (cur) vWrite(P, 'VAULTP', cur);        // spare copy of the previous version
-    var v = curV + 1; vWrite(P, 'VAULT', { v: v, box: req.box });
-    if (!have) P.setProperty('VAULT_CHK', h);
+    if (cur) vWrite(P, pre + 'P', cur);        // spare copy of the previous version
+    var v = curV + 1; vWrite(P, pre, { v: v, box: req.box });
+    if (!v2 && !have) P.setProperty('VAULT_CHK', h);
     return out({ ok: true, v: v });
   } finally { lock.releaseLock(); }
 }
@@ -463,11 +468,10 @@ function cust(reqText, P) {
         var b = custBal(L, key, String(req.except || ''));
         if (!b) return out({ ok: true, found: false });
         var o = { ok: true, found: true, name: b.name, open: b.open, odate: b.odate, bal: b.bal, n: b.n };
-        if (owner) o.entries = b.es.map(function (e) { return { id: e.id, type: e.type, ref: e.ref, date: e.date, sale: e.sale, recv: e.recv, adj: e.adj, by: e.by }; });
+        o.entries = b.es.map(function (e) { return { id: e.id, type: e.type, ref: e.ref, date: e.date, sale: e.sale, recv: e.recv, adj: e.adj, by: e.by }; });
         return out(o);
       }
-      if (op === 'list') {
-        if (!owner) return out({ ok: false, error: 'owner only' });
+      if (op === 'list') {                   // 11 Oct 2026: his employee sees the balances too (any phone with the shop password)
         return out({ ok: true, sheet: ss.getUrl(), list: L.cs.map(function (c) { var b = custBal(L, c.key); var last = b.es.map(function (e) { return e.date; }).sort().pop() || c.odate;
           return { name: c.name, bal: b.bal, n: b.n, last: last }; }) });
       }
@@ -495,7 +499,6 @@ function cust(reqText, P) {
         return out({ ok: true, name: b3 && b3.name, bal: b3 && b3.bal });
       }
       if (op === 'setopen') {
-        if (!owner) return out({ ok: false, error: 'owner only' });
         var cc = L.cs.filter(function (x) { return x.key === key; })[0]; if (!cc) return out({ ok: false, error: 'no such customer' });
         L.C.getRange(cc.row, 3, 1, 2).setValues([[String(custNum(req.open)), String(req.odate || cc.odate)]]);
         var b4 = custBal(custLoad(ss), key); return out({ ok: true, name: b4.name, bal: b4.bal });
