@@ -32,7 +32,7 @@ function doPost(e) {
     var P = PropertiesService.getScriptProperties();
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
-    if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'dorder' ? 25000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
+    if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'dorder' || b.job === 'cash' ? 25000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
     if (b.job === 'live') return live(b.req, P);
     if (b.job === 'orders') return orders(b.req, P);
@@ -40,6 +40,7 @@ function doPost(e) {
     if (b.job === 'slackpdf') return slackPdf(b.req, P);
     if (b.job === 'dorder') return dorder(b.req, P);
     if (b.job === 'cust') return cust(b.req, P);
+    if (b.job === 'cash') return cashPost(b.req, P);
     var wf = JOBS[b.job];
     if (!wf) return out({ ok: false, error: 'bad request' });
     if (!gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
@@ -514,6 +515,33 @@ function cust(reqText, P) {
       return out({ ok: false, error: 'bad request' });
     } finally { if (lock) lock.releaseLock(); }
   } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 300) }); }
+}
+// CASH ENTRY (Abbas, 11 Oct 2026): his #purchase lines typed in the app (owner phone only) and posted to #purchase by the SJ Memo
+// bot, photos attached, in the exact wording the 22:00 SJ Cash run reads. The run still writes the ledger; this only posts.
+var PURCHASE_CH = 'C09SCSQ0M6J';
+function cashPost(reqText, P) {
+  var req = JSON.parse(reqText);
+  if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  if (!ownerOk(P, req.chk)) return out({ ok: false, error: 'owner password does not match' });
+  if (req.op === 'list') return out({ ok: true, log: JSON.parse(P.getProperty('CASHLOG') || '[]') });
+  if (req.op !== 'post') return out({ ok: false, error: 'bad request' });
+  var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return out({ ok: false, error: 'the relay has no SLACK_BOT_TOKEN' });
+  var id = String(req.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40), text = String(req.text || '').slice(0, 3000);
+  if (!id || !text.trim()) return out({ ok: false, error: 'bad request' });
+  var key = 'CASH_' + id, st = JSON.parse(P.getProperty(key) || '{}');
+  if (st.done) return out({ ok: true, again: true });               // pressing Send again never posts twice
+  try {
+    st.files = st.files || [];
+    (req.photos || []).forEach(function (b64, i) {
+      if (st.files[i]) return;
+      st.files[i] = slackUp(tok, 'purchase-' + (i + 1) + '.jpg', Utilities.base64Decode(String(b64))); P.setProperty(key, JSON.stringify(st));
+    });
+    slackShare(tok, st.files, [PURCHASE_CH], text);
+    st.done = Date.now(); P.setProperty(key, JSON.stringify(st));
+    var log = JSON.parse(P.getProperty('CASHLOG') || '[]'); log.unshift({ t: st.done, text: text.slice(0, 300), n: st.files.length, read: String(req.read || '').slice(0, 160) });
+    P.setProperty('CASHLOG', JSON.stringify(log.slice(0, 30)));
+    return out({ ok: true });
+  } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 200) + (/not_in_channel|channel_not_found/.test(String(e)) ? ' - invite @SJ Memo to #purchase' : '') }); }
 }
 function doGet() { return out({ ok: true, relay: 'sj-memo' }); }
 function hex(bytes) { return bytes.map(function (x) { return ('0' + (x & 255).toString(16)).slice(-2); }).join(''); }
