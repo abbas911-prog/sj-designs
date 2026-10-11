@@ -39,6 +39,7 @@ function doPost(e) {
     if (b.job === 'vault') return vault(b.req, P);
     if (b.job === 'slackpdf') return slackPdf(b.req, P);
     if (b.job === 'dorder') return dorder(b.req, P);
+    if (b.job === 'cust') return cust(b.req, P);
     var wf = JOBS[b.job];
     if (!wf) return out({ ok: false, error: 'bad request' });
     if (!gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
@@ -409,6 +410,96 @@ function dorder(reqText, P) {
     if (/Trello said 401/.test(msg)) { var w = trWho(P, tok); msg += ' [key used: ' + w.key + (w.write === false ? ', read-only' : '') + ']'; }
     return out({ ok: false, error: msg });
   }
+}
+// CUSTOMER BALANCES (Abbas, 11 Oct 2026: "save the opening balances within the app ... when I make a receipt of a particular customer
+// once with the given opening balance, you should continue from there on, be it sales or receipt, from now onwards").
+// One Google Sheet in his Drive, made by the relay on first use ("SJ Customer Balances (order memo app)"):
+//   CUSTOMERS: KEY | CUSTOMER | OPENING | OPENING DATE | ADDED | BY
+//   ENTRIES:   ID | KEY | CUSTOMER | TYPE (inv / rv / adj) | REF | DATE | SALE | RECEIVED | ADJUST | BY | DEVICE | SAVED | VOID
+// balance = OPENING + SALE - RECEIVED + ADJUST over the entries that are not void. An entry ID is "<type>:<ref>:<device>", so sending the
+// same invoice / receipt again replaces its line instead of adding a second one. Signed with the shop password (staff make bills too);
+// the full list and the statements need the owner key-check as well.
+function custKey(n) { return String(n || '').trim().replace(/\s+/g, ' ').toUpperCase(); }
+function custNum(v) { var x = parseFloat(String(v == null ? '' : v).replace(/[,\s]/g, '')); return isFinite(x) ? Math.round(x * 100) / 100 : 0; }
+function custBook(P) {
+  var id = P.getProperty('CUST_SHEET'), ss = null;
+  if (id) try { ss = SpreadsheetApp.openById(id); } catch (e) { ss = null; }
+  if (!ss) {
+    ss = SpreadsheetApp.create('SJ Customer Balances (order memo app)');
+    var c = ss.getSheets()[0]; c.setName('CUSTOMERS'); c.appendRow(['KEY', 'CUSTOMER', 'OPENING', 'OPENING DATE', 'ADDED', 'BY']); c.setFrozenRows(1);
+    var e = ss.insertSheet('ENTRIES'); e.appendRow(['ID', 'KEY', 'CUSTOMER', 'TYPE', 'REF', 'DATE', 'SALE', 'RECEIVED', 'ADJUST', 'BY', 'DEVICE', 'SAVED', 'VOID']); e.setFrozenRows(1);
+    [c, e].forEach(function (sh) { sh.getRange('A:Z').setNumberFormat('@'); });   // keep dates and refs as typed text
+    P.setProperty('CUST_SHEET', ss.getId());
+  }
+  return ss;
+}
+function custLoad(ss) {
+  var C = ss.getSheetByName('CUSTOMERS'), E = ss.getSheetByName('ENTRIES');
+  var cs = C.getDataRange().getDisplayValues().slice(1).map(function (r, i) { return { row: i + 2, key: r[0], name: r[1], open: custNum(r[2]), odate: r[3] }; });
+  var es = E.getDataRange().getDisplayValues().slice(1).map(function (r, i) { return { row: i + 2, id: r[0], key: r[1], name: r[2], type: r[3], ref: r[4], date: r[5],
+    sale: custNum(r[6]), recv: custNum(r[7]), adj: custNum(r[8]), by: r[9], dev: r[10], saved: r[11], voided: !!r[12] }; });
+  return { C: C, E: E, cs: cs, es: es };
+}
+function custBal(L, key, except) {
+  var c = L.cs.filter(function (x) { return x.key === key; })[0]; if (!c) return null;
+  var es = L.es.filter(function (e) { return e.key === key && !e.voided && e.id !== except; });
+  var bal = es.reduce(function (a, e) { return a + e.sale - e.recv + e.adj; }, c.open);
+  return { name: c.name, open: c.open, odate: c.odate, bal: Math.round(bal * 100) / 100, n: es.length, es: es };
+}
+function cust(reqText, P) {
+  var req = JSON.parse(reqText);
+  if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  var op = req.op, owner = req.chk ? ownerOk(P, req.chk) : false;
+  try {
+    var ss = custBook(P), lock = null;
+    if (op === 'post' || op === 'void' || op === 'setopen') { lock = LockService.getScriptLock(); lock.waitLock(15000); }
+    try {
+      var L = custLoad(ss), key = custKey(req.name);
+      if (op === 'names') return out({ ok: true, names: L.cs.map(function (c) { return c.name; }).sort() });
+      if (op === 'get') {
+        var b = custBal(L, key, String(req.except || ''));
+        if (!b) return out({ ok: true, found: false });
+        var o = { ok: true, found: true, name: b.name, open: b.open, odate: b.odate, bal: b.bal, n: b.n };
+        if (owner) o.entries = b.es.map(function (e) { return { id: e.id, type: e.type, ref: e.ref, date: e.date, sale: e.sale, recv: e.recv, adj: e.adj, by: e.by }; });
+        return out(o);
+      }
+      if (op === 'list') {
+        if (!owner) return out({ ok: false, error: 'owner only' });
+        return out({ ok: true, sheet: ss.getUrl(), list: L.cs.map(function (c) { var b = custBal(L, c.key); var last = b.es.map(function (e) { return e.date; }).sort().pop() || c.odate;
+          return { name: c.name, bal: b.bal, n: b.n, last: last }; }) });
+      }
+      if (op === 'post') {
+        if (!key) return out({ ok: false, error: 'no customer name' });
+        var id = String(req.id || '').slice(0, 80), type = ['inv', 'rv', 'adj'].indexOf(req.type) >= 0 ? req.type : '';
+        if (!id || !type) return out({ ok: false, error: 'bad request' });
+        var now = new Date().toISOString(), made = false;
+        if (!L.cs.some(function (c) { return c.key === key; })) {          // first time: what he typed becomes the opening balance
+          L.C.appendRow([key, String(req.name).trim().replace(/\s+/g, ' ').slice(0, 80), String(custNum(req.open)), String(req.date || now.slice(0, 10)), now, String(req.by || '').slice(0, 40)]);
+          L = custLoad(ss); made = true;
+        }
+        var c = L.cs.filter(function (x) { return x.key === key; })[0];
+        var row = [id, key, c.name, type, String(req.ref || '').slice(0, 40), String(req.date || now.slice(0, 10)), String(custNum(req.sale)), String(custNum(req.recv)), String(custNum(req.adj)),
+          String(req.by || '').slice(0, 40), String(req.dev || '').slice(0, 20), now, ''];
+        var have = L.es.filter(function (e) { return e.id === id; })[0];
+        if (have) L.E.getRange(have.row, 1, 1, row.length).setValues([row]); else L.E.appendRow(row);
+        L = custLoad(ss); var b2 = custBal(L, key);
+        return out({ ok: true, made: made, name: b2.name, bal: b2.bal, n: b2.n });
+      }
+      if (op === 'void') {
+        var hv = L.es.filter(function (e) { return e.id === String(req.id || ''); })[0];
+        if (hv && !hv.voided) L.E.getRange(hv.row, 13).setValue(new Date().toISOString() + ' ' + String(req.by || '').slice(0, 30));
+        var b3 = hv ? custBal(custLoad(ss), hv.key) : null;
+        return out({ ok: true, name: b3 && b3.name, bal: b3 && b3.bal });
+      }
+      if (op === 'setopen') {
+        if (!owner) return out({ ok: false, error: 'owner only' });
+        var cc = L.cs.filter(function (x) { return x.key === key; })[0]; if (!cc) return out({ ok: false, error: 'no such customer' });
+        L.C.getRange(cc.row, 3, 1, 2).setValues([[String(custNum(req.open)), String(req.odate || cc.odate)]]);
+        var b4 = custBal(custLoad(ss), key); return out({ ok: true, name: b4.name, bal: b4.bal });
+      }
+      return out({ ok: false, error: 'bad request' });
+    } finally { if (lock) lock.releaseLock(); }
+  } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 300) }); }
 }
 function doGet() { return out({ ok: true, relay: 'sj-memo' }); }
 function hex(bytes) { return bytes.map(function (x) { return ('0' + (x & 255).toString(16)).slice(-2); }).join(''); }
