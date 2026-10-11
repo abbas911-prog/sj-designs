@@ -662,7 +662,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-11c';
+var VER = '2026-10-11d';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1216,7 +1216,7 @@ $('stk').addEventListener('click', function(e){ var b = e.target.closest('button
 var CAT = { items: [], modes: {}, busy: false };
 function isOwner(){ return ls('sj_owner') === '1'; }
 function isBoss(){ return isOwner() && !!COST && !!pinGet(); }   // 10 Oct 2026 (Abbas): staff phones with the catalogue on must NOT see 50-50 or cost check
-function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('doropen').hidden = !bo; if (!bo && $('dor')) $('dor').hidden = true; $('svopen').hidden = !bo; $('cbopen').hidden = !bo; if (!bo && $('cb')) $('cb').hidden = true; $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
+function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('doropen').hidden = !bo; if (!bo && $('dor')) $('dor').hidden = true; $('svopen').hidden = !o; $('cbopen').hidden = !o; if (!o && $('cb')) $('cb').hidden = true; if (!o && $('sv')) $('sv').hidden = true; /* 11 Oct 2026: his employee (catalogue + star on) uses both */ $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
 (function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
   function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
   function stop(){ clearTimeout(t); }
@@ -1989,7 +1989,7 @@ setTimeout(ordLoad, 2500);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && Date.now() - (ORD.last || 0) > 60000) { ORD.last = Date.now(); ordLoad(); } });
 
 // ----- SMALL VENDORS (Abbas, 10 Oct 2026): 3-4 small office-expense vendors kept OUT of the main SJ vendor list.
-// Owner phones only. Opening balance + bills (we owe more) + payments (we owe less) = running balance.
+// 11 Oct 2026: his employee uses it too — locked with the SHOP password now (was the owner password). Opening balance + bills (we owe more) + payments (we owe less) = running balance.
 // Saved to the cloud (relay job "vault"), locked with the OWNER password on the phone; every change is saved within a second.
 // Nothing is ever really removed: deletes are marks, so two phones editing at once merge instead of losing work.
 var SV = { v: 0, d: null, view: '', busy: false, dirty: false, msg: '', t: 0, form: {} };
@@ -1998,14 +1998,18 @@ function svId(){ return Date.now().toString(36) + Math.random().toString(36).sli
 function svMerge(a, b){ var out = svNew(); ['vendors', 'entries'].forEach(function(k){ var m = {}; (a[k] || []).concat(b[k] || []).forEach(function(x){ if (!m[x.id] || (x.ts || 0) > (m[x.id].ts || 0)) m[x.id] = x; }); out[k] = Object.keys(m).map(function(i){ return m[i]; }); }); return out; }
 async function svChk(){ var k = await crypto.subtle.importKey('raw', new TextEncoder().encode(pinGet()), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   return [].map.call(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode('sj-vault-owner'))), function(x){ return ('0' + x.toString(16)).slice(-2); }).join(''); }
-async function svCall(o){ o.t = Date.now(); o.dev = devId(); o.chk = await svChk(); var j = await relayJson('vault', o, 3);
+async function svCall(o){ o.t = Date.now(); o.dev = devId(); o.v2 = true; var j = await relayJson('vault', o, 3);
   if (j.error === 'bad request' && !j.conflict) throw new Error('the relay needs its new version — Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy'); return j; }
-async function svCacheSave(){ try { ls('sj_sv', JSON.stringify({ v: SV.v, dirty: SV.dirty, box: await costLock(SV.d, pinGet()) })); } catch(e){} }
-async function svCacheLoad(){ try { var c = JSON.parse(ls('sj_sv') || 'null'); if (!c || !c.box) return false; SV.d = await costUnlock(c.box, pinGet()); SV.v = c.v || 0; SV.dirty = !!c.dirty; return true; } catch(e){ return false; } }
+async function svOld(){ var j = await relayJson('vault', { op: 'get', t: Date.now(), dev: devId(), chk: await svChk() }, 2); return j; }   // the old owner-locked copy, read once to move it
+async function svCacheSave(){ try { ls('sj_sv2', JSON.stringify({ v: SV.v, dirty: SV.dirty, box: await costLock(SV.d, token) })); } catch(e){} }
+async function svCacheLoad(){ try { var c = JSON.parse(ls('sj_sv2') || 'null'); if (!c || !c.box) return false; SV.d = await costUnlock(c.box, token); SV.v = c.v || 0; SV.dirty = !!c.dirty; return true; } catch(e){ return false; } }
 async function svPull(){
   try { var j = await svCall({ op: 'get' }); if (!j.ok) throw new Error(j.error || 'refused');
-    if (j.box) { var their = await costUnlock(j.box, pinGet()); SV.d = SV.d ? svMerge(their, SV.d) : their; }
-    else if (!SV.d) SV.d = svNew();
+    if (j.box) { var their = await costUnlock(j.box, token); SV.d = SV.d ? svMerge(their, SV.d) : their; }
+    else if (pinGet()) {                       // nothing in the shared ledger yet: an owner phone moves the old owner-locked one across
+      try { var o = await svOld(); if (o.ok && o.box) { var old = await costUnlock(o.box, pinGet()); SV.d = SV.d ? svMerge(old, SV.d) : old; SV.dirty = true; } } catch(e){}
+    }
+    if (!SV.d) SV.d = svNew();
     var mine = SV.v; SV.v = j.v || 0;
     if (SV.dirty || (j.v || 0) < mine) { SV.dirty = true; await svPush(); } else { SV.msg = 'ok'; SV.t = Date.now(); await svCacheSave(); }
   } catch(e){ SV.msg = 'Could not reach the cloud: ' + e.message; if (!SV.d) SV.d = svNew(); }
@@ -2017,9 +2021,9 @@ async function svPush(){
   if (SV.busy) { clearTimeout(svT); svT = setTimeout(svPush, 800); return; } SV.busy = true;
   try {
     for (var n = 0; n < 4; n++) {
-      var j = await svCall({ op: 'put', base: SV.v, box: await costLock(SV.d, pinGet()) });
+      var j = await svCall({ op: 'put', base: SV.v, box: await costLock(SV.d, token) });
       if (j.ok) { SV.v = j.v; SV.dirty = false; SV.msg = 'ok'; SV.t = Date.now(); break; }
-      if (j.conflict) { if (j.box) SV.d = svMerge(await costUnlock(j.box, pinGet()), SV.d); SV.v = j.v; continue; }   // another phone saved first: merge and try again
+      if (j.conflict) { if (j.box) SV.d = svMerge(await costUnlock(j.box, token), SV.d); SV.v = j.v; continue; }   // another phone saved first: merge and try again
       throw new Error(j.error || 'refused');
     }
     if (SV.dirty) throw new Error('kept changing on another phone — try again');
@@ -2054,7 +2058,7 @@ function svDraw(){
   }
   el.innerHTML = h;
 }
-async function svOpen(){ if (!isBoss()) return; $('mysheet').hidden = true; $('sv').hidden = false; SV.view = ''; if (!SV.d) await svCacheLoad(); svDraw(); svPull(); }
+async function svOpen(){ if (!isOwner()) return; $('mysheet').hidden = true; $('sv').hidden = false; SV.view = ''; if (!SV.d) await svCacheLoad(); svDraw(); svPull(); }
 $('svopen').onclick = svOpen;
 $('svx').onclick = function(){ $('sv').hidden = true; };
 $('svbody').addEventListener('click', function(ev){
@@ -2328,7 +2332,7 @@ async function custVoid(d){ if (!(d.name || '').trim()) return; try { var j = aw
 async function custNames(){ try { var j = await custCall({ op: 'names' }, 2); $('custnames').innerHTML = (j.names || []).map(function(n){ return '<option value="' + esc(n) + '">'; }).join(''); } catch(e){} }
 // owner screen: every customer's balance, and a statement per customer
 function cbDate(s){ return dmy(s); }
-async function cbOpen(){ if (!isBoss()) return; $('mysheet').hidden = true; $('cb').hidden = false; CU.view = ''; cbDraw(); try { var j = await custCall({ op: 'list' }); CU.list = j.list || []; CU.sheet = j.sheet; } catch(e){ CU.list = { err: e.message }; } cbDraw(); }
+async function cbOpen(){ if (!isOwner()) return; $('mysheet').hidden = true; $('cb').hidden = false; CU.view = ''; cbDraw(); try { var j = await custCall({ op: 'list' }); CU.list = j.list || []; CU.sheet = j.sheet; } catch(e){ CU.list = { err: e.message }; } cbDraw(); }
 async function cbView(name){ CU.view = name; CU.st = null; cbDraw(); try { CU.st = await custCall({ op: 'get', name: name }); } catch(e){ CU.st = { err: e.message }; } cbDraw(); }
 function cbDraw(){
   var el = $('cbbody'), h = '';
@@ -2340,7 +2344,7 @@ function cbDraw(){
     h += '<input id="cbq" placeholder="Search customer · بحث" autocomplete="off" value="' + esc(CU.q) + '">';
     ls2.filter(function(c){ return !q || c.name.toUpperCase().indexOf(q) >= 0; }).forEach(function(c){ h += '<button type="button" class="svv" data-cbv="' + esc(c.name) + '"><span><b>' + esc(c.name) + '</b><small>' + c.n + ' entr' + (c.n === 1 ? 'y' : 'ies') + ' · last ' + cbDate(c.last) + '</small></span><em class="' + (c.bal < 0 ? 'neg' : '') + '">' + amt(c.bal) + '</em></button>'; });
     if (!ls2.length) h += '<div class="ffempty">No customers yet. Make a receipt or include an invoice with the customer\'s name and opening balance — they appear here.</div>';
-    if (CU.sheet) h += '<a class="cbsheet" href="' + esc(CU.sheet) + '" target="_blank" rel="noopener">Open the Google Sheet</a>';
+    if (CU.sheet && isBoss()) h += '<a class="cbsheet" href="' + esc(CU.sheet) + '" target="_blank" rel="noopener">Open the Google Sheet</a>';
     el.innerHTML = h; var qi = $('cbq'); if (qi && CU.focus) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); } CU.focus = false; return;
   }
   h += '<button type="button" class="svback" data-cbv="">← All customers</button>';
