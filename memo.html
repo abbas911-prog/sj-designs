@@ -322,6 +322,9 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .dorhint{font-size:12.5px;color:var(--mute);line-height:1.35}.dorhint a{color:var(--gold);font-weight:700}
 .dorlbl{display:grid;gap:4px;font-size:12px;color:var(--mute);font-weight:600}
 .dorbtns{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:6px;margin:10px 0}
+.dorpaste{display:grid;grid-template-columns:1fr auto;gap:6px;margin:-4px 0 10px}
+#dorpaste{width:100%;min-width:0;height:48px;padding:12px;border:1.5px dashed var(--gold);border-radius:12px;background:#fffaf0;font:inherit;font-size:14px;resize:none;color:var(--mute)}
+#dorpaste.on{background:#fff1d6;border-style:solid}
 .dorbtn{display:flex;align-items:center;justify-content:center;min-height:46px;border:1.5px solid var(--gold);border-radius:12px;background:#fff;color:var(--gold);font:inherit;font-weight:800;font-size:13.5px;text-align:center;padding:4px}
 .dorbtn.on{background:#b4472a;border-color:#b4472a;color:#fff}
 .dorm{display:grid;grid-template-columns:88px 1fr auto;gap:8px;align-items:center;background:#fff;border-radius:14px;box-shadow:var(--sh);padding:8px;margin-bottom:6px}
@@ -406,6 +409,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 <label class="dorlbl">Order line · card name<input id="dorname" autocomplete="off"></label>
 </div>
 <div class="dorbtns"><label class="dorbtn">📷 Photos<input type="file" id="dorphoto" accept="image/*" multiple hidden></label><button type="button" class="dorbtn" id="dorrec">🎤 Record voice note</button><label class="dorbtn">🎬 Video<input type="file" id="dorvideo" accept="video/*" hidden></label></div>
+<div class="dorpaste"><textarea id="dorpaste" rows="1" placeholder="📋 Tap here and PASTE a photo, video or voice note (from WhatsApp / Slack)"></textarea><label class="dorbtn" style="padding:4px 12px">📎 Files<input type="file" id="dorfiles" accept="image/*,video/*,audio/*,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div>
 <div id="dormedia"></div>
 <button type="button" class="gold dorsend" id="dorsend">Send order</button>
 <div id="dorprog" class="dorprog"></div>
@@ -674,7 +678,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-11f';
+var VER = '2026-10-11g';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -2275,6 +2279,41 @@ $('dorname').addEventListener('input', function(){ DOR.nameEdited = true; });
 $('dorphoto').onchange = async function(){ var fs = [].slice.call(this.files || []); this.value = ''; for (var i = 0; i < fs.length; i++) dorAdd('photo', await dorPhoto(fs[i]), 'photo-' + (DOR.media.length + 1) + '.jpg'); };
 $('dorvideo').onchange = function(){ var fs = [].slice.call(this.files || []); this.value = ''; fs.forEach(function(f){ dorAdd('video', f, 'video-' + (DOR.media.length + 1) + '.' + dorExt(f.type, (f.name.match(/\.(\w+)$/) || [, 'mp4'])[1].toLowerCase())); }); };
 $('dorrec').onclick = dorRecord;
+// 11 Oct 2026 (Abbas): photos, videos and voice notes that arrive on WhatsApp or Slack go into the order too —
+// copy them there and PASTE into the box, pick them with 📎 Files, or drop them on the sheet (laptop).
+var DOR_AUD = /\.(opus|ogg|oga|m4a|mp3|aac|amr|wav|caf)$/i, DOR_VID = /\.(mp4|mov|m4v|3gp|webm)$/i, DOR_IMG = /\.(jpe?g|png|webp|heic|heif|gif)$/i;
+async function dorAddFile(f, from){
+  var nm = f.name || '', t = f.type || '', n = DOR.media.length + 1;
+  if (/^image\//.test(t) || (!t && DOR_IMG.test(nm))) { try { dorAdd('photo', await dorPhoto(f), 'photo-' + n + '.jpg'); return 'photo'; } catch(e){ return ''; } }
+  if (/^video\//.test(t) || (!t && DOR_VID.test(nm))) { var vt = t || (/\.mov$/i.test(nm) ? 'video/quicktime' : 'video/mp4'); var vb = t ? f : new Blob([f], { type: vt });
+    dorAdd('video', vb, 'video-' + n + '.' + dorExt(vt, (nm.match(/\.(\w+)$/) || [, 'mp4'])[1].toLowerCase())); return 'video'; }
+  if (/^audio\//.test(t) || DOR_AUD.test(nm)) { var ext = ((nm.match(/\.(\w+)$/) || [, ''])[1] || '').toLowerCase() || dorExt(t, 'm4a');
+    var at = t || ({ opus: 'audio/ogg', ogg: 'audio/ogg', oga: 'audio/ogg', m4a: 'audio/mp4', mp3: 'audio/mpeg', aac: 'audio/aac', amr: 'audio/amr', wav: 'audio/wav', caf: 'audio/x-caf' })[ext] || 'audio/mp4';
+    dorAdd('voice', t ? f : new Blob([f], { type: at }), 'voice-' + (DOR.media.filter(function(m){ return m.kind === 'voice'; }).length + 1) + '.' + (ext || 'm4a')); return 'voice note'; }
+  return '';
+}
+async function dorTakeFiles(list, from){
+  var fs = [].slice.call(list || []).filter(Boolean), got = [], bad = 0;
+  for (var i = 0; i < fs.length; i++) { var k = await dorAddFile(fs[i], from); if (k) got.push(k); else bad++; }
+  var el = $('dorpaste'); if (el) { el.value = ''; el.blur(); el.placeholder = got.length ? '✓ Added ' + got.join(', ') + (bad ? ' · ' + bad + ' file(s) not a photo, video or voice note' : '') + ' — paste more' : (bad ? 'That is not a photo, video or voice note — try 📎 Files' : '📋 Tap here and PASTE a photo, video or voice note (from WhatsApp / Slack)'); }
+  return got.length;
+}
+$('dorpaste').addEventListener('paste', async function(e){
+  var cd = e.clipboardData, fs = [];
+  if (cd && cd.files && cd.files.length) fs = [].slice.call(cd.files);
+  else if (cd && cd.items) [].forEach.call(cd.items, function(it){ if (it.kind === 'file') { var f = it.getAsFile(); if (f) fs.push(f); } });
+  if (fs.length) { e.preventDefault(); await dorTakeFiles(fs, 'paste'); return; }
+  setTimeout(function(){ var el = $('dorpaste'); if (el.value.trim()) { el.value = ''; el.placeholder = 'Only text was copied — in WhatsApp long-press the photo/video/voice → Copy (or Share → Save to Files, then 📎 Files)'; } }, 0);
+});
+$('dorpaste').addEventListener('input', function(){ if (this.value) this.value = ''; });
+$('dorfiles').onchange = async function(){ var fs = [].slice.call(this.files || []); this.value = ''; await dorTakeFiles(fs, 'files'); };
+['dragover', 'dragenter'].forEach(function(ev){ $('dor').addEventListener(ev, function(e){ if (e.dataTransfer && [].indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) { e.preventDefault(); $('dorpaste').classList.add('on'); } }); });
+$('dor').addEventListener('dragleave', function(){ $('dorpaste').classList.remove('on'); });
+$('dor').addEventListener('drop', async function(e){ if (!e.dataTransfer || !e.dataTransfer.files.length) return; e.preventDefault(); $('dorpaste').classList.remove('on'); await dorTakeFiles(e.dataTransfer.files, 'drop'); });
+document.addEventListener('paste', async function(e){       // laptop: Ctrl+V anywhere on the open order sheet
+  if ($('dor').hidden || e.target === $('dorpaste') || /INPUT|TEXTAREA/.test((e.target || {}).tagName || '')) return;
+  var fs = e.clipboardData && e.clipboardData.files ? [].slice.call(e.clipboardData.files) : []; if (fs.length) { e.preventDefault(); await dorTakeFiles(fs, 'paste'); }
+});
 $('dormedia').addEventListener('click', function(ev){
   var b = ev.target.closest('[data-dx]'); if (b) { var x = DOR.media[+b.dataset.dx]; if (x && !x.sent && confirm('Remove this ' + (x.kind === 'voice' ? 'voice note' : x.kind) + '?')) { URL.revokeObjectURL(x.url); DOR.media.splice(+b.dataset.dx, 1); dorMedia(); } return; }
   b = ev.target.closest('[data-dstar]'); if (b) { DOR.media.forEach(function(m, i){ m.design = i === +b.dataset.dstar; }); dorMedia(); }
