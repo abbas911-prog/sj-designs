@@ -354,6 +354,17 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 #cb .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cb .hd b{letter-spacing:.12em;color:var(--mute);font-size:13px}#cb .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700}
 #cbq{width:100%;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px;margin-bottom:8px;background:#fff}
 .cbsheet{display:block;text-align:center;font-size:13px;color:var(--gold);font-weight:700;margin:8px 0 2px}
+#cashopen[hidden],#cash[hidden]{display:none}
+#cash{position:fixed;inset:0;z-index:57;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
+#cash .in{background:var(--bg);width:100%;max-width:720px;border-radius:24px 24px 0 0;padding:16px 12px calc(22px + env(safe-area-inset-bottom));max-height:94vh;max-height:94dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#cash .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cash .hd b{letter-spacing:.12em;color:var(--mute);font-size:13px}#cash .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700}
+.cshk{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.cshk button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;color:var(--ink)}.cshk button.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.cshk.small button{padding:5px 10px;font-size:12px;font-weight:600}
+.cshlbl{font-size:11.5px;color:var(--mute);font-weight:700;letter-spacing:.06em;margin:8px 2px 4px}
+#cashtxt{width:100%;min-height:96px;padding:10px 12px;border:1.5px solid var(--line);border-radius:14px;font:inherit;font-size:16px;line-height:1.4;background:#fff;resize:vertical}
+#cashamt{width:100%;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px;background:#fff}
+.cshread{margin:8px 0;padding:10px 12px;border-radius:12px;background:#fff;box-shadow:var(--sh);font-size:14px;line-height:1.45}.cshread b{color:var(--ink)}.cshread.warn{background:#fff6e5}.cshread.bad{background:#fbe9e6}
+.cshph{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.cshph span{position:relative}.cshph img{width:72px;height:72px;object-fit:cover;border-radius:10px;display:block}.cshph button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:#b4472a;color:#fff;font-size:12px}
 .svback{border:0;background:none;color:var(--gold);font:inherit;font-weight:700;padding:0 2px 8px}
 .svt{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;font-size:12.5px;box-shadow:var(--sh)}
 .svt th{font-size:10.5px;color:var(--mute);text-align:right;padding:7px 5px;border-bottom:1px solid var(--line)}.svt td{padding:7px 5px;border-bottom:1px solid #f0ebe3;text-align:right;white-space:nowrap}
@@ -379,7 +390,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
   <div id="load" hidden>Loading READY list…</div>
   <div id="feed"></div>
 </main>
-<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="doropen" class="ffbig">NEW DESIGN ORDER<small>Trello card + factory Slack · instead of #order-2</small></button><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><button type="button" id="cbopen" class="ffbig">CUSTOMER BALANCES<small>opening balance once · every sale and receipt continues from it</small></button><button type="button" id="svopen" class="ffbig">SMALL VENDORS<small>office expenses · opening balances · kept in the cloud</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
+<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="doropen" class="ffbig">NEW DESIGN ORDER<small>Trello card + factory Slack · instead of #order-2</small></button><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><button type="button" id="cashopen" class="ffbig">CASH ENTRY · #purchase<small>type it like Slack · see how the 22:00 run will read it · send</small></button><button type="button" id="cbopen" class="ffbig">CUSTOMER BALANCES<small>opening balance once · every sale and receipt continues from it</small></button><button type="button" id="svopen" class="ffbig">SMALL VENDORS<small>office expenses · opening balances · kept in the cloud</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
 <div id="ff" hidden><div class="in"><div class="hd"><b>50-50 BILLS</b><span><button type="button" id="ffre">↻</button><button type="button" id="ffx">Close</button></span></div><div id="ffbody"></div></div></div>
 <div id="dor" hidden><div class="in"><div class="hd"><b>NEW DESIGN ORDER</b><button type="button" id="dorx">Close</button></div>
 <div class="dorseg"><button type="button" data-dm="alm" class="on">Normal<small>ALM START · #cutting</small></button><button type="button" data-dm="out">Outsourced<small>name · #emaan</small></button></div>
@@ -400,6 +411,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 <div id="dorprog" class="dorprog"></div>
 <div id="dorlog"></div>
 </div></div>
+<div id="cash" hidden><div class="in"><div class="hd"><b>CASH ENTRY · #purchase</b><button type="button" id="cashx">Close</button></div><div id="cashbody"></div></div></div>
 <div id="cb" hidden><div class="in"><div class="hd"><b>CUSTOMER BALANCES · أرصدة العملاء</b><button type="button" id="cbx">Close</button></div><div id="cbbody"></div></div></div>
 <datalist id="custnames"></datalist>
 <div id="sv" hidden><div class="in"><div class="hd"><b>SMALL VENDORS · موردين صغار</b><button type="button" id="svx">Close</button></div><div id="svbody"></div></div></div>
@@ -662,7 +674,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-11e';
+var VER = '2026-10-11f';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1216,7 +1228,7 @@ $('stk').addEventListener('click', function(e){ var b = e.target.closest('button
 var CAT = { items: [], modes: {}, busy: false };
 function isOwner(){ return ls('sj_owner') === '1'; }
 function isBoss(){ return isOwner() && !!COST && !!pinGet(); }   // 10 Oct 2026 (Abbas): staff phones with the catalogue on must NOT see 50-50 or cost check
-function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('doropen').hidden = !bo; if (!bo && $('dor')) $('dor').hidden = true; $('svopen').hidden = !o; $('cbopen').hidden = !o; if (!o && $('cb')) $('cb').hidden = true; if (!o && $('sv')) $('sv').hidden = true; /* 11 Oct 2026: his employee (catalogue + star on) uses both */ $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
+function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('doropen').hidden = !bo; if (!bo && $('dor')) $('dor').hidden = true; $('svopen').hidden = !o; $('cbopen').hidden = !o; $('cashopen').hidden = !bo; if (!bo && $('cash')) $('cash').hidden = true; if (!o && $('cb')) $('cb').hidden = true; if (!o && $('sv')) $('sv').hidden = true; /* 11 Oct 2026: his employee (catalogue + star on) uses both */ $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
 (function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
   function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
   function stop(){ clearTimeout(t); }
@@ -2374,6 +2386,126 @@ $('cbbody').addEventListener('click', async function(e){
     CU.view = ''; CU.list = null; cbDraw(); try { var j = await custCall({ op: 'list' }); CU.list = j.list || []; CU.sheet = j.sheet; } catch(er){ CU.list = { err: er.message }; } cbDraw(); custNames(); return; }
   if (e.target.id === 'cbopenbal') { var st = CU.st, o = prompt('Opening balance for ' + st.name + ' (AED)', String(st.open)); if (o === null) return; var dt = prompt('Opening balance date (YYYY-MM-DD)', st.odate) || st.odate;
     try { await custCall({ op: 'setopen', name: st.name, open: n2(o), odate: dt }); } catch(er){ alert('Not changed: ' + er.message); return; } cbView(st.name); }
+});
+
+// ----- CASH ENTRY (Abbas, 11 Oct 2026): "a normal built-in input where I write things or post a photo, it goes to #purchase and the
+// AI still goes on". Owner phone only. He types like Slack (or taps the quick buttons); the box below shows how the 22:00 SJ Cash
+// run will read it, using that run's own rules (SJ Cash Daily Process); Send posts it to #purchase with the SJ Memo bot, photos
+// attached. The 22:00 run still writes the ledger — nothing here touches the sheet.
+var CASH_VENDORS = ['A-B(S-K)', 'POLI YASIN', 'SHAMSI', 'AL-MU', 'USMAN', 'TUSHAR', 'NADEEM', 'MANIK', 'ARDEE TRADING', 'STONE', 'KAAMI', 'RUSA',
+  'SOUTH WAY TRADING', 'HIGH CHOICE', 'SAROOJ', 'IMRAN LAIS', 'MATIULLAH'];
+var CASH_ALIAS = { 'al mu': 'AL-MU', 'almu': 'AL-MU', 'al-mu': 'AL-MU', 'a-b': 'A-B(S-K)', 'ab': 'A-B(S-K)', 'a b': 'A-B(S-K)', 'poli': 'POLI YASIN', 'poli yasin': 'POLI YASIN',
+  'usman hand work': 'USMAN', 'usman handwork': 'USMAN', 'usman': 'USMAN', 'yogesh': 'HIGH CHOICE', 'high choice': 'HIGH CHOICE', 'south way': 'SOUTH WAY TRADING', 'ardee': 'ARDEE TRADING',
+  'imran lais': 'IMRAN LAIS', 'imran': 'IMRAN LAIS', 'mati': 'MATIULLAH' };
+var CASH_EXP = ['Fuel', 'Parking', 'Salary', 'Food', 'Helper', 'Pick up', 'Wifi', 'Electricity', 'Car expense', 'Godown expense', 'Cafeteria', 'Packing', 'Mobile expense', 'Office maintenance', 'Application', 'Fine'];
+var CASH_EXPW = ['fuel', 'petrol', 'parking', 'salary', 'food', 'helper', 'pick up', 'pickup', 'wifi', 'electricity', 'dewa', 'car', 'godown', 'cafeteria', 'packing', 'mobile', 'office', 'application', 'fine', 'rent', 'water', 'tea', 'taxi', 'courier', 'visa', 'stationery', 'cleaning', 'maintenance'];
+var CASH_KINDS = [['out', 'Cash paid (out)'], ['in', 'Cash received (in)'], ['bill', 'Bill (credit)'], ['cp', 'Cash purchase'], ['exp', 'Expense'], ['gave', 'Money given'], ['took', 'Money taken'], ['ucust', 'Customer via Usman']];
+var CSH = { kind: '', who: '', amt: '', what: '', photos: [], busy: false, log: null, msg: '' };
+function cashVendor(w){ w = String(w || '').toLowerCase().replace(/[^a-z0-9() -]/g, ' ').replace(/\s+/g, ' ').trim(); if (!w) return null;
+  if (CASH_ALIAS[w]) return CASH_ALIAS[w];
+  var hit = CASH_VENDORS.filter(function(v){ var k = v.toLowerCase(); return k === w || k.replace(/[^a-z]/g, '') === w.replace(/[^a-z]/g, ''); })[0]; return hit || null; }
+function cashNear(w){ w = String(w || '').toLowerCase().replace(/[^a-z]/g, ''); if (w.length < 2) return null; var best = null, bs = 9;
+  CASH_VENDORS.concat(Object.keys(CASH_ALIAS)).forEach(function(v){ var k = v.toLowerCase().replace(/[^a-z]/g, ''), d = cashDist(w, k.slice(0, Math.max(w.length, 3))); if (d < bs) { bs = d; best = CASH_ALIAS[v] || v; } });
+  return bs <= 2 ? best : null; }
+function cashDist(a, b){ var m = [], i, j; for (i = 0; i <= a.length; i++) { m[i] = [i]; } for (j = 0; j <= b.length; j++) m[0][j] = j;
+  for (i = 1; i <= a.length; i++) for (j = 1; j <= b.length; j++) m[i][j] = Math.min(m[i-1][j] + 1, m[i][j-1] + 1, m[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1)); return m[a.length][b.length]; }
+function cashAmt(t){ var m = String(t).replace(/,/g, '').match(/=\s*(\d+(?:\.\d+)?)/) || String(t).replace(/,/g, '').match(/(\d+(?:\.\d+)?)\s*(?:dhs|aed|dh)?\s*$/i); return m ? +m[1] : null; }
+// how the 22:00 run reads a #purchase message (its own rules, in its own order)
+function cashRead(text){
+  var t = String(text || '').trim(); if (!t) return { cls: '', h: 'Type the line, or tap the buttons above.' };
+  var lines = t.split(/\n|\s\/\s|\s\/|\/\s/).map(function(l){ return l.trim(); }).filter(Boolean), low = t.toLowerCase(), n = cashAmt(t), A = n == null ? '<span class="miss">no amount</span>' : '<b>' + amt(n) + ' AED</b>';
+  var nameOf = function(l){ return l.replace(/=.*$/, '').replace(/\d[\d,.]*\s*(dhs|aed|dh)?/gi, '').trim(); };
+  if (n == null) return { cls: 'bad', h: '⚠ No amount found — write it as <b>= 1400</b>.' };
+  if (/new vendor create|make a new ledger/.test(low)) return { cls: '', h: '→ <b>NEW VENDOR</b> tab is created and ' + A + ' posted as its first bill.' };
+  if (/cash purchase/.test(low)) { var x = nameOf(t.replace(/cash purchase/i, '')); return { cls: '', h: '→ <b>CASH PURCHASE</b> ' + esc(x || '') + ' ' + A + ' — out of the <b>purchase account</b> only, no vendor tab.' }; }
+  if (/usman/.test(low) && /customer/.test(low) && /cash/.test(low)) { var cu = (t.match(/customer\s+([A-Za-z][\w ]*)/i) || [, '?'])[1].trim(); return { cls: '', h: '→ <b>CASH IN from customer ' + esc(cu.toUpperCase()) + '</b> (via Usman hand work) ' + A + ' — purchase account + the customer\'s tab in the Usman hand work sheet.' }; }
+  if (/money taken from others/.test(low)) { var p1 = (t.match(/\(([^)]+)\)/) || [, '?'])[1]; return { cls: '', h: '→ <b>CASH IN</b> — money taken from <b>' + esc(p1) + '</b> ' + A + ' · purchase account up, MONEY GIVEN TO OTHERS up.' }; }
+  var ci = lines.map(function(l){ return /^cash\b/i.test(l) && !/cash purchase/i.test(l); }).indexOf(true);
+  var others = lines.filter(function(l, i){ return i !== ci && nameOf(l); });
+  if (ci >= 0) {
+    var nm = others.length ? nameOf(others[0]) : nameOf(lines[ci].replace(/^cash\b/i, ''));
+    var giv = /money given to others/i.test(nm), who = giv ? 'MONEY GIVEN TO OTHERS (' + ((nm.match(/\(([^)]+)\)/) || [, '?'])[1]) + ')' : cashVendor(nm);
+    var cashFirst = others.length ? ci < lines.indexOf(others[0]) : true;
+    if (!nm) return { cls: '', h: '→ <b>CASH PAID</b> with no name — taken straight out of the <b>purchase account</b> as a cash purchase ' + A + '.' };
+    if (!who) { var near = cashNear(nm); return { cls: 'warn', h: '⚠ <b>' + esc(nm) + '</b> is not a vendor tab' + (near ? ' — did you mean <b>' + esc(near) + '</b>?' : '. The run will look it up and ask you if it can\'t find it.') }; }
+    return cashFirst ? { cls: '', h: '→ <b>CASH OUT to ' + esc(who) + '</b> ' + A + ' · purchase account down, ' + esc(who) + ' tab down' + (who === 'AL-MU' ? ' · also posted to #al-mutageded' : who === 'USMAN' ? ' · also posted to #usman-hand-work' : '') + '.' }
+      : { cls: '', h: '→ <b>CASH IN from ' + esc(who) + '</b> ' + A + ' (name first, cash second) · purchase account up.' };
+  }
+  var first = nameOf(lines[0]), v = cashVendor(first);
+  if (v) return { cls: '', h: '→ <b>BILL from ' + esc(v) + '</b> ' + A + ' on credit — added to what we owe ' + esc(v) + ', no cash moves.' + (CSH.photos.length ? '' : ' <span class="miss">Attach the bill photo.</span>') };
+  if (CASH_EXPW.some(function(w){ return first.toLowerCase().indexOf(w) >= 0; })) return { cls: '', h: '→ <b>EXPENSE</b> "' + esc(first) + '" ' + A + ' · business account down · also listed in #matiexpense.' };
+  var nr = cashNear(first);
+  return { cls: 'warn', h: '⚠ <b>' + esc(first || '?') + '</b> is not a vendor tab or a known expense' + (nr ? ' — did you mean <b>' + esc(nr) + '</b>?' : '. If it is an expense it will be taken as one; otherwise the run will ask you.') };
+}
+function cashBuild(){       // the quick buttons write the line in the wording the run expects
+  var k = CSH.kind, w = CSH.who, n = CSH.amt ? '= ' + CSH.amt + ' dhs' : '= ', x = CSH.what;
+  if (k === 'out') return 'Cash\n' + (w || '') + '\n' + n;
+  if (k === 'in') return (w || '') + '\nCash\n' + n;
+  if (k === 'bill') return (w || '') + ' ' + n;
+  if (k === 'cp') return 'Cash purchase ' + (x || '') + ' ' + n;
+  if (k === 'exp') return (x || '') + ' ' + n;
+  if (k === 'gave') return 'Cash\nMoney given to others (' + (w || '') + ')\n' + n;
+  if (k === 'took') return 'Money taken from others (' + (w || '') + ') ' + n;
+  if (k === 'ucust') return 'USMAN HAND WORK\nCASH\n' + n + ' (cash from customer ' + (w || '') + ')';
+  return $('cashtxt') ? $('cashtxt').value : '';
+}
+function cashDraw(){
+  var el = $('cashbody'), k = CSH.kind, h = '';
+  h += '<div class="cshlbl">WHAT HAPPENED (optional — or just type below)</div><div class="cshk">' + CASH_KINDS.map(function(x){ return '<button type="button" data-ck="' + x[0] + '" class="' + (k === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  if (k === 'out' || k === 'in' || k === 'bill') h += '<div class="cshlbl">VENDOR</div><div class="cshk small">' + CASH_VENDORS.map(function(v){ return '<button type="button" data-cw="' + esc(v) + '" class="' + (CSH.who === v ? 'on' : '') + '">' + esc(v) + '</button>'; }).join('') + '</div>';
+  if (k === 'exp') h += '<div class="cshlbl">EXPENSE</div><div class="cshk small">' + CASH_EXP.map(function(v){ return '<button type="button" data-cx="' + esc(v) + '" class="' + (CSH.what === v ? 'on' : '') + '">' + esc(v) + '</button>'; }).join('') + '</div>';
+  if (k === 'cp') h += '<div class="cshlbl">WHAT WAS BOUGHT</div><input id="cashwhat" autocomplete="off" placeholder="e.g. fabric, buttons" value="' + esc(CSH.what) + '" style="width:100%;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px">';
+  if (k === 'gave' || k === 'took' || k === 'ucust') h += '<div class="cshlbl">' + (k === 'ucust' ? 'CUSTOMER' : 'PERSON') + '</div><input id="cashwho" autocomplete="off" placeholder="name" value="' + esc(CSH.who) + '" style="width:100%;height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px">';
+  if (k) h += '<div class="cshlbl">AMOUNT (AED)</div><input id="cashamt" inputmode="decimal" autocomplete="off" placeholder="e.g. 1400" value="' + esc(CSH.amt) + '">';
+  h += '<div class="cshlbl">MESSAGE FOR #purchase</div><textarea id="cashtxt" placeholder="Cash&#10;Al mu&#10;= 1400 dhs"></textarea>';
+  h += '<div class="cshph" id="cashph"></div><div class="ffbtns"><label class="dorbtn">📷 Photo / bill<input type="file" id="cashfile" accept="image/*" multiple hidden></label><button type="button" class="dorbtn" id="cashclear">Clear</button></div>';
+  h += '<div id="cashread" class="cshread"></div><button type="button" class="gold dorsend" id="cashsend">Send to #purchase</button><div id="cashmsg" class="dorprog"></div><div id="cashlog"></div>';
+  var keep = $('cashtxt') ? $('cashtxt').value : CSH.text || '';
+  el.innerHTML = h; $('cashtxt').value = k ? cashBuild() : keep; cashPh(); cashUpd(); cashLogDraw();
+}
+function cashPh(){ $('cashph').innerHTML = CSH.photos.map(function(p, i){ return '<span><img src="' + p.url + '" alt=""><button type="button" data-cpx="' + i + '">✕</button></span>'; }).join(''); }
+function cashUpd(){ CSH.text = $('cashtxt').value; var r = cashRead(CSH.text); $('cashread').className = 'cshread ' + r.cls; $('cashread').innerHTML = '<small style="color:var(--mute)">How the 22:00 run will read it:</small><br>' + r.h; $('cashmsg').innerHTML = CSH.msg; }
+function cashLogDraw(){ var L = CSH.log; if (!L || !L.length) { $('cashlog').innerHTML = ''; return; }
+  $('cashlog').innerHTML = '<div class="ffs">Sent from the app</div>' + L.map(function(x){ return '<div class="dorl"><b>' + esc(x.text).replace(/\n/g, ' · ') + '</b><small>' + ordWhen(x.t) + (x.n ? ' · ' + x.n + ' photo' + (x.n === 1 ? '' : 's') : '') + (x.read ? ' · ' + esc(x.read) : '') + '</small></div>'; }).join(''); }
+async function cashCall(o){ o.t = Date.now(); o.dev = devId(); o.chk = await svChk(); var j = await relayJson('cash', o, o.op === 'post' ? 1 : 2);
+  if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version — Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy' : (j.error || 'refused')); return j; }
+async function cashSend(){
+  if (CSH.busy) return; var text = $('cashtxt').value.trim(); if (!text) { alert('Type the line first.'); return; }
+  var r = cashRead(text); if (r.cls === 'bad') { alert('No amount — write it as = 1400'); return; }
+  var plain = $('cashread').innerText.replace(/^How the 22:00 run will read it:\s*/, '');
+  if (!confirm('Send to #purchase?\n\n' + text + '\n\n' + plain)) return;
+  CSH.busy = true; $('cashsend').disabled = true; CSH.msg = 'Sending…'; cashUpd();
+  var sig = text + '|' + CSH.photos.length; if (!CSH.run || CSH.run.sig !== sig) CSH.run = { sig: sig, id: 'c' + Date.now().toString(36) + devId() };
+  try { await cashCall({ op: 'post', id: CSH.run.id, text: text, read: plain.slice(0, 160), photos: CSH.photos.map(function(p){ return p.b64; }) });
+    CSH.msg = '<b class="okc">✓ Posted to #purchase.</b> The 22:00 run puts it in the ledger.'; CSH.run = null; CSH.photos.forEach(function(p){ URL.revokeObjectURL(p.url); }); CSH.photos = []; CSH.kind = ''; CSH.who = ''; CSH.amt = ''; CSH.what = ''; CSH.text = '';
+    $('cashtxt').value = ''; cashDraw(); cashLoad(); }
+  catch(e){ CSH.msg = '<span class="miss">Not sent: ' + esc(e.message) + '</span> — press Send again (it never posts twice).'; cashUpd(); }
+  finally { CSH.busy = false; if ($('cashsend')) $('cashsend').disabled = false; }
+}
+async function cashLoad(){ try { CSH.log = (await cashCall({ op: 'list' })).log || []; } catch(e){} if (!$('cash').hidden) cashLogDraw(); }
+function cashOpen(){ if (!isBoss()) return; $('mysheet').hidden = true; $('cash').hidden = false; CSH.msg = ''; cashDraw(); cashLoad(); }
+$('cashopen').onclick = cashOpen;
+$('cashx').onclick = function(){ $('cash').hidden = true; };
+$('cashbody').addEventListener('click', function(e){
+  var b = e.target.closest('[data-ck]'); if (b) { CSH.kind = CSH.kind === b.dataset.ck ? '' : b.dataset.ck; CSH.who = ''; CSH.what = ''; cashDraw(); return; }
+  b = e.target.closest('[data-cw]'); if (b) { CSH.who = b.dataset.cw; cashDraw(); return; }
+  b = e.target.closest('[data-cx]'); if (b) { CSH.what = b.dataset.cx; cashDraw(); return; }
+  b = e.target.closest('[data-cpx]'); if (b) { var p = CSH.photos.splice(+b.dataset.cpx, 1)[0]; if (p) URL.revokeObjectURL(p.url); cashPh(); cashUpd(); return; }
+  if (e.target.id === 'cashclear') { CSH.kind = ''; CSH.who = ''; CSH.amt = ''; CSH.what = ''; CSH.text = ''; $('cashtxt').value = ''; CSH.photos = []; CSH.msg = ''; cashDraw(); return; }
+  if (e.target.id === 'cashsend') cashSend();
+});
+$('cashbody').addEventListener('input', function(e){
+  var t = e.target;
+  if (t.id === 'cashamt') { CSH.amt = t.value.replace(/[^\d.]/g, ''); $('cashtxt').value = cashBuild(); }
+  if (t.id === 'cashwhat') { CSH.what = t.value; $('cashtxt').value = cashBuild(); }
+  if (t.id === 'cashwho') { CSH.who = t.value.trim(); $('cashtxt').value = cashBuild(); }
+  if (t.id === 'cashtxt' && CSH.kind) { CSH.kind = ''; document.querySelectorAll('#cashbody [data-ck]').forEach(function(x){ x.classList.remove('on'); }); }
+  cashUpd();
+});
+$('cashbody').addEventListener('change', async function(e){
+  if (e.target.id !== 'cashfile') return; var fs = [].slice.call(e.target.files || []); e.target.value = '';
+  for (var i = 0; i < fs.length; i++) { var bl = await dorPhoto(fs[i]); CSH.photos.push({ url: URL.createObjectURL(bl), b64: await dorB64(bl) }); }
+  cashPh(); cashUpd();
 });
 
 boot();
