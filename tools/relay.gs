@@ -183,7 +183,8 @@ function slackPdf(reqText, P) {
 // DESIGN ORDERS FROM THE APP (Abbas, 11 Oct 2026: "the #order-2 process ... I want this process to be built in the app ... just for me").
 // Replaces posting in #order-2 and waiting for the 22:30 laptop run. From the memo (owner phone only) the relay:
 //   'find'  - the newest ALM card for a design (what will be copied)       'mint' - a fresh unused SJ-/US- number
-//   'card'  - builds the Trello card (ALM START copy, USMAN HAND WORK copy, a fresh /N card, or an outsourced US- card)
+//   'card'  - builds the Trello card (ALM START copy or a fresh /N card - plus the same card on USMAN HAND WORK when the order
+//             includes Usman hand work - or an outsourced US- card)
 //   'file'  - one photo / voice note / video: onto the Trello card (<=10 MB) and uploaded to the factory Slack
 //   'send'  - one factory message with every file (#cutting [+ #usmancutting] or #emaan) and "<SJ-no> SAMPLE" in #samplesneed
 // Rules are the ones in "Design Number Card Workflow": copy keeps custom fields + attachments + cover, no labels, pictures added
@@ -208,6 +209,13 @@ function trApi(method, path, params, tok, body, raw) {
   var r = UrlFetchApp.fetch('https://api.trello.com/1' + path + '?key=' + TKEY + '&token=' + tok + (q ? '&' + q : ''), o), c = r.getResponseCode(), t = r.getContentText();
   if (c >= 300) throw new Error('Trello said ' + c + (c === 401 ? ' (the relay\'s Trello key cannot change cards - add TRELLO_W)' : '') + ': ' + t.slice(0, 120));
   try { return JSON.parse(t); } catch (e) { return t; }
+}
+function trWho(P, tok) {                                   // which Trello key the relay uses, and whether it may change cards
+  var key = P.getProperty('TRELLO_W') ? 'TRELLO_W' : 'TRELLO', c = CacheService.getScriptCache(), ck = 'TW_' + key + '_' + String(tok).slice(-6), have = c.get(ck);
+  if (have) return JSON.parse(have);
+  var w = { key: key, write: null };
+  try { var t = trApi('get', '/tokens/' + tok, { fields: 'permissions' }, tok); w.write = (t.permissions || []).some(function (p) { return p.write && p.modelType === 'Board'; }); } catch (e) {}
+  c.put(ck, JSON.stringify(w), 600); return w;
 }
 function idTime(id) { return parseInt(String(id).slice(0, 8), 16) * 1000; }
 function doFindCard(no, tok) {
@@ -282,17 +290,18 @@ function dorder(reqText, P) {
   var tok = P.getProperty('TRELLO_W') || P.getProperty('TRELLO'); if (!tok) return out({ ok: false, error: 'the relay has no Trello key' });
   var op = req.op;
   try {
-    if (op === 'find') { var f = doFindCard(req.no, tok); return out({ ok: true, card: f ? { id: f.id, name: f.name, url: f.shortUrl, made: idTime(f.id) } : null }); }
+    if (op === 'find') { var f = doFindCard(req.no, tok); return out({ ok: true, w: trWho(P, tok), card: f ? { id: f.id, name: f.name, url: f.shortUrl, made: idTime(f.id) } : null }); }
     if (op === 'mint') return out({ ok: true, no: doMint(req.prefix === 'US-' ? 'US-' : '', tok) });
     if (op === 'list') return out({ ok: true, log: JSON.parse(P.getProperty('DOLOG') || '[]') });
     var oid = String(req.oid || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40); if (!oid) return out({ ok: false, error: 'no order id' });
     var key = 'DO_' + oid, st = JSON.parse(P.getProperty(key) || '{}'), save = function () { P.setProperty(key, JSON.stringify(st)); };
     var FT = P.getProperty('SLACK_FACTORY_TOKEN'), ST = P.getProperty('SLACK_BOT_TOKEN');
     if (op === 'card') {
-      if (st.card) return out({ ok: true, card: st.card, notes: st.notes || [] });     // already built - a retry never makes a second card
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN yet' });
-      var mode = req.mode, name = String(req.name || '').slice(0, 300), notes = [], card;
-      st.mode = mode; st.no = String(req.no || ''); st.files = []; st.notes = notes;
+      var mode = req.mode === 'out' ? 'out' : 'alm', name = String(req.name || '').slice(0, 300), notes = st.notes || [], card;
+      var usman = mode !== 'out' && !!(req.usman || req.mode === 'hand');   // Abbas 11 Oct 2026: a hand-work order goes on ALM AND on USMAN HAND WORK
+      if (!st.card) {                                         // a retry never makes a second card
+      st.mode = mode; st.usman = usman; st.no = String(req.no || ''); st.files = []; st.notes = notes;
       if (mode === 'out') {                                   // outsourced hand-work: US- card on USMAN HAND WORK, his label, COST / SALE
         var lid = doLabel(DOX.USB, req.person || 'ALI', tok);
         card = trApi('post', '/cards', { idList: DOX.USORDER, name: name, pos: 'top', idLabels: lid }, tok);
@@ -309,7 +318,7 @@ function dorder(reqText, P) {
         var src = req.src ? trApi('get', '/cards/' + req.src, { fields: 'name,closed,idAttachmentCover,shortUrl' }, tok) : doFindCard(req.no, tok);
         if (!src) return out({ ok: false, error: 'no ALM card found for ' + req.no + ' - mark it /N if it is a new fabric' });
         if (!src.idAttachmentCover && src.idAttachmentCover !== null) src = trApi('get', '/cards/' + src.id, { fields: 'name,idAttachmentCover,shortUrl' }, tok);
-        var hand = mode === 'hand', toList = hand ? DOX.USORDER : DOX.START;
+        var hand = false, toList = DOX.START;
         card = trApi('post', '/cards', { idList: toList, idCardSource: src.id, keepFromSource: 'attachments,customFields', name: name, pos: 'top' }, tok);
         var sa = trApi('get', '/cards/' + src.id + '/attachments', { fields: 'id,name,date,mimeType,bytes' }, tok);
         var isImg = function (a) { return /^image\//.test(a.mimeType || '') || /\.(jpe?g|png|webp|heic|gif)$/i.test(a.name || ''); };
@@ -340,7 +349,25 @@ function dorder(reqText, P) {
         } else notes.push('the copied card has no design picture');
       }
       st.card = { id: card.id, url: card.shortUrl, name: card.name };
-      save(); return out({ ok: true, card: st.card, notes: notes });
+      save();
+      }
+      if (st.usman && !st.ucard) {                             // the same order on USMAN HAND WORK -> ORDER (top): same name, same pictures
+        var uc, ulabs = [];
+        if (req.customer) ulabs.push(doLabel(DOX.USB, req.customer, tok));
+        if (st.newCard) uc = trApi('post', '/cards', { idList: DOX.USORDER, name: st.card.name, pos: 'top', idLabels: ulabs.join(',') }, tok);
+        else {
+          uc = trApi('post', '/cards', { idList: DOX.USORDER, idCardSource: st.card.id, keepFromSource: 'attachments', name: st.card.name, pos: 'top' }, tok);
+          try {
+            var ac = trApi('get', '/cards/' + st.card.id, { fields: 'idAttachmentCover' }, tok).idAttachmentCover;
+            var aa = trApi('get', '/cards/' + st.card.id + '/attachments', { fields: 'id,name' }, tok), ua = trApi('get', '/cards/' + uc.id + '/attachments', { fields: 'id,name' }, tok);
+            var ix = aa.map(function (a) { return a.id; }).indexOf(ac);
+            if (ix >= 0 && ua.length === aa.length) trApi('put', '/cards/' + uc.id, { idAttachmentCover: ua[ix].id }, tok);
+          } catch (e) { notes.push('USMAN card cover not set: ' + String(e.message).slice(0, 80)); }
+          ulabs.forEach(function (l) { trApi('post', '/cards/' + uc.id + '/idLabels', { value: l }, tok); });
+        }
+        st.ucard = { id: uc.id, url: uc.shortUrl, name: uc.name }; st.notes = notes; save();
+      }
+      return out({ ok: true, card: st.card, ucard: st.ucard || null, notes: st.notes || [] });
     }
     if (op === 'file') {
       if (!st.card) return out({ ok: false, error: 'build the card first' });
@@ -351,6 +378,8 @@ function dorder(reqText, P) {
       if (bytes.length <= DOX.TRELLO_MAX) {
         try { trApi('post', '/cards/' + st.card.id + '/attachments', { name: fname, setCover: req.design && st.newCard ? 'true' : 'false', mimeType: mime }, tok, { file: Utilities.newBlob(bytes, mime, fname) }, true); rec.trello = true; }
         catch (e) { rec.trelloErr = e.message.slice(0, 100); }
+        if (st.ucard) try { trApi('post', '/cards/' + st.ucard.id + '/attachments', { name: fname, setCover: req.design && st.newCard ? 'true' : 'false', mimeType: mime }, tok, { file: Utilities.newBlob(bytes, mime, fname) }, true); rec.utrello = true; }
+        catch (e) { rec.utrelloErr = e.message.slice(0, 100); }
       }
       rec.slack = slackUp(FT, fname, bytes);
       if (req.design && st.newCard && st.mode !== 'out' && ST && !st.sampleF) try { st.sampleF = slackUp(ST, fname, bytes); } catch (e) { (st.notes = st.notes || []).push('#samplesneed photo: ' + e.message.slice(0, 80)); }
@@ -360,7 +389,7 @@ function dorder(reqText, P) {
       if (!st.card) return out({ ok: false, error: 'build the card first' });
       var text = String(req.text || '').slice(0, 3500);
       if (!st.factory) {
-        var chans = st.mode === 'out' ? [factoryChannel(P, FT, 'emaan')] : st.mode === 'hand' ? [DOX.CUTTING, DOX.USMANCUT] : [DOX.CUTTING];
+        var chans = st.mode === 'out' ? [factoryChannel(P, FT, 'emaan')] : st.usman ? [DOX.CUTTING, DOX.USMANCUT] : [DOX.CUTTING];
         var ids = (st.coverF ? [st.coverF] : []).concat((st.files || []).map(function (x) { return x.slack; }));
         slackShare(FT, ids, chans, text); st.factory = Date.now(); save();
       }
@@ -370,12 +399,16 @@ function dorder(reqText, P) {
         st.samples = Date.now(); save();
       }
       var log = JSON.parse(P.getProperty('DOLOG') || '[]').filter(function (x) { return x.oid !== oid; });
-      log.unshift({ oid: oid, t: Date.now(), name: st.card.name, url: st.card.url, mode: st.mode, files: (st.files || []).length, notes: st.notes || [] });
+      log.unshift({ oid: oid, t: Date.now(), name: st.card.name, url: st.card.url, mode: st.mode, usman: !!st.usman, files: (st.files || []).length, notes: st.notes || [] });
       P.setProperty('DOLOG', JSON.stringify(log.slice(0, 25)));
       return out({ ok: true, card: st.card, notes: st.notes || [] });
     }
     return out({ ok: false, error: 'bad request' });
-  } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 300) }); }
+  } catch (e) {
+    var msg = String(e.message || e).slice(0, 300);
+    if (/Trello said 401/.test(msg)) { var w = trWho(P, tok); msg += ' [key used: ' + w.key + (w.write === false ? ', read-only' : '') + ']'; }
+    return out({ ok: false, error: msg });
+  }
 }
 function doGet() { return out({ ok: true, relay: 'sj-memo' }); }
 function hex(bytes) { return bytes.map(function (x) { return ('0' + (x & 255).toString(16)).slice(-2); }).join(''); }
