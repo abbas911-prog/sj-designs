@@ -419,6 +419,9 @@ function dorder(reqText, P) {
 // balance = OPENING + SALE - RECEIVED + ADJUST over the entries that are not void. An entry ID is "<type>:<ref>:<device>", so sending the
 // same invoice / receipt again replaces its line instead of adding a second one. Signed with the shop password (staff make bills too);
 // the full list and the statements need the owner key-check as well.
+// Run this once from the editor (pick setupSheets next to Run, press Run, allow Google Sheets): it asks for the Sheets permission
+// and makes the balances sheet. The web app cannot ask for a new permission by itself.
+function setupSheets() { var ss = custBook(PropertiesService.getScriptProperties()); console.log('Customer balances sheet: ' + ss.getUrl()); }
 function custKey(n) { return String(n || '').trim().replace(/\s+/g, ' ').toUpperCase(); }
 function custNum(v) { var x = parseFloat(String(v == null ? '' : v).replace(/[,\s]/g, '')); return isFinite(x) ? Math.round(x * 100) / 100 : 0; }
 function custBook(P) {
