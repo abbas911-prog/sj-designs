@@ -303,6 +303,34 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .ohd{position:relative}.opv{float:right;width:58px;height:72px;object-fit:cover;border-radius:10px;margin:0 0 4px 10px;background:#EFE9DF}
 .opvbig{display:block;width:100%;border-radius:12px;margin:6px 0 10px;box-shadow:var(--sh)}.opvno{font-size:12px;color:var(--mute);margin:6px 0 10px}
 .slk{font-size:12.5px;color:var(--mute);margin:-4px 2px 8px}.slk:empty{display:none}.slk.ok{color:#2f6b4f;font-weight:700}.slk.bad{color:#9a3b1e}.slk button{margin-left:6px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px}
+
+/* new design order */
+#doropen[hidden],#dor[hidden]{display:none}
+#dor{position:fixed;inset:0;z-index:57;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
+#dor .in{background:var(--bg);width:100%;max-width:720px;border-radius:24px 24px 0 0;padding:16px 12px calc(22px + env(safe-area-inset-bottom));max-height:94vh;max-height:94dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#dor .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#dor .hd b{letter-spacing:.12em;color:var(--mute);font-size:13px}#dor .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700}
+.dorseg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:#EAE3D7;border-radius:14px;padding:3px;margin-bottom:10px}
+.dorseg button{border:0;background:none;border-radius:11px;padding:8px 2px;font:inherit;font-weight:800;font-size:13.5px;color:var(--mute)}.dorseg button small{display:block;font-weight:500;font-size:10.5px}
+.dorseg button.on{background:#fff;color:var(--gold);box-shadow:0 1px 3px rgba(40,30,15,.14)}
+.dorf{background:#fff;border-radius:16px;box-shadow:var(--sh);padding:12px;display:grid;gap:8px}
+.dorf input:not([type=checkbox]),.dorf textarea{width:100%;min-width:0;height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:16px;background:#fff}
+.dorf textarea{height:64px;padding:8px 10px}
+.dorno{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.dorchk{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;white-space:nowrap}.dorchk input{width:20px;height:20px}
+.dorlabs{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center}
+.dorhint{font-size:12.5px;color:var(--mute);line-height:1.35}.dorhint a{color:var(--gold);font-weight:700}
+.dorlbl{display:grid;gap:4px;font-size:12px;color:var(--mute);font-weight:600}
+.dorbtns{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:6px;margin:10px 0}
+.dorbtn{display:flex;align-items:center;justify-content:center;min-height:46px;border:1.5px solid var(--gold);border-radius:12px;background:#fff;color:var(--gold);font:inherit;font-weight:800;font-size:13.5px;text-align:center;padding:4px}
+.dorbtn.on{background:#b4472a;border-color:#b4472a;color:#fff}
+.dorm{display:grid;grid-template-columns:88px 1fr auto;gap:8px;align-items:center;background:#fff;border-radius:14px;box-shadow:var(--sh);padding:8px;margin-bottom:6px}
+.dormh img,.dormh video{width:88px;height:66px;object-fit:cover;border-radius:10px;background:#000;display:block}.dormh audio{width:88px}
+.dorm .dormt{font-size:12.5px;color:var(--mute)}.dorm .dormt b{color:var(--ink)}.dorm em{color:#8a5a00;font-style:normal}
+.dorstar{grid-column:2;justify-self:start;border:0;background:none;color:var(--gold);font:inherit;font-size:12px;font-weight:700;padding:0}
+.dorx{grid-row:1;grid-column:3;border:0;background:none;color:#b9b0a4;font-size:18px}
+.dorsend{width:100%;height:50px;border:0;border-radius:14px;background:var(--gold);color:#fff;font:inherit;font-size:16px;font-weight:800;box-shadow:0 3px 10px rgba(160,125,63,.3)}.dorsend[disabled]{opacity:.5}
+.dorprog{font-size:13px;line-height:1.6;margin:10px 2px}.dorprog a{color:var(--gold);font-weight:700}.okc{color:#2f6b4f}
+.dorl{background:#fff;border-radius:12px;padding:8px 10px;margin:6px 0;font-size:13.5px}.dorl a{color:var(--ink);font-weight:700;text-decoration:none}.dorl small{display:block;color:var(--mute)}
 /* small vendors */
 #svopen[hidden],#sv[hidden]{display:none}
 #sv{position:fixed;inset:0;z-index:56;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -343,8 +371,26 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
   <div id="load" hidden>Loading READY list…</div>
   <div id="feed"></div>
 </main>
-<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><button type="button" id="svopen" class="ffbig">SMALL VENDORS<small>office expenses · opening balances · kept in the cloud</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
+<div id="mysheet" hidden><div class="in"><div class="hd"><b>MY SHORTCUTS</b><button type="button" id="myx">Close</button></div><button type="button" id="doropen" class="ffbig">NEW DESIGN ORDER<small>Trello card + factory Slack · instead of #order-2</small></button><button type="button" id="ffopen" class="ffbig">50-50 BILLS<small>reprice · review · MAKE BILL</small></button><button type="button" id="svopen" class="ffbig">SMALL VENDORS<small>office expenses · opening balances · kept in the cloud</small></button><div id="clk"><input id="clq" inputmode="numeric" autocomplete="off" placeholder="Cost check · type design number"><div id="clres"></div><div id="clbar" hidden><input id="clcmd" autocomplete="off" enterkeyhint="send" placeholder="e.g. remove lace 1, +20"><button type="button" id="clgo">→</button></div></div><div id="myg"></div><div id="myst"></div></div></div>
 <div id="ff" hidden><div class="in"><div class="hd"><b>50-50 BILLS</b><span><button type="button" id="ffre">↻</button><button type="button" id="ffx">Close</button></span></div><div id="ffbody"></div></div></div>
+<div id="dor" hidden><div class="in"><div class="hd"><b>NEW DESIGN ORDER</b><button type="button" id="dorx">Close</button></div>
+<div class="dorseg"><button type="button" data-dm="alm" class="on">Normal<small>ALM START · #cutting</small></button><button type="button" data-dm="hand">Hand work<small>Usman · #usmancutting</small></button><button type="button" data-dm="out">Outsourced<small>name · #emaan</small></button></div>
+<div class="dorf">
+<div id="dorout" hidden><div class="svg2"><input id="dorperson" placeholder="Person (e.g. ALI)" autocomplete="off"><input id="dorcost" inputmode="decimal" placeholder="COST"></div><input id="dorsale" inputmode="decimal" placeholder="SALE"></div>
+<div id="dornorow" class="dorno"><input id="dorno" inputmode="text" autocomplete="off" placeholder="Design number (e.g. 41862)"><label class="dorchk"><input type="checkbox" id="dorfresh"> /N new fabric</label></div>
+<div id="dorfind" class="dorhint"></div>
+<div class="svg2"><input id="dorpcs" autocomplete="off" placeholder="Pieces (e.g. 96) or OP"><input id="dorcol" autocomplete="off" placeholder="Colours (e.g. 6)" class="dorcol"></div>
+<div id="dorcolrow"><input id="dorsize" autocomplete="off" placeholder="Size (e.g. M,L,XL,XXL (ALL SILVER))"></div>
+<div id="dorlabs" class="dorlabs"><label class="dorchk"><input type="checkbox" id="dorrate"> RATE</label><label class="dorchk"><input type="checkbox" id="dorhis"> HISAAB</label><input id="dorcust" autocomplete="off" placeholder="Customer label (optional)"></div>
+<textarea id="dornotes" placeholder="Extra lines for the factory (optional)"></textarea>
+<label class="dorlbl">Order line · card name<input id="dorname" autocomplete="off"></label>
+</div>
+<div class="dorbtns"><label class="dorbtn">📷 Photos<input type="file" id="dorphoto" accept="image/*" multiple hidden></label><button type="button" class="dorbtn" id="dorrec">🎤 Record voice note</button><label class="dorbtn">🎬 Video<input type="file" id="dorvideo" accept="video/*" hidden></label></div>
+<div id="dormedia"></div>
+<button type="button" class="gold dorsend" id="dorsend">Send order</button>
+<div id="dorprog" class="dorprog"></div>
+<div id="dorlog"></div>
+</div></div>
 <div id="sv" hidden><div class="in"><div class="hd"><b>SMALL VENDORS · موردين صغار</b><button type="button" id="svx">Close</button></div><div id="svbody"></div></div></div>
 <div id="ords" hidden><div class="in"><div class="hd"><b>ORDERS · الطلبات</b><span><button type="button" id="ordre">↻</button><button type="button" id="ordx">Close</button></span></div><div class="otabs"><button type="button" data-o="open" class="on">Open</button><button type="button" data-o="done">Complete</button></div><div id="ordbody"></div></div></div>
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
@@ -605,7 +651,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-10h';
+var VER = '2026-10-11a';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1150,7 +1196,7 @@ $('stk').addEventListener('click', function(e){ var b = e.target.closest('button
 var CAT = { items: [], modes: {}, busy: false };
 function isOwner(){ return ls('sj_owner') === '1'; }
 function isBoss(){ return isOwner() && !!COST && !!pinGet(); }   // 10 Oct 2026 (Abbas): staff phones with the catalogue on must NOT see 50-50 or cost check
-function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('svopen').hidden = !bo; $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
+function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('doropen').hidden = !bo; if (!bo && $('dor')) $('dor').hidden = true; $('svopen').hidden = !bo; $('clk').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
 (function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
   function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
   function stop(){ clearTimeout(t); }
@@ -2027,6 +2073,175 @@ async function memoSlack(file, again){
     slkMsg('✓ Sent to Slack #godown and #customer', 'ok');
   } catch(e){ slkMsg('Not sent to Slack: ' + esc(e.message) + ' <button type="button" id="slkre">Try again</button>', 'bad'); var b = $('slkre'); if (b) b.onclick = function(){ memoSlack(file, again); }; }
 }
+
+// ----- NEW DESIGN ORDER (Abbas, 11 Oct 2026): the #order-2 process inside the app, owner only.
+// One order = order line + photos + voice notes + videos -> Trello card (copy of the newest ALM card, a fresh /N card, or an
+// outsourced US- card) + ONE factory Slack message with every file + "SJ-x SAMPLE" in #samplesneed. Done by the relay (job "dorder").
+var DOR = { mode: 'alm', fresh: false, media: [], src: null, findT: null, busy: false, run: null, nameEdited: false, rec: null };
+var DOR_MAX = 17 * 1024 * 1024;                           // per file: the relay takes up to ~25 MB of text per request
+async function dorCall(o, tries){ o.t = Date.now(); o.dev = devId(); o.chk = await svChk(); var j = await relayJson('dorder', o, tries || 2);
+  if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version — Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy' : (j.error || 'refused')); return j; }
+function dorV(id){ return ($(id).value || '').trim(); }
+function dorName(){
+  var no = DOR.mode === 'out' ? 'US-(new number)' : (DOR.fresh || !dorV('dorno') ? 'SJ-(new number)' : 'SJ-' + dorV('dorno').replace(/^SJ-?/i, ''));
+  if (!DOR.fresh && DOR.mode !== 'out' && !dorV('dorno')) no = 'SJ-?';
+  var pcs = dorV('dorpcs') || 'OP', parts = [no, /^\d+$/.test(pcs) ? pcs + ' PCS' : pcs];
+  if (DOR.mode !== 'out') { parts.push('COLORS = ' + dorV('dorcol')); parts.push('SIZE = ' + dorV('dorsize')); }
+  return parts.join(' , ');
+}
+function dorSyncName(){ if (!DOR.nameEdited) $('dorname').value = dorName(); }
+function dorDraw(){
+  var m = DOR.mode;
+  document.querySelectorAll('#dor [data-dm]').forEach(function(b){ b.classList.toggle('on', b.dataset.dm === m); });
+  $('dorout').hidden = m !== 'out'; $('dornorow').hidden = m === 'out'; $('dorlabs').hidden = m === 'out'; $('dorcolrow').hidden = m === 'out';
+  if (DOR.fresh) { $('dorrate').checked = true; $('dorhis').checked = true; }
+  dorSyncName(); dorMedia(); dorFindShow();
+}
+function dorFindShow(){
+  var el = $('dorfind'); if (DOR.mode === 'out') { el.innerHTML = 'A new <b>US-#####</b> card goes on USMAN HAND WORK → ORDER, with the person\'s label, COST and SALE. Slack: #emaan only.'; return; }
+  if (DOR.fresh) { el.innerHTML = '<b>/N</b> — a fresh SJ number is made when you send. New card on ALM START with RATE + HISAAB, your design photo as the cover.'; return; }
+  var s = DOR.src;
+  if (!dorV('dorno')) el.innerHTML = 'Type the design number — the newest ALM card for it is copied (custom fields + design picture).';
+  else if (s === 'wait') el.innerHTML = 'Looking for the ALM card…';
+  else if (s && s.err) el.innerHTML = '<span class="miss">' + esc(s.err) + '</span>';
+  else if (s) el.innerHTML = '✓ Will copy: <a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.name) + '</a> · made ' + new Date(s.made).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) +
+    ' → ' + (DOR.mode === 'hand' ? 'USMAN HAND WORK · ORDER' : 'ALM · START');
+  else el.innerHTML = '<span class="miss">No ALM card found for SJ-' + esc(dorV('dorno')) + '. Tick /N if it is a new fabric, or check the number.</span>';
+}
+function dorFind(){
+  clearTimeout(DOR.findT); var no = dorV('dorno').replace(/^SJ-?/i, ''); DOR.src = no ? 'wait' : null; dorFindShow(); if (!no || DOR.fresh) return;
+  DOR.findT = setTimeout(async function(){ try { var j = await dorCall({ op: 'find', no: no }); if (dorV('dorno').replace(/^SJ-?/i, '') !== no) return; DOR.src = j.card; }
+    catch(e){ DOR.src = { err: 'Could not check Trello: ' + e.message }; } dorFindShow(); }, 700);
+}
+function dorMedia(){
+  var el = $('dormedia'); if (!DOR.media.length) { el.innerHTML = '<div class="dorhint">No photos, voice notes or videos yet.</div>'; return; }
+  el.innerHTML = DOR.media.map(function(x, i){
+    var head = x.kind === 'photo' ? '<img src="' + x.url + '" alt="">' : x.kind === 'voice' ? '<audio controls preload="none" src="' + x.url + '"></audio>' : '<video controls playsinline preload="metadata" src="' + x.url + '"></video>';
+    return '<div class="dorm"><div class="dormh">' + head + '</div><div class="dormt"><b>' + (x.kind === 'photo' ? 'Photo' : x.kind === 'voice' ? 'Voice note' : 'Video') + '</b> · ' + (x.size / 1048576).toFixed(1) + ' MB' +
+      (x.kind === 'video' && x.size > DOR_MAX ? ' · <em>will be made smaller before sending</em>' : '') + (x.st ? ' · ' + x.st : '') + '</div>' +
+      (x.kind === 'photo' ? '<button type="button" class="dorstar' + (x.design ? ' on' : '') + '" data-dstar="' + i + '">' + (x.design ? '★ design photo' : '☆ set as design photo') + '</button>' : '') +
+      '<button type="button" class="dorx" data-dx="' + i + '">✕</button></div>';
+  }).join('');
+}
+function dorAdd(kind, blob, name){
+  var x = { kind: kind, blob: blob, url: URL.createObjectURL(blob), size: blob.size, name: name, mime: blob.type || 'application/octet-stream' };
+  if (kind === 'photo' && !DOR.media.some(function(m){ return m.design; })) x.design = true;
+  DOR.media.push(x); dorMedia();
+}
+function dorPhoto(file){ return new Promise(function(ok){ var u = URL.createObjectURL(file), im = new Image();
+  im.onload = function(){ var k = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); c.toBlob(function(b){ ok(b || file); }, 'image/jpeg', 0.86); };
+  im.onerror = function(){ URL.revokeObjectURL(u); ok(file); }; im.src = u; }); }
+function dorExt(mime, fallback){ return /mp4|m4a|aac/.test(mime) ? (/audio/.test(mime) ? 'm4a' : 'mp4') : /webm/.test(mime) ? 'webm' : /quicktime/.test(mime) ? 'mov' : /ogg/.test(mime) ? 'ogg' : fallback; }
+async function dorRecord(){
+  var b = $('dorrec');
+  if (DOR.rec) { DOR.rec.stop(); return; }
+  try {
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: true }), chunks = [], mt = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm'].filter(function(t){ return window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t); })[0];
+    var r = new MediaRecorder(stream, mt ? { mimeType: mt } : undefined), t0 = Date.now(), tick = setInterval(function(){ var s = Math.round((Date.now() - t0) / 1000); b.textContent = '■ Stop · ' + Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); if (s >= 600) r.stop(); }, 500);
+    r.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
+    r.onstop = function(){ clearInterval(tick); stream.getTracks().forEach(function(t){ t.stop(); }); DOR.rec = null; b.textContent = '🎤 Record voice note'; b.classList.remove('on');
+      var blob = new Blob(chunks, { type: r.mimeType || mt || 'audio/mp4' }); if (blob.size > 1000) dorAdd('voice', blob, 'voice-' + (DOR.media.filter(function(m){ return m.kind === 'voice'; }).length + 1) + '.' + dorExt(blob.type, 'm4a')); };
+    r.start(1000); DOR.rec = r; b.classList.add('on'); b.textContent = '■ Stop · 0:00';
+  } catch(e){ alert('Microphone not available: ' + e.message); }
+}
+// make a long video small enough to send: replay it into a canvas at ~720p and record that (works on iPhone Safari and Android Chrome)
+// (iPhone: the video element and the sound context are unlocked on the Send tap itself - see dorSend - so the sound is kept)
+function dorShrink(file, maxBytes, onp, vEl, acIn){ return new Promise(function(ok, no){
+  var own = !vEl, v = vEl || document.createElement('video'); if (own) { v.playsInline = true; v.preload = 'auto'; v.src = URL.createObjectURL(file); }
+  v.onerror = function(){ no(new Error('this video cannot be read on this phone')); };
+  var go = async function(){
+    try {
+      var dur = v.duration || 60, long = dur > 120, side = long ? 960 : 1280, k = Math.min(1, side / Math.max(v.videoWidth, v.videoHeight));
+      var c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * k / 2) * 2; c.height = Math.round(v.videoHeight * k / 2) * 2; var g = c.getContext('2d');
+      var vbr = Math.max(300000, Math.min(2500000, Math.floor(maxBytes * 8 * 0.85 / dur) - 64000));
+      v.pause(); v.currentTime = 0; v.muted = false;
+      var cs = c.captureStream(30), AC = window.AudioContext || window.webkitAudioContext, ac = acIn || (AC ? new AC() : null);
+      if (ac) { try { var src = ac.createMediaElementSource(v), dst = ac.createMediaStreamDestination(); src.connect(dst); dst.stream.getAudioTracks().forEach(function(t){ cs.addTrack(t); }); await ac.resume(); } catch(e){} }
+      var mt = ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm'].filter(function(t){ return MediaRecorder.isTypeSupported(t); })[0];
+      var rec = new MediaRecorder(cs, { mimeType: mt, videoBitsPerSecond: vbr, audioBitsPerSecond: 64000 }), chunks = [];
+      rec.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop = function(){ if (own) URL.revokeObjectURL(v.src); if (ac && !acIn) ac.close(); var b = new Blob(chunks, { type: rec.mimeType || mt }); if (b.size > maxBytes) no(new Error('still ' + (b.size / 1048576).toFixed(0) + ' MB after making it smaller — please trim the video')); else ok(b); };
+      var draw = function(){ if (v.ended || v.paused && v.currentTime >= dur - 0.05) return; g.drawImage(v, 0, 0, c.width, c.height); onp && onp(Math.min(99, Math.round(v.currentTime / dur * 100))); requestAnimationFrame(draw); };
+      v.onended = function(){ setTimeout(function(){ rec.stop(); }, 150); };
+      rec.start(1000);
+      try { await v.play(); } catch(e){ v.muted = true; await v.play(); }   // if the phone refuses sound, keep going without it
+      draw();
+    } catch(e){ no(e); }
+  };
+  if (v.readyState >= 1) go(); else v.onloadedmetadata = go;
+}); }
+function dorB64(blob){ return new Promise(function(ok, no){ var r = new FileReader(); r.onload = function(){ ok(String(r.result).split(',')[1] || ''); }; r.onerror = function(){ no(new Error('could not read the file')); }; r.readAsDataURL(blob); }); }
+function dorProg(h){ $('dorprog').innerHTML = h; }
+async function dorSend(){
+  if (DOR.busy) return;
+  var m = DOR.mode, fresh = m !== 'out' && DOR.fresh, no = dorV('dorno').replace(/^SJ-?/i, '');
+  if (m !== 'out' && !fresh && !no) { alert('Type the design number, or tick /N for a new fabric'); return; }
+  if (m !== 'out' && !fresh && (!DOR.src || DOR.src === 'wait' || DOR.src.err)) { alert(DOR.src === 'wait' ? 'Still looking for the ALM card — try again in a second' : 'No ALM card to copy for SJ-' + no + '. Tick /N if it is a new fabric.'); return; }
+  if (m === 'out' && !dorV('dorperson')) { alert('Type the person\'s name (e.g. ALI)'); return; }
+  if (DOR.rec) { alert('Stop the voice recording first'); return; }
+  // unlock sound + video playback on this tap (iPhone allows it only inside a tap) for any video that has to be made smaller
+  var AC = window.AudioContext || window.webkitAudioContext; if (!DOR.ac && AC) try { DOR.ac = new AC(); } catch(e){} if (DOR.ac) try { DOR.ac.resume(); } catch(e){}
+  DOR.media.forEach(function(x){ if (x.kind === 'video' && x.size > DOR_MAX && !x.sent && !x.vel) { var v = document.createElement('video'); v.playsInline = true; v.preload = 'auto'; v.src = x.url; x.vel = v;
+    try { var pr = v.play(); if (pr && pr.then) pr.then(function(){ v.pause(); }).catch(function(){}); } catch(e){} } });
+  if (!confirm('Send this order now? It goes to Trello and the factory Slack.')) return;
+  DOR.busy = true; $('dorsend').disabled = true;
+  var run = DOR.run && DOR.run.sig === dorName() + DOR.media.length ? DOR.run : (DOR.run = { oid: 'd' + Date.now().toString(36) + devId(), sig: dorName() + DOR.media.length, no: null, card: null, sent: {} });
+  var lines = [];
+  function show(extra){ dorProg(lines.join('<br>') + (extra ? '<br>' + extra : '')); }
+  try {
+    if (!run.no) {
+      if (m === 'out') { lines.push('Making a US- number…'); show(); run.no = (await dorCall({ op: 'mint', prefix: 'US-' })).no; }
+      else if (fresh) { lines.push('Making a fresh SJ number…'); show();
+        for (var k = 0; k < 6; k++) { var n = (await dorCall({ op: 'mint', prefix: '' })).no; if (!(COST && COST.c && COST.c[n] != null)) { run.no = n; break; } } if (!run.no) throw new Error('could not find a free number'); }
+      else run.no = no;
+    }
+    var shownNo = m === 'out' ? run.no : 'SJ-' + run.no;
+    var name = $('dorname').value.trim().replace(/US-\(new number\)|SJ-\(new number\)/, shownNo) || dorName().replace(/US-\(new number\)|SJ-\(new number\)/, shownNo);
+    lines = ['Number: <b>' + esc(shownNo) + '</b>']; lines.push('Trello card…'); show();
+    var j = await dorCall({ op: 'card', oid: run.oid, mode: m, fresh: fresh, no: run.no, src: DOR.src && DOR.src.id, name: name, rate: $('dorrate').checked, hisaab: $('dorhis').checked,
+      customer: dorV('dorcust'), person: dorV('dorperson'), cost: dorV('dorcost'), sale: dorV('dorsale') });
+    run.card = j.card; lines[lines.length - 1] = '✓ Trello card: <a href="' + esc(j.card.url) + '" target="_blank" rel="noopener">' + esc(j.card.name) + '</a>'; (j.notes || []).forEach(function(n){ lines.push('<span class="miss">' + esc(n) + '</span>'); }); show();
+    var order = DOR.media.map(function(x, i){ return { x: x, i: i }; }).sort(function(a, b){ var r = function(o){ return o.x.design ? 0 : o.x.kind === 'photo' ? 1 : o.x.kind === 'voice' ? 2 : 3; }; return r(a) - r(b) || a.i - b.i; });
+    for (var q = 0; q < order.length; q++){
+      var x = order[q].x; if (x.sent) continue; var blob = x.blob, mime = x.mime, fname = x.name;
+      if (x.kind === 'video' && blob.size > DOR_MAX) { x.st = 'making smaller…'; dorMedia();
+        blob = await dorShrink(blob, DOR_MAX, function(p){ show('Making video ' + (q + 1) + ' smaller: ' + p + '% — keep this screen open'); }, x.vel, DOR.ac); mime = blob.type; fname = fname.replace(/\.\w+$/, '') + '.' + dorExt(mime, 'mp4'); }
+      show('Sending ' + (x.kind === 'photo' ? 'photo' : x.kind === 'voice' ? 'voice note' : 'video') + ' ' + (q + 1) + ' of ' + order.length + ' (' + (blob.size / 1048576).toFixed(1) + ' MB)…');
+      var fj = await dorCall({ op: 'file', oid: run.oid, i: order[q].i, kind: x.kind, design: !!x.design, name: fname, mime: mime, b64: await dorB64(blob) }, 1);
+      x.sent = true; x.st = '✓ sent' + (fj.file && fj.file.trello === false || fj.file && fj.file.trelloErr ? ' (Slack only)' : ''); dorMedia();
+    }
+    lines.push('✓ ' + order.length + ' file' + (order.length === 1 ? '' : 's') + ' uploaded'); show('Posting to the factory Slack…');
+    var sep = '//////////////////////', txt = [sep, '', j.card.name];
+    if (m !== 'out') { if ($('dorrate').checked) txt.push('RATE'); if ($('dorhis').checked) txt.push('HISAAB'); }
+    dorV('dornotes').split('\n').forEach(function(l){ if (l.trim()) txt.push(l.trim()); }); txt.push(j.card.url);
+    var sj = await dorCall({ op: 'send', oid: run.oid, text: txt.join('\n'), sample: shownNo + ' SAMPLE' });
+    lines.push('✓ Posted to ' + (m === 'out' ? '#emaan' : m === 'hand' ? '#cutting + #usmancutting' : '#cutting') + (m === 'out' ? '' : ' and #samplesneed'));
+    show('<b class="okc">Done ✓</b>');
+    DOR.run = null; DOR.media = []; DOR.nameEdited = false; ['dorno', 'dorpcs', 'dorcol', 'dorsize', 'dorcust', 'dornotes', 'dorperson', 'dorcost', 'dorsale'].forEach(function(id){ $(id).value = ''; });
+    DOR.fresh = false; $('dorfresh').checked = false; $('dorrate').checked = false; $('dorhis').checked = false; DOR.src = null; dorDraw(); dorLog();
+  } catch(e){ show('<span class="miss">Stopped: ' + esc(e.message) + '</span> — press <b>Send order</b> again to carry on from here (nothing is sent twice).'); }
+  finally { DOR.busy = false; $('dorsend').disabled = false; }
+}
+async function dorLog(){ try { var j = await dorCall({ op: 'list' }); $('dorlog').innerHTML = (j.log || []).length ? '<div class="ffs">Sent from the app</div>' + j.log.map(function(x){
+  return '<div class="dorl"><a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><small>' + ordWhen(x.t) + ' · ' + (x.mode === 'out' ? '#emaan' : x.mode === 'hand' ? '#cutting + #usmancutting' : '#cutting') + ' · ' + x.files + ' file' + (x.files === 1 ? '' : 's') + '</small></div>'; }).join('') : ''; } catch(e){} }
+function dorOpen(){ if (!isBoss()) return; $('mysheet').hidden = true; $('dor').hidden = false; dorDraw(); dorLog(); }
+$('doropen').onclick = dorOpen;
+$('dorx').onclick = function(){ $('dor').hidden = true; };
+document.querySelectorAll('#dor [data-dm]').forEach(function(b){ b.onclick = function(){ DOR.mode = b.dataset.dm; if (DOR.mode === 'out') DOR.fresh = false; dorDraw(); if (DOR.mode !== 'out') dorFind(); }; });
+$('dorfresh').onchange = function(){ DOR.fresh = this.checked; if (!DOR.fresh) { $('dorrate').checked = false; $('dorhis').checked = false; } dorDraw(); if (!DOR.fresh) dorFind(); };
+$('dorno').addEventListener('input', function(){ dorSyncName(); dorFind(); });
+['dorpcs', 'dorcol', 'dorsize'].forEach(function(id){ $(id).addEventListener('input', dorSyncName); });
+$('dorname').addEventListener('input', function(){ DOR.nameEdited = true; });
+$('dorphoto').onchange = async function(){ var fs = [].slice.call(this.files || []); this.value = ''; for (var i = 0; i < fs.length; i++) dorAdd('photo', await dorPhoto(fs[i]), 'photo-' + (DOR.media.length + 1) + '.jpg'); };
+$('dorvideo').onchange = function(){ var fs = [].slice.call(this.files || []); this.value = ''; fs.forEach(function(f){ dorAdd('video', f, 'video-' + (DOR.media.length + 1) + '.' + dorExt(f.type, (f.name.match(/\.(\w+)$/) || [, 'mp4'])[1].toLowerCase())); }); };
+$('dorrec').onclick = dorRecord;
+$('dormedia').addEventListener('click', function(ev){
+  var b = ev.target.closest('[data-dx]'); if (b) { var x = DOR.media[+b.dataset.dx]; if (x && !x.sent && confirm('Remove this ' + (x.kind === 'voice' ? 'voice note' : x.kind) + '?')) { URL.revokeObjectURL(x.url); DOR.media.splice(+b.dataset.dx, 1); dorMedia(); } return; }
+  b = ev.target.closest('[data-dstar]'); if (b) { DOR.media.forEach(function(m, i){ m.design = i === +b.dataset.dstar; }); dorMedia(); }
+});
+$('dorsend').onclick = dorSend;
+window.__dor = { shrink: dorShrink };
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; } };
