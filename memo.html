@@ -314,6 +314,9 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .gdc{border:0;background:none;color:var(--gold);font:inherit;font-size:12px;font-weight:700;padding:4px 2px}
 .gsw button.on[data-v="s"]{background:#A8864A;color:#fff}
 .gsp{flex-wrap:wrap}.gst{display:inline-flex;gap:4px;align-items:center}.gst button{border:1.5px solid var(--line);background:#fff;border-radius:8px;font:inherit;font-size:12px;font-weight:700;padding:5px 7px}.gst input{width:44px;height:30px;text-align:center;border:1.5px solid var(--gold);border-radius:8px;font:inherit;font-weight:700}.gsx{width:100%;color:var(--mute);font-size:11.5px}
+.gbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.gbtns button{border:0;border-radius:12px;padding:13px 8px;font:inherit;font-weight:800;font-size:14.5px;color:#fff;line-height:1.25}.gbtns button small{display:block;font-weight:500;font-size:11.5px;opacity:.9}
+#sendg{background:#9a3b1e}#sendc{background:#2f6b4f}.gbtns button:disabled{opacity:.4}
+#send small{display:block;font-weight:500;font-size:11.5px;color:var(--mute)}
 .gdsh{display:block;width:100%;margin-top:10px;border:2px solid #9a3b1e;background:#fff;color:#9a3b1e;border-radius:10px;padding:10px;font:inherit;font-weight:800;font-size:14px}.gdsh small{display:block;font-weight:500;font-size:11.5px;color:var(--mute)}
 .gmix{font-size:11px;font-weight:700;color:var(--gold)}
 .gdt{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.gdt label{display:flex;gap:7px;align-items:center;font-size:14px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;flex:1;min-width:140px}
@@ -446,7 +449,8 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
   <div class="dlvr"><span>In office<small>في المكتب</small></span><input id="dl_od" autocomplete="off" placeholder="Date"><input id="dl_ot" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="o">Now</button></div>
   <div class="dlvr"><span>To customer / cargo<small>للعميل / الشحن</small></span><input id="dl_cd" autocomplete="off" placeholder="Date"><input id="dl_ct" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="c">Now</button></div></div>
   <div class="gdl" id="gdl"></div>
-  <div class="btns"><button id="send" class="gold" type="button">Send PDF · full memo · أرسل PDF</button><button id="copy" type="button">Copy text · نسخ النص</button></div>
+  <div class="gbtns"><button id="sendg" class="gold" type="button">Send to GODOWN group<small id="sendgs">pick list</small></button><button id="sendc" class="gold" type="button">Send to CUSTOMER group<small>full memo</small></button></div>
+  <div class="btns"><button id="send" type="button">Share PDF · just in case<small>WhatsApp / any app · full memo</small></button><button id="copy" type="button">Copy text · نسخ النص</button></div>
   <div id="slk" class="slk"></div>
   <div id="marks"></div>
   </section>
@@ -696,7 +700,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-12d';
+var VER = '2026-10-12e';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -861,12 +865,22 @@ document.querySelectorAll('.dlnow').forEach(function(b){ b.onclick = function(){
   $('dl_' + k + 'd').value = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
   $('dl_' + k + 't').value = ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' AM' : ' PM'); dlChanged(); saveSoon(); }; });
 $('back').onclick = function(){ $('done').hidden = true; };
+// 12 Oct 2026: GODOWN button -> pick list straight into #godown · CUSTOMER button -> full memo straight into #customer · Share PDF = the phone's share sheet
+async function grpSend(which){
+  if (memoP) await memoP; if (!pdfFile) return;
+  SLK = { g: which === 'g', c: which === 'c' };
+  var plan = gdPlan(); SLK = { g: false, c: false };
+  if (which === 'c') { var oc = ls('sj_oid'), pc = oc ? (gdLog()[oc + '|c'] || null) : null; if (pc && !confirm('Already sent to #customer at ' + hhmm(pc.t) + '. Send it again?')) return; }
+  if (!plan.g && !plan.c) return;                   // said no to a repeat
+  var oid = ordFromMemo();                          // the memo going out starts / updates its order
+  await memoSlack2(oid, plan);
+  if (which === 'c' && /✓/.test($('slk').textContent)) { var L = gdLog(); L[oid + '|c'] = { t: Date.now() }; ls('sj_gdlog', JSON.stringify(L)); }
+}
+$('sendg').onclick = function(){ grpSend('g'); };
+$('sendc').onclick = function(){ grpSend('c'); };
 $('send').onclick = async function(){
   if (memoP) await memoP; if (!pdfFile) return;
-  var plan = gdPlan(); if (plan === null) return;     // asked "already sent to godown — send again?" and he said no to everything
-  var oid = ordFromMemo();                          // 10 Oct 2026: the memo going out starts its order
-  memoSlack2(oid, plan);                            // 12 Oct 2026: only to the groups he ticked (#godown = pick list, #customer = full memo)
-  SLK = { g: false, c: false }; gdDraw();          // ticks clear after each Send, so a second Send never repeats a post by itself
+  ordFromMemo();                                    // 10 Oct 2026: the memo going out starts its order
   try { if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) { await navigator.share({ files: [pdfFile], text: orderText() }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   var a = document.createElement('a'); a.href = URL.createObjectURL(pdfFile); a.download = pdfFile.name; a.click();
   window.open('https://wa.me/?text=' + encodeURIComponent(orderText()), '_blank');
@@ -2233,12 +2247,9 @@ function gdDraw(){
       h += '<div class="gdr sub"><span class="gn">Colour ' + c + '<small>' + lab(state[k], colPcs(d, +c)).en + '</small></span>' + sw(k, l, t > 1) + '</div>';
       if (l === 's') h += '<div class="gdr sub gsp"><span class="gn">In office<small>from godown: <b>' + nTxt(t - op) + '</b></small></span><span class="gst"><button type="button" data-gs="' + k + '" data-d="-4">−1 set</button><button type="button" data-gs="' + k + '" data-d="-1">−</button><input data-gsi="' + k + '" inputmode="numeric" value="' + op + '"><button type="button" data-gs="' + k + '" data-d="1">+</button><button type="button" data-gs="' + k + '" data-d="4">+1 set</button></span><small class="gsx">pcs here · ' + esc(nTxt(op)) + '</small></div>'; });
   });
-  var gn = Object.keys(byDesign(gdSel())).length, has = gn > 0; if (!has) SLK.g = false;
-  h += '<div class="gdt"><label class="' + (has ? '' : 'off') + '"><input type="checkbox" id="tg"' + (SLK.g ? ' checked' : '') + (has ? '' : ' disabled') + '><span>#godown<small>' + (has ? 'pick list · ' + gn + ' of ' + nos.length + (nos.length === 1 ? ' design' : ' designs') : 'nothing to pick — all in office') + '</small></span></label>' +
-       '<label><input type="checkbox" id="tc"' + (SLK.c ? ' checked' : '') + '><span>#customer<small>full memo</small></span></label></div>' +
-       // 12 Oct 2026 (Abbas: "3 of 5 were in godown … I got the whole PDF inside the godown"): Send PDF shares the FULL memo (for the customer);
-       // the godown-only PDF has its own button, for WhatsApp or anywhere else
-       (has ? '<button type="button" class="gdsh" id="gdshare">Share godown pick list only · ' + gn + ' of ' + nos.length + (nos.length === 1 ? ' design' : ' designs') + '<small>WhatsApp / any app — only what the godown must pick · قائمة المستودع فقط</small></button>' : '');
+  var gn = Object.keys(byDesign(gdSel())).length, has = gn > 0;
+  // 12 Oct 2026 (Abbas): "a button — the godown one goes to the godown directly, the customer one to the customer group directly; below it an option to share a PDF, just in case"
+  $('sendg').disabled = !has; $('sendgs').textContent = has ? 'pick list · ' + gn + ' of ' + nos.length + (nos.length === 1 ? ' design' : ' designs') : 'nothing to pick — all in office';
   el.innerHTML = h;
 }
 $('gdl').addEventListener('click', function(e){
