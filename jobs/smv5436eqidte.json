@@ -1,0 +1,71 @@
+{
+ "id": "smv5436eqidte",
+ "op": "sell",
+ "ref": "INV-0012",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6ac9e7a5c6ae93519be179fe",
+   "no": "51862",
+   "before": "Sj = **(51862)** (64) pcs __ colour _(4)__(16/16/16/16)",
+   "after": "Sj = **(51862)** (56) pcs __ colour _(4)__(16/12/16/12)",
+   "left": 56,
+   "lines": [
+    "colour 2: 16 → 12 (−4)",
+    "colour 4: 16 → 12 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "687b9aca8a5235228224abef",
+   "no": "58165",
+   "before": "SJ-58165 , (57) pcs color = (6) ,,,(11/8/11/8/7/12)",
+   "after": "SJ-58165 , (53) pcs color = (6) ,,,(11/8/11/4/7/12)",
+   "left": 53,
+   "lines": [
+    "colour 4: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6aaa44e4330c8a4e1d54aafa",
+   "no": "66038",
+   "before": "Sj = **(66038)** (63) pcs ..color = (4) __(15/16/16/16)",
+   "after": "Sj = **(66038)** (55) pcs ..color = (4) __(11/16/16/12)",
+   "left": 55,
+   "lines": [
+    "colour 1: 15 → 11 (−4)",
+    "colour 4: 16 → 12 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a73706f2e41050fbc7a8ef1",
+   "no": "75308",
+   "before": "Sj = **(75308_B)** (36) pcs colour = (5),,(12/8/0/0/16)",
+   "after": "Sj = **(75308_B)** (28) pcs colour = (5),,(12/4/0/0/12)",
+   "left": 28,
+   "lines": [
+    "colour 2: 8 → 4 (−4)",
+    "colour 5: 16 → 12 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69f5bc7fa53db129df014c2f",
+   "no": "6668",
+   "before": "Sj 6668 (70pcs) 5 colors.                             (14/14/14/14/14)",
+   "after": "Sj 6668 (50pcs) 5 colors.                             (10/10/10/10/10)",
+   "left": 50,
+   "lines": [
+    "colour 1: 14 → 10 (−4)",
+    "colour 2: 14 → 10 (−4)",
+    "colour 3: 14 → 10 (−4)",
+    "colour 4: 14 → 10 (−4)",
+    "colour 5: 14 → 10 (−4)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
