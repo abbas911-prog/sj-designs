@@ -17,6 +17,12 @@ STUB = os.environ.get('SJ_STUB') == '1'
 DAILY_CAP = int(os.environ.get('SJ_DAILY_CAP', '400'))
 IP_HOURLY = int(os.environ.get('SJ_IP_HOURLY', '30'))
 STEPS = int(os.environ.get('SJ_STEPS', '30'))
+# LIVE mode (Abbas, 12 Oct 2026: "I also want it to be working like Decart, which has a video, live"): the page sends camera frames one after
+# another with fast=1; each frame is drawn with fewer steps and the newest picture replaces the last one on her screen.
+FAST_STEPS = int(os.environ.get('SJ_FAST_STEPS', '10'))
+FAST_W, FAST_H = int(os.environ.get('SJ_FAST_W', '576')), int(os.environ.get('SJ_FAST_H', '768'))
+FAST_IP_HOURLY = int(os.environ.get('SJ_FAST_IP_HOURLY', '3000'))
+FAST_DAILY = int(os.environ.get('SJ_FAST_DAILY', '40000'))
 
 app = Flask(__name__)
 @app.after_request
@@ -30,8 +36,9 @@ def cors(r):
 def preflight(): return ('', 204)
 lock = threading.Lock()                 # one GPU -> one job at a time
 queue_len = 0
-day = {'d': time.strftime('%Y-%m-%d'), 'n': 0}
+day = {'d': time.strftime('%Y-%m-%d'), 'n': 0, 'f': 0}
 hits = collections.defaultdict(list)    # ip -> timestamps
+fhits = collections.defaultdict(list)   # ip -> timestamps of live frames
 
 # ---------------- model ----------------
 predictor = None
@@ -55,21 +62,22 @@ def load():
             m = LeffaModel(pretrained_model_name_or_path='./ckpts/stable-diffusion-inpainting', pretrained_model='./ckpts/virtual_tryon_dc.pth', dtype='float16')
             s.inf = LeffaInference(model=m); s.T = LeffaTransform()
             s.rc, s.mask_dc = resize_and_center, get_agnostic_mask_dc
-        def run(s, person: Image.Image, garment: Image.Image, seed=42):
-            src = s.rc(person.convert('RGB'), 768, 1024); ref = s.rc(garment.convert('RGB'), 768, 1024)
+        def run(s, person: Image.Image, garment: Image.Image, seed=42, steps=None, size=(768, 1024)):
+            W, H = size
+            src = s.rc(person.convert('RGB'), W, H); ref = s.rc(garment.convert('RGB'), W, H)
             parse, _ = s.parsing(src.resize((384, 512))); kp = s.openpose(src.resize((384, 512)))
-            mask = s.mask_dc(parse, kp, 'dresses').resize((768, 1024))
+            mask = s.mask_dc(parse, kp, 'dresses').resize((W, H))
             iuv = s.densepose.predict_iuv(np.array(src)); seg = np.concatenate([iuv[:, :, 0:1]] * 3, axis=-1)
             data = s.T({'src_image': [src], 'ref_image': [ref], 'mask': [mask], 'densepose': [Image.fromarray(seg)]})
-            out = s.inf(data, ref_acceleration=False, num_inference_steps=STEPS, guidance_scale=2.5, seed=seed, repaint=False)
+            out = s.inf(data, ref_acceleration=False, num_inference_steps=steps or STEPS, guidance_scale=2.5, seed=seed, repaint=False)
             return out['generated_image'][0]
     predictor = P()
 
-def stub_run(person, garment):
+def stub_run(person, garment, size=(768, 1024)):
     # no GPU: paste the garment over the middle of the photo so the page can be tested end to end
-    p = ImageOps.exif_transpose(person).convert('RGB'); p = ImageOps.fit(p, (768, 1024))
-    g = garment.convert('RGBA'); g = ImageOps.contain(g, (560, 900))
-    p.paste(g, ((768 - g.width) // 2, 90), g); return p
+    W, H = size; p = ImageOps.exif_transpose(person).convert('RGB'); p = ImageOps.fit(p, (W, H))
+    g = garment.convert('RGBA'); g = ImageOps.contain(g, (int(W * 0.73), int(H * 0.88)))
+    p.paste(g, ((W - g.width) // 2, int(H * 0.09)), g); return p
 
 def garment_path(no, colour):
     p = os.path.join(GARMENTS, no, f'{colour}.png'); return p if os.path.exists(p) else None
@@ -91,6 +99,7 @@ def err(code, msg): return (jsonify({'error': msg}), code)
 def tryon():
     global queue_len
     ip = request.headers.get('X-Forwarded-For', request.remote_addr or '?').split(',')[0].strip(); now = time.time()
+    if request.form.get('fast') == '1': return tryon_fast(ip, now)
     hits[ip] = [t for t in hits[ip] if now - t < 3600]
     if len(hits[ip]) >= IP_HOURLY: return err(429, 'Too many try-ons from this phone this hour')
     today = time.strftime('%Y-%m-%d')
@@ -117,6 +126,32 @@ def tryon():
         queue_len -= 1
     b = io.BytesIO(); out.convert('RGB').save(b, 'JPEG', quality=90)
     return Response(b.getvalue(), mimetype='image/jpeg', headers={'X-Seconds': f'{dt:.1f}'})
+
+def tryon_fast(ip, now):
+    """one LIVE frame: never queues behind another picture — if the GPU is busy the page simply sends its next frame"""
+    fhits[ip] = [t for t in fhits[ip] if now - t < 3600]
+    if len(fhits[ip]) >= FAST_IP_HOURLY: return err(429, 'Live limit reached for this hour')
+    today = time.strftime('%Y-%m-%d')
+    if day['d'] != today: day['d'] = today; day['n'] = 0; day['f'] = 0
+    if day['f'] >= FAST_DAILY: return err(503, 'Daily live limit reached')
+    gp = garment_path(request.form.get('no', ''), request.form.get('colour', ''))
+    if not gp: return err(404, 'Unknown design or colour')
+    f = request.files.get('photo')
+    if not f: return err(400, 'No frame')
+    raw = f.read()
+    if len(raw) > 3_000_000: return err(413, 'Frame too large')
+    try: person = ImageOps.exif_transpose(Image.open(io.BytesIO(raw)))
+    except Exception: return err(400, 'Not an image')
+    if not lock.acquire(timeout=0.15): return (jsonify({'busy': True}), 503)
+    try:
+        t0 = time.time(); garment = Image.open(gp)
+        out = stub_run(person, garment, (FAST_W, FAST_H)) if STUB else predictor.run(person, garment, 42, FAST_STEPS, (FAST_W, FAST_H))
+        dt = time.time() - t0
+    finally:
+        lock.release()
+    fhits[ip].append(now); day['f'] += 1
+    b = io.BytesIO(); out.convert('RGB').save(b, 'JPEG', quality=78)
+    return Response(b.getvalue(), mimetype='image/jpeg', headers={'X-Seconds': f'{dt:.2f}', 'Cache-Control': 'no-store'})
 
 load()
 if __name__ == '__main__':
