@@ -294,7 +294,7 @@ def ar_count(n):
     if n == 1: return 'تصميم جديد'
     if n == 2: return 'تصميمان جديدان'
     return ('%d' % n).translate(AR_DIG) + (' تصاميم جديدة' if n <= 10 else ' تصميماً جديداً')
-def og_cover(src, stem, customer, sub):
+def og_cover(src, stem, customer, sub, en=None, ar=None, brand='SJ TRADING'):
     import html as H
     ph = []
     for m in re.finditer(r'<article class="design" data-no="(\d+)"', src):
@@ -303,8 +303,8 @@ def og_cover(src, stem, customer, sub):
     cols = k if k <= 5 else (3 if k == 6 else 5); rows = 1 if k <= 5 else 2
     tiles = ''.join('<div class="t" style="background-image:url(%s)"></div>' % u for u in ph[:k])
     who = H.escape(customer or 'NEW COLLECTION'); subl = H.escape(sub or '')
-    en = '%d NEW DESIGN%s  ·  TAP TO VIEW &amp; ORDER' % (n, '' if n == 1 else 'S')
-    ar = ar_count(n) + ' · اضغط للمشاهدة والطلب'
+    en = en or '%d NEW DESIGN%s  ·  TAP TO VIEW &amp; ORDER' % (n, '' if n == 1 else 'S')
+    ar = ar or ar_count(n) + ' · اضغط للمشاهدة والطلب'
     page = f'''<!doctype html><meta charset="utf-8"><style>
     body{{margin:0;position:relative;width:1200px;height:630px;background:#F4F2ED;font-family:Arial,Helvetica,sans-serif;overflow:hidden}}
     .g{{display:grid;grid-template-columns:repeat({cols},1fr);grid-template-rows:repeat({rows},1fr);gap:6px;height:452px;padding:6px 6px 0}}
@@ -317,7 +317,7 @@ def og_cover(src, stem, customer, sub):
     .ar{{position:absolute;right:40px;bottom:28px;font:bold 30px Arial;direction:rtl;color:#F3F6F5}}
     .brand{{position:absolute;right:40px;top:34px;font:bold 22px Arial;letter-spacing:4px;color:#CFE0DC}}
     </style><div class="g">{tiles}</div><div class="top"></div><div class="b">
-    <div class="who">{who}<small>{subl}</small></div><div class="brand">SJ TRADING</div>
+    <div class="who">{who}<small>{subl}</small></div><div class="brand">{brand}</div>
     <div class="en">{en}</div><div class="ar">{ar}</div></div>'''
     with tempfile.TemporaryDirectory() as t:
         f = os.path.join(t, 'c.html'); open(f, 'w', encoding='utf-8').write(page); png = os.path.join(t, 'c.png')
@@ -331,10 +331,10 @@ def og_cover(src, stem, customer, sub):
             if os.path.getsize('og-%s.jpg' % stem) < 280_000 or q <= 50: break
             q -= 6
     return n
-def og_meta(src, stem, customer, sub, n):
+def og_meta(src, stem, customer, sub, n, title=None, desc=None):
     import html as H
-    title = (customer + (' · ' + sub if sub else '') + ' — ' if customer else '') + '%d new design%s' % (n, '' if n == 1 else 's')
-    desc = 'Tap to view the catalogue and choose your colours. اضغط لمشاهدة الكتالوج واختيار الألوان'
+    title = title or (customer + (' · ' + sub if sub else '') + ' — ' if customer else '') + '%d new design%s' % (n, '' if n == 1 else 's')
+    desc = desc or 'Tap to view the catalogue and choose your colours. اضغط لمشاهدة الكتالوج واختيار الألوان'
     img = BASE + 'og-%s.jpg?v=1' % stem
     tags = ('<meta property="og:type" content="website">\n<meta property="og:site_name" content="SJ Trading">\n'
             '<meta property="og:title" content="%s">\n<meta property="og:description" content="%s">\n<meta property="og:url" content="%s%s.html">\n'
@@ -366,7 +366,12 @@ def main():
     if not LOCAL and not (pw and hmac.compare_digest(hmac.new(pw.encode(), req_s.encode(), hashlib.sha256).hexdigest(), sig)):
         res = {'ok': False, 'error': 'not signed with the shop password'}
     else:
-        try: res = save_costs(req) if req.get('kind') == 'costs' else build(req)
+        try:
+            if req.get('kind') == 'costs': res = save_costs(req)
+            elif req.get('kind') == 'sizes':
+                from sizes import build_sizes          # invoice -> the customer's own catalogue with sizes (12 Oct 2026)
+                res = build_sizes(req)
+            else: res = build(req)
         except Exception as e:
             import traceback; traceback.print_exc(); res = {'ok': False, 'error': 'Build failed: %s: %s' % (type(e).__name__, str(e)[:300])}
     res['id'] = jid

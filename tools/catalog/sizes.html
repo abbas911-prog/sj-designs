@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SJ TRADING</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;600&display=swap">
+<style>
+  :root{--bg:#ECE9E2;--surface:#fff;--ink:#1C1A17;--muted:#6E675D;--line:#D9D4CA;--accent:#234C47;--accent-ink:#F3F6F5;--soft:#E3EBE9;--gold:#8A6A2A;
+        --display:"Fraunces","Iowan Old Style",Georgia,serif;--body:"Manrope","Helvetica Neue",Arial,sans-serif;--ar:"Noto Naskh Arabic","Geeza Pro",serif}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#151614;--surface:#1F211E;--ink:#EDE9E1;--muted:#A39C90;--line:#33362F;--accent:#7FBDB3;--accent-ink:#10201D;--soft:#243330;--gold:#D8B46A}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;padding-block:0 130px}
+  .wrap{max-width:480px;margin:0 auto;padding-inline:14px}
+  .ar{font-family:var(--ar);direction:rtl}
+  .proto{background:#8A6A2A;color:#fff;font-size:12.5px;padding:8px 14px;text-align:center;line-height:1.4}
+  header{padding-block:22px 14px}
+  header h1{font-family:var(--display);font-weight:500;font-size:27px;margin:0 0 10px;letter-spacing:.01em}
+  header p{margin:0;color:var(--muted);font-size:14px}
+  header .ar{margin-top:4px;font-size:16px}
+  .feed{display:flex;flex-direction:column;gap:18px}
+  .design{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .photo{position:relative;background:#F2F0EB}
+  .photo img{display:block;width:100%;height:auto}
+  .nums{display:grid;padding:8px 6px 4px;gap:4px}
+  .nums span{display:flex;align-items:center;justify-content:center;height:34px;width:34px;margin:0 auto;border-radius:50%;
+             background:var(--surface);border:1.5px solid var(--line);font-weight:700;font-size:15px}
+  .vid{background:#000;border-top:1px solid var(--line)}
+  .vid video{display:block;width:100%;height:auto;max-height:70vh;background:#000}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;padding:12px 14px 6px;gap:10px}
+  .head .lbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .head .no{font-family:var(--display);font-size:30px;font-weight:500;line-height:1}
+  .head .ar{font-size:14px;color:var(--muted);text-align:right}
+  .colour{border-top:1px solid var(--line);padding:12px 14px 14px}
+  .chead{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .badge{flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:700}
+  .stock{font-size:12.5px;color:var(--muted);line-height:1.35}
+  .stock .ar{display:block;font-size:13.5px;text-align:left;direction:rtl;unicode-bidi:plaintext}
+  .sizes{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .sz{position:relative;appearance:none;font:inherit;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;
+      padding:9px 2px 8px;text-align:center;cursor:pointer;min-height:64px;-webkit-tap-highlight-color:transparent}
+  .sz b{display:block;font-size:19px;line-height:1.1}
+  .sz small{display:block;font-family:var(--ar);font-size:12px;color:var(--muted);margin-top:2px}
+  .sz.on{border-color:var(--accent);background:var(--soft)}
+  .sz .cnt{position:absolute;top:-8px;right:-6px;min-width:22px;height:22px;padding:0 5px;border-radius:11px;background:var(--accent);color:var(--accent-ink);font-size:12.5px;font-weight:700;display:none;align-items:center;justify-content:center}
+  .sz.on .cnt{display:flex}
+  .sz .minus{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);width:26px;height:20px;border-radius:10px;border:1.5px solid var(--accent);background:var(--surface);color:var(--accent);font-weight:700;font-size:14px;line-height:15px;display:none}
+  .sz.on .minus{display:block}
+  .sz.full{animation:nudge .25s}
+  @keyframes nudge{0%,100%{transform:translateX(0)}30%{transform:translateX(-3px)}70%{transform:translateX(3px)}}
+  .bar{z-index:10;position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+  .bar .in{max-width:480px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .bar .tot{flex:1;font-size:13.5px;line-height:1.35}
+  .bar .tot .ar{display:block;font-size:14px;text-align:left;direction:rtl;unicode-bidi:plaintext;color:var(--muted)}
+  .btn{appearance:none;font:inherit;font-weight:700;font-size:16px;padding:12px 22px;border-radius:9px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+  .btn:disabled{opacity:.4}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+  #done{display:none}
+  body.confirm #pick{display:none} body.confirm #done{display:block}
+  .card{display:flex;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px;align-items:center}
+  .card canvas{flex:none;width:84px;height:160px;border-radius:6px;background:#F2F0EB}
+  .card .t{font-weight:700}
+  .card .s{font-size:14px;margin-top:4px}
+  .card .s .ar{display:block;font-size:14px;text-align:left;direction:rtl;unicode-bidi:plaintext;color:var(--muted)}
+  .note{font-size:13px;color:var(--muted);margin:14px 0}
+  .btn .bl{display:block;font-size:14px;font-weight:600}
+  .actions{display:flex;gap:10px;margin-top:6px}
+</style><style>
+  .sizes{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .sizes.one{grid-template-columns:minmax(0,1fr)}
+  .sz{border:1.5px solid var(--line);background:var(--surface);border-radius:9px;padding:7px 5px 6px;text-align:center;min-height:0;min-width:0}
+  .sz.on{border-color:var(--accent);background:var(--soft)}
+  .szl{font-weight:700;font-size:18px;line-height:1.1}
+  .szl small{display:block;font-family:var(--ar);font-weight:400;font-size:12px;color:var(--muted);margin-top:1px}
+  .qty{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+  .qty input{grid-column:1 / -1;grid-row:1;width:100%;min-width:0;height:34px;border:1.5px solid var(--line);border-radius:7px;text-align:center;font:700 18px var(--body);color:var(--ink);background:var(--surface);padding:0}
+  .qty button{appearance:none;grid-row:2;min-width:0;height:30px;border-radius:7px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:700 18px/1 var(--body);padding:0;cursor:pointer}
+  .sz.on .qty input{border-color:var(--accent)}
+  .sizes.one .qty{grid-template-columns:48px 96px 48px;justify-content:center}
+  .sizes.one .qty input{grid-column:2;grid-row:1;height:38px}
+  .sizes.one .qty .mi{grid-column:1;grid-row:1;height:38px}.sizes.one .qty .pl{grid-column:3;grid-row:1;height:38px}
+  .cmsg{margin-top:8px;font-size:12.5px;color:#9a3b1e}
+  .cmsg .ar{display:block;direction:rtl;text-align:left;unicode-bidi:plaintext}
+  .sz.full{animation:nudge .25s}
+  .btn .bl{display:block;font-size:14px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap" id="pick">
+  <header>
+    <h1>SJ TRADING</h1>
+    <p>Choose the colour, size and number of pieces under each design, then OK.</p>
+    <p class="ar">اختر اللون والمقاس وعدد القطع تحت كل تصميم، ثم اضغط OK</p>
+  </header>
+  <main class="feed" id="feed">
+%FEED%
+  </main>
+</div>
+<div class="wrap" id="done">
+  <header>
+    <h1>SJ TRADING</h1>
+    <p>Your order — check it, then tap Send order.</p>
+    <p class="ar">طلبك — راجعه ثم اضغط إرسال الطلب</p>
+  </header>
+  <div id="cards"></div>
+  <div class="actions"><button class="btn ghost" id="back" type="button">← Change<small class="ar bl">تعديل</small></button><button class="btn" id="send" type="button" style="flex:1">Send order<small class="ar bl">إرسال الطلب</small></button></div>
+  <p class="note" id="sendnote"></p>
+</div>
+<div class="bar" id="bar"><div class="in"><div class="tot" id="tot"></div><button class="btn" id="ok" type="button" disabled>OK</button></div></div>
+<script>
+/* SIZES CATALOGUE (Abbas, 12 Oct 2026): made from an invoice — only the colours on the bill, a number box per size. */
+(function(){
+var D = %DATA%, PAGE = %PAGE%, NAME = 'SJ TRADING';
+var AR = '٠١٢٣٤٥٦٧٨٩';
+function ar(n){ return String(n).replace(/\d/g, function(d){ return AR[d]; }); }
+function arPcs(n){ return n==1 ? 'قطعة واحدة' : n==2 ? 'قطعتان' : ar(n) + (n<=10 ? ' قطع' : ' قطعة'); }
+function arDes(n){ return n==1 ? 'تصميم واحد' : n==2 ? 'تصميمان' : ar(n) + ' تصاميم'; }
+function arCol(n){ return n==1 ? 'لون واحد' : n==2 ? 'لونان' : ar(n) + ' ألوان'; }
+function szAr(s){ return s === 'FREE SIZE' ? 'مقاس حر' : 'مقاس ' + ar(s); }
+function szEn(s){ return s === 'FREE SIZE' ? 'Free size' : 'Size ' + s; }
+function $(id){ return document.getElementById(id); }
+var byKey = {}; D.forEach(function(d){ byKey[d.key] = d; });
+var Q = {};                                   // "key:c:si" -> pieces
+
+function colourSum(kc, skip){ var s = 0; Object.keys(Q).forEach(function(k){ if (k !== skip && k.lastIndexOf(kc + ':', 0) === 0) s += Q[k]; }); return s; }
+function cellOf(k){ return document.querySelector('.sz[data-k="' + k + '"]'); }
+function setQ(k, v, quiet){
+  var cell = cellOf(k); if (!cell) return;
+  var p = k.split(':'), kc = p[0] + ':' + p[1], col = cell.closest('.colour'), cmax = +col.dataset.max, smax = +cell.dataset.max;
+  v = Math.max(0, Math.floor(+v || 0));
+  var room = cmax - colourSum(kc, k), cap = Math.min(smax, room), msg = col.querySelector('.cmsg');
+  if (v > cap) { v = cap; if (!quiet) { cell.classList.remove('full'); void cell.offsetWidth; cell.classList.add('full');
+      msg.innerHTML = (cap === smax && smax < room ? 'Only ' + smax + ' pc' + (smax>1?'s':'') + ' in this size' + '<span class="ar">' + arPcs(smax) + ' فقط في هذا المقاس</span>'
+                                                  : 'Only ' + cmax + ' pc' + (cmax>1?'s':'') + ' of this colour' + '<span class="ar">' + arPcs(cmax) + ' فقط من هذا اللون</span>');
+      msg.hidden = false; clearTimeout(msg._t); msg._t = setTimeout(function(){ msg.hidden = true; }, 3500); } }
+  if (v) Q[k] = v; else delete Q[k];
+  cell.classList.toggle('on', v > 0);
+  var inp = cell.querySelector('input'); if (document.activeElement !== inp || String(+inp.value || 0) !== String(v)) inp.value = v ? v : '';
+  refresh();
+}
+document.querySelectorAll('.sz').forEach(function(cell){
+  var k = cell.dataset.k, inp = cell.querySelector('input');
+  cell.querySelector('.pl').addEventListener('click', function(){ setQ(k, (Q[k] || 0) + 1); });
+  cell.querySelector('.mi').addEventListener('click', function(){ setQ(k, (Q[k] || 0) - 1); });
+  inp.addEventListener('input', function(){ var t = inp.value.replace(/[^\d٠-٩]/g, '').replace(/[٠-٩]/g, function(d){ return AR.indexOf(d); }); setQ(k, t === '' ? 0 : +t); if (t === '') inp.value = ''; });
+  inp.addEventListener('blur', function(){ inp.value = Q[k] ? Q[k] : ''; });
+  inp.addEventListener('focus', function(){ setTimeout(function(){ try { inp.select(); } catch(e){} }, 0); });
+});
+function totals(){
+  var pcs = 0, des = {}, cols = {};
+  Object.keys(Q).forEach(function(k){ var p = k.split(':'); pcs += Q[k]; des[p[0]] = 1; cols[p[0] + ':' + p[1]] = 1; });
+  return { pcs: pcs, des: Object.keys(des).length, cols: Object.keys(cols).length };
+}
+function totEn(t){ return t.des + ' design' + (t.des>1?'s':'') + ' · ' + t.cols + ' colour' + (t.cols>1?'s':'') + ' · ' + t.pcs + ' pc' + (t.pcs>1?'s':''); }
+function totAr(t){ return arDes(t.des) + '، ' + arCol(t.cols) + '، ' + arPcs(t.pcs); }
+function refresh(){
+  var t = totals(); $('ok').disabled = !t.pcs;
+  $('tot').innerHTML = t.pcs ? totEn(t) + '<span class="ar">' + totAr(t) + '</span>' : 'Nothing chosen yet<span class="ar">لم يتم الاختيار بعد</span>';
+}
+function lines(){
+  var out = [];
+  D.forEach(function(d){ d.pcs.forEach(function(_, ci){ var c = ci + 1, sz = [];
+    d.sizes.forEach(function(s, si){ var q = Q[d.key + ':' + c + ':' + si]; if (q) sz.push([s, q]); });
+    if (sz.length) out.push({ key: d.key, no: d.no, c: c, sizes: sz, pcs: sz.reduce(function(a, x){ return a + x[1]; }, 0) }); }); });
+  return out;
+}
+function dressSrc(key, c){        // the photo + column that holds colour c
+  var d = byKey[key], imgs = document.querySelectorAll('.design[data-key="' + key + '"] .photo img');
+  for (var i = 0; i < d.photos.length; i++) { var j = d.photos[i].nums.indexOf(c); if (j >= 0) return { img: imgs[i], col: d.photos[i].cols[j] }; }
+  return null;
+}
+function drawDress(cv, key, c){
+  var s = dressSrc(key, c), g = cv.getContext('2d'); g.fillStyle = '#F2F0EB'; g.fillRect(0, 0, cv.width, cv.height); if (!s) return;
+  var W = s.img.naturalWidth, Hh = s.img.naturalHeight, sx = s.col[0] * W + (s.col[1] - s.col[0]) * W * 0.03, sw = (s.col[1] - s.col[0]) * W * 0.94;
+  var k = Math.min(cv.width / sw, cv.height / Hh), w = sw * k, h = Hh * k;
+  g.drawImage(s.img, sx, 0, sw, Hh, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
+}
+function sizesEn(sz){ return sz.map(function(x){ return szEn(x[0]) + ' × ' + x[1]; }).join(' · '); }
+function sizesAr(sz){ return sz.map(function(x){ return szAr(x[0]) + ' × ' + ar(x[1]); }).join('، '); }
+function showDone(){
+  var L = lines(), h = '';
+  L.forEach(function(l, i){
+    h += '<div class="card"><canvas width="168" height="320" id="cv' + i + '"></canvas><div><div class="t">Design ' + l.no + ' · colour ' + l.c + '</div>' +
+         '<div class="ar" style="font-size:14px">تصميم ' + ar(l.no) + '، لون ' + ar(l.c) + '</div>' +
+         '<div class="s">' + sizesEn(l.sizes) + '<span class="ar">' + sizesAr(l.sizes) + '</span></div></div></div>';
+  });
+  var t = totals();
+  h += '<div class="card" style="background:var(--accent);color:var(--accent-ink);display:block"><b>Total: ' + totEn(t) + '</b><div class="ar" style="font-size:15px">المجموع: ' + totAr(t) + '</div></div>';
+  $('cards').innerHTML = h;
+  L.forEach(function(l, i){ drawDress($('cv' + i), l.key, l.c); });
+  document.body.classList.add('confirm'); $('bar').hidden = true; window.scrollTo(0, 0);
+}
+$('ok').onclick = showDone;
+$('back').onclick = function(){ document.body.classList.remove('confirm'); $('bar').hidden = false; $('sendnote').textContent = ''; };
+
+// reopen link: the choices ride in the address (#o=key.c.size.qty_...)
+function linkUrl(){
+  var o = Object.keys(Q).map(function(k){ return k.replace(/:/g, '.') + '.' + Q[k]; }).join('_');
+  return location.origin + location.pathname + '#o=' + o;
+}
+function fromLink(){
+  var m = /[#&]o=([\w.\-]+)/.exec(location.hash); if (!m) return false;
+  m[1].split('_').forEach(function(t){ var p = t.split('.'); if (p.length === 4) setQ(p[0] + ':' + p[1] + ':' + p[2], +p[3], true); });
+  return Object.keys(Q).length > 0;
+}
+
+function rtl(g, t, x, y){ g.save(); g.direction = 'rtl'; g.textAlign = 'right'; g.fillText(t, x, y); g.restore(); }   // Arabic lines drawn right-to-left, anchored at x on the right
+// ---- the order PDF: A4, one picture per page, tiny built-in writer; the reopen link is tappable in the footer ----
+function pages(){
+  var L = lines(), W = 1240, H = 1754, M = 70, out = [], cv, g, y;
+  function newPage(){ cv = document.createElement('canvas'); cv.width = W; cv.height = H; g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); y = M; out.push(cv);
+    g.fillStyle = '#234C47'; g.fillRect(0, 0, W, 14);
+    g.fillStyle = '#1C1A17'; g.font = '700 40px Manrope, Arial'; g.textAlign = 'left'; g.fillText('ORDER REQUEST', M, y + 30);
+    g.textAlign = 'right'; g.font = '600 40px "Noto Naskh Arabic", Arial'; rtl(g, 'طلب شراء', W - M, y + 30);
+    g.textAlign = 'left'; g.font = '700 34px Manrope, Arial'; g.fillText(NAME, M, y + 84);
+    g.textAlign = 'right'; g.font = '500 28px Manrope, Arial'; g.fillStyle = '#6E675D';
+    g.fillText(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }), W - M, y + 84);
+    y += 130; g.fillStyle = '#D9D4CA'; g.fillRect(M, y, W - 2 * M, 2); y += 30; }
+  newPage();
+  var cw = 200, ch = 380;
+  L.forEach(function(l){
+    var need = Math.max(ch, 160 + l.sizes.length * 64);
+    if (y + need + 20 > H - 220) newPage();
+    var tmp = document.createElement('canvas'); tmp.width = cw; tmp.height = ch; drawDress(tmp, l.key, l.c); g.drawImage(tmp, M, y);
+    var x = M + cw + 36;
+    g.textAlign = 'left'; g.fillStyle = '#1C1A17'; g.font = '700 38px Manrope, Arial'; g.fillText('DESIGN ' + l.no + '  ·  COLOUR ' + l.c, x, y + 50);
+    g.font = '600 32px "Noto Naskh Arabic", Arial'; g.fillStyle = '#6E675D'; g.textAlign = 'right'; rtl(g, 'تصميم ' + ar(l.no) + '، لون ' + ar(l.c), W - M, y + 100);
+    var yy = y + 160;
+    l.sizes.forEach(function(s){
+      g.fillStyle = '#E3EBE9'; g.fillRect(x, yy - 38, W - M - x, 54);
+      g.textAlign = 'left'; g.fillStyle = '#1C1A17'; g.font = '700 32px Manrope, Arial'; g.fillText(szEn(s[0]) + '  ×  ' + s[1], x + 16, yy);
+      g.textAlign = 'right'; g.font = '600 30px "Noto Naskh Arabic", Arial'; rtl(g, szAr(s[0]) + ' × ' + ar(s[1]), W - M - 16, yy);
+      yy += 64; });
+    y += need + 30; g.fillStyle = '#D9D4CA'; g.fillRect(M, y - 12, W - 2 * M, 2); y += 10;
+  });
+  if (y + 160 > H - 160) newPage();
+  var t = totals();
+  g.fillStyle = '#234C47'; g.fillRect(M, y, W - 2 * M, 130);
+  g.fillStyle = '#F3F6F5'; g.textAlign = 'left'; g.font = '700 36px Manrope, Arial'; g.fillText('Total: ' + totEn(t), M + 30, y + 55);
+  g.textAlign = 'right'; g.font = '600 34px "Noto Naskh Arabic", Arial'; rtl(g, 'المجموع: ' + totAr(t), W - M - 30, y + 105);
+  out.forEach(function(p, i){ var q = p.getContext('2d'); q.textAlign = 'center';
+    q.fillStyle = '#234C47'; q.font = '700 26px Manrope, Arial'; q.fillText('Tap here to reopen this order  /  اضغط هنا لفتح الطلب', W / 2, H - 92);
+    q.fillStyle = '#6E675D'; q.font = '500 22px Manrope, Arial'; q.fillText(NAME + '  ·  ' + new Date().toLocaleDateString('en-GB') + '  ·  page ' + (i + 1) + ' / ' + out.length, W / 2, H - 50); });
+  return out;
+}
+function pdfBlob(cvs, url){
+  var enc = new TextEncoder(), parts = [], off = 0, xref = [], n = cvs.length, objs = 2 + n * 4;
+  function push(x){ var b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); off += b.length; }
+  function obj(i, body){ xref[i] = off; push(i + ' 0 obj\n'); body(); push('\nendobj\n'); }
+  var u = url.replace(/[()\\]/g, function(c){ return '%' + c.charCodeAt(0).toString(16).toUpperCase(); });
+  push('%PDF-1.4\n');
+  obj(1, function(){ push('<< /Type /Catalog /Pages 2 0 R >>'); });
+  var kids = []; for (var i = 0; i < n; i++) kids.push((3 + i * 4) + ' 0 R');
+  obj(2, function(){ push('<< /Type /Pages /Count ' + n + ' /Kids [' + kids.join(' ') + '] >>'); });
+  cvs.forEach(function(cv, i){
+    var p = 3 + i * 4, im = p + 1, ct = p + 2, an = p + 3;
+    var b64 = cv.toDataURL('image/jpeg', 0.86).split(',')[1], bin = atob(b64), jpg = new Uint8Array(bin.length);
+    for (var j = 0; j < bin.length; j++) jpg[j] = bin.charCodeAt(j);
+    obj(p, function(){ push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /I' + i + ' ' + im + ' 0 R >> >> /Contents ' + ct + ' 0 R /Annots [' + an + ' 0 R] >>'); });
+    obj(im, function(){ push('<< /Type /XObject /Subtype /Image /Width ' + cv.width + ' /Height ' + cv.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n'); push(jpg); push('\nendstream'); });
+    var s = 'q 595 0 0 842 0 0 cm /I' + i + ' Do Q';
+    obj(ct, function(){ push('<< /Length ' + s.length + ' >>\nstream\n' + s + '\nendstream'); });
+    obj(an, function(){ push('<< /Type /Annot /Subtype /Link /Rect [60 30 535 62] /Border [0 0 0] /A << /S /URI /URI (' + u + ') >> >>'); });
+  });
+  var xo = off; push('xref\n0 ' + (objs + 1) + '\n0000000000 65535 f \n');
+  for (var k = 1; k <= objs; k++) push(String(xref[k]).padStart(10, '0') + ' 00000 n \n');
+  push('trailer\n<< /Size ' + (objs + 1) + ' /Root 1 0 R >>\nstartxref\n' + xo + '\n%%EOF');
+  return new Blob(parts, { type: 'application/pdf' });
+}
+function orderFile(){ return new File([pdfBlob(pages(), linkUrl())], 'SJ-order.pdf', { type: 'application/pdf' }); }
+$('send').onclick = async function(){
+  var f = orderFile(), payload = { files: [f] };          // the PDF only — nothing else goes
+  try { if (navigator.share && (!navigator.canShare || navigator.canShare(payload))) { await navigator.share(payload); return; } }
+  catch (e) { if (e && e.name === 'AbortError') return; }
+  var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+  $('sendnote').innerHTML = 'Your order PDF has been saved to your phone. Open WhatsApp and attach it.<span class="ar" style="display:block">تم حفظ ملف الطلب PDF على هاتفك. افتح واتساب وأرفقه.</span>';
+};
+window.__sizes = { pdf: function(){ return orderFile(); }, lines: lines, link: linkUrl, Q: Q };
+refresh();
+if (fromLink()) { var go = function(){ showDone(); }; if (document.readyState === 'complete') go(); else window.addEventListener('load', go); }
+})();
+</script>
+</body></html>
