@@ -82,7 +82,7 @@ main{padding:12px 14px 40px}
 <input id="lpw" type="password" placeholder="Password · پاس ورڈ" autocomplete="current-password"><input id="lname" placeholder="Your name · آپ کا نام" autocomplete="name"><button id="lgo">Open · کھولیں</button><div id="lerr"></div></div></div>
 
 <header>
-  <div class="top"><div class="mono">SJ</div><h1>Factory · فیکٹری<small id="who"></small></h1><button class="rf" id="bell" title="Notifications">🔔</button><button class="rf" id="rf" title="Refresh">↻</button></div>
+  <div class="top"><div class="mono">SJ</div><h1>Factory · فیکٹری<small id="who"></small></h1><button class="rf" id="bell" title="Notifications" hidden>🔔</button><button class="rf" id="rf" title="Refresh">↻</button></div>
   <div class="stages" id="stages"></div>
   <div class="search"><input id="q" placeholder="Search design number · ڈیزائن نمبر" inputmode="search" autocomplete="off"></div>
   <div id="msg"></div>
@@ -118,7 +118,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13f3';
+var VER = '2026-10-13f4';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -191,7 +191,7 @@ async function load(fresh){
   var j = await call({ op: 'list', fresh: !!fresh });
   $('rf').classList.remove('spin');
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
-  D.lists = j.lists; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; });
+  D.lists = j.lists; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.byId = {}; $('bell').hidden = !j.tg; /* the bell shows only once Telegram is set up in the relay */ D.cards.forEach(function(c){ D.byId[c.id] = c; });
   $('msg').className = 'ok'; $('msg').textContent = D.w ? '' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
   draw(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
   if (!open) openFromHash();
