@@ -178,6 +178,13 @@ function slackPdf(reqText, P, v2) {
   if (v2) { var to = String(req.to || ''); if (to !== 'godown' && to !== 'customer') return out({ ok: false, error: 'bad channel' }); chans = [MEMO_PDF_CHANNELS[to === 'godown' ? 0 : 1]]; }
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
   var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return out({ ok: false, error: 'the relay has no SLACK_BOT_TOKEN yet' });
+  // 12 Oct 2026 (Abbas): photos / videos / voice notes / a paper go WITH the godown post. Each one is uploaded first (op 'file' -> Slack file id),
+  // then the pick-list post shares the PDF and those files in ONE message.
+  if (v2 && req.op === 'file') {
+    var fb = Utilities.base64Decode(String(req.b64 || '')); if (fb.length < 10 || fb.length > 18000000) return out({ ok: false, error: 'file too big or empty' });
+    var fn = String(req.name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80);
+    try { return out({ ok: true, fid: slackUp(tok, fn, fb) }); } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 200) }); }
+  }
   var bytes = Utilities.base64Decode(String(req.pdf || '')); if (bytes.length < 100 || bytes.length > 18000000) return out({ ok: false, error: 'bad PDF' });
   var name = String(req.name || 'SJ-memo.pdf').replace(/[^\w.\- ]+/g, '-').slice(0, 80); if (!/\.pdf$/i.test(name)) name += '.pdf';
   var H = { Authorization: 'Bearer ' + tok };
@@ -187,7 +194,7 @@ function slackPdf(reqText, P, v2) {
   var up = UrlFetchApp.fetch(a.upload_url, { method: 'post', payload: Utilities.newBlob(bytes, 'application/pdf', name), muteHttpExceptions: true });
   if (up.getResponseCode() !== 200) return out({ ok: false, error: 'Slack upload said ' + up.getResponseCode() });
   var c = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: H, muteHttpExceptions: true,
-    payload: { files: JSON.stringify([{ id: a.file_id, title: name.replace(/\.pdf$/i, '') }]), channels: chans.join(','), initial_comment: String(req.text || '').slice(0, 3000) } }).getContentText());
+    payload: { files: JSON.stringify([{ id: a.file_id, title: name.replace(/\.pdf$/i, '') }].concat((v2 && Array.isArray(req.fids) ? req.fids : []).filter(function (f) { return /^F[A-Z0-9]{6,20}$/.test(String(f)); }).slice(0, 25).map(function (f) { return { id: String(f) }; }))), channels: chans.join(','), initial_comment: String(req.text || '').slice(0, 3000) } }).getContentText());
   if (!c.ok) return out({ ok: false, error: 'Slack said ' + c.error + (c.error === 'not_in_channel' || c.error === 'channel_not_found' ? ' (invite @SJ Memo to #godown and #customer)' : '') });
   return out({ ok: true, file: a.file_id, to: v2 ? req.to : 'both' });
 }
