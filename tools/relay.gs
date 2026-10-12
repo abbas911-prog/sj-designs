@@ -66,14 +66,14 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var FAC = { BOARD: '6527c52485d9627f63157296', LISTS: [
+var FAC = { BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
+  ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
   ['START', '6527c572b12b208471c080cb'], ['CUTTING', '6527c57751007e81a43f55a6'], ['IN LINE', '6527c57cd7e267fbf2a602b4'],
   ['READY FOR HAND WORK', '6527c585b9300f804906d9bd'], ['IN HAND WORK', '6527c59b796865bd9639b0c3'], ['CAME FROM HAND WORK', '6602ad25e74db40a25ab0296'],
   ['IN LINE (2)', '6527c5a3964596815651a97f'], ['IRON/CHECKING', '6527c5a93db4d8b8e91a8be9'], ['READY', '6527c5b13129a9ba37acd3ad'],
-  ['READY 2', '699b35ceb77292db0289c473'], ['FINISH', '6527c5b41e630c094b619f5e'], ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593']],
-  // which lists are shown, and how many cards from the top (FINISH holds hundreds: the newest 60 are enough) — Abbas 13 Oct: add READY 2, FINISH, SAMPLE DONE
-  SHOW: { '6527c572b12b208471c080cb': 0, '6527c57751007e81a43f55a6': 0, '6527c57cd7e267fbf2a602b4': 0, '6527c585b9300f804906d9bd': 0, '6527c59b796865bd9639b0c3': 0, '6602ad25e74db40a25ab0296': 0,
-    '6527c5a3964596815651a97f': 0, '6527c5a93db4d8b8e91a8be9': 0, '6527c5b13129a9ba37acd3ad': 0, '699b35ceb77292db0289c473': 0, '6527c5b41e630c094b619f5e': 60, '65a121d2829a36ccacd05593': 60 } };
+  ['READY 2', '699b35ceb77292db0289c473'], ['FINISH', '6527c5b41e630c094b619f5e'], ['FINISH SAMPLES', '68b77a221eef6fbb9a305e0e']],
+  // every list is shown; the three "done" lists hold hundreds of cards, so only their newest 60 are sent
+  LIMIT: { '65a121d2829a36ccacd05593': 60, '6527c5b41e630c094b619f5e': 60, '68b77a221eef6fbb9a305e0e': 60 } };
 function facCf(tok) {                                         // custom-field names of the ALM board (cached 6 h)
   var c = CacheService.getScriptCache(), h = c.get('FAC_CF'); if (h) return JSON.parse(h);
   var m = {}; (trApi('get', '/boards/' + FAC.BOARD + '/customFields', {}, tok) || []).forEach(function (f) { m[f.id] = f.name; });
@@ -107,7 +107,7 @@ function facThreads(P, FT, cards, fresh) {                    // reply counts fo
     if (!id) { var t = String(m.text || ''); for (var k in byLink) if (t.indexOf('/c/' + k) >= 0) { id = byLink[k]; delete byLink[k]; P.setProperty('FTH_' + id, JSON.stringify({ ch: DOX.CUTTING, ts: m.ts })); break; } }   // an order message from before: remembered from now on
     if (id) outm[id] = { n: m.reply_count || 0, last: m.latest_reply || m.ts };
   });
-  cache.put('FAC_TH', JSON.stringify(outm), 20); return outm;
+  cache.put('FAC_TH', JSON.stringify(outm), 8); return outm;
 }
 function facSeen(P, who, card, ts) {                           // FSEEN_<who> = { _t0: first use, <cardId>: last ts seen } - shared by every phone that person signs in on
   who = String(who || '').trim(); if (!who || !card) return;
@@ -129,7 +129,7 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
     (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if (mm.sys) return; if (String(mm.who).toUpperCase() === who.toUpperCase()) return; n++; lastOther = m.ts; });
     if (n) outm[cid] = { n: n, last: lastOther };
   });
-  cache.put(ck, JSON.stringify(outm), 20); return outm;
+  cache.put(ck, JSON.stringify(outm), 8); return outm;
 }
 function facUser(P, FT, uid) {
   var c = CacheService.getScriptCache(), k = 'FAC_U_' + uid, h = c.get(k); if (h) return h;
@@ -204,17 +204,20 @@ function fac(reqText, P) {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = cache.get('FAC_LIST');
       if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} return out(hv); }
-      var show = Object.keys(FAC.SHOW), cf = facCf(rtok);
-      var q = '/cards?fields=name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels&customFieldItems=true&attachments=cover&attachment_fields=id,previews,mimeType&key=' + TKEY + '&token=' + rtok;
-      var rs = UrlFetchApp.fetchAll(show.map(function (id) { return { url: 'https://api.trello.com/1/lists/' + id + q + (FAC.SHOW[id] ? '&limit=' + FAC.SHOW[id] : ''), muteHttpExceptions: true }; })), cards = [];
-      for (var i = 0; i < rs.length; i++) { if (rs[i].getResponseCode() !== 200) return out({ ok: false, error: 'Trello said ' + rs[i].getResponseCode() }); cards = cards.concat(JSON.parse(rs[i].getContentText())); }
+      var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
+      // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
+      // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
+      var cards = trApi('get', '/boards/' + FAC.BOARD + '/cards', { filter: 'open', limit: 1000, fields: 'name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels', customFieldItems: 'true', attachments: 'cover', attachment_fields: 'id,previews,mimeType' }, rtok) || [];
+      cards = cards.filter(function (c) { return listIds.indexOf(c.idList) >= 0; });
+      var perList = {}; cards.sort(function (a, b) { return a.pos - b.pos; });
+      cards = cards.filter(function (c) { var lim = FAC.LIMIT[c.idList]; if (!lim) return true; perList[c.idList] = (perList[c.idList] || 0) + 1; return perList[c.idList] <= lim; });
       var outc = cards.map(function (c) {
         var f = {}; (c.customFieldItems || []).forEach(function (it) { var n = cf[it.idCustomField], v = it.value || {}; var x = v.text != null ? v.text : v.number != null ? v.number : v.date || (v.checked === 'true' ? '✓' : null); if (n && x != null && String(x).trim() !== '') f[n] = String(x); });
         var a = (c.attachments || [])[0], img = a && a.previews && a.previews.length ? a.id : '';
         return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity, lb: (c.labels || []).filter(function (l) { return l.name; }).map(function (l) { return { n: l.name, c: l.color || '' }; }) };
       });
-      var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: Object.keys(FAC.SHOW), cards: outc, w: !!wtok, th: {}, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
-      var js = JSON.stringify(res); if (js.length < 95000) cache.put('FAC_LIST', js, 20);
+      var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: listIds, cards: outc, w: !!wtok, th: {}, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
+      var js = JSON.stringify(res); if (js.length < 95000) cache.put('FAC_LIST', js, 8);
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       return out(res);
     }
