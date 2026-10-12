@@ -31,7 +31,7 @@ def parse(t):
     tail = (s[ci:] if ci >= 0 else s) + ')'
     cells = []                                              # one per colour: [pcs, (start, end) in t, pure_number]
     groups = 0
-    for g in re.finditer(r'\(([^()]*/[^()]*?)\)', tail):
+    for g in re.finditer(r'\(([^()]*/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)', tail):   # (8-1/8-2) = pieces-row per colour; a single colour may be (8-1) (12 Oct 2026)
         groups += 1
         pos = g.start(1)
         for tok in g.group(1).split('/'):
