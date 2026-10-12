@@ -712,7 +712,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-13a';
+var VER = '2026-10-13b';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1364,7 +1364,7 @@ function myDraw(){ $('myg').innerHTML = MY.map(function(x, i){ return '<button t
 $('mybtn').onclick = function(){ myDraw(); $('myst').textContent = ''; $('mysheet').hidden = false; clShow(); cgLoad(); };
 // 13 Oct 2026 (Abbas): the factory app's own password is set from HERE — the Apps Script settings page is read-only once a script has
 // more than 50 properties (ours has hundreds: orders, vault, threads). Owner key-check + shop-password signature; he types it, nobody else sees it.
-$('fpwgo').onclick = async function(){ var v = $('fpwv').value; if (v.length < 4) { $('fpwmsg').hidden = false; $('fpwmsg').textContent = 'At least 4 characters'; return; }
+$('fpwgo').onclick = async function(){ var v = $('fpwv').value; $('fpwmsg').hidden = false; if (!pinGet()) { $('fpwmsg').textContent = 'Your OWNER password is not saved on this device — Catalogue → Costs → Owner password → Save, then come back here.'; return; } if (v.length < 4) { $('fpwmsg').textContent = 'At least 4 characters'; return; }
   this.disabled = true; $('fpwmsg').hidden = false; $('fpwmsg').textContent = 'Saving…';
   try { var j = await relayJson('fac', { op: 'setpw', pw: v, chk: await svChk(), t: Date.now() }); $('fpwmsg').textContent = j.ok ? '✓ Saved. On the factory phone: tap the SJ logo → sign out → sign in with this password.' : 'Not saved: ' + (j.error || ''); if (j.ok) $('fpwv').value = ''; }
   catch(e){ $('fpwmsg').textContent = 'Not saved: ' + e.message; }
