@@ -98,7 +98,7 @@ main{padding:12px 14px 40px}
 </head>
 <body>
 <div id="login" hidden><div class="in"><h2 style="font-family:'Cormorant Garamond',Georgia,serif;letter-spacing:.05em;color:#6e4f1e">AL MUTAGADED GARMENTS</h2><p>Type the factory password and your name — only once on this phone.<br>পাসওয়ার্ড এবং আপনার নাম লিখুন</p>
-<input id="lpw" type="password" placeholder="Password · পাসওয়ার্ড" autocomplete="current-password"><input id="lname" placeholder="Your name · আপনার নাম" autocomplete="name"><button id="lgo">Open · খুলুন</button><div id="lerr"></div></div></div>
+<input id="lpw" type="password" placeholder="Password · পাসওয়ার্ড" autocomplete="current-password"><input id="lname" placeholder="Your first name (as in Slack) · আপনার নাম" autocomplete="name"><button id="lgo">Open · খুলুন</button><div id="lerr"></div></div></div>
 
 <header>
   <div class="brandbar">AL MUTAGADED GARMENTS</div>
@@ -118,7 +118,8 @@ main{padding:12px 14px 40px}
       <button class="bdone" id="bdone">✅ Done → <span id="bnext"></span><small id="bnextar"></small></button>
       <button class="bmove" id="bmove">↔ Move to… <small>অন্য জায়গায়</small></button>
       <button class="btrello" id="btrello">Open in Trello<small>ট্রেলোতে খুলুন</small></button>
-    </div>
+      <button class="btrello" id="battach">📷 Add photo to Trello<small>ট্রেলোতে ছবি যোগ করুন</small></button>
+    </div><input type="file" id="tfile" accept="image/*" multiple hidden>
     <div class="btns" style="margin-top:0"><button class="bprob" id="bprob">🚩 Problem · সমস্যা<small>fabric short · lace missing · machine</small></button></div>
     <div class="thr"><h3>CARD CHAT · কার্ড চ্যাট <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
@@ -139,7 +140,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13f8';
+var VER = '2026-10-13g1';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -279,6 +280,20 @@ function closeCard(){ $('card').hidden = true; thStop(); open = null; draw(); }
 $('back').onclick = function(){ history.back(); };
 window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
+$('battach').onclick = function(){ if (open) $('tfile').click(); };
+$('tfile').onchange = async function(){                     // 13 Oct 2026 (Abbas): photos from the phone onto the real Trello card (first one becomes the cover when the card has none)
+  var fs = Array.from(this.files || []), c = open; this.value = ''; if (!fs.length || !c) return;
+  var b = $('battach'); b.disabled = true; b.innerHTML = '⏳ Sending ' + fs.length + '…<small>পাঠানো হচ্ছে</small>';
+  try {
+    var files = [];
+    for (var i = 0; i < fs.length; i++) { var bl = await shrink(fs[i]); files.push({ name: (fs[i].name || 'photo').replace(/\.(png|webp|heic|jpeg)$/i, '') .replace(/\.jpg$/i, '') + '.jpg', type: 'image/jpeg', b64: await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(bl); }) }); }
+    var j = await call({ op: 'attach', card: c.id, files: files, cover: !c.img });
+    if (!j.ok) { toast('✗ ' + j.error); return; }
+    toast('✓ ' + files.length + ' photo' + (files.length > 1 ? 's' : '') + ' added to Trello · ট্রেলোতে যোগ হয়েছে');
+    c._atts = null; if (open === c) attsLoad(c); load(true);
+  } catch (e) { toast('✗ ' + e.message); }
+  finally { b.disabled = false; b.innerHTML = '📷 Add photo to Trello<small>ট্রেলোতে ছবি যোগ করুন</small>'; }
+};
 async function move(toName){
   var c = open, to = lid(toName); if (!c || !to) return;
   if (!confirm('Move SJ-' + (parse(c.name).no || '') + ' to ' + toName + '?\n' + (UR[toName] || '') + '-এ পাঠাবেন?')) return;
@@ -317,8 +332,12 @@ async function thPull(){
   TH.msgs = TH.msgs.concat(add); thDraw(); seen(c); draw();
 }
 function firstName(x){ return String(x || '').trim().split(/[\s·]+/)[0].toUpperCase(); }
+function nrm(x){ return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
+// my side = the message carries my name: "Abbas" matches Abbas, abbas_911, Abbas Jamal, ABBAS J... (any of the names Slack has for the writer)
+function isMe(m){ if (m.sys) return false; var k = nrm(firstName(WHO)); if (k.length < 2) return false;
+  return [m.who].concat(m.wn || []).some(function(n){ n = nrm(n); return n.length >= 2 && (n.indexOf(k) === 0 || k.indexOf(n) === 0); }); }
 function bubble(m){
-  var me = !m.sys && firstName(m.who) === firstName(WHO), cls = m.sys ? 'sys' : me ? 'me' : '', body = esc(m.sys ? m.text.replace(/\*/g, '') : m.text);
+  var me = isMe(m), cls = m.sys ? 'sys' : me ? 'me' : '', body = esc(m.sys ? m.text.replace(/\*/g, '') : m.text);
   if (m.root) cls += ' root'; if (/^🚩/.test(m.text)) cls += ' prob';
   (m.files || []).forEach(function(f){
     if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="img">tap to load photo</div>';
