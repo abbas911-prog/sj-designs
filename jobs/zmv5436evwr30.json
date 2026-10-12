@@ -1,0 +1,31 @@
+{
+ "ok": true,
+ "kind": "sizes",
+ "page": "sz-1012.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sz-1012.html?v=1",
+ "cover": "og-sz-1012.jpg",
+ "name": "SJ TRADING",
+ "country": "",
+ "ref": "INV-0012",
+ "cust": "",
+ "designs": [
+  "51862",
+  "58165",
+  "66038",
+  "75308",
+  "6668"
+ ],
+ "report": [
+  "SJ-51862  0+4+0+4 → 2 colours on the bill, 8 pcs · sizes M L XL XXL (default)",
+  "SJ-58165  0+0+0+4+0+0 → 1 colour on the bill, 4 pcs · sizes M L XL XXL (default)",
+  "SJ-66038  4+0+0+4 → 2 colours on the bill, 8 pcs · sizes M L XL XXL (default)",
+  "SJ-75308  0+4+0+0+4 → 2 colours on the bill, 8 pcs · sizes M L XL XXL (default)",
+  "SJ-6668  4+4+4+4+4 → 5 colours on the bill, 20 pcs · sizes M L XL XXL (default)"
+ ],
+ "flags": [
+  "SJ-58165: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-6668: no JAMĀL photo for every colour group — shop photo used."
+ ],
+ "bytes": 1213015,
+ "id": "zmv5436evwr30"
+}
