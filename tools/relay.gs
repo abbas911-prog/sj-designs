@@ -131,19 +131,21 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
   });
   cache.put(ck, JSON.stringify(outm), 8); return outm;
 }
-function facUser(P, FT, uid) {
-  var c = CacheService.getScriptCache(), k = 'FAC_U_' + uid, h = c.get(k); if (h) return h;
-  var j = slackApi(FT, 'users.info', { user: uid }, true), n = j.ok ? ((j.user.profile && (j.user.profile.display_name || j.user.profile.real_name)) || j.user.real_name || j.user.name) : uid;
-  n = String(n).split(' ')[0]; c.put(k, n, 21600); return n;
+function facUser(P, FT, uid) {                               // {n: first name as shown, wn: every name Slack has for this person (for the "my side" match)}
+  var c = CacheService.getScriptCache(), k = 'FAC_U2_' + uid, h = c.get(k); if (h) return JSON.parse(h);
+  var j = slackApi(FT, 'users.info', { user: uid }, true), pr = j.ok ? (j.user.profile || {}) : {}, u = j.ok ? j.user : {};
+  var names = [pr.real_name, u.real_name, pr.display_name, u.name].filter(function (x) { return x; }).map(String);
+  var r = { n: (names[0] || uid).split(' ')[0], wn: names.join(' ').split(/[\s._\-]+/).filter(function (x) { return x; }) };
+  c.put(k, JSON.stringify(r), 21600); return r;
 }
 function facMsg(P, FT, m, root) {                             // one Slack message -> what the phone shows
-  var text = String(m.text || ''), who = '', app = false, mm = text.match(/^\*([^*]{1,40}):\*\s?([\s\S]*)$/);
+  var text = String(m.text || ''), who = '', app = false, wn = [], mm = text.match(/^\*([^*]{1,40}):\*\s?([\s\S]*)$/);
   if (m.bot_id && mm) { who = mm[1]; text = mm[2]; app = true; }
   else if (m.bot_id) { who = m.username || 'SJ'; }
-  else if (m.user) who = facUser(P, FT, m.user);
+  else if (m.user) { var fu = facUser(P, FT, m.user); who = fu.n; wn = fu.wn; }
   var files = (m.files || []).map(function (f) { return { id: f.id, name: f.name, type: f.mimetype || '', size: f.size || 0, img: /^image\//.test(f.mimetype || ''), audio: /^audio\//.test(f.mimetype || '') || /\.(m4a|opus|ogg|webm|mp3|aac|amr|wav)$/i.test(f.name || ''), video: /^video\//.test(f.mimetype || '') }; });
   var sys = /^→ \*/.test(text) && m.bot_id;
-  return { ts: m.ts, who: who, app: app, sys: !!sys, root: m.ts === root, text: text.replace(/<(https?:[^|>]+)(\|[^>]*)?>/g, '$1'), files: files };
+  return { ts: m.ts, who: who, wn: wn, app: app, sys: !!sys, root: m.ts === root, text: text.replace(/<(https?:[^|>]+)(\|[^>]*)?>/g, '$1'), files: files };
 }
 // ---- STEP 3 (12-13 Oct 2026): the buzz. When Abbas writes in a card's thread, the factory phone gets a Telegram message with a link
 // straight to that card. A 1-minute timer (setupFacWatch, run once by Abbas) looks at #cutting; the phone is linked once by sending a
@@ -182,7 +184,7 @@ function facWatch() {                                          // every minute: 
     var news = (rp.messages || []).filter(function (x) { return x.ts !== m.ts && +x.ts > +last && !x.bot_id; });   // only people, never the factory bot's own lines
     seen[m.ts] = m.latest_reply; changed = true;
     if (!news.length) return;
-    var who = facUser(P, FT, news[0].user), no = (String(m.text || '').match(/\d{4,6}/) || [''])[0];
+    var who = facUser(P, FT, news[0].user).n, no = (String(m.text || '').match(/\d{4,6}/) || [''])[0];
     var txt = news.map(function (x) { return (x.text ? String(x.text).replace(/<[^>]+>/g, '').slice(0, 200) : '') + ((x.files || []).length ? ' 📎' : ''); }).join('\n');
     var body = '💬 ' + (no ? 'SJ-' + no : 'a card') + ' · ' + who + ':\n' + txt + '\n\nOpen · کھولیں: https://abbas911-prog.github.io/sj-designs/factory.html#card=' + card;
     phones.forEach(function (ph) { tgApi(P, 'sendMessage', { chat_id: ph.chat, text: body, disable_web_page_preview: true }); });
@@ -311,6 +313,24 @@ function fac(reqText, P) {
       var cv = trApi('get', '/cards/' + ac2, { fields: 'idAttachmentCover' }, rtok).idAttachmentCover || '';
       var al = trApi('get', '/cards/' + ac2 + '/attachments', { fields: 'id,name,mimeType,previews,url,bytes,date' }, rtok) || [];
       return out({ ok: true, cover: cv, atts: al.map(function (a) { return { id: a.id, name: a.name, type: a.mimeType || '', img: !!(a.previews && a.previews.length), url: a.url, bytes: a.bytes || 0, date: a.date }; }) });
+    }
+    if (req.op === 'attach') {                                // 13 Oct 2026 (Abbas): "add a photo on trello attachment" - photos from the phone go onto the real Trello card
+      if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
+      var xc = String(req.card || '').replace(/[^0-9a-f]/g, ''), xwho = String(req.who || '').slice(0, 40) || 'factory';
+      var xfs = Array.isArray(req.files) ? req.files : []; if (!xc || !xfs.length || xfs.length > 10) return out({ ok: false, error: 'bad request' });
+      var xcard = trApi('get', '/cards/' + xc, { fields: 'idBoard,idAttachmentCover' }, wtok); if (xcard.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
+      var added = [], noCover = !xcard.idAttachmentCover;
+      for (var xi = 0; xi < xfs.length; xi++) {
+        var xn = String(xfs[xi].name || 'photo.jpg').replace(/[^\w.\-]/g, '_').slice(0, 60), xb = Utilities.base64Decode(String(xfs[xi].b64 || ''));
+        if (xb.length > 10 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 10 MB)' });
+        var xr = UrlFetchApp.fetch('https://api.trello.com/1/cards/' + xc + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true,
+          payload: { file: Utilities.newBlob(xb, String(xfs[xi].type || 'image/jpeg'), xn), name: xn, setCover: (noCover && xi === 0 && !!req.cover) ? 'true' : 'false' } });
+        if (xr.getResponseCode() >= 300) return out({ ok: false, error: 'Trello said ' + xr.getResponseCode() + ': ' + xr.getContentText().slice(0, 100) });
+        var xj = JSON.parse(xr.getContentText()); added.push(xj.id);
+      }
+      try { if (FT) { var xth = facThread(P, FT, xc, rtok, true); slackApi(FT, 'chat.postMessage', { channel: xth.ch, thread_ts: xth.ts, text: '→ *TRELLO* · ' + xwho + ' added ' + added.length + (added.length === 1 ? ' photo' : ' photos') + ' to the card' }); } } catch (e) {}
+      CacheService.getScriptCache().remove('FAC_LIST');
+      return out({ ok: true, ids: added });
     }
     if (req.op === 'move') {                                  // "Done -> next stage" (or Move to...): the real Trello card moves, top of the new list
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
