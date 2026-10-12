@@ -508,10 +508,14 @@ function parseTitle(t){
   if (no && headNums[0] === +no) headNums.shift();
   var total = headNums.length ? headNums[0] : null;
   if (total == null) { var m2 = head.match(/(\d+)\s*\)?\s*pcs/i); if (m2) total = +m2[1]; }
-  var groups = [], warn = [];
-  (tail + ')').replace(/\(([^()]*\/[^()]*?)\)/g, function(_, g){
+  var groups = [], warn = [], rows = [];
+  // 12 Oct 2026 (Abbas): a colour can carry its godown row as pieces-row: (8-1/8-2) = colour 1 8 pcs in row 1, colour 2 8 pcs in row 2.
+  // Selling 4 of colour 1 makes it (4-1/8-2). A single colour may be written (8-1).
+  (tail + ')').replace(/\(([^()]*\/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)/g, function(_, g){
     var toks = g.split('/').map(function(x){ return x.trim(); });
     groups.push(toks.map(function(x){
+      var pr = x.match(/^(\d+)\s*-\s*([A-Za-z0-9]+)$/); rows.push(pr ? pr[2] : '');
+      if (pr) return +pr[1];
       if (/^\d+$/.test(x)) return +x;
       var d = x.match(/\d+/); if (d) { warn.push(x); return +d[0]; }
       warn.push(x || '?'); return 0;
@@ -519,7 +523,7 @@ function parseTitle(t){
   });
   var ncol = (tail.match(/colou?rs?\.?\s*=?\s*\(\s*(\d+)\s*\)/i) || [])[1];
   var sum = groups.reduce(function(a, g){ return a + g.reduce(function(x, y){ return x + y; }, 0); }, 0);
-  return { no: no, total: total, groups: groups, ncol: ncol ? +ncol : null, sum: sum, warn: warn, ok: total != null && sum === total && groups.length > 0 };
+  return { no: no, total: total, groups: groups, rows: rows, ncol: ncol ? +ncol : null, sum: sum, warn: warn, ok: total != null && sum === total && groups.length > 0 };
 }
 
 // ---------- shop data ----------
@@ -611,7 +615,7 @@ function mkDesigns(cards, roles){
       p.groups.slice(imgs.length).forEach(function(g){ var last = photos[photos.length - 1]; if (!last) return; last.nums = (last.nums || []).concat(g.map(function(q){ c0++; return { c: c0, pcs: q }; })); });
     }
     extra.forEach(function(a){ photos.push({ srcs: imgSrcs(a), att: a.id, nums: null, name: a.name }); });
-    var colours = []; photos.forEach(function(ph){ (ph.nums || []).forEach(function(n){ colours.push(n); }); });
+    var colours = []; photos.forEach(function(ph){ (ph.nums || []).forEach(function(n){ n.row = (p.rows || [])[n.c - 1] || ''; colours.push(n); }); });
     return { id: c.id, title: c.name, base: p.no || String(c.idShort), no: p.no || String(c.idShort), total: p.total, ncol: p.ncol, sum: p.sum, ok: p.ok, warn: p.warn, photos: photos, colours: colours, pos: c.pos };
   }));
 }
@@ -640,7 +644,7 @@ function render(){
     }).join('');
     var rows = d.sample ? '<div class="row" data-k="' + d.no + ':1"><div class="c">1</div><div class="p"><b>1 pc</b><small>sample · عينة</small></div><button type="button" class="one">Add 1 pc · أضف</button></div>' : d.colours.map(function(n){
       var k = d.no + ':' + n.c, st = Math.floor(n.pcs / 4), r = n.pcs % 4;
-      return '<div class="row' + (n.pcs ? '' : ' zero') + '" data-k="' + k + '"><div class="c">' + n.c + '</div><div class="p"><b>' + n.pcs + ' pcs</b><small>' + st + ' set' + (st === 1 ? '' : 's') + (r ? ' + ' + r : '') + '</small></div>' +
+      return '<div class="row' + (n.pcs ? '' : ' zero') + '" data-k="' + k + '"><div class="c">' + n.c + '</div><div class="p"><b>' + n.pcs + ' pcs</b><small>' + st + ' set' + (st === 1 ? '' : 's') + (r ? ' + ' + r : '') + (n.row ? ' · row ' + esc(n.row) : '') + '</small></div>' +
         (n.pcs ? '<div class="step"><button type="button" data-d="-1">−</button><span class="v">0</span><button type="button" data-d="1">+</button></div><input class="pc" type="number" inputmode="numeric" min="1" max="' + n.pcs + '" placeholder="pcs" aria-label="pieces"><button type="button" class="all">All</button>' : '') + '</div>';
     }).join('');
     art.innerHTML = '<div class="head"><div class="no">' + d.no + '</div><div class="meta">' + meta + '</div></div><div class="photos">' + ph + '</div><div class="rows">' + rows + '</div>' +
@@ -700,7 +704,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-12e';
+var VER = '2026-10-12f';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -708,6 +712,10 @@ function byNo(no){ return designs.filter(function(d){ return d.no === no; })[0];
 // 9 Oct 2026 (Abbas: "you mentioned S in front of it by yourself"): the -S is only the memo's own key for a SAMPLES card; bills, PDFs and texts print the real design number
 function shown(no){ var d = byNo(no); return d && d.sample ? d.base : no; }
 // GODOWN ROW (Abbas, 9 Oct 2026): every batch card says which godown row it sits in, in brackets — e.g. (row 3). Order memo PDF only.
+function colRow(no, c){ var d = byNo(no), n = d && d.colours.filter(function(x){ return x.c === +c; })[0]; return n && n.row ? n.row : ''; }
+// the godown row(s) for the chosen colours of a design: per-colour rows (8-1/8-2) first, else the design's (row 3)
+function rowsFor(no, st){ var r = []; Object.keys(byDesign(st)[no] || {}).forEach(function(c){ var x = colRow(no, c); if (x && r.indexOf(x) < 0) r.push(x); });
+  return r.length ? r.join(' & ') : rowOf(no); }
 function rowOf(no){ var d = byNo(no), t = d ? String(d.title || '') : ''; var m = t.match(/\(\s*rows?\s*[-:=#.]?\s*([^)]*)\)/i) || t.match(/\brows?\s*[-:=#.]?\s*(\d+(?:\s*[,&+]\s*\d+)*)/i); return m ? m[1].trim() : ''; }
 function colPcs(d, c){ return (d.colours.filter(function(n){ return n.c === c; })[0] || {}).pcs || 0; }
 function paint(row, s, maxSets){
@@ -771,10 +779,10 @@ async function drawPages(opt){
       if (PK) { var pt = pickNote(opt), pl = wrapText(g, pt[1], W - 2 * P - 40); g.font = 'bold 28px Arial'; var bh = 58 + pl.length * 34; g.fillStyle = '#F6E7E2'; g.fillRect(P, P + 262, W - 2 * P, bh); g.fillStyle = '#9a3b1e'; g.fillText(pt[0], P + 20, P + 300); g.font = '26px Arial'; pl.forEach(function(t, q){ g.fillText(t, P + 20, P + 336 + q * 34); }); T += bh + 16; }
       g.translate(0, T); }   // 10 Oct 2026 (Abbas): delivery times typed in the memo, printed on page 1
     g.fillStyle = '#1C1A17'; g.font = 'bold 54px Arial'; g.fillText('SJ-' + shown(no), P, P + 140);
-    var rw = rowOf(no); if (rw) { var rt = 'ROW ' + rw.toUpperCase(); g.font = 'bold 46px Arial'; var rwW = Math.max(220, g.measureText(rt).width + 60);
+    var rw = rowsFor(no, st); if (rw) { var rt = 'ROW ' + rw.toUpperCase(); g.font = 'bold 46px Arial'; var rwW = Math.max(220, g.measureText(rt).width + 60);
       g.fillStyle = '#A8864A'; g.fillRect(W - P - rwW, P + 88, rwW, 72); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(rt, W - P - rwW / 2, P + 140); g.font = '22px Arial'; g.fillStyle = '#6E675D'; g.fillText('صف · godown row', W - P - rwW / 2, P + 186); g.textAlign = 'left'; }
     var y = P + 196, lines = [];
-    Object.keys(bd[no]).forEach(function(c){ var L = lab(st[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push(dz.sample ? 'SAMPLE  ·  1 pc  ·  عينة' : 'Colour ' + c + '  ·  ' + L.en); });
+    Object.keys(bd[no]).forEach(function(c){ var L = lab(st[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push(dz.sample ? 'SAMPLE  ·  1 pc  ·  عينة' : 'Colour ' + c + '  ·  ' + L.en + (colRow(no, c) ? '  ·  ROW ' + colRow(no, c).toUpperCase() : '')); });
     g.font = '30px Arial'; lines.forEach(function(t){ g.fillText(t, P, y); y += 40; });
     if (PK) { var offc = Object.keys(byDesign()[no] || {}).filter(function(c){ return !bd[no][c]; }); g.fillStyle = '#9a3b1e'; g.font = 'bold 26px Arial';
       if (offc.length) { g.fillText('Colour ' + offc.join(', ') + ' already in office — do not pick', P, y); y += 40; }
@@ -2057,7 +2065,7 @@ function ordFromMemo(){
   if (!RELAY) return ''; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) return '';
   var oid = ls('sj_oid'); if (!oid) { oid = 'o' + Date.now().toString(36) + devId(); ls('sj_oid', oid); }
   var items = nos.map(function(no){ var d = byNo(no), ls2 = Object.keys(bd[no]).map(function(c){ return locOf(no, c); }), loc = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm';
-    return { no: shown(no), pcs: designPcs(no), row: rowOf(no), loc: loc, c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs + (loc === 'm' ? (locOf(no, c) === 'o' ? ' office' : locOf(no, c) === 's' ? ' (' + offPcs(no, c) + ' office / ' + (colTot(no, c) - offPcs(no, c)) + ' godown)' : ' godown') : ''); }).join(', ') }; });
+    return { no: shown(no), pcs: designPcs(no), row: rowsFor(no), loc: loc, c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs + (loc === 'm' ? (locOf(no, c) === 'o' ? ' office' : locOf(no, c) === 's' ? ' (' + offPcs(no, c) + ' office / ' + (colTot(no, c) - offPcs(no, c)) + ' godown)' : ' godown') : ''); }).join(', ') }; });
   var allOff = !gdHas();
   var dv = dlv(), dl = [(dv.od || dv.ot) ? 'Office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '', (dv.cd || dv.ct) ? 'Customer/cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : ''].filter(Boolean).join(' · ');
   // 12 Oct 2026: step 1 ticks itself when the pick list is posted to #godown; with nothing to pick, steps 1 and 2 tick themselves ("all in office")
@@ -2240,11 +2248,11 @@ function gdDraw(){
   var el = $('gdl'); if (!el) return; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) { el.innerHTML = ''; return; }
   function sw(k, v, split){ return '<span class="gsw"><button type="button" data-gl="' + k + '" data-v="g" class="' + (v === 'g' ? 'on' : '') + '">GODOWN</button>' + (split ? '<button type="button" data-gl="' + k + '" data-v="s" class="' + (v === 's' ? 'on' : '') + '">SPLIT</button>' : '') + '<button type="button" data-gl="' + k + '" data-v="o" class="' + (v === 'o' ? 'on' : '') + '">IN OFFICE</button></span>'; }
   var h = '<div class="gdh">Where is it? · أين البضاعة<small>GODOWN = the godown man picks it · IN OFFICE = already here. Tap “colours” when a colour is somewhere else, or SPLIT when part of a colour is here and the rest in the godown.</small></div>';
-  nos.forEach(function(no){ var d = byNo(no), cs = Object.keys(bd[no]), ls2 = cs.map(function(c){ return locOf(no, c); }), v = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm', rw = rowOf(no);
+  nos.forEach(function(no){ var d = byNo(no), cs = Object.keys(bd[no]), ls2 = cs.map(function(c){ return locOf(no, c); }), v = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm', rw = rowsFor(no);
     h += '<div class="gdr"><span class="gn"><b>SJ-' + esc(shown(no)) + '</b>' + (v === 'm' ? ' <span class="gmix">MIXED</span>' : '') + '<small>' + designPcs(no) + ' pcs' + (rw ? ' · ROW ' + esc(rw.toUpperCase()) : '') + '</small></span>' + sw(no, v === 'm' ? '' : v) +
       (!(d && d.sample) ? '<button type="button" class="gdc" data-gx="' + no + '">colours ' + (GDX[no] ? '▴' : '▾') + '</button>' : '') + '</div>';
     if (GDX[no] && !(d && d.sample)) cs.forEach(function(c){ var t = colTot(no, c), l = locOf(no, c), k = no + ':' + c, op = offPcs(no, c);
-      h += '<div class="gdr sub"><span class="gn">Colour ' + c + '<small>' + lab(state[k], colPcs(d, +c)).en + '</small></span>' + sw(k, l, t > 1) + '</div>';
+      h += '<div class="gdr sub"><span class="gn">Colour ' + c + '<small>' + lab(state[k], colPcs(d, +c)).en + (colRow(no, c) ? ' · ROW ' + esc(colRow(no, c).toUpperCase()) : '') + '</small></span>' + sw(k, l, t > 1) + '</div>';
       if (l === 's') h += '<div class="gdr sub gsp"><span class="gn">In office<small>from godown: <b>' + nTxt(t - op) + '</b></small></span><span class="gst"><button type="button" data-gs="' + k + '" data-d="-4">−1 set</button><button type="button" data-gs="' + k + '" data-d="-1">−</button><input data-gsi="' + k + '" inputmode="numeric" value="' + op + '"><button type="button" data-gs="' + k + '" data-d="1">+</button><button type="button" data-gs="' + k + '" data-d="4">+1 set</button></span><small class="gsx">pcs here · ' + esc(nTxt(op)) + '</small></div>'; });
   });
   var gn = Object.keys(byDesign(gdSel())).length, has = gn > 0;
@@ -2301,7 +2309,7 @@ async function memoSlack2(oid, plan){
       var st = gdSel(), gs = byDesign(st), gn = Object.keys(gs), all = Object.keys(byDesign()), off = all.filter(function(no){ return !gs[no]; });
       var pages = await drawPages({ st: st, pick: true, upd: plan.upd, chg: plan.chg }), f = new File([makePDF(pages)], (nm || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-') + '-GODOWN-pick.pdf', { type: 'application/pdf' });
       var text = '*GODOWN PICK LIST*' + (plan.upd ? ' — *' + plan.upd + '*' : '') + ' — ' + (nm || 'no name') + '\n' + date + ' · ' + gn.length + ' of ' + all.length + (all.length === 1 ? ' design' : ' designs') + ' · ' + gn.reduce(function(a, no){ return a + designPcs(no, st); }, 0) + ' pcs' + (me() ? ' · sent by ' + me() : '') +
-        '\nPick: ' + gn.map(function(x){ var r = rowOf(x); return 'SJ-' + shown(x) + (r ? ' (row ' + r + ')' : ''); }).join(' · ') + (off.length ? '\nAlready in office — don\'t pick: ' + off.map(function(x){ return 'SJ-' + shown(x); }).join(' · ') : '') + (plan.chg ? '\nChanges: ' + plan.chg : '') + dlt;
+        '\nPick: ' + gn.map(function(x){ var r = rowsFor(x, st); return 'SJ-' + shown(x) + (r ? ' (row ' + r + ')' : ''); }).join(' · ') + (off.length ? '\nAlready in office — don\'t pick: ' + off.map(function(x){ return 'SJ-' + shown(x); }).join(' · ') : '') + (plan.chg ? '\nChanges: ' + plan.chg : '') + dlt;
       await post('godown', f, text); done.push('#godown (pick list, ' + gn.length + ' designs)');
       var L = gdLog(); if (oid) { L[oid] = { t: Date.now(), sig: gdSig() }; ls('sj_gdlog', JSON.stringify(L)); ordCall({ op: 'tick', id: oid, step: 's1', on: true, by: me(), note: 'pick list posted to #godown' }).catch(function(){}); }
     } catch(e){ bad.push(['g', '#godown: ' + e.message]); }
