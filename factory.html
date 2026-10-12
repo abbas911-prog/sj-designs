@@ -17,8 +17,10 @@ header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 14px 6p
 .rf{border:1.5px solid var(--line);background:#fff;border-radius:12px;width:44px;height:40px;font-size:18px;color:var(--gold);flex:none}
 .rf.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .stages{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding:6px 0 4px;scrollbar-width:none}.stages::-webkit-scrollbar{display:none}
-.stages button{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:14px;font-weight:700;color:var(--ink)}
+.stages button{flex:none;position:relative;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:14px;font-weight:700;color:var(--ink)}
 .stages button.on{border-color:var(--gold);background:var(--gold2)}.stages button i{font-style:normal;font-size:12px;color:var(--mute);margin-left:4px}
+.stages button b.u{position:absolute;top:-6px;right:-4px;background:var(--red);color:#fff;border-radius:999px;font-size:11px;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 4px}
+.badge{background:var(--red);color:#fff;border-radius:999px;font-size:12px;font-weight:700;padding:2px 8px;flex:none}
 .stages button small{display:block;font-weight:500;font-size:11px;color:var(--mute)}
 .search{margin-top:6px}.search input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;font:inherit;font-size:16px;background:#fff}
 #msg{font-size:13px;color:var(--red);margin:6px 2px 0}#msg:empty{display:none}#msg.ok{color:var(--mute)}
@@ -44,6 +46,22 @@ main{padding:12px 14px 40px}
 .btns button small{display:block;font-weight:500;font-size:12px;opacity:.9;margin-top:2px}
 .bdone{background:var(--green);grid-column:1/3;font-size:18px}.bdone:disabled{background:#9bb8a6}
 .bmove{background:#fff;color:var(--ink)!important;border:1.5px solid var(--line)!important}.btrello{background:#fff;color:var(--ink)!important;border:1.5px solid var(--line)!important}
+.thr{background:#fff;border-radius:16px;border:1px solid var(--line);padding:10px 12px;margin-bottom:8px}
+.thr h3{margin:0 0 8px;font-size:13px;color:var(--mute);letter-spacing:.06em;font-weight:700}.thr h3 span{float:right;font-weight:500;letter-spacing:0}
+.msg{display:flex;flex-direction:column;margin:6px 0;max-width:86%}.msg.me{align-self:flex-end;align-items:flex-end;margin-left:auto}
+.msg .who{font-size:11px;color:var(--mute);margin:0 4px 2px}.msg .who b{color:var(--ink)}
+.msg .bub{background:#f1ebe0;border-radius:14px 14px 14px 4px;padding:8px 11px;font-size:15px;white-space:pre-wrap;word-break:break-word}
+.msg.me .bub{background:#e4f3ea;border-radius:14px 14px 4px 14px}.msg.sys{align-self:center;max-width:100%}.msg.sys .bub{background:none;color:var(--mute);font-size:12px;padding:2px 8px;text-align:center}
+.msg.root .bub{background:var(--gold2);border:1px solid #e9d9b8}.msg.prob .bub{background:#fde8ee;color:var(--red);font-weight:700}
+.bub img{max-width:230px;max-height:300px;border-radius:10px;display:block}.bub .fph{width:200px;height:120px;border-radius:10px;background:#e6dccb;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:12px}
+.bub audio{width:220px;height:36px;display:block}.bub .fl{font-size:13px;color:var(--mute)}
+.comp{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff;align-items:flex-end}
+.comp textarea{flex:1;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:16px;resize:none;max-height:120px;min-height:44px}
+.comp button{border:0;background:var(--gold);color:#fff;border-radius:12px;padding:0 14px;height:44px;font-weight:800}.comp button:disabled{opacity:.5}
+.comp .mic{background:#5a4a8a;font-size:20px;padding:0 12px}.comp .mic.rec{background:var(--red);animation:pulse 1s infinite}.comp .cam{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:20px;padding:0 10px}
+@keyframes pulse{50%{opacity:.6}}
+.bprob{background:var(--red);grid-column:1/3}
+#tmsg{font-size:13px;color:var(--red);margin:4px 0}#tmsg:empty{display:none}
 .soon{background:#fff;border:1.5px dashed var(--line);border-radius:16px;padding:14px;color:var(--mute);font-size:14px;text-align:center}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end}.sheet[hidden]{display:none}
 .sheet .in{background:#fff;width:100%;max-height:85vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom))}
@@ -79,16 +97,26 @@ main{padding:12px 14px 40px}
       <button class="bmove" id="bmove">↔ Move to… <small>کسی اور جگہ</small></button>
       <button class="btrello" id="btrello">Open in Trello<small>ٹریلو میں کھولیں</small></button>
     </div>
-    <div class="soon">💬 Card chat with Abbas (the card's Slack thread) — coming in the next step.<br>کارڈ چیٹ — اگلے مرحلے میں</div>
+    <div class="btns" style="margin-top:0"><button class="bprob" id="bprob">🚩 Problem · مسئلہ<small>fabric short · lace missing · machine</small></button></div>
+    <div class="thr"><h3>CARD CHAT · کارڈ چیٹ <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
+  <div class="comp"><button class="mic" id="mic" title="hold to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><textarea id="txt" rows="1" placeholder="Write to Abbas… · لکھیں"></textarea><button id="send">Send</button></div>
 </div>
+<div class="sheet" id="probs" hidden><div class="in"><h3>What is the problem? · کیا مسئلہ ہے؟</h3>
+<button data-p="🚩 Fabric short · کپڑا کم ہے">🧵 Fabric short · کپڑا کم ہے</button>
+<button data-p="🚩 Lace missing · لیس نہیں ہے">🎀 Lace missing · لیس نہیں ہے</button>
+<button data-p="🚩 Machine problem · مشین خراب">⚙️ Machine problem · مشین خراب</button>
+<button data-p="🚩 Design not clear · ڈیزائن سمجھ نہیں آیا">❓ Design not clear · ڈیزائن سمجھ نہیں آیا</button>
+<button data-p="🚩 Other problem · کوئی اور مسئلہ">❗ Other problem · کوئی اور مسئلہ</button>
+<button class="x" id="probx">Cancel</button></div></div>
+<input type="file" id="pfile" accept="image/*" capture="environment" hidden>
 
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · کارڈ کہاں بھیجیں</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
-var VER = '2026-10-12f1';
+var VER = '2026-10-12f2';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -161,19 +189,20 @@ async function load(fresh){
   var j = await call({ op: 'list', fresh: !!fresh });
   $('rf').classList.remove('spin');
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
-  D.lists = j.lists; D.cards = j.cards; D.w = j.w; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; });
+  D.lists = j.lists; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; });
   $('msg').className = 'ok'; $('msg').textContent = D.w ? '' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
   draw(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
   return true;
 }
 function inChip(c, i){ return CHIPS[i][1].indexOf(lname(c.l)) >= 0; }
 function draw(){
-  $('stages').innerHTML = CHIPS.map(function(ch, i){ var n = D.cards.filter(function(c){ return inChip(c, i); }).length;
-    return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i><small>' + ch[2] + '</small></button>'; }).join('');
+  $('stages').innerHTML = CHIPS.map(function(ch, i){ var cs0 = D.cards.filter(function(c){ return inChip(c, i); }), n = cs0.length, u = cs0.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0);
+    return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i>' + (u ? '<b class="u">' + u + '</b>' : '') + '<small>' + ch[2] + '</small></button>'; }).join('');
   var q = $('q').value.replace(/\D/g, ''), cs = D.cards.filter(function(c){ return q ? parse(c.name).no.indexOf(q) >= 0 || c.name.indexOf(q) >= 0 : inChip(c, cur); });
   cs.sort(function(a, b){ return a.pos - b.pos; });
   $('list').innerHTML = cs.length ? cs.map(function(c){ var p = parse(c.name);
-    return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div></div>'; }).join('')
+    var u = unread(c);
+    return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="badge">' + u + '</span>' : '') + '</div>'; }).join('')
     : '<div class="empty">' + (q ? 'No card with ' + esc(q) : 'No cards here · یہاں کوئی کارڈ نہیں') + '</div>';
   document.querySelectorAll('#list .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); });
 }
@@ -184,7 +213,7 @@ $('rf').onclick = function(){ load(true); };
 
 // ----- card screen -----
 var HIDE = /^(TASLEEM|IRFAN ALI|HASHIM|QADIR|SHAHZAIB|SALMAAN|ZAKIR|USMAN|Anees|SHAWKEEN|IBRAHEEM|US|COST|SALE|CHAT)$/i;
-function openCard(c){ open = c; $('card').hidden = false; paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
+function openCard(c){ open = c; $('card').hidden = false; paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); thStart(c); }
 function paintCard(){
   var c = open, p = parse(c.name), ln = lname(c.l), nx = NEXT[ln];
   $('cnm').innerHTML = (p.no ? 'SJ-' + esc(p.no) : 'Card') + '<small>' + [p.pcs && p.pcs + ' pcs', p.col && p.col + ' colours', p.size].filter(Boolean).map(esc).join(' · ') + '</small>';
@@ -197,7 +226,7 @@ function paintCard(){
   if (assigned.length) $('cinfo').innerHTML += '<div style="grid-column:1/3"><b>WORKERS</b>' + assigned.map(function(k){ return esc(k) + ' ' + esc(c.f[k]); }).join(' · ') + '</div>';
   $('bdone').disabled = !nx || !D.w; $('bnext').textContent = nx || '—'; $('bnextar').textContent = nx ? (UR[nx] || '') + ' میں بھیجیں' : '';
 }
-function closeCard(){ $('card').hidden = true; open = null; draw(); }
+function closeCard(){ $('card').hidden = true; thStop(); open = null; draw(); }
 $('back').onclick = function(){ history.back(); };
 window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
@@ -209,7 +238,7 @@ async function move(toName){
   if (!j.ok) { toast(j.error); $('bdone').disabled = false; if (j.moved) load(true); return; }
   c.l = to; toast('✓ Moved to ' + toName + ' · ' + (UR[toName] || ''));
   if (D.lists.slice(0, 9).every(function(l){ return l[1] !== to; })) { D.cards = D.cards.filter(function(x){ return x !== c; }); delete D.byId[c.id]; history.back(); }
-  else paintCard();
+  else { paintCard(); setTimeout(thPull, 1200); }
   draw(); setTimeout(function(){ load(true); }, 1500);
 }
 $('bdone').onclick = function(){ var nx = NEXT[lname(open.l)]; if (nx) move(nx); };
@@ -218,6 +247,86 @@ $('bmove').onclick = function(){ if (!D.w) { toast('View only — cannot move ye
   $('mv').hidden = false; };
 $('mvx').onclick = function(){ $('mv').hidden = true; };
 $('mvl').onclick = function(e){ var b = e.target.closest('button[data-n]'); if (!b || b.classList.contains('here')) return; $('mv').hidden = true; move(b.dataset.n); };
+
+// ----- card chat = the card's Slack #cutting thread (both ways) -----
+var SEEN = {}; try { SEEN = JSON.parse(ls('sj_fac_seen') || '{}'); } catch(e){}
+function unread(c){ var t = D.th && D.th[c.id]; if (!t || !t.n) return 0; return (+t.last > +(SEEN[c.id] || 0)) ? t.n : 0; }
+function seen(c, ts){ if (!ts) return; SEEN[c.id] = Math.max(+(SEEN[c.id] || 0), +ts); ls('sj_fac_seen', JSON.stringify(SEEN)); }
+var TH = { card: null, msgs: [], timer: null, busy: false, none: false }, MEDIA = {};
+function thStart(c){ TH.card = c; TH.msgs = []; TH.none = false; $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · لوڈ ہو رہا ہے</div>'; $('tmsg').textContent = ''; $('tcount').textContent = ''; thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 12000); }
+function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
+async function thPull(){
+  var c = TH.card; if (!c || TH.busy) return; TH.busy = true;
+  var last = TH.msgs.length ? TH.msgs[TH.msgs.length - 1].ts : '';
+  var j = await call({ op: 'thread', card: c.id, since: last });
+  TH.busy = false; if (TH.card !== c) return;
+  if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = ''; return; }
+  $('tmsg').textContent = '';
+  if (j.none) { TH.none = true; $('thread').innerHTML = '<div class="empty" style="padding:14px">No chat yet — write the first message, send a photo or a voice note.<br>ابھی کوئی پیغام نہیں — پہلا پیغام لکھیں</div>'; $('tcount').textContent = ''; return; }
+  TH.none = false;
+  var have = {}; TH.msgs.forEach(function(m){ have[m.ts] = 1; }); var add = (j.msgs || []).filter(function(m){ return !have[m.ts]; });
+  if (!add.length && TH.msgs.length) return;
+  TH.msgs = TH.msgs.concat(add); thDraw(); seen(c, TH.msgs[TH.msgs.length - 1].ts); draw();
+}
+function bubble(m){
+  var me = m.app && m.who === WHO, cls = m.sys ? 'sys' : me ? 'me' : '', body = esc(m.sys ? m.text.replace(/\*/g, '') : m.text);
+  if (m.root) cls += ' root'; if (/^🚩/.test(m.text)) cls += ' prob';
+  (m.files || []).forEach(function(f){
+    if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="img">tap to load photo</div>';
+    else if (f.audio) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="audio" style="height:44px">▶ voice note · آواز</div>';
+    else body += '<div class="fl">📎 ' + esc(f.name) + (f.video ? ' (video — open in Slack)' : '') + '</div>';
+  });
+  var t = new Date(+m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
+  return '<div class="msg ' + cls + '">' + (m.sys ? '' : '<div class="who"><b>' + esc(m.who || '') + '</b>' + (m.app ? '' : ' · Slack') + ' · ' + dd + ' ' + hh + '</div>') + '<div class="bub">' + body + '</div></div>';
+}
+function thDraw(){ $('thread').innerHTML = TH.msgs.map(bubble).join(''); $('tcount').textContent = TH.msgs.length + ' messages';
+  var el = $('cbody'); setTimeout(function(){ el.scrollTop = el.scrollHeight; }, 30); autoMedia(); }
+function autoMedia(){ document.querySelectorAll('#thread .fph[data-k="img"]').forEach(function(e){ loadMedia(e); }); }
+async function loadMedia(e){
+  var id = e.dataset.f, k = e.dataset.k; if (e.dataset.busy) return; e.dataset.busy = '1';
+  var have = MEDIA[id]; if (!have) { e.textContent = '…'; var j = await call({ op: 'media', file: id, full: k === 'audio' ? 1 : 0 }); if (!j.ok) { e.textContent = 'could not load'; e.dataset.busy = ''; return; } have = MEDIA[id] = 'data:' + (j.type || (k === 'audio' ? 'audio/mp4' : 'image/jpeg')) + ';base64,' + j.b64; }
+  if (k === 'img') { var im = document.createElement('img'); im.src = have; e.replaceWith(im); }
+  else { var au = document.createElement('audio'); au.controls = true; au.src = have; e.replaceWith(au); au.play().catch(function(){}); }
+}
+$('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) loadMedia(f); };
+async function thSend(text){
+  var c = TH.card; if (!c || !text.trim()) return; $('send').disabled = true;
+  var j = await call({ op: 'post', card: c.id, text: text, who: WHO }); $('send').disabled = false;
+  if (!j.ok) { toast(j.error); return; }
+  TH.msgs.push({ ts: j.ts, who: WHO, app: true, text: text, files: [] }); thDraw(); seen(c, j.ts); toast('✓ Sent to Abbas · بھیج دیا');
+}
+$('send').onclick = function(){ var v = $('txt').value; if (!v.trim()) return; $('txt').value = ''; thSend(v); };
+$('txt').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('send').onclick(); } };
+$('bprob').onclick = function(){ $('probs').hidden = false; };
+$('probx').onclick = function(){ $('probs').hidden = true; };
+$('probs').onclick = function(e){ var b = e.target.closest('button[data-p]'); if (!b) return; $('probs').hidden = true; thSend(b.dataset.p); };
+// photo
+$('cam').onclick = function(){ $('pfile').value = ''; $('pfile').click(); };
+$('pfile').onchange = function(){ var f = this.files[0]; if (f) upFile(f, 'photo-' + Date.now() + '.jpg', true); };
+function shrink(file){ return new Promise(function(ok){ var im = new Image(); im.onload = function(){ var k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); c.toBlob(ok, 'image/jpeg', 0.82); URL.revokeObjectURL(im.src); }; im.onerror = function(){ ok(file); }; im.src = URL.createObjectURL(file); }); }
+async function upFile(file, name, isPhoto){
+  var c = TH.card; if (!c) return; toast(isPhoto ? 'Sending photo… · بھیجی جا رہی ہے' : 'Sending voice note… · بھیجا جا رہا ہے');
+  var blob = isPhoto ? await shrink(file) : file;
+  if (blob.size > 18 * 1024 * 1024) { toast('Too big (max 18 MB)'); return; }
+  var b64 = await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(blob); });
+  var j = await call({ op: 'up', card: c.id, name: name, b64: b64, who: WHO });
+  if (!j.ok) { toast(j.error); return; }
+  toast('✓ Sent · بھیج دیا'); setTimeout(thPull, 1500);
+}
+// voice: hold the mic
+var REC = { r: null, chunks: [], t0: 0 };
+async function recStart(){ if (REC.r) return; REC.t0 = Date.now();
+  try { var st = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch(e){ toast('Allow the microphone · مائیک کی اجازت دیں'); return; }
+  var type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].filter(function(t){ return window.MediaRecorder && MediaRecorder.isTypeSupported(t); })[0] || '';
+  REC.chunks = []; REC.r = new MediaRecorder(st, type ? { mimeType: type } : {}); REC.r.ondataavailable = function(e){ if (e.data.size) REC.chunks.push(e.data); };
+  REC.r.onstop = function(){ st.getTracks().forEach(function(x){ x.stop(); }); var sec = Math.round((Date.now() - REC.t0) / 1000), mt = REC.r.mimeType || type || 'audio/mp4', blob = new Blob(REC.chunks, { type: mt }); REC.r = null;
+    if (sec < 1 || blob.size < 1000) { toast('Too short — hold the mic while you speak · بولتے وقت مائیک دبائے رکھیں'); return; }
+    upFile(blob, 'voice-' + Date.now() + (/mp4/.test(mt) ? '.m4a' : /ogg/.test(mt) ? '.ogg' : '.webm'), false); };
+  REC.r.start(); $('mic').classList.add('rec'); toast('Recording… release to send · ریکارڈنگ');
+}
+function recStop(){ if (REC.r && REC.r.state === 'recording') REC.r.stop(); $('mic').classList.remove('rec'); }
+$('mic').onpointerdown = function(e){ e.preventDefault(); recStart(); }; $('mic').onpointerup = $('mic').onpointercancel = $('mic').onpointerleave = recStop;
+$('mic').oncontextmenu = function(e){ e.preventDefault(); };
 
 // ----- sign in once -----
 function showLogin(){ $('login').hidden = false; $('lname').value = WHO; $('lpw').focus(); }
@@ -240,7 +349,7 @@ async function checkVer(){ try { var t = await (await fetch('factory.html?t=' + 
 $('who').textContent = WHO;
 if (!PW) showLogin(); else load(false);
 checkVer();
-window.__f = { D: D, parse: parse, call: call };
+window.__f = { D: D, parse: parse, call: call, TH: TH };
 })();
 </script>
 </body></html>
