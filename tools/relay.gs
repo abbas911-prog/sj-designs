@@ -95,8 +95,8 @@ function facThread(P, FT, card, rtok, make) {                 // the #cutting me
   if (!p.ok) throw new Error('Slack said ' + p.error + (p.error === 'not_in_channel' ? ' (invite the factory bot to #cutting)' : ''));
   var t2 = { ch: DOX.CUTTING, ts: p.ts }; P.setProperty(key, JSON.stringify(t2)); return t2;
 }
-function facThreads(P, FT, cards) {                           // reply counts for the badges: one #cutting history call, matched to the remembered threads
-  var cache = CacheService.getScriptCache(), hit = cache.get('FAC_TH'); if (hit) return JSON.parse(hit);
+function facThreads(P, FT, cards, fresh) {                    // reply counts for the badges: one #cutting history call, matched to the remembered threads
+  var cache = CacheService.getScriptCache(), hit = fresh ? null : cache.get('FAC_TH'); if (hit) return JSON.parse(hit);
   var all = P.getProperties(), byTs = {}, byLink = {}, outm = {};
   cards.forEach(function (c) { var v = all['FTH_' + c.id]; if (v) byTs[JSON.parse(v).ts] = c.id; else if (c.url) byLink[c.url.split('/').pop()] = c.id; });
   var hist = slackApi(FT, 'conversations.history', { channel: DOX.CUTTING, limit: 200 }, true);
@@ -106,6 +106,28 @@ function facThreads(P, FT, cards) {                           // reply counts fo
     if (id) outm[id] = { n: m.reply_count || 0, last: m.latest_reply || m.ts };
   });
   cache.put('FAC_TH', JSON.stringify(outm), 20); return outm;
+}
+function facSeen(P, who, card, ts) {                           // FSEEN_<who> = { _t0: first use, <cardId>: last ts seen } - shared by every phone that person signs in on
+  who = String(who || '').trim(); if (!who || !card) return;
+  var k = 'FSEEN_' + who.toUpperCase().slice(0, 40), rec = JSON.parse(P.getProperty(k) || '{}'); if (!rec._t0) rec._t0 = String(Date.now() / 1000);
+  if (!(+rec[card] >= +ts)) { rec[card] = String(ts); var ks = Object.keys(rec).filter(function (x) { return x !== '_t0'; }); if (ks.length > 400) ks.sort(function (a, b) { return +rec[a] - +rec[b]; }).slice(0, ks.length - 400).forEach(function (x) { delete rec[x]; }); P.setProperty(k, JSON.stringify(rec)); CacheService.getScriptCache().remove('FAC_UN_' + who.toUpperCase().slice(0, 20)); }
+}
+function facUnread(P, FT, cards, who, fresh) {                         // what THIS person has not seen yet: replies by others, newer than their last look (and newer than their first use)
+  who = String(who || '').trim(); if (!who || !FT) return {};
+  var k = 'FSEEN_' + who.toUpperCase().slice(0, 40), rec = JSON.parse(P.getProperty(k) || 'null');
+  if (!rec) { rec = { _t0: String(Date.now() / 1000) }; P.setProperty(k, JSON.stringify(rec)); }
+  var cache = CacheService.getScriptCache(), ck = 'FAC_UN_' + who.toUpperCase().slice(0, 20), hit = fresh ? null : cache.get(ck); if (hit) return JSON.parse(hit);
+  var th = facThreads(P, FT, cards, fresh), all = P.getProperties(), outm = {}, looked = 0;
+  var byCard = {}; Object.keys(all).forEach(function (x) { if (x.indexOf('FTH_') === 0) byCard[x.slice(4)] = JSON.parse(all[x]); });
+  Object.keys(th).forEach(function (cid) {
+    var t = th[cid], seen = Math.max(+(rec[cid] || 0), +rec._t0); if (!(+t.last > seen) || !byCard[cid] || looked >= 15) return;
+    looked++;
+    var rp = slackApi(FT, 'conversations.replies', { channel: byCard[cid].ch, ts: byCard[cid].ts, oldest: String(seen), limit: 50 }, true);
+    var n = 0, lastOther = '';
+    (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if (mm.sys) return; if (String(mm.who).toUpperCase() === who.toUpperCase()) return; n++; lastOther = m.ts; });
+    if (n) outm[cid] = { n: n, last: lastOther };
+  });
+  cache.put(ck, JSON.stringify(outm), 20); return outm;
 }
 function facUser(P, FT, uid) {
   var c = CacheService.getScriptCache(), k = 'FAC_U_' + uid, h = c.get(k); if (h) return h;
@@ -178,20 +200,20 @@ function fac(reqText, P) {
   var ids = FAC.LISTS.map(function (l) { return l[1]; });
   try {
     if (req.op === 'list') {
-      var cache = CacheService.getScriptCache(), hit = cache.get('FAC_LIST');
-      if (hit && !req.fresh) return out(JSON.parse(hit));
+      var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = cache.get('FAC_LIST');
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} return out(hv); }
       var show = ids.slice(0, FAC.SHOW), cf = facCf(rtok);
-      var q = '/cards?fields=name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity&customFieldItems=true&attachments=cover&attachment_fields=id,previews,mimeType&key=' + TKEY + '&token=' + rtok;
+      var q = '/cards?fields=name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels&customFieldItems=true&attachments=cover&attachment_fields=id,previews,mimeType&key=' + TKEY + '&token=' + rtok;
       var rs = UrlFetchApp.fetchAll(show.map(function (id) { return { url: 'https://api.trello.com/1/lists/' + id + q, muteHttpExceptions: true }; })), cards = [];
       for (var i = 0; i < rs.length; i++) { if (rs[i].getResponseCode() !== 200) return out({ ok: false, error: 'Trello said ' + rs[i].getResponseCode() }); cards = cards.concat(JSON.parse(rs[i].getContentText())); }
       var outc = cards.map(function (c) {
         var f = {}; (c.customFieldItems || []).forEach(function (it) { var n = cf[it.idCustomField], v = it.value || {}; var x = v.text != null ? v.text : v.number != null ? v.number : v.date || (v.checked === 'true' ? '✓' : null); if (n && x != null && String(x).trim() !== '') f[n] = String(x); });
         var a = (c.attachments || [])[0], img = a && a.previews && a.previews.length ? a.id : '';
-        return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity };
+        return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity, lb: (c.labels || []).filter(function (l) { return l.name; }).map(function (l) { return { n: l.name, c: l.color || '' }; }) };
       });
-      var th = {}; try { if (P.getProperty('SLACK_FACTORY_TOKEN')) th = facThreads(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
-      var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: FAC.SHOW, cards: outc, w: !!wtok, th: th, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
+      var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: FAC.SHOW, cards: outc, w: !!wtok, th: {}, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
       var js = JSON.stringify(res); if (js.length < 95000) cache.put('FAC_LIST', js, 20);
+      try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       return out(res);
     }
     if (req.op === 'img') {                                   // a card's cover photo, ~300-600 px, fetched with the auth header (browsers are refused)
@@ -218,6 +240,8 @@ function fac(reqText, P) {
       var rq = { channel: th.ch, ts: th.ts, limit: 200 }; if (req.since) rq.oldest = String(req.since);
       var rp = slackApi(FT, 'conversations.replies', rq, true);
       var ms = (rp.messages || []).filter(function (m) { return !req.since || m.ts !== String(req.since); }).map(function (m) { return facMsg(P, FT, m, th.ts); });
+      var lastTs = (rp.messages || []).reduce(function (a, m) { return +m.ts > +a ? m.ts : a; }, req.since || th.ts);
+      facSeen(P, String(req.who || ''), tc, lastTs);                // this person has now seen the thread up to here (shared by all their phones)
       return out({ ok: true, ch: th.ch, ts: th.ts, msgs: ms });
     }
     if (req.op === 'post') {                                  // a text line from the factory phone into the thread, shown as "*Name:* text"
@@ -227,18 +251,26 @@ function fac(reqText, P) {
       var pth = facThread(P, FT, pc, rtok, true);
       var pj = slackApi(FT, 'chat.postMessage', { channel: pth.ch, thread_ts: pth.ts, text: '*' + pwho + ':* ' + ptx });
       if (!pj.ok) return out({ ok: false, error: 'Slack said ' + pj.error });
+      facSeen(P, pwho, pc, pj.ts); CacheService.getScriptCache().remove('FAC_UN_' + pwho.toUpperCase().slice(0, 20));
       return out({ ok: true, ts: pj.ts });
     }
-    if (req.op === 'up') {                                    // a photo / voice note / video from the factory phone into the thread
+    if (req.op === 'up') {                                    // photos / voice notes / files from the factory phone -> ONE message in the thread (Abbas 13 Oct: "like Slack ... all as one message")
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
-      var uc = String(req.card || '').replace(/[^0-9a-f]/g, ''), un = String(req.name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 60), uwho = String(req.who || '').slice(0, 40) || 'factory';
-      if (!uc || !req.b64) return out({ ok: false, error: 'bad request' });
-      var ub = Utilities.base64Decode(String(req.b64)); if (ub.length > 18 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 18 MB)' });
-      var uth = facThread(P, FT, uc, rtok, true), fid = slackUp(FT, un, ub);
+      var uc = String(req.card || '').replace(/[^0-9a-f]/g, ''), uwho = String(req.who || '').slice(0, 40) || 'factory';
+      var ufs = Array.isArray(req.files) ? req.files : (req.b64 ? [{ name: req.name, b64: req.b64 }] : []);
+      if (!uc || !ufs.length || ufs.length > 10) return out({ ok: false, error: 'bad request' });
+      var uth = facThread(P, FT, uc, rtok, true), fids = [], tot = 0;
+      for (var ui = 0; ui < ufs.length; ui++) {
+        var un = String(ufs[ui].name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 60), ub = Utilities.base64Decode(String(ufs[ui].b64 || ''));
+        tot += ub.length; if (ub.length > 18 * 1024 * 1024 || tot > 40 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 18 MB each, 40 MB together)' });
+        fids.push(slackUp(FT, un, ub));
+      }
+      var utext = '*' + uwho + ':* ' + (req.text ? String(req.text).slice(0, 3000) : ufs.map(function (f) { var n = String(f.name || ''); return /^voice/i.test(n) ? '🎤 voice note' : /\.(jpe?g|png|webp|heic)$/i.test(n) ? '📷 photo' : /\.(mp4|mov|webm)$/i.test(n) ? '🎬 video' : '📎 ' + n; }).join(' · '));
       var uj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + FT }, muteHttpExceptions: true,
-        payload: { files: JSON.stringify([{ id: fid }]), channel_id: uth.ch, thread_ts: uth.ts, initial_comment: '*' + uwho + ':* ' + (req.caption ? String(req.caption).slice(0, 300) : (/^voice/i.test(un) ? '🎤 voice note' : /\.(jpe?g|png|webp|heic)$/i.test(un) ? '📷 photo' : '📎 ' + un)) } }).getContentText());
+        payload: { files: JSON.stringify(fids.map(function (f) { return { id: f }; })), channel_id: uth.ch, thread_ts: uth.ts, initial_comment: utext } }).getContentText());
       if (!uj.ok) return out({ ok: false, error: 'Slack said ' + uj.error });
-      return out({ ok: true, fid: fid });
+      facSeen(P, uwho, uc, String(Date.now() / 1000));
+      return out({ ok: true, fids: fids });
     }
     if (req.op === 'media') {                                 // one Slack file for the phone (photo thumbnail or the voice note), through the bot token
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
