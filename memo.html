@@ -194,6 +194,8 @@ main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .stk{font-size:13.5px;line-height:1.45;background:#fff;border-radius:12px;padding:10px 12px;margin:8px 0;border-left:4px solid var(--gold)}
 .stk.ok{border-color:#2f7d4f}.stk.bad{border-color:#9a3b1e;color:#9a3b1e}.stk[hidden]{display:none}
 .stk small{display:block;color:var(--mute);margin-top:3px}
+#szc img{display:block;width:100%;border-radius:8px;margin:8px 0}
+#szc .btns{display:flex;flex-wrap:wrap;gap:6px}
 .stk button{margin-top:8px;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;border:1.5px solid var(--line);background:#fff;font-weight:700}
 #p-cat textarea{width:100%;min-height:90px;padding:10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px}
 .crow{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border-radius:10px;padding:8px 10px;margin:6px 0;font-weight:700}
@@ -437,6 +439,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
   <div id="bform"></div>
   <div class="btns"><button id="dinc" class="inc" type="button" hidden>Include &amp; share · تأكيد وإرسال<small>takes the pieces off Trello</small></button><button id="dsend" class="gold" type="button">Send PDF · أرسل PDF</button><button id="dcopy" type="button">Copy text · نسخ النص</button><button id="dnew" type="button">New number · رقم جديد</button><button id="dff" type="button" hidden>50-50 check · for me</button></div>
   <div id="stk" class="stk" hidden></div>
+  <div id="szc" class="stk" hidden></div>
   <div id="dprev"></div>
   </section>
   <section id="p-cat" hidden>
@@ -678,7 +681,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-11g';
+var VER = '2026-10-12a';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -886,7 +889,7 @@ function dmy(s){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? m
 var B = { mode: 'memo', inv: null, rv: null, pv: null, pdf: null, timer: null };
 function freshDoc(k){
   var d = { ref: nextRef(k), date: today(), name: $('name').value.trim(), open: '', note: '' };
-  if (k === 'inv') { d.vat = false; d.extras = [{ d: '', a: '' }]; d.disc = ''; d.paid = ''; d.man = []; d.nophoto = false; }
+  if (k === 'inv') { d.vat = false; d.extras = [{ d: '', a: '' }]; d.disc = ''; d.paid = ''; d.man = []; d.nophoto = false; d.cat = true; }
   else { d.amount = ''; d.modeP = 'Cash'; d.chq = ''; }
   return d;
 }
@@ -948,6 +951,8 @@ function drawForm(){
     h += (d.man || []).map(function(m, i){ return '<div class="bman"><input data-mn="' + i + '" data-f="d" value="' + String(m.d || '').replace(/"/g, '&quot;') + '" placeholder="Design / item"><input data-mn="' + i + '" data-f="q" inputmode="decimal" value="' + (m.q || '') + '" placeholder="Qty"><input data-mn="' + i + '" data-f="r" inputmode="decimal" value="' + (m.r || '') + '" placeholder="Rate"><button type="button" data-rmm="' + i + '" aria-label="remove">✕</button></div>'; }).join('');
     h += '<button type="button" class="badd" id="addman">+ Add line</button>';
     h += '<label class="bchk"><input type="checkbox" data-k="nophoto"' + (d.nophoto ? ' checked' : '') + '> Invoice without photos · فاتورة بدون صور</label>';
+    // 12 Oct 2026 (Abbas): with every invoice, a catalogue of the billed designs with sizes for the customer's own buyers — untick to skip
+    h += '<label class="bchk"><input type="checkbox" data-k="cat"' + (d.cat !== false ? ' checked' : '') + '> Send sizes catalogue with this invoice · كتالوج المقاسات مع الفاتورة</label>';
     h += '<div class="bsec">Extras · إضافات <small>(e.g. packing, delivery, old item)</small></div>';
     h += d.extras.map(function(e, i){ return '<div class="bex"><input data-x="' + i + '" data-f="d" value="' + e.d.replace(/"/g, '&quot;') + '" placeholder="Description"><input data-x="' + i + '" data-f="a" inputmode="decimal" value="' + e.a + '" placeholder="AED"><button type="button" data-rm="' + i + '" aria-label="remove">✕</button></div>'; }).join('');
     h += '<button type="button" class="badd" id="addex">+ Add extra</button>';
@@ -1117,7 +1122,9 @@ $('dinc').onclick = async function(){
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   custAfter('inv', d);
+  var szl = lines.slice();
   stkRun('sell');
+  if (d.cat !== false && szl.length) szRun(d, szl);
 };
 $('dcopy').onclick = async function(){ var t = docText(B.mode, B[B.mode]); try { await navigator.clipboard.writeText(t); $('dcopy').textContent = 'Copied ✓'; setTimeout(function(){ $('dcopy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', t); } };
 $('dnew').onclick = function(){ var k = B.mode; keepNo(k, B[k].ref); B[k] = freshDoc(k); redraw(); stkShow(); };
@@ -1180,7 +1187,7 @@ var STK = {}; try { STK = JSON.parse(ls('sj_stock') || '{}'); } catch(e){}
 function stkSave(){ var ks = Object.keys(STK).sort(function(a, b){ return (STK[b].t || 0) - (STK[a].t || 0); }); ks.slice(40).forEach(function(k){ delete STK[k]; }); ls('sj_stock', JSON.stringify(STK)); }
 function stkKey(ref){ return devId() + '|' + ref; }
 function stkLines(){ return colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var d = byNo(l.no); return { card: d.id, no: d.base, c: l.c, pcs: l.qty }; }); }
-function stkShow(){ var el = $('stk'); $('dinc').hidden = B.mode !== 'inv'; $('dff').hidden = B.mode !== 'inv' || !isBoss(); if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
+function stkShow(){ szPaint(); var el = $('stk'); $('dinc').hidden = B.mode !== 'inv'; $('dff').hidden = B.mode !== 'inv' || !isBoss(); if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
   if (s) { stkPaint(s); return; }
   el.hidden = false; el.className = 'stk';
   el.innerHTML = RELAY ? '<b>Send PDF</b> does not change stock. <b>Include &amp; share</b> sends the final invoice and takes its pieces off Trello. <small>فقط «تأكيد وإرسال» يخصم القطع من تريلو</small>' + (isOwner() ? '<button type="button" data-stk="check">Test — show what would change (Trello not touched)</button>' : '')
@@ -1217,7 +1224,7 @@ async function stkRun(op){
   catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); stkPaint(s); return; }
   var res = await waitJob(id, 'stock', 8);
   s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; if (res.ok && op === 'sell') ordBillMade(B.inv && B.inv.ref); if (res.ok && op === 'return' && B.inv) custVoid(B.inv); s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
-  applyCards(res.cards || []);
+  applyCards(res.cards || []); szPaint();
 }
 function applyCards(cs){ if (!RAW) return; var ch = false;     // show the new numbers at once; the full list refreshes within a few minutes
   cs.forEach(function(c){ if (!c.after) return; RAW.cards.forEach(function(rc, i){ if (rc.id === c.card) { rc.name = c.after; ch = true; } });
@@ -1227,6 +1234,50 @@ $('stk').addEventListener('click', function(e){ var b = e.target.closest('button
   if (b.dataset.stk === 'return' && !confirm('Put the pieces of ' + B.inv.ref + ' back on Trello?')) return;
   if (b.dataset.stk === 'sell') { var s = STK[stkKey(B.inv.ref)]; if (s) s.st = 'retry'; }
   stkRun(b.dataset.stk); });
+
+// ----- SIZES CATALOGUE WITH THE INVOICE (Abbas, 12 Oct 2026) -----
+// "When a bill is generated ... send him a catalog of those designs with the quantity and video ... instead of sets or complete
+// he will have options of 4 sizes below it for his customers to choose" · "a ticker option — sometimes I would not want to send
+// a catalog with the invoice" · "this applies to all the customers". Include & share (tick on) starts the memo-catalog job with
+// kind "sizes": only the billed colours and pieces, SJ TRADING at the top, sizes from the Trello card (FREE SIZE / the sizes
+// written on the card / M L XL XXL), a number box per size, the video. The cover + link come back here to send.
+var SZ = {}; try { SZ = JSON.parse(ls('sj_sz') || '{}'); } catch(e){}
+function szSave(){ var ks = Object.keys(SZ).sort(function(a, b){ return (SZ[b].t || 0) - (SZ[a].t || 0); }); ks.slice(30).forEach(function(k){ delete SZ[k]; }); ls('sj_sz', JSON.stringify(SZ)); }
+async function szRun(d, lines){
+  var k = stkKey(d.ref), id = jobId('z');
+  var z = SZ[k] = { st: 'busy', id: id, ref: d.ref, who: d.name || $('name').value.trim(), lines: lines, t: Date.now() }; szSave(); szPaint();
+  try { await relay('catalog', { id: id, kind: 'sizes', ref: d.ref, cust: z.who, items: lines.map(function(l){ return { card: l.card, no: l.no, c: l.c, pcs: l.pcs }; }) }); }
+  catch(e){ z.st = 'bad'; z.err = 'Could not start: ' + e.message; szSave(); szPaint(); return; }
+  var res = await waitJob(id, 'catalog', 30, function(sec){ z.sec = sec; szPaint(); });
+  if (!res.ok) { z.st = 'bad'; z.err = res.error || 'not made'; z.res = res; szSave(); szPaint(); return; }
+  z.res = res; z.st = 'wait'; szSave(); szPaint();
+  var live = false; for (var i = 0; i < 36 && !live; i++) { try { var r = await fetch(res.page + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); live = r.ok; } catch(e){} if (!live) await sleep(5000); }
+  z.st = 'ok'; szSave(); szPaint();
+  try { var h = JSON.parse(ls('sj_cat_hist') || '[]'); h.unshift({ name: 'SIZES · ' + (z.who || '') + ' · ' + z.ref, country: '', url: res.url, cover: res.cover, page: res.page, t: Date.now(), report: res.report, flags: res.flags, designs: res.designs }); ls('sj_cat_hist', JSON.stringify(h.slice(0, 20))); } catch(e){}
+}
+function szPaint(){
+  var el = $('szc'); if (!el || !SZ) return; var d = B.inv, z = d && B.mode === 'inv' ? SZ[stkKey(d.ref)] : null;
+  if (!z) { var s = d && B.mode === 'inv' ? STK[stkKey(d.ref)] : null;
+    if (s && s.st === 'ok') { el.hidden = false; el.className = 'stk'; el.innerHTML = 'No sizes catalogue for ' + esc(d.ref) + '.<button type="button" data-sz="make">Make the sizes catalogue now · كتالوج المقاسات</button>'; }
+    else el.hidden = true; return; }
+  el.hidden = false; var h = '', r = z.res || {};
+  if (z.st === 'busy') { el.className = 'stk'; h = 'Making the sizes catalogue for ' + esc(z.who || z.ref) + '…' + (z.sec ? ' ' + Math.floor(z.sec / 60) + ':' + ('0' + z.sec % 60).slice(-2) : '') + '<small>photos, cut-outs, videos, cover · usually 2–6 minutes · you can keep working</small>'; }
+  else if (z.st === 'bad') { el.className = 'stk bad'; h = 'Sizes catalogue NOT made.<small>' + esc(z.err) + '</small>' + (r.report || []).map(function(l){ return '<small>' + esc(l) + '</small>'; }).join('') + '<button type="button" data-sz="make">Try again · أعد المحاولة</button>'; }
+  else { el.className = 'stk' + (z.st === 'ok' ? ' ok' : '');
+    h = (z.st === 'ok' ? 'Sizes catalogue ready ✓ — press Send link: WhatsApp shows the picture, and tapping it opens the catalogue.' : 'Made ✓ — waiting for the link to go live… <small>about a minute</small>') +
+        '<img src="' + GH_RAW + r.cover + '?t=' + (z.t || 0) + '" alt="cover">' +
+        '<div class="btns"><button type="button" class="gold" data-sz="share">Send link · أرسل الرابط</button><button type="button" data-sz="pic">Send picture only</button><button type="button" data-sz="copy">Copy link · نسخ الرابط</button><a href="' + esc(r.url) + '" target="_blank" style="align-self:center;color:var(--gold);font-weight:700">Open page ↗</a></div>' +
+        (r.report || []).map(function(l){ return '<small>' + esc(l) + '</small>'; }).join('') + (r.flags || []).map(function(l){ return '<small style="color:#9a3b1e">' + esc(l) + '</small>'; }).join(''); }
+  el.innerHTML = h;
+}
+$('szc').addEventListener('click', async function(e){ var b = e.target.closest('button[data-sz]'); if (!b || !B.inv) return; var z = SZ[stkKey(B.inv.ref)], a = b.dataset.sz;
+  if (a === 'make') { var lines = z && z.lines && z.lines.length ? z.lines : ((STK[stkKey(B.inv.ref)] || {}).lines || stkLines()); if (!lines.length) { alert('No designs on this invoice.'); return; } szRun(B.inv, lines); return; }
+  if (!z || !z.res) return; var url = z.res.url;
+  if (a === 'copy') { try { await navigator.clipboard.writeText(url); b.textContent = 'Copied ✓'; } catch(e2){ prompt('Copy:', url); } return; }
+  if (a === 'share') { try { if (navigator.share) { await navigator.share({ url: url }); return; } } catch(e5){ if (e5 && e5.name === 'AbortError') return; } location.href = 'https://wa.me/?text=' + encodeURIComponent(url); return; }
+  try { var blob = await (await fetch(GH_RAW + z.res.cover + '?t=' + Date.now())).blob(); var f = new File([blob], 'SJ-catalogue-' + z.res.cover.replace(/^og-/, ''), { type: 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; } } catch(e3){ if (e3 && e3.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); } catch(e4){} window.open(url, '_blank'); });
 
 // ----- catalogue (his phone only): design numbers + SETS / COMPLETE -> customer catalogue link -----
 var CAT = { items: [], modes: {}, busy: false };
