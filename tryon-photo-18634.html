@@ -167,6 +167,7 @@ $('lsave').onclick = async function(){ if (!L.last) return; var b = await (await
   var a = document.createElement('a'); a.href = L.last; a.download = file.name; a.click(); };
 document.addEventListener('visibilitychange', function(){ if (document.hidden && L.on) { liveStop(); say('Paused · tap Start to continue', 'توقف مؤقت'); } });
 window.__live = { state: function(){ return { on: L.on, n: L.n, ms: L.ms }; }, start: liveStart, stop: liveStop, mode: setMode };
+if (new URLSearchParams(location.search).get('mode') === 'live') setMode('live');   // opened from the order page's 🎥 Live try-on button
 window.__photo = { state: function(){ return { stat: stat.textContent, hasResult: !!results[cur], busy: busy }; } };
 })();
 </script>
