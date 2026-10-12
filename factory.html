@@ -15,6 +15,7 @@ header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 14px 6p
 .top{display:flex;align-items:center;gap:10px}.mono{width:40px;height:40px;border-radius:12px;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;letter-spacing:.04em;flex:none}
 .top h1{font-size:17px;margin:0;flex:1;min-width:0}.top h1 small{display:block;font-weight:500;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rf{border:1.5px solid var(--line);background:#fff;border-radius:12px;width:44px;height:40px;font-size:18px;color:var(--gold);flex:none}
+.rf.on{border-color:var(--green);color:var(--green)}
 .rf.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .stages{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding:6px 0 4px;scrollbar-width:none}.stages::-webkit-scrollbar{display:none}
 .stages button{flex:none;position:relative;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:14px;font-weight:700;color:var(--ink)}
@@ -81,7 +82,7 @@ main{padding:12px 14px 40px}
 <input id="lpw" type="password" placeholder="Password · پاس ورڈ" autocomplete="current-password"><input id="lname" placeholder="Your name · آپ کا نام" autocomplete="name"><button id="lgo">Open · کھولیں</button><div id="lerr"></div></div></div>
 
 <header>
-  <div class="top"><div class="mono">SJ</div><h1>Factory · فیکٹری<small id="who"></small></h1><button class="rf" id="rf" title="Refresh">↻</button></div>
+  <div class="top"><div class="mono">SJ</div><h1>Factory · فیکٹری<small id="who"></small></h1><button class="rf" id="bell" title="Notifications">🔔</button><button class="rf" id="rf" title="Refresh">↻</button></div>
   <div class="stages" id="stages"></div>
   <div class="search"><input id="q" placeholder="Search design number · ڈیزائن نمبر" inputmode="search" autocomplete="off"></div>
   <div id="msg"></div>
@@ -112,11 +113,12 @@ main{padding:12px 14px 40px}
 <input type="file" id="pfile" accept="image/*" capture="environment" hidden>
 
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · کارڈ کہاں بھیجیں</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
+<div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · عباس کے پیغامات</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
-var VER = '2026-10-12f2';
+var VER = '2026-10-13f3';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -192,6 +194,7 @@ async function load(fresh){
   D.lists = j.lists; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; });
   $('msg').className = 'ok'; $('msg').textContent = D.w ? '' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
   draw(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
+  if (!open) openFromHash();
   return true;
 }
 function inChip(c, i){ return CHIPS[i][1].indexOf(lname(c.l)) >= 0; }
@@ -327,6 +330,27 @@ async function recStart(){ if (REC.r) return; REC.t0 = Date.now();
 function recStop(){ if (REC.r && REC.r.state === 'recording') REC.r.stop(); $('mic').classList.remove('rec'); }
 $('mic').onpointerdown = function(e){ e.preventDefault(); recStart(); }; $('mic').onpointerup = $('mic').onpointercancel = $('mic').onpointerleave = recStop;
 $('mic').oncontextmenu = function(e){ e.preventDefault(); };
+
+// ----- notifications: Telegram buzz when Abbas writes (linked once with a 6-letter code) -----
+function devId(){ var d = ls('sj_fac_dev'); if (!d) { d = Math.random().toString(36).slice(2, 10); ls('sj_fac_dev', d); } return d; }
+var TG = { linked: ls('sj_fac_tg') === '1', timer: null };
+function bellPaint(){ $('bell').classList.toggle('on', TG.linked); }
+$('bell').onclick = async function(){
+  $('tg').hidden = false; $('tgbody').innerHTML = 'Checking… · چیک ہو رہا ہے';
+  var j = await call({ op: 'tglink', dev: devId(), who: WHO, again: !TG.linked ? 0 : 1 });
+  if (!j.ok) { $('tgbody').innerHTML = '<span style="color:var(--red)">' + esc(j.error) + '</span>'; return; }
+  if (j.linked && !j.code) { TG.linked = true; ls('sj_fac_tg', '1'); bellPaint(); $('tgbody').innerHTML = '✅ This phone is linked. When Abbas writes on a card, Telegram buzzes with a link to it.<br>یہ فون جڑا ہوا ہے۔<br><br><button id="tgre" style="border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font:inherit">Link again · دوبارہ جوڑیں</button>'; $('tgre').onclick = function(){ TG.linked = false; ls('sj_fac_tg', null); $('bell').onclick(); }; return; }
+  var bot = j.bot ? 'https://t.me/' + j.bot : '';
+  $('tgbody').innerHTML = '1. Open Telegram' + (bot ? ' → <a href="' + bot + '" target="_blank" rel="noopener"><b>@' + esc(j.bot) + '</b></a>' : '') + ' and press <b>Start</b>.<br>2. Send this code to the bot:<div style="font-size:34px;font-weight:800;letter-spacing:.12em;text-align:center;margin:10px 0;color:var(--gold)">' + esc(j.code) + '</div>ٹیلیگرام کھولیں، بوٹ کو Start کریں اور یہ کوڈ بھیجیں۔<div id="tgwait" style="color:var(--mute);margin-top:8px">Waiting for the code… · انتظار</div>';
+  clearInterval(TG.timer); var tries = 0;
+  TG.timer = setInterval(async function(){ if ($('tg').hidden || ++tries > 40) { clearInterval(TG.timer); return; } var c = await call({ op: 'tgcheck', dev: devId() });
+    if (c.ok && c.linked) { clearInterval(TG.timer); TG.linked = true; ls('sj_fac_tg', '1'); bellPaint(); $('tgbody').innerHTML = '✅ Linked! Telegram will buzz when Abbas writes on a card.<br>جڑ گیا! عباس کے لکھنے پر ٹیلیگرام پر پیغام آئے گا۔'; toast('✓ Notifications on'); } }, 4000);
+};
+$('tgx').onclick = function(){ $('tg').hidden = true; clearInterval(TG.timer); };
+bellPaint();
+// a Telegram link opens the card straight away: factory.html#card=<id>
+function openFromHash(){ var m = (location.hash || '').match(/card=([0-9a-f]{24})/); if (!m) return false; var c = D.byId[m[1]]; if (c) { history.replaceState(null, '', location.pathname + location.search); openCard(c); return true; } return false; }
+window.addEventListener('hashchange', openFromHash);
 
 // ----- sign in once -----
 function showLogin(){ $('login').hidden = false; $('lname').value = WHO; $('lpw').focus(); }
