@@ -33,10 +33,18 @@ main{max-width:520px;margin:0 auto;padding:0 16px 30px}
 #srv{display:none;margin-top:8px}#srv.show{display:block}#srv input{width:100%;padding:10px;border:1px solid #ddd2c4;border-radius:10px;font:inherit}
 .note{font-size:12px;color:var(--mute);line-height:1.5;margin-top:10px;text-align:center}
 [hidden]{display:none!important}
+.modes{display:flex;gap:8px;max-width:520px;margin:6px auto 0;padding:0 16px}.modes button{flex:1;border:2px solid #ddd2c4;background:#fff;border-radius:12px;padding:10px 6px;font:inherit;font-weight:700;font-size:14px;color:var(--ink)}
+.modes button small{display:block;font-weight:500;font-size:12px;color:var(--mute)}.modes button.on{border-color:var(--gold);background:#fff8ec}
+#limg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}#limg.show{display:block}
+#lcam{position:absolute;right:8px;top:12px;width:28%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;border:2px solid #fff;background:#222;z-index:2;display:none}#lcam.show{display:block}
+.mir{transform:scaleX(-1)}
+#lrate{position:absolute;left:8px;top:12px;z-index:2;background:rgba(0,0,0,.55);color:#fff;font-size:12px;border-radius:999px;padding:4px 9px;display:none}#lrate.show{display:block}
+#stage.live{aspect-ratio:3/4}
 </style></head><body>
 <header><a id="back" href="#" hidden>← Back to order · العودة للطلب</a><h1>SJ-18634 · Try it on<small class="ar">جرّبيها عليكِ من صورتكِ</small></h1></header>
+<div class="modes" id="modes"><button type="button" data-mode="photo" class="on">📷 Photo try-on<small>من صورة · أدق</small></button><button type="button" data-mode="live">🎥 Live try-on<small>مباشر بالكاميرا</small></button></div>
 <main>
-<div class="card">
+<div class="card" id="c1">
   <div class="step">1 · YOUR PHOTO · صورتكِ</div>
   <div class="tips"><b>Full body, front, arms a little away from the body.</b> Plain wall, good light, phone upright.<br><span class="ar">صورة كاملة من الأمام، الذراعان بعيدتان قليلاً عن الجسم، خلفية بسيطة وإضاءة جيدة.</span></div>
   <div id="pick">
@@ -47,13 +55,18 @@ main{max-width:520px;margin:0 auto;padding:0 16px 30px}
 <div class="card">
   <div class="step">2 · COLOUR · اللون</div>
   <div id="cols"></div>
-  <div id="stage"><div id="bar"><i></i></div><img id="imgA" alt=""><img id="imgB" alt=""><div id="stat"></div></div>
+  <div id="stage"><div id="bar"><i></i></div><img id="imgA" alt=""><img id="imgB" alt=""><img id="limg" alt=""><video id="lcam" playsinline muted autoplay></video><div id="lrate"></div><div id="stat"></div></div>
+  <div id="lbox" hidden>
+    <div class="tips" style="margin-top:8px"><b>Stand back so you are seen from the shoulders to the knees, facing the camera.</b> The dress follows you and updates by itself — tap a colour to change it.<br><span class="ar">قفي بعيداً بحيث يظهر جسمكِ من الكتفين إلى الركبتين ومواجهة للكاميرا. يتغير الفستان معكِ تلقائياً — اضغطي على لون لتغييره.</span></div>
+    <button id="lgo" class="gold" type="button">Start live try-on · ابدئي</button>
+    <div class="row" id="lctl" hidden><button id="lflip" type="button">Switch camera · تبديل</button><button id="lsave" type="button">Save photo · حفظ</button><button id="lstop" type="button">Stop · إيقاف</button></div>
+  </div>
   <div class="row" id="ab" hidden><button id="bA" type="button">Before · قبل</button><button id="bB" class="on" type="button">After · بعد</button></div>
   <button id="go" class="gold" type="button" disabled>Try it on · جرّبيها</button>
   <div class="row" id="after" hidden><button id="save" type="button">Save / share · حفظ</button><button id="again" type="button">New photo · صورة أخرى</button></div>
   <div id="srv"><input id="srvin" placeholder="Server address (https://…)"><div class="note">One-time setup: paste the GPU server address, then tap Try it on.</div></div>
 </div>
-<p class="note">Your photo goes to our own server for a few seconds to make the picture and is not kept.<br><span class="ar">تُرسل صورتكِ إلى خادمنا الخاص لثوانٍ لإنشاء الصورة ولا يتم حفظها.</span></p>
+<p class="note">Your photo (or, in live mode, your camera pictures) goes to our own server only to make the try-on and is not kept.<br><span class="ar">تُرسل صورتكِ إلى خادمنا الخاص لثوانٍ لإنشاء الصورة ولا يتم حفظها.</span></p>
 </main>
 <script>window.TRYON = {"no": "18634", "server": "", "colours": [{"i": 0, "name": "Navy · كحلي", "swatch": "#1f3a68"}, {"i": 1, "name": "Red · أحمر", "swatch": "#b5123f"}, {"i": 2, "name": "Mustard · خردلي", "swatch": "#d9a428"}, {"i": 3, "name": "Burgundy · عنابي", "swatch": "#6e1a2a"}]};</script>
 <script>
@@ -75,6 +88,7 @@ function onPick(e){ var f = e.target.files && e.target.files[0]; if (!f) return;
   downscale(f).then(function(b){ photoBlob = b; results = {}; imgA.src = URL.createObjectURL(b); showA(); $('ab').hidden = true; $('after').hidden = true; $('go').disabled = false; say('Choose a colour, then tap Try it on', 'اختاري اللون ثم اضغطي جرّبيها'); }); }
 $('fcam').onchange = onPick; $('ffile').onchange = onPick;
 function pick(k){ cur = k; document.querySelectorAll('#cols button').forEach(function(b, i){ b.classList.toggle('on', i === k); });
+  if (!$('lbox').hidden) return;   // live mode: the next camera picture comes back in the new colour
   if (results[k]) { imgB.src = results[k]; showB(); $('ab').hidden = false; $('after').hidden = false; say(''); } else if (photoBlob && !busy) { showA(); $('ab').hidden = true; } }
 D.colours.forEach(function(c, i){ var b = document.createElement('button'); b.type = 'button'; b.textContent = c.name; b.style.setProperty('--sw', c.swatch); b.onclick = function(){ pick(i); }; $('cols').appendChild(b); });
 pick(0);
@@ -106,6 +120,53 @@ $('save').onclick = async function(){
 };
 var from = new URLSearchParams(location.search).get('from'); if (from && /^[\w.-]+\.html$/.test(from)) { $('back').href = from; $('back').hidden = false; }
 if (!server()) $('srv').classList.add('show');
+// ---------- LIVE try-on (12 Oct 2026, Abbas: "I also want it to be working like Decart, which has a video, live") ----------
+// The camera picture goes to OUR GPU server again and again (fast=1); every new try-on picture replaces the last one, so the dress follows her.
+var L = { on: false, stream: null, facing: 'user', last: null, n: 0, t0: 0, ms: 0, timer: null };
+var limg = $('limg'), lcam = $('lcam'), lrate = $('lrate');
+function setMode(m){ document.querySelectorAll('#modes button').forEach(function(b){ b.classList.toggle('on', b.dataset.mode === m); });
+  var live = m === 'live'; $('c1').hidden = live; $('lbox').hidden = !live; $('go').hidden = live; $('ab').hidden = true; $('after').hidden = true;
+  if (live) { imgA.classList.remove('show'); imgB.classList.remove('show'); say('Tap Start — allow the camera', 'اضغطي ابدئي واسمحي بالكاميرا'); }
+  else { liveStop(); limg.classList.remove('show'); lcam.classList.remove('show'); lrate.classList.remove('show'); say(photoBlob ? '' : 'Take or choose a photo first', 'التقطي أو اختاري صورة أولاً'); if (photoBlob) showA(); } }
+document.getElementById('modes').onclick = function(e){ var b = e.target.closest('button[data-mode]'); if (b) setMode(b.dataset.mode); };
+async function camOn(){ if (L.stream) L.stream.getTracks().forEach(function(t){ t.stop(); });
+  L.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: L.facing, width: { ideal: 720 }, height: { ideal: 1280 } } });
+  lcam.srcObject = L.stream; await lcam.play().catch(function(){}); lcam.classList.add('show'); lcam.classList.toggle('mir', L.facing === 'user'); limg.classList.toggle('mir', L.facing === 'user'); }
+function grab(){ var vw = lcam.videoWidth, vh = lcam.videoHeight; if (!vw || !vh) return null;
+  var W = 576, H = 768, k = Math.max(W / vw, H / vh), c = document.createElement('canvas'); c.width = W; c.height = H;
+  c.getContext('2d').drawImage(lcam, (W - vw * k) / 2, (H - vh * k) / 2, vw * k, vh * k);
+  return new Promise(function(ok){ c.toBlob(ok, 'image/jpeg', 0.8); }); }
+async function liveLoop(){ var s = server();
+  while (L.on) {
+    var fr = await grab(); if (!fr) { await new Promise(function(r){ setTimeout(r, 200); }); continue; }
+    var fd = new FormData(); fd.append('photo', fr, 'frame.jpg'); fd.append('no', D.no); fd.append('colour', String(cur)); fd.append('fast', '1');
+    var t = performance.now(), r;
+    try { r = await fetch(s + '/tryon', { method: 'POST', body: fd }); } catch(e){ say('Cannot reach the server — is it switched on?', 'تعذّر الوصول إلى الخادم'); $('srv').classList.add('show'); liveStop(); return; }
+    if (r.status === 503) { var j = {}; try { j = await r.json(); } catch(e){} if (j.busy) { await new Promise(function(z){ setTimeout(z, 250); }); continue; } say(j.error || 'Server busy', 'الخادم مشغول'); liveStop(); return; }
+    if (!r.ok) { var m = ''; try { m = (await r.json()).error || ''; } catch(e){} say(m || ('Server error ' + r.status), 'حدث خطأ'); liveStop(); return; }
+    var b = await r.blob(); if (!L.on) break;
+    if (L.last) URL.revokeObjectURL(L.last); L.last = URL.createObjectURL(b); limg.src = L.last; limg.classList.add('show'); say('');
+    L.n++; L.ms = L.ms ? L.ms * 0.7 + (performance.now() - t) * 0.3 : (performance.now() - t);
+    lrate.textContent = 'LIVE · new picture every ' + (L.ms / 1000).toFixed(1) + ' s'; lrate.classList.add('show');
+  } }
+async function liveStart(){
+  var s = server(); if (!s) { $('srv').classList.add('show'); say('Server address needed (one-time)', 'يلزم عنوان الخادم مرة واحدة'); return; }
+  $('lgo').disabled = true; say('Opening the camera…', 'جارٍ فتح الكاميرا…');
+  try { await camOn(); } catch(e){ $('lgo').disabled = false; say(e && e.name === 'NotAllowedError' ? 'Camera permission is needed — allow it, then tap Start' : 'Camera not available on this phone', 'يلزم السماح بالكاميرا'); return; }
+  say('Starting… the first picture takes a few seconds', 'جارٍ البدء… الصورة الأولى تحتاج ثوانٍ');
+  L.on = true; L.n = 0; L.ms = 0; $('lgo').hidden = true; $('lctl').hidden = false;
+  clearTimeout(L.timer); L.timer = setTimeout(function(){ liveStop(); say('Paused after 5 minutes — tap Start to continue', 'توقف بعد ٥ دقائق — اضغطي ابدئي للمتابعة'); }, 5 * 60 * 1000);
+  liveLoop(); }
+function liveStop(){ L.on = false; clearTimeout(L.timer); if (L.stream) { L.stream.getTracks().forEach(function(t){ t.stop(); }); L.stream = null; }
+  lcam.classList.remove('show'); lrate.classList.remove('show'); $('lgo').hidden = false; $('lgo').disabled = false; $('lctl').hidden = true; }
+$('lgo').onclick = liveStart; $('lstop').onclick = function(){ liveStop(); say('Stopped · tap Start to try again', 'توقف'); };
+$('lflip').onclick = async function(){ L.facing = L.facing === 'user' ? 'environment' : 'user'; try { await camOn(); } catch(e){ say('Camera not available', 'الكاميرا غير متاحة'); } };
+$('lsave').onclick = async function(){ if (!L.last) return; var b = await (await fetch(L.last)).blob();
+  var file = new File([b], 'SJ-' + D.no + '-' + D.colours[cur].name.split(' ')[0] + '-live.jpg', { type: 'image/jpeg' });
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  var a = document.createElement('a'); a.href = L.last; a.download = file.name; a.click(); };
+document.addEventListener('visibilitychange', function(){ if (document.hidden && L.on) { liveStop(); say('Paused · tap Start to continue', 'توقف مؤقت'); } });
+window.__live = { state: function(){ return { on: L.on, n: L.n, ms: L.ms }; }, start: liveStart, stop: liveStop, mode: setMode };
 window.__photo = { state: function(){ return { stat: stat.textContent, hasResult: !!results[cur], busy: busy }; } };
 })();
 </script>
