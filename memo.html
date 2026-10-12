@@ -420,10 +420,12 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 <div id="dor" hidden><div class="in"><div class="hd"><b>NEW DESIGN ORDER</b><button type="button" id="dorx">Close</button></div>
 <div class="dorseg"><button type="button" data-dm="alm" class="on">Normal<small>ALM START · #cutting</small></button><button type="button" data-dm="out">Outsourced<small>name · #emaan</small></button></div>
 <div class="dorf">
-<div id="dorout" hidden><div class="svg2"><input id="dorperson" placeholder="Person (e.g. ALI)" autocomplete="off"><input id="dorcost" inputmode="decimal" placeholder="COST"></div><input id="dorsale" inputmode="decimal" placeholder="SALE"></div>
+<div id="dorout" hidden><input id="dorperson" placeholder="Person (e.g. ALI)" autocomplete="off"></div>
 <div id="dornorow" class="dorno"><input id="dorno" inputmode="text" autocomplete="off" placeholder="Design number (e.g. 41862)"><label class="dorchk"><input type="checkbox" id="dorfresh"> /N new fabric</label></div>
 <div id="dorfind" class="dorhint"></div>
 <label class="dorus" id="dorusrow"><input type="checkbox" id="dorus"><span>+ USMAN HAND WORK<small>same card also on USMAN board → ORDER · Slack #cutting + #usmancutting</small></span></label>
+<div id="dorcs" class="svg2" hidden><input id="dorcost" inputmode="decimal" placeholder="COST price (per pc)"><input id="dorsale" inputmode="decimal" placeholder="SALE price (per pc)"></div>
+<div id="dorcshint" class="dorhint" hidden>Goes into the COST and SALE fields of the USMAN HAND WORK card.</div>
 <div class="svg2"><input id="dorpcs" autocomplete="off" placeholder="Pieces (e.g. 96) or OP"><input id="dorcol" autocomplete="off" placeholder="Colours (e.g. 6)" class="dorcol"></div>
 <div id="dorcolrow"><input id="dorsize" autocomplete="off" placeholder="Size (e.g. M,L,XL,XXL (ALL SILVER))"></div>
 <div id="dorlabs" class="dorlabs"><label class="dorchk"><input type="checkbox" id="dorrate"> RATE</label><label class="dorchk"><input type="checkbox" id="dorhis"> HISAAB</label><input id="dorcust" autocomplete="off" placeholder="Customer label (optional)"></div>
@@ -710,7 +712,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-12g';
+var VER = '2026-10-12h';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -2394,6 +2396,7 @@ function dorDraw(){
   document.querySelectorAll('#dor [data-dm]').forEach(function(b){ b.classList.toggle('on', b.dataset.dm === m); });
   $('dorusrow').hidden = m === 'out'; $('dorus').checked = DOR.usman && m !== 'out'; $('dorusrow').classList.toggle('on', DOR.usman && m !== 'out');
   $('dorout').hidden = m !== 'out'; $('dornorow').hidden = m === 'out'; $('dorlabs').hidden = m === 'out'; $('dorcolrow').hidden = m === 'out';
+  var cs = m === 'out' || (DOR.usman && m !== 'out'); $('dorcs').hidden = !cs; $('dorcshint').hidden = !cs;   // Abbas 12 Oct 2026: COST / SALE boxes for the USMAN HAND WORK card
   if (DOR.fresh) { $('dorrate').checked = true; $('dorhis').checked = true; }
   dorSyncName(); dorMedia(); dorFindShow();
 }
