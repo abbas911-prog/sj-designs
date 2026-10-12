@@ -314,6 +314,9 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .gdc{border:0;background:none;color:var(--gold);font:inherit;font-size:12px;font-weight:700;padding:4px 2px}
 .gsw button.on[data-v="s"]{background:#A8864A;color:#fff}
 .gsp{flex-wrap:wrap}.gst{display:inline-flex;gap:4px;align-items:center}.gst button{border:1.5px solid var(--line);background:#fff;border-radius:8px;font:inherit;font-size:12px;font-weight:700;padding:5px 7px}.gst input{width:44px;height:30px;text-align:center;border:1.5px solid var(--gold);border-radius:8px;font:inherit;font-weight:700}.gsx{width:100%;color:var(--mute);font-size:11.5px}
+.gatt{background:#fff;border-radius:12px;padding:10px 12px;margin:8px 0}.gatt .dorpaste{margin:6px 0 4px}
+#gapaste{width:100%;min-width:0;height:48px;padding:12px;border:1.5px dashed var(--gold);border-radius:12px;background:#fffaf0;font:inherit;font-size:14px;resize:none;color:var(--mute)}
+.gam{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13px}.gam img{width:44px;height:44px;object-fit:cover;border-radius:6px}.gam .gk{width:44px;height:44px;border-radius:6px;background:#F3EEE6;display:flex;align-items:center;justify-content:center;font-size:20px}.gam span{flex:1;min-width:0}.gam small{display:block;color:var(--mute)}.gam button{border:1.5px solid var(--line);background:#fff;border-radius:999px;color:#9a3b1e;font-weight:800;padding:3px 9px}
 .gbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.gbtns button{border:0;border-radius:12px;padding:13px 8px;font:inherit;font-weight:800;font-size:14.5px;color:#fff;line-height:1.25}.gbtns button small{display:block;font-weight:500;font-size:11.5px;opacity:.9}
 #sendg{background:#9a3b1e}#sendc{background:#2f6b4f}.gbtns button:disabled{opacity:.4}
 #send small{display:block;font-weight:500;font-size:11.5px;color:var(--mute)}
@@ -449,6 +452,9 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
   <div class="dlvr"><span>In office<small>في المكتب</small></span><input id="dl_od" autocomplete="off" placeholder="Date"><input id="dl_ot" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="o">Now</button></div>
   <div class="dlvr"><span>To customer / cargo<small>للعميل / الشحن</small></span><input id="dl_cd" autocomplete="off" placeholder="Date"><input id="dl_ct" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="c">Now</button></div></div>
   <div class="gdl" id="gdl"></div>
+  <div class="gatt"><div class="gdh">Attach for the godown · مرفقات للمستودع<small>Photo, video, voice note or a paper (PDF) — they go WITH the GODOWN group post.</small></div>
+  <div class="dorpaste"><textarea id="gapaste" rows="1" placeholder="📋 Tap here and PASTE a photo, video, voice note or paper"></textarea><label class="dorbtn" style="padding:4px 12px">📎 Files<input type="file" id="gafiles" accept="image/*,video/*,audio/*,application/pdf,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div>
+  <div id="gamedia"></div></div>
   <div class="gbtns"><button id="sendg" class="gold" type="button">Send to GODOWN group<small id="sendgs">pick list</small></button><button id="sendc" class="gold" type="button">Send to CUSTOMER group<small>full memo</small></button></div>
   <div class="btns"><button id="send" type="button">Share PDF · just in case<small>WhatsApp / any app · full memo</small></button><button id="copy" type="button">Copy text · نسخ النص</button></div>
   <div id="slk" class="slk"></div>
@@ -704,7 +710,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-12f';
+var VER = '2026-10-12g';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -750,7 +756,7 @@ function applySearch(){
 $('tabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; TAB = b.dataset.t;
   document.querySelectorAll('#tabs button').forEach(function(x){ x.classList.toggle('on', x === b); }); applySearch(); window.scrollTo(0, 0); };
 $('q').oninput = applySearch;
-$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; LOC = {}; B.inv = null; $('name').value = ''; ls('sj_oid', null); ['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).value = ''; }); try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
+$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; LOC = {}; GA.media = []; gaDraw(); B.inv = null; $('name').value = ''; ls('sj_oid', null); ['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).value = ''; }); try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
 
 // ---------- memo output ----------
 function orderText(){
@@ -2302,7 +2308,7 @@ async function memoSlack2(oid, plan){
   var done = [], bad = [], d = new Date(), dv = dlv(), nm = $('name').value.trim(), date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
   var dlt = ((dv.od || dv.ot) ? '\nDelivery in office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '') + ((dv.cd || dv.ct) ? '\nDelivery to customer / cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : '');
   slkMsg('Sending to ' + [plan.g ? '#godown' : '', plan.c ? '#customer' : ''].filter(Boolean).join(' and ') + '…');
-  async function post(to, file, text){ var j = await relayJson('slackpdf2', { t: Date.now(), dev: devId(), to: to, name: file.name, text: text, pdf: await pdfB64(file) }, 2);
+  async function post(to, file, text, fids){ var j = await relayJson('slackpdf2', { t: Date.now(), dev: devId(), to: to, name: file.name, text: text, pdf: await pdfB64(file), fids: fids || [] }, 2);
     if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version (Deploy → New version)' : (j.error || 'refused')); }
   if (plan.g) {
     try {
@@ -2310,7 +2316,9 @@ async function memoSlack2(oid, plan){
       var pages = await drawPages({ st: st, pick: true, upd: plan.upd, chg: plan.chg }), f = new File([makePDF(pages)], (nm || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-') + '-GODOWN-pick.pdf', { type: 'application/pdf' });
       var text = '*GODOWN PICK LIST*' + (plan.upd ? ' — *' + plan.upd + '*' : '') + ' — ' + (nm || 'no name') + '\n' + date + ' · ' + gn.length + ' of ' + all.length + (all.length === 1 ? ' design' : ' designs') + ' · ' + gn.reduce(function(a, no){ return a + designPcs(no, st); }, 0) + ' pcs' + (me() ? ' · sent by ' + me() : '') +
         '\nPick: ' + gn.map(function(x){ var r = rowsFor(x, st); return 'SJ-' + shown(x) + (r ? ' (row ' + r + ')' : ''); }).join(' · ') + (off.length ? '\nAlready in office — don\'t pick: ' + off.map(function(x){ return 'SJ-' + shown(x); }).join(' · ') : '') + (plan.chg ? '\nChanges: ' + plan.chg : '') + dlt;
-      await post('godown', f, text); done.push('#godown (pick list, ' + gn.length + ' designs)');
+      var fids = GA.media.length ? await gaUpload(function(m){ slkMsg(m); }) : [];
+      if (fids.length) text += '\n📎 ' + fids.length + ' attachment' + (fids.length === 1 ? '' : 's') + ' with this order';
+      await post('godown', f, text, fids); done.push('#godown (pick list, ' + gn.length + ' designs' + (fids.length ? ' + ' + fids.length + ' attachment' + (fids.length === 1 ? '' : 's') : '') + ')');
       var L = gdLog(); if (oid) { L[oid] = { t: Date.now(), sig: gdSig() }; ls('sj_gdlog', JSON.stringify(L)); ordCall({ op: 'tick', id: oid, step: 's1', on: true, by: me(), note: 'pick list posted to #godown' }).catch(function(){}); }
     } catch(e){ bad.push(['g', '#godown: ' + e.message]); }
   }
@@ -2322,6 +2330,47 @@ async function memoSlack2(oid, plan){
   if (!bad.length) slkMsg('✓ Sent to ' + done.join(' and '), 'ok');
   else { slkMsg((done.length ? '✓ ' + done.join(', ') + ' · ' : '') + 'NOT sent: ' + esc(bad.map(function(b){ return b[1]; }).join(' · ')) + ' <button type="button" id="slkre">Try again</button>', 'bad');
     var rb = $('slkre'); if (rb) rb.onclick = function(){ memoSlack2(oid, { g: bad.some(function(b){ return b[0] === 'g'; }), c: bad.some(function(b){ return b[0] === 'c'; }), upd: plan.upd, chg: plan.chg }); }; }
+}
+
+// ----- ATTACHMENTS FOR THE GODOWN (Abbas, 12 Oct 2026): "a small area to copy photo, video and voice or a paper with the order to godown,
+// just like we did in the order in this app ... when I send it to godown, also send those attachments". Kept on this screen until clear.
+var GA = { media: [] };
+function gaDraw(){ var el = $('gamedia'); if (!el) return;
+  el.innerHTML = GA.media.map(function(x, i){ var ic = { photo: '', video: '🎬', voice: '🎤', paper: '📄' }[x.kind];
+    return '<div class="gam">' + (x.kind === 'photo' ? '<img src="' + x.url + '" alt="">' : '<div class="gk">' + ic + '</div>') + '<span><b>' + ({ photo: 'Photo', video: 'Video', voice: 'Voice note', paper: 'Paper (PDF)' })[x.kind] + '</b><small>' + (x.size / 1048576).toFixed(1) + ' MB' + (x.kind === 'video' && x.size > DOR_MAX ? ' · made smaller when sent' : '') + (x.st ? ' · ' + x.st : '') + '</small></span><button type="button" data-gax="' + i + '">✕</button></div>'; }).join(''); }
+async function gaAddFile(f){
+  var nm = f.name || '', t = f.type || '', n = GA.media.length + 1, x = null;
+  if (/^image\//.test(t) || (!t && DOR_IMG.test(nm))) x = { kind: 'photo', blob: await dorPhoto(f), name: 'photo-' + n + '.jpg' };
+  else if (/pdf/.test(t) || /\.pdf$/i.test(nm)) x = { kind: 'paper', blob: f, name: (nm || 'paper-' + n + '.pdf').replace(/[^\w.\- ]+/g, '-') };
+  else if (/^video\//.test(t) || (!t && DOR_VID.test(nm))) { var vt = t || (/\.mov$/i.test(nm) ? 'video/quicktime' : 'video/mp4'); x = { kind: 'video', blob: t ? f : new Blob([f], { type: vt }), name: 'video-' + n + '.' + dorExt(vt, 'mp4') }; }
+  else if (/^audio\//.test(t) || DOR_AUD.test(nm)) { var ext = ((nm.match(/\.(\w+)$/) || [, ''])[1] || '').toLowerCase() || dorExt(t, 'm4a');
+    var at = t || ({ opus: 'audio/ogg', ogg: 'audio/ogg', oga: 'audio/ogg', m4a: 'audio/mp4', mp3: 'audio/mpeg', aac: 'audio/aac', amr: 'audio/amr', wav: 'audio/wav' })[ext] || 'audio/mp4';
+    x = { kind: 'voice', blob: t ? f : new Blob([f], { type: at }), name: 'voice-' + n + '.' + (ext || 'm4a') }; }
+  if (!x) return '';
+  x.size = x.blob.size; x.url = URL.createObjectURL(x.blob); x.mime = x.blob.type || 'application/octet-stream'; GA.media.push(x); gaDraw();
+  return { photo: 'photo', video: 'video', voice: 'voice note', paper: 'paper' }[x.kind];
+}
+async function gaTake(list){ var fs = [].slice.call(list || []).filter(Boolean), got = [], bad = 0;
+  for (var i = 0; i < fs.length; i++) { var k = await gaAddFile(fs[i]); if (k) got.push(k); else bad++; }
+  var el = $('gapaste'); el.value = ''; el.blur(); el.placeholder = got.length ? '✓ Added ' + got.join(', ') + (bad ? ' · ' + bad + ' file(s) not usable' : '') + ' — paste more' : (bad ? 'Not a photo, video, voice note or PDF — try 📎 Files' : '📋 Tap here and PASTE a photo, video, voice note or paper'); }
+$('gapaste').addEventListener('paste', async function(e){ var cd = e.clipboardData, fs = [];
+  if (cd && cd.files && cd.files.length) fs = [].slice.call(cd.files); else if (cd && cd.items) [].forEach.call(cd.items, function(it){ if (it.kind === 'file') { var f = it.getAsFile(); if (f) fs.push(f); } });
+  if (fs.length) { e.preventDefault(); await gaTake(fs); return; }
+  setTimeout(function(){ var el = $('gapaste'); if (el.value.trim()) { el.value = ''; el.placeholder = 'Only text was copied — in WhatsApp long-press the photo/video/voice → Copy (or Share → Save to Files, then 📎 Files)'; } }, 0); });
+$('gapaste').addEventListener('input', function(){ if (this.value) this.value = ''; });
+$('gafiles').onchange = async function(){ var fs = [].slice.call(this.files || []); this.value = ''; await gaTake(fs); };
+$('gamedia').addEventListener('click', function(e){ var b = e.target.closest('[data-gax]'); if (!b) return; var x = GA.media[+b.dataset.gax]; if (x && confirm('Remove this ' + x.kind + '?')) { URL.revokeObjectURL(x.url); GA.media.splice(+b.dataset.gax, 1); gaDraw(); } });
+// upload each attachment to Slack (relay op 'file'); returns the Slack file ids for the godown post
+async function gaUpload(onp){
+  var ids = [], AC = window.AudioContext || window.webkitAudioContext;
+  for (var i = 0; i < GA.media.length; i++){ var x = GA.media[i], blob = x.blob, fname = x.name;
+    if (x.kind === 'video' && blob.size > DOR_MAX) { x.st = 'making smaller…'; gaDraw(); if (!GA.ac && AC) try { GA.ac = new AC(); } catch(e){}
+      blob = await dorShrink(blob, DOR_MAX, function(p){ onp('Making video ' + (i + 1) + ' smaller: ' + p + '% — keep this screen open'); }, null, GA.ac); fname = fname.replace(/\.\w+$/, '') + '.' + dorExt(blob.type, 'mp4'); }
+    onp('Sending attachment ' + (i + 1) + ' of ' + GA.media.length + ' (' + (blob.size / 1048576).toFixed(1) + ' MB)…');
+    var j = await relayJson('slackpdf2', { t: Date.now(), dev: devId(), to: 'godown', op: 'file', name: fname, b64: await dorB64(blob) }, 2);
+    if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version (Deploy → New version)' : 'attachment ' + (i + 1) + ': ' + (j.error || 'refused'));
+    ids.push(j.fid); x.st = '✓ sent'; gaDraw(); }
+  return ids;
 }
 
 // ----- NEW DESIGN ORDER (Abbas, 11 Oct 2026): the #order-2 process inside the app, owner only.
