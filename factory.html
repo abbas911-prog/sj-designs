@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f4efe6">
+<title>SJ Factory</title>
+<style>
+:root{--bg:#f4efe6;--card:#fff;--ink:#2b2118;--mute:#7a6a58;--gold:#b08a4a;--gold2:#fff8ec;--green:#2e7d4f;--red:#b5123f;--line:#e6dccb}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit;cursor:pointer}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 14px 6px;border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;gap:10px}.mono{width:40px;height:40px;border-radius:12px;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;letter-spacing:.04em;flex:none}
+.top h1{font-size:17px;margin:0;flex:1;min-width:0}.top h1 small{display:block;font-weight:500;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rf{border:1.5px solid var(--line);background:#fff;border-radius:12px;width:44px;height:40px;font-size:18px;color:var(--gold);flex:none}
+.rf.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.stages{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding:6px 0 4px;scrollbar-width:none}.stages::-webkit-scrollbar{display:none}
+.stages button{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:14px;font-weight:700;color:var(--ink)}
+.stages button.on{border-color:var(--gold);background:var(--gold2)}.stages button i{font-style:normal;font-size:12px;color:var(--mute);margin-left:4px}
+.stages button small{display:block;font-weight:500;font-size:11px;color:var(--mute)}
+.search{margin-top:6px}.search input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;font:inherit;font-size:16px;background:#fff}
+#msg{font-size:13px;color:var(--red);margin:6px 2px 0}#msg:empty{display:none}#msg.ok{color:var(--mute)}
+main{padding:12px 14px 40px}
+.cardrow{display:flex;gap:12px;background:var(--card);border-radius:16px;padding:10px;margin-bottom:10px;border:1px solid var(--line);align-items:center;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.ph{width:92px;height:92px;border-radius:12px;background:#ede5d6 center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
+.cardrow .t{flex:1;min-width:0}.cardrow .no{font-weight:800;font-size:19px}.cardrow .sub{color:var(--mute);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cardrow .lst{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.04em;margin-top:3px}
+.empty{color:var(--mute);text-align:center;padding:40px 10px}
+#card{position:fixed;inset:0;background:var(--bg);z-index:10;display:flex;flex-direction:column}#card[hidden]{display:none}
+.chd{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg)}
+.chd button{border:0;background:none;font-weight:700;color:var(--gold);padding:6px 4px}
+.chd .nm{flex:1;font-weight:800;font-size:18px;min-width:0}.chd .nm small{display:block;font-weight:500;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{background:var(--gold2);border:1.5px solid var(--gold);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;flex:none;max-width:40%;text-align:center}
+.cbody{flex:1;overflow-y:auto;padding:12px 14px calc(16px + env(safe-area-inset-bottom))}
+.hero{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden}
+.hero .big{width:100%;aspect-ratio:4/3;background:#ede5d6 center/contain no-repeat}
+.hero .ttl{padding:10px 12px 0;font-size:14px;color:var(--mute)}
+.hero .info{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:14px;word-break:break-word}
+.hero .info b{display:block;font-size:11px;color:var(--mute);font-weight:600;letter-spacing:.06em}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.btns button{border:0;border-radius:14px;padding:14px 8px;font-weight:800;font-size:16px;color:#fff;line-height:1.2}
+.btns button small{display:block;font-weight:500;font-size:12px;opacity:.9;margin-top:2px}
+.bdone{background:var(--green);grid-column:1/3;font-size:18px}.bdone:disabled{background:#9bb8a6}
+.bmove{background:#fff;color:var(--ink)!important;border:1.5px solid var(--line)!important}.btrello{background:#fff;color:var(--ink)!important;border:1.5px solid var(--line)!important}
+.soon{background:#fff;border:1.5px dashed var(--line);border-radius:16px;padding:14px;color:var(--mute);font-size:14px;text-align:center}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end}.sheet[hidden]{display:none}
+.sheet .in{background:#fff;width:100%;max-height:85vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 10px;font-size:15px}.sheet button{display:block;width:100%;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:13px;font-size:16px;font-weight:700;text-align:left;margin-bottom:8px}
+.sheet button.here{opacity:.45}.sheet button.x{border:0;color:var(--mute);text-align:center;font-weight:600}
+#login{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}#login[hidden]{display:none}
+#login .in{width:100%;max-width:380px;background:#fff;border-radius:18px;border:1px solid var(--line);padding:20px}
+#login h2{margin:0 0 4px}#login p{color:var(--mute);font-size:14px;margin:0 0 14px}
+#login input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:17px;margin-bottom:10px}
+#login button{width:100%;border:0;border-radius:12px;padding:13px;background:var(--gold);color:#fff;font-weight:800;font-size:17px}
+#lerr{color:var(--red);font-size:14px;min-height:18px;margin-top:8px}
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 14px;border-radius:12px;font-size:14px;z-index:50;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center}.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="login" hidden><div class="in"><h2>SJ Factory · فیکٹری</h2><p>Type the factory password and your name — only once on this phone.<br>پاس ورڈ اور اپنا نام لکھیں</p>
+<input id="lpw" type="password" placeholder="Password · پاس ورڈ" autocomplete="current-password"><input id="lname" placeholder="Your name · آپ کا نام" autocomplete="name"><button id="lgo">Open · کھولیں</button><div id="lerr"></div></div></div>
+
+<header>
+  <div class="top"><div class="mono">SJ</div><h1>Factory · فیکٹری<small id="who"></small></h1><button class="rf" id="rf" title="Refresh">↻</button></div>
+  <div class="stages" id="stages"></div>
+  <div class="search"><input id="q" placeholder="Search design number · ڈیزائن نمبر" inputmode="search" autocomplete="off"></div>
+  <div id="msg"></div>
+</header>
+<main><div id="list"><div class="empty">Loading… · لوڈ ہو رہا ہے</div></div></main>
+
+<div id="card" hidden>
+  <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><span class="pill" id="cstage"></span></div>
+  <div class="cbody" id="cbody">
+    <div class="hero"><div class="big" id="cimg"></div><div class="ttl" id="cttl"></div><div class="info" id="cinfo"></div></div>
+    <div class="btns">
+      <button class="bdone" id="bdone">✅ Done → <span id="bnext"></span><small id="bnextar"></small></button>
+      <button class="bmove" id="bmove">↔ Move to… <small>کسی اور جگہ</small></button>
+      <button class="btrello" id="btrello">Open in Trello<small>ٹریلو میں کھولیں</small></button>
+    </div>
+    <div class="soon">💬 Card chat with Abbas (the card's Slack thread) — coming in the next step.<br>کارڈ چیٹ — اگلے مرحلے میں</div>
+  </div>
+</div>
+
+<div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · کارڈ کہاں بھیجیں</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+var VER = '2026-10-12f1';
+var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
+var $ = function(id){ return document.getElementById(id); };
+function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
+function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function sleep(ms){ return new Promise(function(ok){ setTimeout(ok, ms); }); }
+function toast(s){ var e = $('toast'); e.textContent = s; e.classList.add('show'); clearTimeout(e._t); e._t = setTimeout(function(){ e.classList.remove('show'); }, 2600); }
+var PW = ls('sj_fac_pw') || '', WHO = ls('sj_fac_who') || '';
+
+// ----- stages: the ALM production lists (ids come from the relay); hand-work lists are one chip -----
+var CHIPS = [['START', ['START'], 'شروع'], ['CUTTING', ['CUTTING'], 'کٹنگ'], ['IN LINE', ['IN LINE'], 'لائن'],
+  ['HAND WORK', ['READY FOR HAND WORK', 'IN HAND WORK', 'CAME FROM HAND WORK', 'IN LINE (2)'], 'ہینڈ ورک'],
+  ['IRON / CHECK', ['IRON/CHECKING'], 'استری · چیکنگ'], ['READY', ['READY'], 'تیار']];
+var NEXT = { 'START': 'CUTTING', 'CUTTING': 'IN LINE', 'IN LINE': 'IRON/CHECKING', 'READY FOR HAND WORK': 'IN HAND WORK', 'IN HAND WORK': 'CAME FROM HAND WORK',
+  'CAME FROM HAND WORK': 'IN LINE (2)', 'IN LINE (2)': 'IRON/CHECKING', 'IRON/CHECKING': 'READY', 'READY': 'FINISH' };
+var UR = { 'START': 'شروع', 'CUTTING': 'کٹنگ', 'IN LINE': 'لائن', 'READY FOR HAND WORK': 'ہینڈ ورک کے لیے تیار', 'IN HAND WORK': 'ہینڈ ورک میں', 'CAME FROM HAND WORK': 'ہینڈ ورک سے آیا',
+  'IN LINE (2)': 'لائن (2)', 'IRON/CHECKING': 'استری · چیکنگ', 'READY': 'تیار', 'READY 2': 'تیار 2', 'FINISH': 'ختم' };
+var D = { lists: [], cards: [], byId: {}, w: true }, cur = +(ls('sj_fac_chip') || 0), open = null;
+function lname(id){ var l = D.lists.filter(function(x){ return x[1] === id; })[0]; return l ? l[0] : '?'; }
+function lid(name){ var l = D.lists.filter(function(x){ return x[0] === name; })[0]; return l ? l[1] : null; }
+
+// ----- relay (signed with the factory password) -----
+async function hmacHex(key, msg){
+  var k = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg)))).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
+}
+async function call(obj, pw){
+  obj.t = Date.now(); var req = JSON.stringify(obj), sig = await hmacHex(pw || PW, req), last = '';
+  for (var n = 0; n < 4; n++) {
+    if (n) await sleep(2000 * n);
+    try {
+      var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: 'fac', req: req, sig: sig }), cache: 'no-store', credentials: 'omit' });
+      var t = await r.text(), j = null; try { j = JSON.parse(t); } catch(e){}
+      if (j && j.relay === 'sj-memo' && Object.keys(j).length <= 2) { last = 'Google passed the request on without its contents'; continue; }
+      if (j) return j;
+      last = 'Google sent a web page instead of an answer (' + r.status + ')';
+    } catch(e){ last = e.message; }
+  }
+  return { ok: false, error: last + ' — check the internet and try again' };
+}
+
+// ----- title reading: SJ number, pieces, colours, size -----
+function parse(name){
+  var s = String(name || ''), no = (s.match(/(?:SJ|Sj|sj|SH|US)\s*[-=:*#(]*\s*\**\(?\s*(\d{3,6}(?:-[A-Z])?)/) || s.match(/\b(\d{4,6})\b/) || [])[1] || '';
+  var pcs = (s.match(/\(?\s*(\d{1,4})\s*\)?\s*(?:pcs|pc|PCS|PC|Pcs)\b/) || s.match(/(\d{1,4})\s*pcs/i) || [])[1] || '';
+  if (!pcs && /\bOP\b/.test(s)) pcs = 'OP';
+  var col = (s.match(/colou?rs?\s*[=:.]*\s*\(?\s*(\d{1,2})/i) || [])[1] || '';
+  var size = (s.match(/size\s*[=:]*\s*(.*)$/i) || [])[1] || '';
+  return { no: no, pcs: pcs, col: col, size: size.trim().slice(0, 40) };
+}
+
+// ----- photos: fetched once through the relay, kept on the phone -----
+var IMG = {}, IMGQ = [], imgBusy = 0;
+function imgKey(c){ return 'sj_fac_i_' + c.img; }
+function photo(c, el){
+  if (!c.img) { el.textContent = 'no photo'; return; }
+  var have = IMG[c.img] || ls(imgKey(c)); if (have) { IMG[c.img] = have; el.style.backgroundImage = 'url(data:image/jpeg;base64,' + have + ')'; el.textContent = ''; return; }
+  el.textContent = '…'; IMGQ.push([c, el]); pump();
+}
+function pump(){
+  while (imgBusy < 3 && IMGQ.length) { var x = IMGQ.shift(); imgBusy++;
+    (function(c, el){ call({ op: 'img', card: c.id, att: c.img }).then(function(j){ imgBusy--;
+      if (j.ok) { IMG[c.img] = j.b64; if (j.b64.length < 150000) ls(imgKey(c), j.b64); document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(data:image/jpeg;base64,' + j.b64 + ')'; e.textContent = ''; }); }
+      else el.textContent = 'photo?';
+      pump(); }); })(x[0], x[1]); }
+}
+
+// ----- list -----
+async function load(fresh){
+  $('rf').classList.add('spin');
+  var j = await call({ op: 'list', fresh: !!fresh });
+  $('rf').classList.remove('spin');
+  if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
+  D.lists = j.lists; D.cards = j.cards; D.w = j.w; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; });
+  $('msg').className = 'ok'; $('msg').textContent = D.w ? '' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
+  draw(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
+  return true;
+}
+function inChip(c, i){ return CHIPS[i][1].indexOf(lname(c.l)) >= 0; }
+function draw(){
+  $('stages').innerHTML = CHIPS.map(function(ch, i){ var n = D.cards.filter(function(c){ return inChip(c, i); }).length;
+    return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i><small>' + ch[2] + '</small></button>'; }).join('');
+  var q = $('q').value.replace(/\D/g, ''), cs = D.cards.filter(function(c){ return q ? parse(c.name).no.indexOf(q) >= 0 || c.name.indexOf(q) >= 0 : inChip(c, cur); });
+  cs.sort(function(a, b){ return a.pos - b.pos; });
+  $('list').innerHTML = cs.length ? cs.map(function(c){ var p = parse(c.name);
+    return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div></div>'; }).join('')
+    : '<div class="empty">' + (q ? 'No card with ' + esc(q) : 'No cards here · یہاں کوئی کارڈ نہیں') + '</div>';
+  document.querySelectorAll('#list .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); });
+}
+$('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; ls('sj_fac_chip', String(cur)); $('q').value = ''; draw(); window.scrollTo(0, 0); };
+$('q').oninput = draw;
+$('list').onclick = function(e){ var r = e.target.closest('.cardrow'); if (r) openCard(D.byId[r.dataset.id]); };
+$('rf').onclick = function(){ load(true); };
+
+// ----- card screen -----
+var HIDE = /^(TASLEEM|IRFAN ALI|HASHIM|QADIR|SHAHZAIB|SALMAAN|ZAKIR|USMAN|Anees|SHAWKEEN|IBRAHEEM|US|COST|SALE|CHAT)$/i;
+function openCard(c){ open = c; $('card').hidden = false; paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
+function paintCard(){
+  var c = open, p = parse(c.name), ln = lname(c.l), nx = NEXT[ln];
+  $('cnm').innerHTML = (p.no ? 'SJ-' + esc(p.no) : 'Card') + '<small>' + [p.pcs && p.pcs + ' pcs', p.col && p.col + ' colours', p.size].filter(Boolean).map(esc).join(' · ') + '</small>';
+  $('cstage').textContent = ln;
+  var big = $('cimg'); big.setAttribute('data-img', c.img || ''); big.style.backgroundImage = ''; photo(c, big);
+  $('cttl').textContent = c.name;
+  var ks = Object.keys(c.f || {}).filter(function(k){ return !HIDE.test(k.trim()); });
+  $('cinfo').innerHTML = ks.length ? ks.map(function(k){ return '<div><b>' + esc(k) + '</b>' + esc(c.f[k]) + '</div>'; }).join('') : '<div style="grid-column:1/3;color:var(--mute)">No details on the card</div>';
+  var assigned = Object.keys(c.f || {}).filter(function(k){ return /^(TASLEEM|IRFAN ALI|HASHIM|QADIR|SHAHZAIB|SALMAAN|ZAKIR|USMAN|Anees|SHAWKEEN)$/i.test(k.trim()); });
+  if (assigned.length) $('cinfo').innerHTML += '<div style="grid-column:1/3"><b>WORKERS</b>' + assigned.map(function(k){ return esc(k) + ' ' + esc(c.f[k]); }).join(' · ') + '</div>';
+  $('bdone').disabled = !nx || !D.w; $('bnext').textContent = nx || '—'; $('bnextar').textContent = nx ? (UR[nx] || '') + ' میں بھیجیں' : '';
+}
+function closeCard(){ $('card').hidden = true; open = null; draw(); }
+$('back').onclick = function(){ history.back(); };
+window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
+$('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
+async function move(toName){
+  var c = open, to = lid(toName); if (!c || !to) return;
+  if (!confirm('Move SJ-' + (parse(c.name).no || '') + ' to ' + toName + '?\n' + (UR[toName] || '') + ' میں بھیجیں؟')) return;
+  $('bdone').disabled = true; toast('Moving… · بھیجا جا رہا ہے');
+  var j = await call({ op: 'move', card: c.id, from: c.l, to: to, who: WHO });
+  if (!j.ok) { toast(j.error); $('bdone').disabled = false; if (j.moved) load(true); return; }
+  c.l = to; toast('✓ Moved to ' + toName + ' · ' + (UR[toName] || ''));
+  if (D.lists.slice(0, 9).every(function(l){ return l[1] !== to; })) { D.cards = D.cards.filter(function(x){ return x !== c; }); delete D.byId[c.id]; history.back(); }
+  else paintCard();
+  draw(); setTimeout(function(){ load(true); }, 1500);
+}
+$('bdone').onclick = function(){ var nx = NEXT[lname(open.l)]; if (nx) move(nx); };
+$('bmove').onclick = function(){ if (!D.w) { toast('View only — cannot move yet'); return; }
+  $('mvl').innerHTML = D.lists.map(function(l){ return '<button data-n="' + esc(l[0]) + '"' + (l[1] === open.l ? ' class="here"' : '') + '>' + esc(l[0]) + ' · ' + (UR[l[0]] || '') + (l[1] === open.l ? ' (here)' : '') + '</button>'; }).join('');
+  $('mv').hidden = false; };
+$('mvx').onclick = function(){ $('mv').hidden = true; };
+$('mvl').onclick = function(e){ var b = e.target.closest('button[data-n]'); if (!b || b.classList.contains('here')) return; $('mv').hidden = true; move(b.dataset.n); };
+
+// ----- sign in once -----
+function showLogin(){ $('login').hidden = false; $('lname').value = WHO; $('lpw').focus(); }
+$('lgo').onclick = async function(){
+  var pw = $('lpw').value, nm = $('lname').value.trim(); $('lerr').textContent = '';
+  if (!pw || !nm) { $('lerr').textContent = 'Type both · دونوں لکھیں'; return; }
+  this.disabled = true; this.textContent = 'Checking…';
+  var j = await call({ op: 'list' }, pw); this.disabled = false; this.textContent = 'Open · کھولیں';
+  if (!j.ok) { $('lerr').textContent = j.error === 'wrong password' ? 'Wrong password · غلط پاس ورڈ' : j.error; return; }
+  PW = pw; WHO = nm; ls('sj_fac_pw', pw); ls('sj_fac_who', nm); $('who').textContent = nm; $('login').hidden = true; load(false);
+};
+document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on this phone?')) { ls('sj_fac_pw', null); PW = ''; showLogin(); } };
+
+// ----- keep fresh: every 30 s while on screen, and when coming back to the app -----
+setInterval(function(){ if (PW && !document.hidden) load(false); }, 30000);
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { load(false); checkVer(); } });
+async function checkVer(){ try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
+  if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
+
+$('who').textContent = WHO;
+if (!PW) showLogin(); else load(false);
+checkVer();
+window.__f = { D: D, parse: parse, call: call };
+})();
+</script>
+</body></html>
