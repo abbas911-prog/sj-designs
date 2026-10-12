@@ -39,6 +39,11 @@ main{padding:12px 14px 40px}
 .cbody{flex:1;overflow-y:auto;padding:12px 14px calc(16px + env(safe-area-inset-bottom))}
 .hero{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden}
 .hero .big{width:100%;aspect-ratio:4/3;background:#ede5d6 center/contain no-repeat}
+.atts{display:flex;gap:8px;overflow-x:auto;padding:8px 10px 0;scrollbar-width:none}.atts::-webkit-scrollbar{display:none}
+.atts .a{flex:none;width:74px;height:74px;border-radius:10px;background:#f1ebe0 center/cover no-repeat;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:24px;position:relative}
+.atts .a.cv{border-color:var(--gold)}.atts .a small{position:absolute;bottom:0;left:0;right:0;font-size:9px;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:0 0 8px 8px}
+.atts .n{flex:none;align-self:center;font-size:12px;color:var(--mute);padding-right:4px}
+#viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:30;display:flex;align-items:center;justify-content:center}#viewer[hidden]{display:none}#viewer img{max-width:100%;max-height:100%}#viewer button{position:absolute;top:14px;right:14px;width:40px;height:40px;border-radius:50%;border:0;background:#fff;font-size:18px}
 .hero .ttl{padding:10px 12px 0;font-size:14px;color:var(--mute)}
 .hero .info{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:14px;word-break:break-word}
 .hero .info b{display:block;font-size:11px;color:var(--mute);font-weight:600;letter-spacing:.06em}
@@ -47,13 +52,14 @@ main{padding:12px 14px 40px}
 .btns button small{display:block;font-weight:500;font-size:12px;opacity:.9;margin-top:2px}
 .bdone{background:var(--green);grid-column:1/3;font-size:18px}.bdone:disabled{background:#9bb8a6}
 .bmove{background:#fff;color:var(--ink)!important;border:1.5px solid var(--line)!important}.btrello{background:#fff;color:var(--ink)!important;border:1.5px solid var(--line)!important}
-.thr{background:#fff;border-radius:16px;border:1px solid var(--line);padding:10px 12px;margin-bottom:8px}
+.thr{background:#efe7dd;border-radius:16px;border:1px solid var(--line);padding:10px 10px;margin-bottom:8px}
 .thr h3{margin:0 0 8px;font-size:13px;color:var(--mute);letter-spacing:.06em;font-weight:700}.thr h3 span{float:right;font-weight:500;letter-spacing:0}
-.msg{display:flex;flex-direction:column;margin:6px 0;max-width:86%}.msg.me{align-self:flex-end;align-items:flex-end;margin-left:auto}
-.msg .who{font-size:11px;color:var(--mute);margin:0 4px 2px}.msg .who b{color:var(--ink)}
-.msg .bub{background:#f1ebe0;border-radius:14px 14px 14px 4px;padding:8px 11px;font-size:15px;white-space:pre-wrap;word-break:break-word}
-.msg.me .bub{background:#e4f3ea;border-radius:14px 14px 4px 14px}.msg.sys{align-self:center;max-width:100%}.msg.sys .bub{background:none;color:var(--mute);font-size:12px;padding:2px 8px;text-align:center}
-.msg.root .bub{background:var(--gold2);border:1px solid #e9d9b8}.msg.prob .bub{background:#fde8ee;color:var(--red);font-weight:700}
+.msg{display:flex;flex-direction:column;margin:5px 0;max-width:84%;align-items:flex-start}.msg.me{align-self:flex-end;align-items:flex-end;margin-left:auto}
+.msg .who{font-size:11px;color:#7a5a2a;margin:0 8px 1px;font-weight:700}.msg.me .who{display:none}
+.msg .bub{background:#fff;border-radius:10px;padding:7px 9px 5px;font-size:15px;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative;min-width:70px}
+.msg.me .bub{background:#dcf8c6}.msg .tm{display:block;text-align:right;font-size:10px;color:#8a7f70;margin-top:3px}
+.msg.sys{align-self:center;max-width:100%;align-items:center}.msg.sys .bub{background:#e1dbd0;color:#5a5047;font-size:12px;padding:3px 10px;box-shadow:none}.msg.sys .tm{display:none}
+.msg.root .bub{background:#fff6dc;border:1px solid #ecd9a8}.msg.prob .bub{background:#fde8ee;color:var(--red);font-weight:700}
 .bub img{max-width:230px;max-height:300px;border-radius:10px;display:block}.bub .fph{width:200px;height:120px;border-radius:10px;background:#e6dccb;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:12px}
 .bub audio{width:220px;height:36px;display:block}.bub .fl{font-size:13px;color:var(--mute)}
 .comp{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff;align-items:flex-end}
@@ -103,7 +109,8 @@ main{padding:12px 14px 40px}
 <div id="card" hidden>
   <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><span class="pill" id="cstage"></span></div>
   <div class="cbody" id="cbody">
-    <div class="hero"><div class="big" id="cimg"></div><div class="ttl" id="cttl"></div><div class="info" id="cinfo"></div></div>
+    <div class="hero"><div class="big" id="cimg"></div><div class="atts" id="catts" hidden></div><div class="ttl" id="cttl"></div><div class="info" id="cinfo"></div></div>
+    <div id="viewer" hidden><img id="vimg" alt=""><button id="vx">✕</button></div>
     <div class="btns">
       <button class="bdone" id="bdone">✅ Done → <span id="bnext"></span><small id="bnextar"></small></button>
       <button class="bmove" id="bmove">↔ Move to… <small>کسی اور جگہ</small></button>
@@ -129,7 +136,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13f5';
+var VER = '2026-10-13f6';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -141,11 +148,11 @@ var PW = ls('sj_fac_pw') || '', WHO = ls('sj_fac_who') || '';
 // ----- stages: the ALM production lists (ids come from the relay); hand-work lists are one chip -----
 var CHIPS = [['START', ['START'], 'شروع'], ['CUTTING', ['CUTTING'], 'کٹنگ'], ['IN LINE', ['IN LINE'], 'لائن'],
   ['HAND WORK', ['READY FOR HAND WORK', 'IN HAND WORK', 'CAME FROM HAND WORK', 'IN LINE (2)'], 'ہینڈ ورک'],
-  ['IRON / CHECK', ['IRON/CHECKING'], 'استری · چیکنگ'], ['READY', ['READY'], 'تیار']];
+  ['IRON / CHECK', ['IRON/CHECKING'], 'استری · چیکنگ'], ['READY', ['READY'], 'تیار'], ['READY 2', ['READY 2'], 'تیار 2'], ['FINISH', ['FINISH'], 'ختم'], ['SAMPLE DONE', ['SAMPLE DONE'], 'سیمپل مکمل']];
 var NEXT = { 'START': 'CUTTING', 'CUTTING': 'IN LINE', 'IN LINE': 'IRON/CHECKING', 'READY FOR HAND WORK': 'IN HAND WORK', 'IN HAND WORK': 'CAME FROM HAND WORK',
-  'CAME FROM HAND WORK': 'IN LINE (2)', 'IN LINE (2)': 'IRON/CHECKING', 'IRON/CHECKING': 'READY', 'READY': 'FINISH' };
+  'CAME FROM HAND WORK': 'IN LINE (2)', 'IN LINE (2)': 'IRON/CHECKING', 'IRON/CHECKING': 'READY', 'READY': 'FINISH', 'READY 2': 'FINISH', 'SAMPLES': 'SAMPLE DONE' };
 var UR = { 'START': 'شروع', 'CUTTING': 'کٹنگ', 'IN LINE': 'لائن', 'READY FOR HAND WORK': 'ہینڈ ورک کے لیے تیار', 'IN HAND WORK': 'ہینڈ ورک میں', 'CAME FROM HAND WORK': 'ہینڈ ورک سے آیا',
-  'IN LINE (2)': 'لائن (2)', 'IRON/CHECKING': 'استری · چیکنگ', 'READY': 'تیار', 'READY 2': 'تیار 2', 'FINISH': 'ختم' };
+  'IN LINE (2)': 'لائن (2)', 'IRON/CHECKING': 'استری · چیکنگ', 'READY': 'تیار', 'READY 2': 'تیار 2', 'FINISH': 'ختم', 'SAMPLES': 'سیمپل', 'SAMPLE DONE': 'سیمپل مکمل' };
 var D = { lists: [], cards: [], byId: {}, w: true }, cur = +(ls('sj_fac_chip') || 0), open = null;
 function lname(id){ var l = D.lists.filter(function(x){ return x[1] === id; })[0]; return l ? l[0] : '?'; }
 function lid(name){ var l = D.lists.filter(function(x){ return x[0] === name; })[0]; return l ? l[1] : null; }
@@ -183,16 +190,17 @@ function parse(name){
 // ----- photos: fetched once through the relay, kept on the phone -----
 var IMG = {}, IMGQ = [], imgBusy = 0;
 function imgKey(c){ return 'sj_fac_i_' + c.img; }
+function ptxt(el, t){ Array.from(el.childNodes).forEach(function(n){ if (n.nodeType === 3) n.remove(); }); if (t) el.insertBefore(document.createTextNode(t), el.firstChild); }
 function photo(c, el){
-  if (!c.img) { el.textContent = 'no photo'; return; }
-  var have = IMG[c.img] || ls(imgKey(c)); if (have) { IMG[c.img] = have; el.style.backgroundImage = 'url(data:image/jpeg;base64,' + have + ')'; el.textContent = ''; return; }
-  el.textContent = '…'; IMGQ.push([c, el]); pump();
+  if (!c.img) { ptxt(el, 'no photo'); return; }
+  var have = IMG[c.img] || ls(imgKey(c)); if (have) { IMG[c.img] = have; el.style.backgroundImage = 'url(data:image/jpeg;base64,' + have + ')'; ptxt(el, ''); return; }
+  ptxt(el, '…'); IMGQ.push([c, el]); pump();
 }
 function pump(){
   while (imgBusy < 3 && IMGQ.length) { var x = IMGQ.shift(); imgBusy++;
     (function(c, el){ call({ op: 'img', card: c.id, att: c.img }).then(function(j){ imgBusy--;
-      if (j.ok) { IMG[c.img] = j.b64; if (j.b64.length < 150000) ls(imgKey(c), j.b64); document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(data:image/jpeg;base64,' + j.b64 + ')'; e.textContent = ''; }); }
-      else el.textContent = 'photo?';
+      if (j.ok) { IMG[c.img] = j.b64; if (j.b64.length < 150000) ls(imgKey(c), j.b64); document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(data:image/jpeg;base64,' + j.b64 + ')'; ptxt(e, ''); }); }
+      else ptxt(el, 'photo?');
       pump(); }); })(x[0], x[1]); }
 }
 
@@ -202,7 +210,7 @@ async function load(fresh){
   var j = await call({ op: 'list', fresh: !!fresh });
   $('rf').classList.remove('spin');
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
-  D.lists = j.lists; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.byId = {}; $('bell').hidden = !j.tg; /* the bell shows only once Telegram is set up in the relay */ D.cards.forEach(function(c){ D.byId[c.id] = c; });
+  D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.byId = {}; $('bell').hidden = !j.tg; /* the bell shows only once Telegram is set up in the relay */ D.cards.forEach(function(c){ D.byId[c.id] = c; });
   $('msg').className = 'ok'; $('msg').textContent = D.w ? '' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
   draw(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
   if (!open) openFromHash();
@@ -248,7 +256,20 @@ function paintCard(){
   var assigned = Object.keys(c.f || {}).filter(function(k){ return /^(TASLEEM|IRFAN ALI|HASHIM|QADIR|SHAHZAIB|SALMAAN|ZAKIR|USMAN|Anees|SHAWKEEN)$/i.test(k.trim()); });
   if (assigned.length) $('cinfo').innerHTML += '<div style="grid-column:1/3"><b>WORKERS</b>' + assigned.map(function(k){ return esc(k) + ' ' + esc(c.f[k]); }).join(' · ') + '</div>';
   $('bdone').disabled = !nx || !D.w; $('bnext').textContent = nx || '—'; $('bnextar').textContent = nx ? (UR[nx] || '') + ' میں بھیجیں' : '';
+  if (!c._atts) { $('catts').hidden = true; attsLoad(c); } else attsDraw(c);
 }
+async function attsLoad(c){ var j = await call({ op: 'atts', card: c.id }); if (!j.ok || open !== c) return; c._atts = j.atts || []; c._cover = j.cover || ''; attsDraw(c); }
+function attsDraw(c){
+  var el = $('catts'), as = c._atts || []; if (!as.length) { el.hidden = true; return; }
+  el.hidden = false; el.innerHTML = '<span class="n">' + as.length + '<br>files</span>' + as.map(function(a){ var cv = a.id === c._cover, ic = a.img ? '' : /^video/.test(a.type) ? '🎬' : /pdf/i.test(a.type + a.name) ? '📄' : /^audio/.test(a.type) ? '🎤' : '📎';
+    return '<div class="a' + (cv ? ' cv' : '') + '" data-a="' + esc(a.id) + '" data-img="' + (a.img ? esc(a.id) : '') + '" data-url="' + esc(a.url) + '">' + ic + '<small>' + esc(cv ? 'cover' : a.name) + '</small></div>'; }).join('');
+  as.filter(function(a){ return a.img; }).forEach(function(a){ photo({ id: c.id, img: a.id }, el.querySelector('[data-a="' + a.id + '"]')); });
+}
+$('catts').onclick = async function(e){ var a = e.target.closest('.a'); if (!a) return;
+  if (a.dataset.img) { $('viewer').hidden = false; $('vimg').src = IMG[a.dataset.img] ? 'data:image/jpeg;base64,' + IMG[a.dataset.img] : ''; var j = await call({ op: 'img', card: open.id, att: a.dataset.img, big: 1 }); if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }
+  else window.open(a.dataset.url, '_blank'); };
+$('vx').onclick = function(){ $('viewer').hidden = true; $('vimg').src = ''; };
+$('cimg').onclick = function(){ if (open && open.img) { $('viewer').hidden = false; $('vimg').src = IMG[open.img] ? 'data:image/jpeg;base64,' + IMG[open.img] : ''; call({ op: 'img', card: open.id, att: open.img, big: 1 }).then(function(j){ if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }); } };
 function closeCard(){ $('card').hidden = true; thStop(); open = null; draw(); }
 $('back').onclick = function(){ history.back(); };
 window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
@@ -260,7 +281,7 @@ async function move(toName){
   var j = await call({ op: 'move', card: c.id, from: c.l, to: to, who: WHO });
   if (!j.ok) { toast(j.error); $('bdone').disabled = false; if (j.moved) load(true); return; }
   c.l = to; toast('✓ Moved to ' + toName + ' · ' + (UR[toName] || ''));
-  if (D.lists.slice(0, 9).every(function(l){ return l[1] !== to; })) { D.cards = D.cards.filter(function(x){ return x !== c; }); delete D.byId[c.id]; history.back(); }
+  if ((D.show || []).indexOf(to) < 0) { D.cards = D.cards.filter(function(x){ return x !== c; }); delete D.byId[c.id]; history.back(); }
   else { paintCard(); setTimeout(thPull, 1200); }
   draw(); setTimeout(function(){ load(true); }, 1500);
 }
@@ -291,7 +312,7 @@ async function thPull(){
   TH.msgs = TH.msgs.concat(add); thDraw(); seen(c); draw();
 }
 function bubble(m){
-  var me = m.app && m.who === WHO, cls = m.sys ? 'sys' : me ? 'me' : '', body = esc(m.sys ? m.text.replace(/\*/g, '') : m.text);
+  var me = !m.sys && String(m.who || '').trim().toUpperCase() === String(WHO).trim().toUpperCase(), cls = m.sys ? 'sys' : me ? 'me' : '', body = esc(m.sys ? m.text.replace(/\*/g, '') : m.text);
   if (m.root) cls += ' root'; if (/^🚩/.test(m.text)) cls += ' prob';
   (m.files || []).forEach(function(f){
     if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="img">tap to load photo</div>';
@@ -299,7 +320,7 @@ function bubble(m){
     else body += '<div class="fl">📎 ' + esc(f.name) + (f.video ? ' (video — open in Slack)' : '') + '</div>';
   });
   var t = new Date(+m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
-  return '<div class="msg ' + cls + '">' + (m.sys ? '' : '<div class="who"><b>' + esc(m.who || '') + '</b>' + (m.app ? '' : ' · Slack') + ' · ' + dd + ' ' + hh + '</div>') + '<div class="bub">' + body + '</div></div>';
+  return '<div class="msg ' + cls + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + '</div>') + '<div class="bub">' + body + '<span class="tm">' + dd + ' ' + hh + '</span></div></div>';
 }
 function thDraw(){ $('thread').innerHTML = TH.msgs.map(bubble).join(''); $('tcount').textContent = TH.msgs.length + ' messages';
   var el = $('cbody'); setTimeout(function(){ el.scrollTop = el.scrollHeight; }, 30); autoMedia(); }
