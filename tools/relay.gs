@@ -70,8 +70,10 @@ var FAC = { BOARD: '6527c52485d9627f63157296', LISTS: [
   ['START', '6527c572b12b208471c080cb'], ['CUTTING', '6527c57751007e81a43f55a6'], ['IN LINE', '6527c57cd7e267fbf2a602b4'],
   ['READY FOR HAND WORK', '6527c585b9300f804906d9bd'], ['IN HAND WORK', '6527c59b796865bd9639b0c3'], ['CAME FROM HAND WORK', '6602ad25e74db40a25ab0296'],
   ['IN LINE (2)', '6527c5a3964596815651a97f'], ['IRON/CHECKING', '6527c5a93db4d8b8e91a8be9'], ['READY', '6527c5b13129a9ba37acd3ad'],
-  ['READY 2', '699b35ceb77292db0289c473'], ['FINISH', '6527c5b41e630c094b619f5e']],
-  SHOW: 9 };                                                  // cards are listed for the first 9 lists (START .. READY); READY 2 / FINISH are move targets only
+  ['READY 2', '699b35ceb77292db0289c473'], ['FINISH', '6527c5b41e630c094b619f5e'], ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593']],
+  // which lists are shown, and how many cards from the top (FINISH holds hundreds: the newest 60 are enough) — Abbas 13 Oct: add READY 2, FINISH, SAMPLE DONE
+  SHOW: { '6527c572b12b208471c080cb': 0, '6527c57751007e81a43f55a6': 0, '6527c57cd7e267fbf2a602b4': 0, '6527c585b9300f804906d9bd': 0, '6527c59b796865bd9639b0c3': 0, '6602ad25e74db40a25ab0296': 0,
+    '6527c5a3964596815651a97f': 0, '6527c5a93db4d8b8e91a8be9': 0, '6527c5b13129a9ba37acd3ad': 0, '699b35ceb77292db0289c473': 0, '6527c5b41e630c094b619f5e': 60, '65a121d2829a36ccacd05593': 60 } };
 function facCf(tok) {                                         // custom-field names of the ALM board (cached 6 h)
   var c = CacheService.getScriptCache(), h = c.get('FAC_CF'); if (h) return JSON.parse(h);
   var m = {}; (trApi('get', '/boards/' + FAC.BOARD + '/customFields', {}, tok) || []).forEach(function (f) { m[f.id] = f.name; });
@@ -202,16 +204,16 @@ function fac(reqText, P) {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = cache.get('FAC_LIST');
       if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} return out(hv); }
-      var show = ids.slice(0, FAC.SHOW), cf = facCf(rtok);
+      var show = Object.keys(FAC.SHOW), cf = facCf(rtok);
       var q = '/cards?fields=name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels&customFieldItems=true&attachments=cover&attachment_fields=id,previews,mimeType&key=' + TKEY + '&token=' + rtok;
-      var rs = UrlFetchApp.fetchAll(show.map(function (id) { return { url: 'https://api.trello.com/1/lists/' + id + q, muteHttpExceptions: true }; })), cards = [];
+      var rs = UrlFetchApp.fetchAll(show.map(function (id) { return { url: 'https://api.trello.com/1/lists/' + id + q + (FAC.SHOW[id] ? '&limit=' + FAC.SHOW[id] : ''), muteHttpExceptions: true }; })), cards = [];
       for (var i = 0; i < rs.length; i++) { if (rs[i].getResponseCode() !== 200) return out({ ok: false, error: 'Trello said ' + rs[i].getResponseCode() }); cards = cards.concat(JSON.parse(rs[i].getContentText())); }
       var outc = cards.map(function (c) {
         var f = {}; (c.customFieldItems || []).forEach(function (it) { var n = cf[it.idCustomField], v = it.value || {}; var x = v.text != null ? v.text : v.number != null ? v.number : v.date || (v.checked === 'true' ? '✓' : null); if (n && x != null && String(x).trim() !== '') f[n] = String(x); });
         var a = (c.attachments || [])[0], img = a && a.previews && a.previews.length ? a.id : '';
         return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity, lb: (c.labels || []).filter(function (l) { return l.name; }).map(function (l) { return { n: l.name, c: l.color || '' }; }) };
       });
-      var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: FAC.SHOW, cards: outc, w: !!wtok, th: {}, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
+      var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: Object.keys(FAC.SHOW), cards: outc, w: !!wtok, th: {}, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
       var js = JSON.stringify(res); if (js.length < 95000) cache.put('FAC_LIST', js, 20);
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       return out(res);
@@ -219,10 +221,11 @@ function fac(reqText, P) {
     if (req.op === 'img') {                                   // a card's cover photo, ~300-600 px, fetched with the auth header (browsers are refused)
       var cid = String(req.card || '').replace(/[^0-9a-f]/g, ''), aid = String(req.att || '').replace(/[^0-9a-f]/g, '');
       if (!cid || !aid) return out({ ok: false, error: 'bad request' });
-      var ck = 'FAC_IMG_' + aid, c2 = CacheService.getScriptCache(), have = c2.get(ck); if (have) return out({ ok: true, b64: have });
-      var at = trApi('get', '/cards/' + cid + '/attachments/' + aid, { fields: 'previews,url,mimeType' }, rtok);
-      var pv = (at.previews || []).filter(function (p) { return p.width >= 300; }).sort(function (x, y) { return x.width - y.width; })[0] || (at.previews || []).slice(-1)[0];
-      var u = pv ? pv.url : at.url;
+      var ck = 'FAC_IMG_' + aid + (req.big ? '_B' : ''), c2 = CacheService.getScriptCache(), have = c2.get(ck); if (have) return out({ ok: true, b64: have });
+      var at = trApi('get', '/cards/' + cid + '/attachments/' + aid, { fields: 'previews,url,mimeType' }, rtok), want = req.big ? 1000 : 300;
+      var pv = (at.previews || []).filter(function (p) { return p.width >= want; }).sort(function (x, y) { return x.width - y.width; })[0] || (at.previews || []).slice(-1)[0];
+      if (!pv) return out({ ok: false, error: 'not a picture' });
+      var u = pv.url;
       var r = UrlFetchApp.fetch(u, { muteHttpExceptions: true, headers: { Authorization: 'OAuth oauth_consumer_key="' + TKEY + '", oauth_token="' + rtok + '"' } });
       if (r.getResponseCode() !== 200) return out({ ok: false, error: 'photo: Trello said ' + r.getResponseCode() });
       var b64 = Utilities.base64Encode(r.getBlob().getBytes());
@@ -298,6 +301,12 @@ function fac(reqText, P) {
     if (req.op === 'tgcheck') {                               // has the code been sent to the bot yet? (reads the bot's new messages)
       var dv = String(req.dev || '').replace(/[^a-z0-9]/g, '').slice(0, 12); facTgPoll(P);
       return out({ ok: true, linked: !!P.getProperty('TG_FAC_' + dv) });
+    }
+    if (req.op === 'atts') {                                  // all attachments of a card (Abbas 13 Oct: the cover stays; show the other attachments too)
+      var ac2 = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!ac2) return out({ ok: false, error: 'bad request' });
+      var cv = trApi('get', '/cards/' + ac2, { fields: 'idAttachmentCover' }, rtok).idAttachmentCover || '';
+      var al = trApi('get', '/cards/' + ac2 + '/attachments', { fields: 'id,name,mimeType,previews,url,bytes,date' }, rtok) || [];
+      return out({ ok: true, cover: cv, atts: al.map(function (a) { return { id: a.id, name: a.name, type: a.mimeType || '', img: !!(a.previews && a.previews.length), url: a.url, bytes: a.bytes || 0, date: a.date }; }) });
     }
     if (req.op === 'move') {                                  // "Done -> next stage" (or Move to...): the real Trello card moves, top of the new list
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
