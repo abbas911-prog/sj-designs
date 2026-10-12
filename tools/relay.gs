@@ -301,6 +301,12 @@ function factoryChannel(P, tok, name) {
   }
   throw new Error('#' + name + ' not found - invite the factory bot to #' + name);
 }
+function doCostSale(cardId, req, tok, notes) {                 // COST / SALE custom fields on a USMAN HAND WORK card (Abbas 1 Oct for US- cards, 12 Oct for hand-work orders too)
+  [[DOX.COST, req.cost], [DOX.SALE, req.sale]].forEach(function (x) {
+    if (x[1] === '' || x[1] == null || !isFinite(+x[1])) return;
+    try { trApi('put', '/cards/' + cardId + '/customField/' + x[0] + '/item', {}, tok, { value: { number: String(+x[1]) } }); } catch (e) { notes.push('COST/SALE not set: ' + String(e.message).slice(0, 80)); }
+  });
+}
 function dorder(reqText, P) {
   var req = JSON.parse(reqText);
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
@@ -323,10 +329,7 @@ function dorder(reqText, P) {
       if (mode === 'out') {                                   // outsourced hand-work: US- card on USMAN HAND WORK, his label, COST / SALE
         var lid = doLabel(DOX.USB, req.person || 'ALI', tok);
         card = trApi('post', '/cards', { idList: DOX.USORDER, name: name, pos: 'top', idLabels: lid }, tok);
-        [[DOX.COST, req.cost], [DOX.SALE, req.sale]].forEach(function (x) {
-          if (x[1] === '' || x[1] == null) return;
-          try { trApi('put', '/cards/' + card.id + '/customField/' + x[0] + '/item', {}, tok, { value: { number: String(+x[1]) } }); } catch (e) { notes.push('COST/SALE not set: ' + e.message.slice(0, 80)); }
-        });
+        doCostSale(card.id, req, tok, notes);
         st.newCard = true;
       } else if (req.fresh) {                                 // /N with nothing to copy: a plain card with RATE + HISAAB
         var labs = [DOX.RATE, DOX.HISAAB]; if (req.customer) labs.push(doLabel(DOX.ALM, req.customer, tok));
@@ -383,6 +386,7 @@ function dorder(reqText, P) {
           } catch (e) { notes.push('USMAN card cover not set: ' + String(e.message).slice(0, 80)); }
           ulabs.forEach(function (l) { trApi('post', '/cards/' + uc.id + '/idLabels', { value: l }, tok); });
         }
+        doCostSale(uc.id, req, tok, notes);                    // Abbas 12 Oct 2026: "two spaces for the cost price and the sale price ... mention them in the custom fields of those cards"
         st.ucard = { id: uc.id, url: uc.shortUrl, name: uc.name }; st.notes = notes; save();
       }
       return out({ ok: true, card: st.card, ucard: st.ucard || null, notes: st.notes || [] });
