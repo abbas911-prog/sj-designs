@@ -38,6 +38,7 @@ function doPost(e) {
     if (b.job === 'orders') return orders(b.req, P);
     if (b.job === 'vault') return vault(b.req, P);
     if (b.job === 'slackpdf') return slackPdf(b.req, P);
+    if (b.job === 'slackpdf2') return slackPdf(b.req, P, true);   // 12 Oct 2026: one channel per call, chosen by the ticks
     if (b.job === 'dorder') return dorder(b.req, P);
     if (b.job === 'cust') return cust(b.req, P);
     if (b.job === 'cash') return cashPost(b.req, P);
@@ -95,7 +96,7 @@ function orders(reqText, P) {
       var id = String(req.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40); if (!id) return out({ ok: false, error: 'no order id' });
       var key = 'ORD_' + id, o = JSON.parse(P.getProperty(key) || 'null'), by = String(req.by || '').slice(0, 40);
       if (op === 'add') {
-        var items = (Array.isArray(req.items) ? req.items : []).slice(0, 60).map(function (x) { return { no: String(x.no || '').slice(0, 20), pcs: +x.pcs || 0, c: String(x.c || '').slice(0, 80), row: String(x.row || '').slice(0, 20) }; });
+        var items = (Array.isArray(req.items) ? req.items : []).slice(0, 60).map(function (x) { return { no: String(x.no || '').slice(0, 20), pcs: +x.pcs || 0, c: String(x.c || '').slice(0, 120), row: String(x.row || '').slice(0, 20), loc: ({ g: 'g', o: 'o', m: 'm' })[x.loc] || '' }; });
         if (!o) o = { id: id, created: now, by: by, steps: {} };
         o.name = String(req.name || '').slice(0, 80); o.items = items; o.pcs = +req.pcs || 0; o.dl = String(req.dl || '').slice(0, 160); o.upd = now; o.del = 0;
         if (req.s1 && !o.steps.s1) o.steps.s1 = { by: by, t: now };
@@ -170,8 +171,11 @@ function vRead(P, pre) {
 // The channels are fixed here - a request cannot send a file anywhere else. Needs the SLACK_BOT_TOKEN script property (typed in by
 // Abbas, never in this code), the bot's files:write permission, and the bot invited to both channels.
 var MEMO_PDF_CHANNELS = ['C08EDKV94SV', 'C0BP6DSUHSA'];   // #godown, #customer
-function slackPdf(reqText, P) {
+function slackPdf(reqText, P, v2) {
   var req = JSON.parse(reqText);
+  // v2 (Abbas, 12 Oct 2026): nothing goes to a group unless ticked; #godown gets the godown pick list, #customer the full memo
+  var chans = MEMO_PDF_CHANNELS;
+  if (v2) { var to = String(req.to || ''); if (to !== 'godown' && to !== 'customer') return out({ ok: false, error: 'bad channel' }); chans = [MEMO_PDF_CHANNELS[to === 'godown' ? 0 : 1]]; }
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
   var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return out({ ok: false, error: 'the relay has no SLACK_BOT_TOKEN yet' });
   var bytes = Utilities.base64Decode(String(req.pdf || '')); if (bytes.length < 100 || bytes.length > 18000000) return out({ ok: false, error: 'bad PDF' });
@@ -183,9 +187,9 @@ function slackPdf(reqText, P) {
   var up = UrlFetchApp.fetch(a.upload_url, { method: 'post', payload: Utilities.newBlob(bytes, 'application/pdf', name), muteHttpExceptions: true });
   if (up.getResponseCode() !== 200) return out({ ok: false, error: 'Slack upload said ' + up.getResponseCode() });
   var c = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: H, muteHttpExceptions: true,
-    payload: { files: JSON.stringify([{ id: a.file_id, title: name.replace(/\.pdf$/i, '') }]), channels: MEMO_PDF_CHANNELS.join(','), initial_comment: String(req.text || '').slice(0, 3000) } }).getContentText());
+    payload: { files: JSON.stringify([{ id: a.file_id, title: name.replace(/\.pdf$/i, '') }]), channels: chans.join(','), initial_comment: String(req.text || '').slice(0, 3000) } }).getContentText());
   if (!c.ok) return out({ ok: false, error: 'Slack said ' + c.error + (c.error === 'not_in_channel' || c.error === 'channel_not_found' ? ' (invite @SJ Memo to #godown and #customer)' : '') });
-  return out({ ok: true, file: a.file_id });
+  return out({ ok: true, file: a.file_id, to: v2 ? req.to : 'both' });
 }
 // DESIGN ORDERS FROM THE APP (Abbas, 11 Oct 2026: "the #order-2 process ... I want this process to be built in the app ... just for me").
 // Replaces posting in #order-2 and waiting for the 22:30 laptop run. From the memo (owner phone only) the relay:
