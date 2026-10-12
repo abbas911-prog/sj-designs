@@ -222,16 +222,17 @@ function fac(reqText, P) {
       var cid = String(req.card || '').replace(/[^0-9a-f]/g, ''), aid = String(req.att || '').replace(/[^0-9a-f]/g, '');
       if (!cid || !aid) return out({ ok: false, error: 'bad request' });
       var ck = 'FAC_IMG_' + aid + (req.big ? '_B' : ''), c2 = CacheService.getScriptCache(), have = c2.get(ck); if (have) return out({ ok: true, b64: have });
-      var at = trApi('get', '/cards/' + cid + '/attachments/' + aid, { fields: 'previews,url,mimeType' }, rtok), want = req.big ? 1000 : 300;
-      var pv = (at.previews || []).filter(function (p) { return p.width >= want; }).sort(function (x, y) { return x.width - y.width; })[0] || (at.previews || []).slice(-1)[0];
+      var at = trApi('get', '/cards/' + cid + '/attachments/' + aid, { fields: 'previews,url,mimeType,bytes' }, rtok), pvs = (at.previews || []).slice().sort(function (x, y) { return x.width - y.width; });
+      var pv = req.big ? pvs.slice(-1)[0] : (pvs.filter(function (p) { return p.width >= 300; })[0] || pvs.slice(-1)[0]);
       if (!pv) return out({ ok: false, error: 'not a picture' });
-      var u = pv.url;
+      // big = the sharpest we can get: Trello's largest preview, or the ORIGINAL file when the preview is small and the original is a photo under 8 MB (Abbas 13 Oct: "very blurry")
+      var u = (req.big && pv.width < 1600 && /^image\//.test(at.mimeType || '') && (at.bytes || 0) <= 8 * 1024 * 1024 && at.url) ? at.url : pv.url;
       var r = UrlFetchApp.fetch(u, { muteHttpExceptions: true, headers: { Authorization: 'OAuth oauth_consumer_key="' + TKEY + '", oauth_token="' + rtok + '"' } });
       if (r.getResponseCode() !== 200) return out({ ok: false, error: 'photo: Trello said ' + r.getResponseCode() });
       var b64 = Utilities.base64Encode(r.getBlob().getBytes());
-      if (b64.length > 900000) return out({ ok: false, error: 'photo too big' });
+      if (b64.length > (req.big ? 12000000 : 900000)) return out({ ok: false, error: 'photo too big' });
       if (b64.length < 99000) c2.put(ck, b64, 21600);
-      return out({ ok: true, b64: b64 });
+      return out({ ok: true, b64: b64, type: at.mimeType || 'image/jpeg' });
     }
     // ---- STEP 2 (12 Oct 2026): the card chat = the card's Slack #cutting thread, both ways ----
     var FT = P.getProperty('SLACK_FACTORY_TOKEN');
