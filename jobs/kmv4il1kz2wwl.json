@@ -1,0 +1,30 @@
+{
+ "id": "kmv4il1kz2wwl",
+ "op": "check",
+ "ref": "INV-0005",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6ac9e7a5c6ae93519be179fe",
+   "no": "51862",
+   "before": "Sj = **(51862)** (64) pcs __ colour _(4)__(16/16/16/16)",
+   "after": "Sj = **(51862)** (60) pcs __ colour _(4)__(12/16/16/16)",
+   "left": 60,
+   "lines": [
+    "colour 1: 16 → 12 (−4)"
+   ],
+   "moved": "(check only — Trello not changed)"
+  },
+  {
+   "card": "6a801d68a35fbafaea7b013c",
+   "no": "63491",
+   "before": "Sj = **(63491)** (56) pcs. Colour = (4) ,,,(14/14/12/16)",
+   "after": "Sj = **(63491)** (52) pcs. Colour = (4) ,,,(10/14/12/16)",
+   "left": 52,
+   "lines": [
+    "colour 1: 14 → 10 (−4)"
+   ],
+   "moved": "(check only — Trello not changed)"
+  }
+ ]
+}
