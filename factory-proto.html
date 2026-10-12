@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>SJ Factory · prototype</title>
+<style>
+:root{--bg:#f4efe6;--card:#fff;--ink:#2b2118;--mute:#7a6a58;--gold:#b08a4a;--gold2:#fff8ec;--green:#2e7d4f;--red:#b5123f;--line:#e6dccb}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 14px 6px;border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;gap:10px}.mono{width:40px;height:40px;border-radius:12px;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;letter-spacing:.04em}
+.top h1{font-size:17px;margin:0;flex:1}.top h1 small{display:block;font-weight:500;font-size:12px;color:var(--mute)}
+.proto{font-size:11px;background:#fde8ee;color:var(--red);border-radius:8px;padding:3px 7px;font-weight:700}
+.stages{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}.stages::-webkit-scrollbar{display:none}
+.stages button{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);position:relative}
+.stages button.on{border-color:var(--gold);background:var(--gold2)}.stages button i{font-style:normal;font-size:12px;color:var(--mute);margin-left:4px}
+.stages button b.u{position:absolute;top:-6px;right:-4px;background:var(--red);color:#fff;border-radius:999px;font-size:11px;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 4px}
+main{padding:12px 14px 90px}
+.cardrow{display:flex;gap:12px;background:var(--card);border-radius:16px;padding:10px;margin-bottom:10px;border:1px solid var(--line);align-items:center;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.cardrow img{width:92px;height:92px;object-fit:cover;border-radius:12px;background:#eee}
+.cardrow .t{flex:1;min-width:0}.cardrow .no{font-weight:800;font-size:19px}.cardrow .sub{color:var(--mute);font-size:13px;margin-top:2px}
+.cardrow .ar{font-size:13px;color:var(--mute)}
+.badge{background:var(--red);color:#fff;border-radius:999px;font-size:12px;font-weight:700;padding:2px 8px}.flag{background:#fde8ee;color:var(--red);border-radius:8px;font-size:12px;font-weight:700;padding:3px 7px;display:inline-block;margin-top:4px}
+.empty{color:var(--mute);text-align:center;padding:40px 10px}
+/* card screen */
+#card{position:fixed;inset:0;background:var(--bg);z-index:10;display:flex;flex-direction:column}
+#card[hidden]{display:none}
+.chd{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--bg)}
+.chd button{border:0;background:none;font:inherit;font-weight:700;color:var(--gold);padding:6px 4px}
+.chd .nm{flex:1;font-weight:800;font-size:18px}.chd .nm small{display:block;font-weight:500;font-size:12px;color:var(--mute)}
+.pill{background:var(--gold2);border:1.5px solid var(--gold);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+.cbody{flex:1;overflow-y:auto;padding:12px 14px 12px}
+.hero{background:#fff;border-radius:16px;border:1px solid var(--line);overflow:hidden}
+.hero img{width:100%;max-height:300px;object-fit:cover;display:block}
+.hero .info{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:14px}
+.hero .info b{display:block;font-size:11px;color:var(--mute);font-weight:600;letter-spacing:.06em}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.btns button{border:0;border-radius:14px;padding:14px 8px;font:inherit;font-weight:800;font-size:16px;color:#fff;line-height:1.2}
+.btns button small{display:block;font-weight:500;font-size:12px;opacity:.9;margin-top:2px}
+.bdone{background:var(--green);grid-column:1/3;font-size:18px}.bphoto{background:var(--gold)}.bvoice{background:#5a4a8a}.bprob{background:var(--red);grid-column:1/3}
+.bdone:disabled{background:#9bb8a6}
+.thr{background:#fff;border-radius:16px;border:1px solid var(--line);padding:10px 12px}
+.thr h3{margin:0 0 8px;font-size:13px;color:var(--mute);letter-spacing:.06em;font-weight:700}
+.thr h3 span{float:right;font-weight:500;letter-spacing:0;text-transform:none}
+.msg{display:flex;flex-direction:column;margin:6px 0;max-width:86%}.msg.me{align-self:flex-end;align-items:flex-end;margin-left:auto}
+.msg .who{font-size:11px;color:var(--mute);margin:0 4px 2px}.msg .who b{color:var(--ink)}
+.msg .bub{background:#f1ebe0;border-radius:14px 14px 14px 4px;padding:8px 11px;font-size:15px;white-space:pre-wrap}
+.msg.me .bub{background:#e4f3ea;border-radius:14px 14px 4px 14px}.msg.sys{align-self:center;max-width:100%}.msg.sys .bub{background:none;color:var(--mute);font-size:12px;padding:2px 8px;text-align:center}
+.msg.prob .bub{background:#fde8ee;color:var(--red);font-weight:700}
+.bub img{max-width:220px;border-radius:10px;display:block}
+.voice{display:flex;align-items:center;gap:8px}.voice .play{width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;border:0;font-size:12px}.voice .bar{width:120px;height:4px;background:#c9bda7;border-radius:2px;overflow:hidden}.voice .bar i{display:block;height:100%;width:0;background:var(--ink)}
+.comp{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff;align-items:flex-end}
+.comp textarea{flex:1;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:16px;resize:none;max-height:120px;min-height:44px}
+.comp button{border:0;background:var(--gold);color:#fff;border-radius:12px;padding:0 14px;height:44px;font:inherit;font-weight:800}
+.comp .mic{background:#5a4a8a;font-size:20px}.comp .mic.rec{background:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.6}}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end}.sheet[hidden]{display:none}
+.sheet .in{background:#fff;width:100%;border-radius:18px 18px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 10px;font-size:15px}.sheet button{display:block;width:100%;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:13px;font:inherit;font-size:16px;font-weight:700;text-align:left;margin-bottom:8px}
+.sheet button.x{border:0;color:var(--mute);text-align:center;font-weight:600}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 14px;border-radius:12px;font-size:14px;z-index:30;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center}.toast.show{opacity:1}
+.note{font-size:12px;color:var(--mute);margin:8px 2px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><div class="mono">SJ</div><h1>Factory · فیکٹری<small>Usman · your cards · آپ کے کارڈ</small></h1><span class="proto">PROTOTYPE</span></div>
+  <div class="stages" id="stages"></div>
+</header>
+<main><div id="list"></div><p class="note">Prototype with sample cards. Nothing here reaches Trello or Slack yet — the real version moves the Trello card and writes into the card's Slack thread.</p></main>
+
+<div id="card" hidden>
+  <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><span class="pill" id="cstage"></span></div>
+  <div class="cbody" id="cbody">
+    <div class="hero"><img id="cimg" alt=""><div class="info" id="cinfo"></div></div>
+    <div class="btns">
+      <button class="bdone" id="bdone">✅ Done → <span id="bnext"></span><small id="bnextar"></small></button>
+      <button class="bphoto" id="bphoto">📷 Photo<small>تصویر</small></button>
+      <button class="bvoice" id="bvoice">🎤 Voice note<small>آواز</small></button>
+      <button class="bprob" id="bprob">🚩 Problem · مسئلہ<small>fabric short · lace missing · machine</small></button>
+    </div>
+    <div class="thr"><h3>CARD CHAT · Slack #cutting thread <span id="cwho"></span></h3><div id="thread"></div></div>
+  </div>
+  <div class="comp"><button class="mic" id="mic" title="hold to record">🎤</button><textarea id="txt" rows="1" placeholder="Write to Abbas… · لکھیں"></textarea><button id="send">Send</button></div>
+</div>
+
+<div class="sheet" id="probs" hidden><div class="in"><h3>What is the problem? · کیا مسئلہ ہے؟</h3>
+<button data-p="Fabric short · کپڑا کم ہے">🧵 Fabric short · کپڑا کم ہے</button>
+<button data-p="Lace missing · لیس نہیں ہے">🎀 Lace missing · لیس نہیں ہے</button>
+<button data-p="Machine problem · مشین خراب">⚙️ Machine problem · مشین خراب</button>
+<button data-p="Design not clear · ڈیزائن سمجھ نہیں آیا">❓ Design not clear · ڈیزائن سمجھ نہیں آیا</button>
+<button class="x" id="probx">Cancel</button></div></div>
+<input type="file" id="pfile" accept="image/*" capture="environment" hidden>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+var $ = function(id){ return document.getElementById(id); };
+var STAGES = [['START','شروع'],['CUTTING','کٹنگ'],['IN LINE','لائن میں'],['IRON/CHECKING','استری · چیکنگ'],['READY','تیار']];
+var now = Date.now(), H = 3600e3, M = 60e3;
+function t(ms){ var d = new Date(ms); return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0'); }
+var CARDS = [
+ { id:'c1', no:'41862', pcs:96, cols:6, size:'M,L,XL,XXL', stage:0, img:'thumbs/6627aefc1caf5da73a256d91.jpg', rate:'19 $', fabric:'2.75 cotton', lais:'7 yds almas', belt:'3.5', unread:2, msgs:[
+   {w:'Abbas', t:now-2*H, x:'SJ-41862 , 96 pcs , COLORS = 6 , SIZE = M,L,XL,XXL (ALL SILVER)\nRATE · HISAAB'},
+   {w:'Abbas', t:now-2*H+M, x:'Sleeves same as 21400. Belt with bow at the back.'},
+   {w:'Abbas', t:now-2*H+2*M, v:'0:21'},
+   {w:'sys', t:now-90*M, x:'Card made on ALM → START'} ]},
+ { id:'c2', no:'58429', pcs:42, cols:4, size:'FREE', stage:1, img:'thumbs/671bd90f5d6a7e46bff4c8cf.jpg', rate:'35 $', fabric:'cotton + candy', lais:'main · chain · almas', belt:'—', unread:0, msgs:[
+   {w:'Abbas', t:now-26*H, x:'SJ-58429 , 42 PCS , COLORS = 4 , SIZE = FREE'},
+   {w:'sys', t:now-20*H, x:'→ CUTTING · Usman · ' + t(now-20*H)},
+   {w:'Usman', t:now-19*H, x:'Cutting started'} ]},
+ { id:'c3', no:'21400', pcs:60, cols:5, size:'M,L,XL,XXL', stage:1, img:'thumbs/675c2913203223286dc135d3.jpg', rate:'22 $', fabric:'3.1', lais:'2 yds', belt:'3.2', unread:1, flag:'Lace missing', msgs:[
+   {w:'Abbas', t:now-50*H, x:'SJ-21400 , 60 pcs , COLORS = 5'},
+   {w:'sys', t:now-30*H, x:'→ CUTTING · Usman · ' + t(now-30*H)},
+   {w:'Usman', t:now-3*H, p:true, x:'🚩 Lace missing · لیس نہیں ہے'},
+   {w:'Abbas', t:now-40*M, x:'Lace coming today 5 pm with the driver. Cut the fabric meanwhile.'} ]},
+ { id:'c4', no:'12985', pcs:76, cols:4, size:'L,XL,XXL', stage:2, img:'thumbs/68223e666cb53c30d7b8372f.jpg', rate:'18 $', fabric:'2.5', lais:'5 yds', belt:'—', unread:0, msgs:[
+   {w:'Abbas', t:now-80*H, x:'SJ-12985 , 76 pcs , COLORS = 4'},
+   {w:'sys', t:now-60*H, x:'→ CUTTING · Usman'}, {w:'sys', t:now-8*H, x:'→ IN LINE · Usman'} ]},
+ { id:'c5', no:'46209', pcs:62, cols:4, size:'M,L,XL,XXL', stage:3, img:'thumbs/682d8d678cb34faa1064a716.jpg', rate:'20 $', fabric:'2.9', lais:'4 yds', belt:'3.5', unread:0, msgs:[
+   {w:'Abbas', t:now-120*H, x:'SJ-46209 , 62 pcs , COLORS = 4'},
+   {w:'sys', t:now-10*H, x:'→ IRON/CHECKING · Usman'} ]},
+ { id:'c6', no:'7284', pcs:64, cols:4, size:'M,L,XL,XXL', stage:4, img:'thumbs/684b10dd1c4e4a73195edc8c.jpg', rate:'21 $', fabric:'2.8', lais:'6 yds', belt:'3.5', unread:0, msgs:[
+   {w:'sys', t:now-5*H, x:'→ READY · Usman'}, {w:'Abbas', t:now-4*H, x:'👍 Good. Pack 4 per bag.'} ]}
+];
+var cur = 0, open = null;
+function toast(s){ var e = $('toast'); e.textContent = s; e.classList.add('show'); clearTimeout(e._t); e._t = setTimeout(function(){ e.classList.remove('show'); }, 2200); }
+function drawStages(){
+  $('stages').innerHTML = STAGES.map(function(s, i){ var n = CARDS.filter(function(c){ return c.stage === i; }), u = n.reduce(function(a, c){ return a + (c.unread || 0); }, 0);
+    return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + s[0] + '<i>' + n.length + '</i>' + (u ? '<b class="u">' + u + '</b>' : '') + '</button>'; }).join('');
+}
+function drawList(){
+  var cs = CARDS.filter(function(c){ return c.stage === cur; });
+  $('list').innerHTML = cs.length ? cs.map(function(c){ return '<div class="cardrow" data-id="' + c.id + '"><img src="' + c.img + '" alt=""><div class="t"><div class="no">SJ-' + c.no + '</div><div class="sub">' + c.pcs + ' pcs · ' + c.cols + ' colours · ' + c.size + '</div><div class="ar">' + c.pcs + ' پیس · ' + c.cols + ' رنگ</div>' + (c.flag ? '<span class="flag">🚩 ' + c.flag + '</span>' : '') + '</div>' + (c.unread ? '<span class="badge">' + c.unread + '</span>' : '') + '</div>'; }).join('')
+    : '<div class="empty">No cards here · یہاں کوئی کارڈ نہیں</div>';
+}
+function draw(){ drawStages(); drawList(); }
+$('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; draw(); };
+$('list').onclick = function(e){ var r = e.target.closest('.cardrow'); if (r) openCard(CARDS.filter(function(c){ return c.id === r.dataset.id; })[0]); };
+function openCard(c){
+  open = c; c.unread = 0; $('card').hidden = false;
+  $('cnm').innerHTML = 'SJ-' + c.no + '<small>' + c.pcs + ' pcs · ' + c.cols + ' colours · ' + c.size + '</small>';
+  $('cimg').src = c.img;
+  $('cinfo').innerHTML = [['RATE', c.rate], ['FABRIC', c.fabric], ['LAIS', c.lais], ['BELT', c.belt]].map(function(x){ return '<div><b>' + x[0] + '</b>' + x[1] + '</div>'; }).join('');
+  paintStage(); drawThread(); $('cbody').scrollTop = 0;
+}
+function paintStage(){ var c = open, nx = STAGES[c.stage + 1];
+  $('cstage').textContent = STAGES[c.stage][0];
+  $('bdone').disabled = !nx; $('bnext').textContent = nx ? nx[0] : 'READY ✓'; $('bnextar').textContent = nx ? nx[1] + ' میں بھیجیں' : 'مکمل'; }
+function bubble(m){
+  var me = m.w === 'Usman', cls = m.w === 'sys' ? 'sys' : me ? 'me' : '', body;
+  if (m.i) body = '<img src="' + m.i + '" alt="">';
+  else if (m.v) body = '<div class="voice"><button class="play" data-d="' + m.v + '">▶</button><div class="bar"><i></i></div><span>' + m.v + '</span></div>';
+  else body = esc(m.x);
+  if (m.p) cls += ' prob';
+  return '<div class="msg ' + cls + '">' + (m.w === 'sys' ? '' : '<div class="who"><b>' + m.w + '</b>' + (me ? '' : ' · from Slack') + ' · ' + t(m.t) + '</div>') + '<div class="bub">' + body + '</div></div>';
+}
+function esc(s){ return String(s).replace(/[&<>]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+function drawThread(){ $('thread').innerHTML = open.msgs.map(bubble).join(''); $('cwho').textContent = open.msgs.length + ' messages'; var b = $('cbody'); setTimeout(function(){ b.scrollTop = b.scrollHeight; }, 30); }
+function add(m){ m.t = Date.now(); open.msgs.push(m); drawThread(); }
+$('back').onclick = function(){ $('card').hidden = true; open = null; draw(); };
+$('bdone').onclick = function(){ var c = open; if (c.stage >= STAGES.length - 1) return; c.stage++; c.flag = null;
+  add({ w: 'sys', x: '→ ' + STAGES[c.stage][0] + ' · Usman · ' + t(Date.now()) }); paintStage(); toast('Moved to ' + STAGES[c.stage][0] + ' · Trello card moved · Abbas told'); };
+$('send').onclick = function(){ var v = $('txt').value.trim(); if (!v) return; $('txt').value = ''; add({ w: 'Usman', x: v }); reply(); };
+$('txt').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('send').onclick(); } };
+$('bphoto').onclick = function(){ $('pfile').value = ''; $('pfile').click(); };
+$('pfile').onchange = function(){ var f = this.files[0]; if (!f) return; var r = new FileReader(); r.onload = function(){ add({ w: 'Usman', i: r.result }); toast('Photo posted in the thread'); }; r.readAsDataURL(f); };
+$('bprob').onclick = function(){ $('probs').hidden = false; };
+$('probx').onclick = function(){ $('probs').hidden = true; };
+$('probs').onclick = function(e){ var b = e.target.closest('button[data-p]'); if (!b) return; $('probs').hidden = true; open.flag = b.dataset.p.split(' · ')[0];
+  add({ w: 'Usman', p: true, x: '🚩 ' + b.dataset.p }); toast('🚩 Sent to Abbas · WhatsApp buzz'); setTimeout(function(){ if (open) add({ w: 'Abbas', x: 'Seen. Checking now.' }); }, 2500); };
+// voice: real recording if the phone allows, otherwise a sample bubble
+var rec = null, chunks = [], t0 = 0;
+function voiceStart(){ if (rec) return; t0 = Date.now(); $('mic').classList.add('rec');
+  if (navigator.mediaDevices && window.MediaRecorder) navigator.mediaDevices.getUserMedia({ audio: true }).then(function(s){ rec = new MediaRecorder(s); chunks = []; rec.ondataavailable = function(e){ chunks.push(e.data); }; rec.start(); }).catch(function(){ rec = 'fake'; }); else rec = 'fake'; }
+function voiceStop(){ $('mic').classList.remove('rec'); var sec = Math.max(1, Math.round((Date.now() - t0) / 1000)), d = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+  if (rec && rec !== 'fake') { try { rec.stream.getTracks().forEach(function(x){ x.stop(); }); rec.stop(); } catch (e) {} }
+  rec = null; add({ w: 'Usman', v: d }); toast('Voice note posted · ' + d); }
+$('mic').onpointerdown = function(e){ e.preventDefault(); voiceStart(); }; $('mic').onpointerup = $('mic').onpointercancel = $('mic').onpointerleave = function(){ if (rec) voiceStop(); };
+$('bvoice').onclick = function(){ toast('Hold the 🎤 button at the bottom to record'); $('mic').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }], 600); };
+$('thread').onclick = function(e){ var p = e.target.closest('.play'); if (!p) return; var bar = p.nextElementSibling.firstElementChild; bar.style.transition = 'none'; bar.style.width = '0'; setTimeout(function(){ bar.style.transition = 'width 3s linear'; bar.style.width = '100%'; }, 20); };
+function reply(){ var c = open; setTimeout(function(){ var m = { w: 'Abbas', x: ['Ok 👍', 'Send me a photo when the first piece is done.', 'Theek hai, continue.'][Math.floor(Math.random() * 3)], t: Date.now() };
+  if (open === c) { c.msgs.push(m); drawThread(); } else { c.msgs.push(m); c.unread = (c.unread || 0) + 1; draw(); } toast('Abbas replied (from Slack)'); }, 3000); }
+draw();
+window.__p = { CARDS: CARDS, open: function(i){ openCard(CARDS[i]); }, cur: function(){ return cur; } };
+})();
+</script>
+</body></html>
