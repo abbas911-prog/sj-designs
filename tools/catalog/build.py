@@ -220,6 +220,23 @@ def img_tag(im, nums, no, cols=None):
     return ('<div class="photo" data-nums="%s" data-n="%d"%s><img src="data:image/jpeg;base64,%s" alt="Design %s" width="%d" height="%d">\n'
             '        <div class="nums" style="grid-template-columns:%s">%s</div></div>' % (','.join(map(str, nums)), n, cattr, d, no, im.width, im.height, gtc, cells))
 
+# ---------- TRY-ON BUTTONS (12 Oct 2026, Abbas: "two processes — one where a customer takes a photo and tries on different dresses,
+# the second the video live part … I need both set up in the HTML"). Two buttons under the design's video. They appear only when the
+# design has its try-on page AND the GPU server is set up (file gpu/ON, written when his RunPod address is baked in) — a customer never
+# gets a button that leads nowhere.
+TRYB_CSS = ('.tryb{display:flex;gap:8px;margin:12px 12px 6px}.tryb a{flex:1;display:block;text-align:center;text-decoration:none;'
+            'border:1.5px solid #b08a4a;border-radius:12px;padding:10px 6px;background:#fff8ec;color:#2b2118;font-weight:700;font-size:14px;line-height:1.25}'
+            '.tryb a small{display:block;font-weight:500;font-size:12px;color:#7a6a58;margin-top:2px}')
+def tryon_on(no):
+    return os.path.exists('tryon-photo-%s.html' % no) and os.path.exists(os.path.join('gpu', 'ON'))
+def tryon_html(no, page_file, force=False):
+    if not (force or tryon_on(no)): return ''
+    q = urllib.parse.quote(page_file)
+    return ('      <div class="tryb"><a href="tryon-photo-%s.html?mode=photo&amp;from=%s" target="_blank" rel="noopener">📷 Photo try-on<small>جرّبيه بصورة</small></a>'
+            '<a href="tryon-photo-%s.html?mode=live&amp;from=%s" target="_blank" rel="noopener">🎥 Live try-on<small>جرّبيه مباشرة بالكاميرا</small></a></div>\n') % (no, q, no, q)
+def tryon_css(src):
+    return src.replace('</style>', TRYB_CSS + '\n</style>', 1) if '<div class="tryb">' in src and '.tryb{' not in src else src
+
 def render(PAGE, CUSTOMER, CUSTOMER_SUB, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, VIDS):
     def labEn(no, c, v):
         C = MODE[no] == 'C'; unit = COLS[no] * 4 if C else 4; p = TOT[no] if C else PCSS[no][c]
@@ -260,8 +277,8 @@ def render(PAGE, CUSTOMER, CUSTOMER_SUB, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, V
             cs = sorted(PCSS[no])
             rows = ''.join('        <div class="row"><div class="n">%d</div><div class="seg">%s</div></div>\n' % (c, seg_buttons(no, c, opts(PCSS[no][c], 4))) for c in cs)
             dlist = ','.join(str(c) for c in cs)
-        arts.append('    <article class="design" data-no="%s" data-mode="%s" data-list="%s">\n%s%s%s      <div class="colours">\n%s      </div>\n    </article>\n'
-                    % (no, MODE[no], dlist, photos, vid, head, rows))
+        arts.append('    <article class="design" data-no="%s" data-mode="%s" data-list="%s">\n%s%s%s%s      <div class="colours">\n%s      </div>\n    </article>\n'
+                    % (no, MODE[no], dlist, photos, vid, tryon_html(no, PAGE + '.html'), head, rows))
     FEED = '\n'.join(arts)
     import html as H
     HEADER = ('  <header>\n' + ('    <h1>%s<span class="sub">%s</span></h1>\n' % (H.escape(CUSTOMER), H.escape(CUSTOMER_SUB)) if CUSTOMER else '') +
@@ -286,7 +303,7 @@ def render(PAGE, CUSTOMER, CUSTOMER_SUB, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, V
     src = src.replace("  var PAGE_ORDER = ", "  var CUSTOMER = " + json.dumps(CUSTOMER) + ", CUSTOMER_SUB = " + json.dumps(CUSTOMER_SUB) + ";\n  var PAGE_ORDER = ", 1)
     src = src.replace('Chosen colours stay in full colour; the rest are faded. Save these pictures for your records.',
                       'Your choice is marked on each picture. Save these pictures for your records.')
-    return src
+    return tryon_css(src)
 
 # ---------- link preview: cover picture + tags (og.py of 4 Oct 2026) ----------
 AR_DIG = str.maketrans('0123456789', '٠١٢٣٤٥٦٧٨٩')

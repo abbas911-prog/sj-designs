@@ -146,10 +146,10 @@ def render(stem, designs):
                         % (k, c, p, c, c, p, '' if p == 1 else 's', each_en, arD(c), arPcs(p), each_ar, ' one' if n_s == 1 else '', cells))
         vid = ('<div class="vid"><video src="vid/%s.mp4" controls playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture></video></div>' % d['no']) if d['vid'] else ''
         arts.append('<article class="design" data-no="%s" data-key="%s">\n%s\n%s\n<div class="head"><div><div class="lbl">Design</div><div class="no">%s</div></div><div class="ar">اختر اللون والمقاس وعدد القطع</div></div>\n%s\n</article>'
-                    % (d['no'], k, '\n'.join(ph_html), vid, d['no'], '\n'.join(rows)))
+                    % (d['no'], k, '\n'.join(ph_html), vid + B.tryon_html(d['no'], stem + '.html'), d['no'], '\n'.join(rows)))
         data.append(dd)
     src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sizes.html'), encoding='utf-8').read()
     src = src.replace('%FEED%', '\n'.join(arts)).replace('%DATA%', json.dumps(data, ensure_ascii=False)).replace('%PAGE%', json.dumps(stem + '.html'))
     share = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'share1.js'), encoding='utf-8').read()
     i = src.rindex('</body>')
-    return src[:i] + share + '\n' + src[i:]
+    return B.tryon_css(src[:i] + share + '\n' + src[i:])
