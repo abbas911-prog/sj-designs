@@ -312,6 +312,8 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .gsw{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}.gsw button{border:0;background:#fff;font:inherit;font-size:12px;font-weight:700;padding:6px 10px;color:var(--mute)}
 .gsw button.on[data-v="g"]{background:#9a3b1e;color:#fff}.gsw button.on[data-v="o"]{background:#2f6b4f;color:#fff}
 .gdc{border:0;background:none;color:var(--gold);font:inherit;font-size:12px;font-weight:700;padding:4px 2px}
+.gsw button.on[data-v="s"]{background:#A8864A;color:#fff}
+.gsp{flex-wrap:wrap}.gst{display:inline-flex;gap:4px;align-items:center}.gst button{border:1.5px solid var(--line);background:#fff;border-radius:8px;font:inherit;font-size:12px;font-weight:700;padding:5px 7px}.gst input{width:44px;height:30px;text-align:center;border:1.5px solid var(--gold);border-radius:8px;font:inherit;font-weight:700}.gsx{width:100%;color:var(--mute);font-size:11.5px}
 .gmix{font-size:11px;font-weight:700;color:var(--gold)}
 .gdt{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.gdt label{display:flex;gap:7px;align-items:center;font-size:14px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;flex:1;min-width:140px}
 .gdt label small{display:block;font-weight:500;color:var(--mute);font-size:11.5px}.gdt input{width:20px;height:20px}.gdt label.off{opacity:.45}
@@ -693,7 +695,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-12b';
+var VER = '2026-10-12c';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -769,7 +771,10 @@ async function drawPages(opt){
     var y = P + 196, lines = [];
     Object.keys(bd[no]).forEach(function(c){ var L = lab(st[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push(dz.sample ? 'SAMPLE  ·  1 pc  ·  عينة' : 'Colour ' + c + '  ·  ' + L.en); });
     g.font = '30px Arial'; lines.forEach(function(t){ g.fillText(t, P, y); y += 40; });
-    if (PK) { var offc = Object.keys(byDesign()[no] || {}).filter(function(c){ return !bd[no][c]; }); if (offc.length) { g.fillStyle = '#9a3b1e'; g.font = 'bold 26px Arial'; g.fillText('Colour ' + offc.join(', ') + ' already in office — do not pick', P, y); g.fillStyle = '#1C1A17'; y += 40; } }
+    if (PK) { var offc = Object.keys(byDesign()[no] || {}).filter(function(c){ return !bd[no][c]; }); g.fillStyle = '#9a3b1e'; g.font = 'bold 26px Arial';
+      if (offc.length) { g.fillText('Colour ' + offc.join(', ') + ' already in office — do not pick', P, y); y += 40; }
+      Object.keys(bd[no]).forEach(function(c){ if (locOf(no, c) === 's') { g.fillText('Colour ' + c + ': ' + nTxt(offPcs(no, c)) + ' already in office — pick only ' + nTxt(colTot(no, c) - offPcs(no, c)), P, y); y += 40; } });
+      g.fillStyle = '#1C1A17'; }
     if (PR[no] > 0) { var dp = designPcs(no, st); g.font = 'bold 32px Arial'; g.fillText(dp + ' pcs × ' + PR[no] + ' AED = ' + money(dp * PR[no]), P, y + 4); y += 48; }
     if (i === nos.length - 1) {   // last page carries the order total
       var tpcs = nos.reduce(function(a, x){ return a + designPcs(x, st); }, 0);
@@ -2037,7 +2042,7 @@ function ordFromMemo(){
   if (!RELAY) return ''; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) return '';
   var oid = ls('sj_oid'); if (!oid) { oid = 'o' + Date.now().toString(36) + devId(); ls('sj_oid', oid); }
   var items = nos.map(function(no){ var d = byNo(no), ls2 = Object.keys(bd[no]).map(function(c){ return locOf(no, c); }), loc = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm';
-    return { no: shown(no), pcs: designPcs(no), row: rowOf(no), loc: loc, c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs + (loc === 'm' ? (locOf(no, c) === 'o' ? ' office' : ' godown') : ''); }).join(', ') }; });
+    return { no: shown(no), pcs: designPcs(no), row: rowOf(no), loc: loc, c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs + (loc === 'm' ? (locOf(no, c) === 'o' ? ' office' : locOf(no, c) === 's' ? ' (' + offPcs(no, c) + ' office / ' + (colTot(no, c) - offPcs(no, c)) + ' godown)' : ' godown') : ''); }).join(', ') }; });
   var allOff = !gdHas();
   var dv = dlv(), dl = [(dv.od || dv.ot) ? 'Office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '', (dv.cd || dv.ct) ? 'Customer/cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : ''].filter(Boolean).join(' · ');
   // 12 Oct 2026: step 1 ticks itself when the pick list is posted to #godown; with nothing to pick, steps 1 and 2 tick themselves ("all in office")
@@ -2200,8 +2205,15 @@ async function memoSlack(file, again){
 // Every design is GODOWN (default) or IN OFFICE; one colour can differ from its design. #godown gets a PICK LIST of the godown part only
 // (no prices, "already in office — don't pick" listed); #customer and the customer's own PDF get the full memo.
 var LOC = {}, SLK = { g: false, c: false }, GDX = {};
-function locOf(no, c){ return LOC[no + ':' + c] || LOC[no] || 'g'; }
-function gdSel(){ var o = {}; Object.keys(state).forEach(function(k){ var p = k.split(':'); if (locOf(p[0], p[1]) === 'g') o[k] = state[k]; }); return o; }
+// SPLIT (Abbas, 12 Oct 2026): "one design will have two sets, same colour, but one set would be in office and the other in the godown".
+// A colour can be SPLIT: LOC['no:c'] = 's:N' = N pieces of it already in the office; the rest comes from the godown.
+function locOf(no, c){ var v = LOC[no + ':' + c] || LOC[no] || 'g'; return v.charAt(0) === 's' ? 's' : v; }
+function colTot(no, c){ return lab(state[no + ':' + c], colPcs(byNo(no), +c)).pcs; }
+function offPcs(no, c){ var v = LOC[no + ':' + c] || ''; if (v.charAt(0) === 's') return Math.max(0, Math.min(colTot(no, c), parseInt(v.slice(2), 10) || 0)); return locOf(no, c) === 'o' ? colTot(no, c) : 0; }
+function selOf(n){ return n % 4 === 0 ? { sets: n / 4, all: false } : { pcs: n }; }
+function nTxt(n){ return lab(selOf(n), n).en; }
+function gdSel(){ var o = {}; Object.keys(state).forEach(function(k){ var p = k.split(':'), l = locOf(p[0], p[1]);
+  if (l === 'g') o[k] = state[k]; else if (l === 's') { var gp = colTot(p[0], p[1]) - offPcs(p[0], p[1]); if (gp > 0) o[k] = selOf(gp); } }); return o; }
 function gdHas(){ return Object.keys(gdSel()).length > 0; }
 function pickNote(opt){
   var all = Object.keys(byDesign()), gs = byDesign(opt.st), g = Object.keys(gs), off = all.filter(function(no){ return !gs[no]; }), pcs = g.reduce(function(a, no){ return a + designPcs(no, opt.st); }, 0);
@@ -2211,12 +2223,14 @@ function pickNote(opt){
 }
 function gdDraw(){
   var el = $('gdl'); if (!el) return; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) { el.innerHTML = ''; return; }
-  function sw(k, v){ return '<span class="gsw"><button type="button" data-gl="' + k + '" data-v="g" class="' + (v === 'g' ? 'on' : '') + '">GODOWN</button><button type="button" data-gl="' + k + '" data-v="o" class="' + (v === 'o' ? 'on' : '') + '">IN OFFICE</button></span>'; }
-  var h = '<div class="gdh">Where is it? · أين البضاعة<small>GODOWN = the godown man picks it · IN OFFICE = already here. Tap “colours” when one colour is somewhere else.</small></div>';
+  function sw(k, v, split){ return '<span class="gsw"><button type="button" data-gl="' + k + '" data-v="g" class="' + (v === 'g' ? 'on' : '') + '">GODOWN</button>' + (split ? '<button type="button" data-gl="' + k + '" data-v="s" class="' + (v === 's' ? 'on' : '') + '">SPLIT</button>' : '') + '<button type="button" data-gl="' + k + '" data-v="o" class="' + (v === 'o' ? 'on' : '') + '">IN OFFICE</button></span>'; }
+  var h = '<div class="gdh">Where is it? · أين البضاعة<small>GODOWN = the godown man picks it · IN OFFICE = already here. Tap “colours” when a colour is somewhere else, or SPLIT when part of a colour is here and the rest in the godown.</small></div>';
   nos.forEach(function(no){ var d = byNo(no), cs = Object.keys(bd[no]), ls2 = cs.map(function(c){ return locOf(no, c); }), v = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm', rw = rowOf(no);
     h += '<div class="gdr"><span class="gn"><b>SJ-' + esc(shown(no)) + '</b>' + (v === 'm' ? ' <span class="gmix">MIXED</span>' : '') + '<small>' + designPcs(no) + ' pcs' + (rw ? ' · ROW ' + esc(rw.toUpperCase()) : '') + '</small></span>' + sw(no, v === 'm' ? '' : v) +
-      (cs.length > 1 && !(d && d.sample) ? '<button type="button" class="gdc" data-gx="' + no + '">colours ' + (GDX[no] ? '▴' : '▾') + '</button>' : '') + '</div>';
-    if (GDX[no] && cs.length > 1) cs.forEach(function(c){ h += '<div class="gdr sub"><span class="gn">Colour ' + c + '<small>' + lab(state[no + ':' + c], colPcs(d, +c)).en + '</small></span>' + sw(no + ':' + c, locOf(no, c)) + '</div>'; });
+      (!(d && d.sample) ? '<button type="button" class="gdc" data-gx="' + no + '">colours ' + (GDX[no] ? '▴' : '▾') + '</button>' : '') + '</div>';
+    if (GDX[no] && !(d && d.sample)) cs.forEach(function(c){ var t = colTot(no, c), l = locOf(no, c), k = no + ':' + c, op = offPcs(no, c);
+      h += '<div class="gdr sub"><span class="gn">Colour ' + c + '<small>' + lab(state[k], colPcs(d, +c)).en + '</small></span>' + sw(k, l, t > 1) + '</div>';
+      if (l === 's') h += '<div class="gdr sub gsp"><span class="gn">In office<small>from godown: <b>' + nTxt(t - op) + '</b></small></span><span class="gst"><button type="button" data-gs="' + k + '" data-d="-4">−1 set</button><button type="button" data-gs="' + k + '" data-d="-1">−</button><input data-gsi="' + k + '" inputmode="numeric" value="' + op + '"><button type="button" data-gs="' + k + '" data-d="1">+</button><button type="button" data-gs="' + k + '" data-d="4">+1 set</button></span><small class="gsx">pcs here · ' + esc(nTxt(op)) + '</small></div>'; });
   });
   var gn = Object.keys(byDesign(gdSel())).length, has = gn > 0; if (!has) SLK.g = false;
   h += '<div class="gdt"><label class="' + (has ? '' : 'off') + '"><input type="checkbox" id="tg"' + (SLK.g ? ' checked' : '') + (has ? '' : ' disabled') + '><span>#godown<small>' + (has ? 'pick list · ' + gn + ' of ' + nos.length + (nos.length === 1 ? ' design' : ' designs') : 'nothing to pick — all in office') + '</small></span></label>' +
@@ -2228,9 +2242,16 @@ $('gdl').addEventListener('click', function(e){
   if (x) { GDX[x.dataset.gx] = !GDX[x.dataset.gx]; gdDraw(); return; }
   if (!b) return; var k = b.dataset.gl, v = b.dataset.v;
   if (k.indexOf(':') < 0) { Object.keys(LOC).forEach(function(z){ if (z.indexOf(k + ':') === 0) delete LOC[z]; }); if (v === 'g') delete LOC[k]; else LOC[k] = v; }
-  else { var no = k.split(':')[0]; if (v === (LOC[no] || 'g')) delete LOC[k]; else LOC[k] = v; }
+  else { var no = k.split(':')[0], c = k.split(':')[1], t = colTot(no, c);
+    if (v === 's') { if (locOf(no, c) !== 's') LOC[k] = 's:' + Math.max(1, Math.min(t - 1, t >= 8 ? Math.floor(t / 8) * 4 : Math.floor(t / 2))); }   // starts at about half, in whole sets when it can
+    else if (v === (LOC[no] || 'g')) delete LOC[k]; else LOC[k] = v; }
   gdDraw(); saveSoon();
 });
+function gdSplitSet(k, n){ var p = k.split(':'), t = colTot(p[0], p[1]); n = Math.round(n);
+  if (n <= 0) LOC[k] = 'g'; else if (n >= t) LOC[k] = 'o'; else LOC[k] = 's:' + n;
+  if (LOC[k] === (LOC[p[0]] || 'g')) delete LOC[k]; gdDraw(); saveSoon(); }
+$('gdl').addEventListener('click', function(e){ var b = e.target.closest('[data-gs]'); if (!b) return; gdSplitSet(b.dataset.gs, offPcs.apply(null, b.dataset.gs.split(':')) + (+b.dataset.d)); });
+$('gdl').addEventListener('change', function(e){ var k = e.target.dataset && e.target.dataset.gsi; if (k) gdSplitSet(k, parseInt(String(e.target.value).replace(/[^\d]/g, ''), 10) || 0); });
 $('gdl').addEventListener('change', function(e){ if (e.target.id === 'tg') SLK.g = e.target.checked; if (e.target.id === 'tc') SLK.c = e.target.checked; });
 function gdSig(){ var g = gdSel(), d = {}; Object.keys(g).forEach(function(k){ var p = k.split(':'); d[p[0]] = (d[p[0]] || 0) + lab(g[k], colPcs(byNo(p[0]), +p[1])).pcs; }); return d; }
 function gdLog(){ try { return JSON.parse(ls('sj_gdlog') || '{}'); } catch(e){ return {}; } }
