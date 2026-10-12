@@ -310,9 +310,9 @@ function fac(reqText, P) {
     }
     if (req.op === 'atts') {                                  // all attachments of a card (Abbas 13 Oct: the cover stays; show the other attachments too)
       var ac2 = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!ac2) return out({ ok: false, error: 'bad request' });
-      var cv = trApi('get', '/cards/' + ac2, { fields: 'idAttachmentCover' }, rtok).idAttachmentCover || '';
+      var acd = trApi('get', '/cards/' + ac2, { fields: 'idAttachmentCover,desc' }, rtok), cv = acd.idAttachmentCover || '';
       var al = trApi('get', '/cards/' + ac2 + '/attachments', { fields: 'id,name,mimeType,previews,url,bytes,date' }, rtok) || [];
-      return out({ ok: true, cover: cv, atts: al.map(function (a) { return { id: a.id, name: a.name, type: a.mimeType || '', img: !!(a.previews && a.previews.length), url: a.url, bytes: a.bytes || 0, date: a.date }; }) });
+      return out({ ok: true, cover: cv, desc: String(acd.desc || ''), atts: al.map(function (a) { return { id: a.id, name: a.name, type: a.mimeType || '', img: !!(a.previews && a.previews.length), url: a.url, bytes: a.bytes || 0, date: a.date }; }) });
     }
     if (req.op === 'attach') {                                // 13 Oct 2026 (Abbas): "add a photo on trello attachment" - photos from the phone go onto the real Trello card
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
@@ -331,6 +331,37 @@ function fac(reqText, P) {
       try { if (FT) { var xth = facThread(P, FT, xc, rtok, true); slackApi(FT, 'chat.postMessage', { channel: xth.ch, thread_ts: xth.ts, text: '→ *TRELLO* · ' + xwho + ' added ' + added.length + (added.length === 1 ? ' photo' : ' photos') + ' to the card' }); } } catch (e) {}
       CacheService.getScriptCache().remove('FAC_LIST');
       return out({ ok: true, ids: added });
+    }
+    if (req.op === 'edit') {                                  // 13 Oct 2026 (Abbas): "let me edit the description of the trello card" (title too)
+      if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
+      var ec = String(req.card || '').replace(/[^0-9a-f]/g, ''), ewho = String(req.who || '').slice(0, 40) || 'factory', eset = {};
+      if (!ec) return out({ ok: false, error: 'bad request' });
+      if (req.desc != null) eset.desc = String(req.desc).slice(0, 16000);
+      if (req.name != null && String(req.name).trim()) eset.name = String(req.name).trim().slice(0, 500);
+      if (!Object.keys(eset).length) return out({ ok: false, error: 'nothing to change' });
+      var ecard = trApi('get', '/cards/' + ec, { fields: 'idBoard' }, wtok); if (ecard.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
+      trApi('put', '/cards/' + ec, eset, wtok);
+      try { if (FT) { var eth = facThread(P, FT, ec, rtok, true); slackApi(FT, 'chat.postMessage', { channel: eth.ch, thread_ts: eth.ts, text: '→ *EDIT* · ' + ewho + ' changed the ' + Object.keys(eset).map(function (k) { return k === 'desc' ? 'description' : 'title'; }).join(' and ') }); } } catch (e) {}
+      CacheService.getScriptCache().remove('FAC_LIST');
+      return out({ ok: true });
+    }
+    if (req.op === 'copy' || req.op === 'add') {              // 13 Oct 2026 (Abbas): "copying the card and adding a new card" - a real Trello card, top of the chosen list
+      if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
+      var nto = String(req.to || ''), nname = String(req.name || '').trim().slice(0, 500), nwho = String(req.who || '').slice(0, 40) || 'factory';
+      if (ids.indexOf(nto) < 0 || !nname) return out({ ok: false, error: 'bad request' });
+      var nbody = { idList: nto, name: nname, pos: 'top' };
+      if (req.desc != null) nbody.desc = String(req.desc).slice(0, 16000);
+      if (req.op === 'copy') {
+        var sc = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!sc) return out({ ok: false, error: 'bad request' });
+        var scard = trApi('get', '/cards/' + sc, { fields: 'idBoard,shortUrl' }, wtok); if (scard.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
+        nbody.idCardSource = sc; nbody.keepFromSource = req.keep === 'none' ? 'none' : (req.keep || 'attachments,labels,customFields,checklists,stickers');
+      }
+      var ncard = trApi('post', '/cards', nbody, wtok);
+      var ln2 = FAC.LISTS.filter(function (l) { return l[1] === nto; })[0];
+      try { trApi('post', '/cards/' + ncard.id + '/actions/comments', { text: (req.op === 'copy' ? 'Copied from ' + scard.shortUrl : 'Added') + ' · ' + nwho + ' (factory app)' }, wtok); } catch (e) {}
+      try { if (FT) { var nth = facThread(P, FT, ncard.id, rtok, true); slackApi(FT, 'chat.postMessage', { channel: nth.ch, thread_ts: nth.ts, text: '→ *' + (ln2 ? ln2[0] : 'NEW') + '* · ' + nwho + (req.op === 'copy' ? ' copied this card from ' + scard.shortUrl : ' added this card') }); } } catch (e) {}
+      CacheService.getScriptCache().remove('FAC_LIST');
+      return out({ ok: true, id: ncard.id, url: ncard.shortUrl });
     }
     if (req.op === 'move') {                                  // "Done -> next stage" (or Move to...): the real Trello card moves, top of the new list
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
