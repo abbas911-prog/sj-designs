@@ -250,6 +250,11 @@ function fac(reqText, P) {
       var mb = mr.getBlob(); if (mb.getBytes().length > 20 * 1024 * 1024) return out({ ok: false, error: 'file too big' });
       return out({ ok: true, b64: Utilities.base64Encode(mb.getBytes()), type: mb.getContentType() || f.mimetype || '', name: f.name || '' });
     }
+    if (req.op === 'setpw') {                                 // 13 Oct 2026: the factory password is set from the order memo (owner key-check), not the read-only settings page
+      if (!ownerOk(P, req.chk)) return out({ ok: false, error: 'owner password does not match' });
+      var npw = String(req.pw || ''); if (npw.length < 4) return out({ ok: false, error: 'password too short' });
+      P.setProperty('FACTORY_PASSWORD', npw); return out({ ok: true });
+    }
     if (req.op === 'tglink') {                                // the factory phone asks for a 6-letter code to send to the Telegram bot
       if (!P.getProperty('TG_FACTORY_TOKEN')) return out({ ok: false, error: 'Telegram is not set up yet (TG_FACTORY_TOKEN)' });
       var dev = String(req.dev || '').replace(/[^a-z0-9]/g, '').slice(0, 12), who2 = String(req.who || '').slice(0, 40); if (!dev) return out({ ok: false, error: 'bad request' });
