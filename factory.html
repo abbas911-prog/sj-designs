@@ -6,14 +6,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f4efe6">
-<title>SJ Factory</title>
+<title>AL MUTAGADED GARMENTS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f4efe6;--card:#fff;--ink:#2b2118;--mute:#7a6a58;--gold:#b08a4a;--gold2:#fff8ec;--green:#2e7d4f;--red:#b5123f;--line:#e6dccb}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
 button{font:inherit;cursor:pointer}
-header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 14px 6px;border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 14px 6px;border-bottom:1px solid var(--line)}
 .top{display:flex;align-items:center;gap:10px}.mono{width:40px;height:40px;border-radius:12px;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;letter-spacing:.04em;flex:none}
-.top h1{font-size:17px;margin:0;flex:1;min-width:0}.top h1 small{display:block;font-weight:500;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brandbar{font-family:'Cormorant Garamond',Georgia,serif;font-weight:700;font-size:20px;letter-spacing:.09em;color:#6e4f1e;text-align:center;padding:2px 0 8px;border-bottom:1px solid #e9dcc4;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top h1{font-size:17px;margin:0;flex:1;min-width:0}.top h1.brand{font-family:'Cormorant Garamond',Georgia,serif;font-weight:700;font-size:21px;letter-spacing:.06em;color:#6e4f1e;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.top h1.brand small{font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;letter-spacing:0;margin-top:3px}.top h1 small{display:block;font-weight:500;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rf{border:1.5px solid var(--line);background:#fff;border-radius:12px;width:44px;height:40px;font-size:18px;color:var(--gold);flex:none}
 .rf.on{border-color:var(--green);color:var(--green)}
 .rf.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
@@ -24,7 +26,7 @@ header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 14px 6p
 .badge{background:var(--red);color:#fff;border-radius:999px;font-size:12px;font-weight:700;padding:2px 8px;flex:none}
 .stages button small{display:block;font-weight:500;font-size:11px;color:var(--mute)}
 .search{margin-top:6px}.search input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;font:inherit;font-size:16px;background:#fff}
-#msg{font-size:13px;color:var(--red);margin:6px 2px 0}#msg:empty{display:none}#msg.ok{color:var(--mute)}
+#msg{font-size:12px;color:var(--red);margin:6px 2px 0}#msg:empty{display:none}#msg.ok{color:var(--mute)}
 main{padding:12px 14px 40px}
 .cardrow{display:flex;gap:12px;background:var(--card);border-radius:16px;padding:10px;margin-bottom:10px;border:1px solid var(--line);align-items:center;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 .ph{width:92px;height:92px;border-radius:12px;background:#ede5d6 center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
@@ -43,7 +45,7 @@ main{padding:12px 14px 40px}
 .atts .a{flex:none;width:74px;height:74px;border-radius:10px;background:#f1ebe0 center/cover no-repeat;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:24px;position:relative}
 .atts .a.cv{border-color:var(--gold)}.atts .a small{position:absolute;bottom:0;left:0;right:0;font-size:9px;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:0 0 8px 8px}
 .atts .n{flex:none;align-self:center;font-size:12px;color:var(--mute);padding-right:4px}
-#viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:30;display:flex;align-items:center;justify-content:center}#viewer[hidden]{display:none}#viewer img{max-width:100%;max-height:100%}#viewer button{position:absolute;top:14px;right:14px;width:40px;height:40px;border-radius:50%;border:0;background:#fff;font-size:18px}
+#viewer{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:30;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:center;justify-content:center;touch-action:pinch-zoom}#viewer[hidden]{display:none}#viewer img{max-width:100%;max-height:100%;object-fit:contain}#viewer button{position:absolute;top:14px;right:14px;width:40px;height:40px;border-radius:50%;border:0;background:#fff;font-size:18px}
 .hero .ttl{padding:10px 12px 0;font-size:14px;color:var(--mute)}
 .hero .info{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:14px;word-break:break-word}
 .hero .info b{display:block;font-size:11px;color:var(--mute);font-weight:600;letter-spacing:.06em}
@@ -60,7 +62,7 @@ main{padding:12px 14px 40px}
 .msg.me .bub{background:#dcf8c6}.msg .tm{display:block;text-align:right;font-size:10px;color:#8a7f70;margin-top:3px}
 .msg.sys{align-self:center;max-width:100%;align-items:center}.msg.sys .bub{background:#e1dbd0;color:#5a5047;font-size:12px;padding:3px 10px;box-shadow:none}.msg.sys .tm{display:none}
 .msg.root .bub{background:#fff6dc;border:1px solid #ecd9a8}.msg.prob .bub{background:#fde8ee;color:var(--red);font-weight:700}
-.bub img{max-width:230px;max-height:300px;border-radius:10px;display:block}.bub .fph{width:200px;height:120px;border-radius:10px;background:#e6dccb;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:12px}
+.bub img{max-width:230px;max-height:300px;border-radius:10px;display:block;cursor:zoom-in}.bub .fph{width:200px;height:120px;border-radius:10px;background:#e6dccb;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:12px}
 .bub audio{width:220px;height:36px;display:block}.bub .fl{font-size:13px;color:var(--mute)}
 .comp{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff;align-items:flex-end}
 .comp textarea{flex:1;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:16px;resize:none;max-height:120px;min-height:44px}
@@ -77,7 +79,7 @@ main{padding:12px 14px 40px}
 .pend .pi{position:relative;width:64px;height:64px;border-radius:10px;background:#f1ebe0 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--line)}
 .pend .pi small{position:absolute;bottom:0;left:0;right:0;font-size:9px;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:1px 2px;border-radius:0 0 9px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pend .pi b{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;line-height:20px;text-align:center}
-.compw{background:#fff;border-top:1px solid var(--line)}.comp{border-top:0}
+.compw{background:#fff;border-top:1px solid var(--line)}.chint{font-size:11px;color:var(--mute);text-align:center;padding:6px 10px 0}.comp{border-top:0}
 .comp .att{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:18px;padding:0 10px}
 #tmsg{font-size:13px;color:var(--red);margin:4px 0}#tmsg:empty{display:none}
 .soon{background:#fff;border:1.5px dashed var(--line);border-radius:16px;padding:14px;color:var(--mute);font-size:14px;text-align:center}
@@ -95,16 +97,17 @@ main{padding:12px 14px 40px}
 </style>
 </head>
 <body>
-<div id="login" hidden><div class="in"><h2>SJ Factory · فیکٹری</h2><p>Type the factory password and your name — only once on this phone.<br>پاس ورڈ اور اپنا نام لکھیں</p>
-<input id="lpw" type="password" placeholder="Password · پاس ورڈ" autocomplete="current-password"><input id="lname" placeholder="Your name · آپ کا نام" autocomplete="name"><button id="lgo">Open · کھولیں</button><div id="lerr"></div></div></div>
+<div id="login" hidden><div class="in"><h2 style="font-family:'Cormorant Garamond',Georgia,serif;letter-spacing:.05em;color:#6e4f1e">AL MUTAGADED GARMENTS</h2><p>Type the factory password and your name — only once on this phone.<br>পাসওয়ার্ড এবং আপনার নাম লিখুন</p>
+<input id="lpw" type="password" placeholder="Password · পাসওয়ার্ড" autocomplete="current-password"><input id="lname" placeholder="Your name · আপনার নাম" autocomplete="name"><button id="lgo">Open · খুলুন</button><div id="lerr"></div></div></div>
 
 <header>
-  <div class="top"><div class="mono">SJ</div><h1>Factory · فیکٹری<small id="who"></small></h1><button class="rf" id="bell" title="Notifications" hidden>🔔</button><button class="rf" id="rf" title="Refresh">↻</button></div>
+  <div class="brandbar">AL MUTAGADED GARMENTS</div>
+  <div class="top"><div class="mono">AM</div><h1><span id="who"></span><small>Factory · কারখানা</small></h1><button class="rf" id="bell" title="Notifications" hidden>🔔</button><button class="rf" id="rf" title="Refresh">↻</button></div>
   <div class="stages" id="stages"></div>
-  <div class="search"><input id="q" placeholder="Search design number · ڈیزائن نمبر" inputmode="search" autocomplete="off"></div>
+  <div class="search"><input id="q" placeholder="Search design number · ডিজাইন নম্বর" inputmode="search" autocomplete="off"></div>
   <div id="msg"></div>
 </header>
-<main><div id="inbox" hidden></div><div id="list"><div class="empty">Loading… · لوڈ ہو رہا ہے</div></div></main>
+<main><div id="inbox" hidden></div><div id="list"><div class="empty">Loading… · লোড হচ্ছে</div></div></main>
 
 <div id="card" hidden>
   <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><span class="pill" id="cstage"></span></div>
@@ -113,30 +116,30 @@ main{padding:12px 14px 40px}
     <div id="viewer" hidden><img id="vimg" alt=""><button id="vx">✕</button></div>
     <div class="btns">
       <button class="bdone" id="bdone">✅ Done → <span id="bnext"></span><small id="bnextar"></small></button>
-      <button class="bmove" id="bmove">↔ Move to… <small>کسی اور جگہ</small></button>
-      <button class="btrello" id="btrello">Open in Trello<small>ٹریلو میں کھولیں</small></button>
+      <button class="bmove" id="bmove">↔ Move to… <small>অন্য জায়গায়</small></button>
+      <button class="btrello" id="btrello">Open in Trello<small>ট্রেলোতে খুলুন</small></button>
     </div>
-    <div class="btns" style="margin-top:0"><button class="bprob" id="bprob">🚩 Problem · مسئلہ<small>fabric short · lace missing · machine</small></button></div>
-    <div class="thr"><h3>CARD CHAT · کارڈ چیٹ <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
+    <div class="btns" style="margin-top:0"><button class="bprob" id="bprob">🚩 Problem · সমস্যা<small>fabric short · lace missing · machine</small></button></div>
+    <div class="thr"><h3>CARD CHAT · কার্ড চ্যাট <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
-  <div class="compw"><div class="pend" id="pend"></div><div class="comp"><button class="mic" id="mic" title="hold to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Write or paste… · لکھیں"></textarea><button id="send">Send</button></div></div>
+  <div class="compw"><div class="pend" id="pend"></div><div class="chint">🎤 hold to record · মাইক ধরে রাখুন &nbsp;·&nbsp; 📷 photo · ছবি &nbsp;·&nbsp; 📎 files · ফাইল</div><div class="comp"><button class="mic" id="mic" title="hold to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Write or paste… · লিখুন"></textarea><button id="send">Send</button></div></div>
 </div>
-<div class="sheet" id="probs" hidden><div class="in"><h3>What is the problem? · کیا مسئلہ ہے؟</h3>
-<button data-p="🚩 Fabric short · کپڑا کم ہے">🧵 Fabric short · کپڑا کم ہے</button>
-<button data-p="🚩 Lace missing · لیس نہیں ہے">🎀 Lace missing · لیس نہیں ہے</button>
-<button data-p="🚩 Machine problem · مشین خراب">⚙️ Machine problem · مشین خراب</button>
-<button data-p="🚩 Design not clear · ڈیزائن سمجھ نہیں آیا">❓ Design not clear · ڈیزائن سمجھ نہیں آیا</button>
-<button data-p="🚩 Other problem · کوئی اور مسئلہ">❗ Other problem · کوئی اور مسئلہ</button>
+<div class="sheet" id="probs" hidden><div class="in"><h3>What is the problem? · সমস্যা কী?</h3>
+<button data-p="🚩 Fabric short · কাপড় কম">🧵 Fabric short · কাপড় কম</button>
+<button data-p="🚩 Lace missing · লেস নেই">🎀 Lace missing · লেস নেই</button>
+<button data-p="🚩 Machine problem · মেশিন নষ্ট">⚙️ Machine problem · মেশিন নষ্ট</button>
+<button data-p="🚩 Design not clear · ডিজাইন বোঝা যায়নি">❓ Design not clear · ডিজাইন বোঝা যায়নি</button>
+<button data-p="🚩 Other problem · অন্য সমস্যা">❗ Other problem · অন্য সমস্যা</button>
 <button class="x" id="probx">Cancel</button></div></div>
 <input type="file" id="pfile" accept="image/*" capture="environment" hidden>
 
-<div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · کارڈ کہاں بھیجیں</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
-<div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · عباس کے پیغامات</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
+<div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
+<div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
-var VER = '2026-10-13f6';
+var VER = '2026-10-13f7';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -146,13 +149,13 @@ function toast(s){ var e = $('toast'); e.textContent = s; e.classList.add('show'
 var PW = ls('sj_fac_pw') || '', WHO = ls('sj_fac_who') || '';
 
 // ----- stages: the ALM production lists (ids come from the relay); hand-work lists are one chip -----
-var CHIPS = [['START', ['START'], 'شروع'], ['CUTTING', ['CUTTING'], 'کٹنگ'], ['IN LINE', ['IN LINE'], 'لائن'],
-  ['HAND WORK', ['READY FOR HAND WORK', 'IN HAND WORK', 'CAME FROM HAND WORK', 'IN LINE (2)'], 'ہینڈ ورک'],
-  ['IRON / CHECK', ['IRON/CHECKING'], 'استری · چیکنگ'], ['READY', ['READY'], 'تیار'], ['READY 2', ['READY 2'], 'تیار 2'], ['FINISH', ['FINISH'], 'ختم'], ['SAMPLE DONE', ['SAMPLE DONE'], 'سیمپل مکمل']];
+var CHIPS = [['START', ['START'], 'শুরু'], ['CUTTING', ['CUTTING'], 'কাটিং'], ['IN LINE', ['IN LINE'], 'লাইন'],
+  ['HAND WORK', ['READY FOR HAND WORK', 'IN HAND WORK', 'CAME FROM HAND WORK', 'IN LINE (2)'], 'হ্যান্ড ওয়ার্ক'],
+  ['IRON / CHECK', ['IRON/CHECKING'], 'ইস্ত্রি · চেকিং'], ['READY', ['READY'], 'রেডি'], ['READY 2', ['READY 2'], 'রেডি 2'], ['FINISH', ['FINISH'], 'শেষ'], ['SAMPLE DONE', ['SAMPLE DONE'], 'স্যাম্পল শেষ']];
 var NEXT = { 'START': 'CUTTING', 'CUTTING': 'IN LINE', 'IN LINE': 'IRON/CHECKING', 'READY FOR HAND WORK': 'IN HAND WORK', 'IN HAND WORK': 'CAME FROM HAND WORK',
   'CAME FROM HAND WORK': 'IN LINE (2)', 'IN LINE (2)': 'IRON/CHECKING', 'IRON/CHECKING': 'READY', 'READY': 'FINISH', 'READY 2': 'FINISH', 'SAMPLES': 'SAMPLE DONE' };
-var UR = { 'START': 'شروع', 'CUTTING': 'کٹنگ', 'IN LINE': 'لائن', 'READY FOR HAND WORK': 'ہینڈ ورک کے لیے تیار', 'IN HAND WORK': 'ہینڈ ورک میں', 'CAME FROM HAND WORK': 'ہینڈ ورک سے آیا',
-  'IN LINE (2)': 'لائن (2)', 'IRON/CHECKING': 'استری · چیکنگ', 'READY': 'تیار', 'READY 2': 'تیار 2', 'FINISH': 'ختم', 'SAMPLES': 'سیمپل', 'SAMPLE DONE': 'سیمپل مکمل' };
+var UR = { 'START': 'শুরু', 'CUTTING': 'কাটিং', 'IN LINE': 'লাইন', 'READY FOR HAND WORK': 'হ্যান্ড ওয়ার্কের জন্য রেডি', 'IN HAND WORK': 'হ্যান্ড ওয়ার্কে', 'CAME FROM HAND WORK': 'হ্যান্ড ওয়ার্ক থেকে এসেছে',
+  'IN LINE (2)': 'লাইন (2)', 'IRON/CHECKING': 'ইস্ত্রি · চেকিং', 'READY': 'রেডি', 'READY 2': 'রেডি 2', 'FINISH': 'শেষ', 'SAMPLES': 'স্যাম্পল', 'SAMPLE DONE': 'স্যাম্পল শেষ' };
 var D = { lists: [], cards: [], byId: {}, w: true }, cur = +(ls('sj_fac_chip') || 0), open = null;
 function lname(id){ var l = D.lists.filter(function(x){ return x[1] === id; })[0]; return l ? l[0] : '?'; }
 function lid(name){ var l = D.lists.filter(function(x){ return x[0] === name; })[0]; return l ? l[1] : null; }
@@ -211,7 +214,7 @@ async function load(fresh){
   $('rf').classList.remove('spin');
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
   D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.byId = {}; $('bell').hidden = !j.tg; /* the bell shows only once Telegram is set up in the relay */ D.cards.forEach(function(c){ D.byId[c.id] = c; });
-  $('msg').className = 'ok'; $('msg').textContent = D.w ? '' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
+  var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? 'Updated · আপডেট ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
   draw(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
   if (!open) openFromHash();
   return true;
@@ -222,7 +225,7 @@ function inbox(){
   var us = D.cards.filter(function(c){ return unread(c); }), el = $('inbox'), tot = us.reduce(function(a, c){ return a + unread(c); }, 0);
   try { if (navigator.setAppBadge) { tot ? navigator.setAppBadge(tot) : navigator.clearAppBadge(); } } catch(e){}
   if (!us.length) { el.hidden = true; return; }
-  el.hidden = false; el.innerHTML = '<h3>💬 New messages · نئے پیغامات · ' + tot + '</h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(lname(c.l)) + '</small></div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
+  el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '</h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(lname(c.l)) + '</small></div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
 }
 $('inbox').onclick = function(e){ var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
 function draw(){
@@ -233,7 +236,7 @@ function draw(){
   $('list').innerHTML = cs.length ? cs.map(function(c){ var p = parse(c.name);
     var u = unread(c);
     return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : '') + '</div>'; }).join('')
-    : '<div class="empty">' + (q ? 'No card with ' + esc(q) : 'No cards here · یہاں کوئی کارڈ نہیں') + '</div>';
+    : '<div class="empty">' + (q ? 'No card with ' + esc(q) : 'No cards here · এখানে কোনো কার্ড নেই') + '</div>';
   document.querySelectorAll('#list .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); });
   inbox();
 }
@@ -255,7 +258,7 @@ function paintCard(){
   $('cinfo').innerHTML = ks.length ? ks.map(function(k){ return '<div><b>' + esc(k) + '</b>' + esc(c.f[k]) + '</div>'; }).join('') : '<div style="grid-column:1/3;color:var(--mute)">No details on the card</div>';
   var assigned = Object.keys(c.f || {}).filter(function(k){ return /^(TASLEEM|IRFAN ALI|HASHIM|QADIR|SHAHZAIB|SALMAAN|ZAKIR|USMAN|Anees|SHAWKEEN)$/i.test(k.trim()); });
   if (assigned.length) $('cinfo').innerHTML += '<div style="grid-column:1/3"><b>WORKERS</b>' + assigned.map(function(k){ return esc(k) + ' ' + esc(c.f[k]); }).join(' · ') + '</div>';
-  $('bdone').disabled = !nx || !D.w; $('bnext').textContent = nx || '—'; $('bnextar').textContent = nx ? (UR[nx] || '') + ' میں بھیجیں' : '';
+  $('bdone').disabled = !nx || !D.w; $('bnext').textContent = nx || '—'; $('bnextar').textContent = nx ? (UR[nx] || '') + ' -এ পাঠান' : '';
   if (!c._atts) { $('catts').hidden = true; attsLoad(c); } else attsDraw(c);
 }
 async function attsLoad(c){ var j = await call({ op: 'atts', card: c.id }); if (!j.ok || open !== c) return; c._atts = j.atts || []; c._cover = j.cover || ''; attsDraw(c); }
@@ -276,8 +279,8 @@ window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
 async function move(toName){
   var c = open, to = lid(toName); if (!c || !to) return;
-  if (!confirm('Move SJ-' + (parse(c.name).no || '') + ' to ' + toName + '?\n' + (UR[toName] || '') + ' میں بھیجیں؟')) return;
-  $('bdone').disabled = true; toast('Moving… · بھیجا جا رہا ہے');
+  if (!confirm('Move SJ-' + (parse(c.name).no || '') + ' to ' + toName + '?\n' + (UR[toName] || '') + '-এ পাঠাবেন?')) return;
+  $('bdone').disabled = true; toast('Moving… · পাঠানো হচ্ছে');
   var j = await call({ op: 'move', card: c.id, from: c.l, to: to, who: WHO });
   if (!j.ok) { toast(j.error); $('bdone').disabled = false; if (j.moved) load(true); return; }
   c.l = to; toast('✓ Moved to ' + toName + ' · ' + (UR[toName] || ''));
@@ -296,7 +299,7 @@ $('mvl').onclick = function(e){ var b = e.target.closest('button[data-n]'); if (
 function unread(c){ var t = D.th && D.th[c.id]; return t && t.n ? t.n : 0; }      // what the relay says THIS person has not seen (shared by all their phones)
 function seen(c){ if (D.th && D.th[c.id]) { delete D.th[c.id]; } }
 var TH = { card: null, msgs: [], timer: null, busy: false, none: false }, MEDIA = {};
-function thStart(c){ TH.card = c; TH.msgs = []; PEND.length = 0; pendDraw(); seen(c); draw(); TH.none = false; $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · لوڈ ہو رہا ہے</div>'; $('tmsg').textContent = ''; $('tcount').textContent = ''; thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 12000); }
+function thStart(c){ TH.card = c; TH.msgs = []; PEND.length = 0; pendDraw(); seen(c); draw(); TH.none = false; $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tmsg').textContent = ''; $('tcount').textContent = ''; thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 12000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 async function thPull(){
   var c = TH.card; if (!c || TH.busy) return; TH.busy = true;
@@ -305,7 +308,7 @@ async function thPull(){
   TH.busy = false; if (TH.card !== c) return;
   if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = ''; return; }
   $('tmsg').textContent = '';
-  if (j.none) { TH.none = true; $('thread').innerHTML = '<div class="empty" style="padding:14px">No chat yet — write the first message, send a photo or a voice note.<br>ابھی کوئی پیغام نہیں — پہلا پیغام لکھیں</div>'; $('tcount').textContent = ''; return; }
+  if (j.none) { TH.none = true; $('thread').innerHTML = '<div class="empty" style="padding:14px">No chat yet — write the first message, send a photo or a voice note.<br>এখনো কোনো মেসেজ নেই — প্রথম মেসেজ লিখুন</div>'; $('tcount').textContent = ''; return; }
   TH.none = false;
   var have = {}; TH.msgs.forEach(function(m){ have[m.ts] = 1; }); var add = (j.msgs || []).filter(function(m){ return !have[m.ts]; });
   if (!add.length && TH.msgs.length) return;
@@ -316,7 +319,7 @@ function bubble(m){
   if (m.root) cls += ' root'; if (/^🚩/.test(m.text)) cls += ' prob';
   (m.files || []).forEach(function(f){
     if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="img">tap to load photo</div>';
-    else if (f.audio) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="audio" style="height:44px">▶ voice note · آواز</div>';
+    else if (f.audio) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="audio" style="height:44px">▶ voice note · ভয়েস নোট</div>';
     else body += '<div class="fl">📎 ' + esc(f.name) + (f.video ? ' (video — open in Slack)' : '') + '</div>';
   });
   var t = new Date(+m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
@@ -328,15 +331,16 @@ function autoMedia(){ document.querySelectorAll('#thread .fph[data-k="img"]').fo
 async function loadMedia(e){
   var id = e.dataset.f, k = e.dataset.k; if (e.dataset.busy) return; e.dataset.busy = '1';
   var have = MEDIA[id]; if (!have) { e.textContent = '…'; var j = await call({ op: 'media', file: id, full: k === 'audio' ? 1 : 0 }); if (!j.ok) { e.textContent = 'could not load'; e.dataset.busy = ''; return; } have = MEDIA[id] = 'data:' + (j.type || (k === 'audio' ? 'audio/mp4' : 'image/jpeg')) + ';base64,' + j.b64; }
-  if (k === 'img') { var im = document.createElement('img'); im.src = have; e.replaceWith(im); }
+  if (k === 'img') { var im = document.createElement('img'); im.src = have; im.dataset.f = id; e.replaceWith(im); }
   else { var au = document.createElement('audio'); au.controls = true; au.src = have; e.replaceWith(au); au.play().catch(function(){}); }
 }
-$('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) loadMedia(f); };
+$('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f); };
+async function openBig(src, fid){ $('viewer').hidden = false; $('vimg').src = src || ''; if (fid) { var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && !$('viewer').hidden && /^image/.test(j.type || 'image')) $('vimg').src = 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64; } }
 async function thSend(text){
   var c = TH.card; if (!c || !text.trim()) return; $('send').disabled = true;
   var j = await call({ op: 'post', card: c.id, text: text, who: WHO }); $('send').disabled = false;
   if (!j.ok) { toast(j.error); return; }
-  TH.msgs.push({ ts: j.ts, who: WHO, app: true, text: text, files: [] }); thDraw(); toast('✓ Sent to Abbas · بھیج دیا');
+  TH.msgs.push({ ts: j.ts, who: WHO, app: true, text: text, files: [] }); thDraw(); toast('✓ Sent to Abbas · পাঠানো হয়েছে');
 }
 var PEND = [];
 function pendDraw(){ $('pend').innerHTML = PEND.map(function(x, i){ return '<div class="pi"' + (x.url ? ' style="background-image:url(' + x.url + ')"' : '') + '>' + (x.url ? '' : x.kind === 'audio' ? '🎤' : x.kind === 'video' ? '🎬' : '📎') + '<small>' + esc(x.label) + '</small><b data-i="' + i + '">✕</b></div>'; }).join('');
@@ -346,10 +350,10 @@ async function pendAdd(file, name, kind){
   if (!file) return;
   var blob = file, nm = name || file.name || 'file';
   if (kind === 'photo') { blob = await shrink(file); nm = /\.(jpe?g|png|webp|heic)$/i.test(nm) ? nm.replace(/\.(png|webp|heic)$/i, '.jpg') : 'photo-' + Date.now() + '.jpg'; }
-  if (blob.size > 18 * 1024 * 1024) { toast('Too big (max 18 MB) · بہت بڑی فائل'); return; }
+  if (blob.size > 18 * 1024 * 1024) { toast('Too big (max 18 MB) · ফাইল খুব বড়'); return; }
   var it = { blob: blob, name: nm, kind: kind, label: kind === 'photo' ? 'photo' : kind === 'audio' ? 'voice' : kind === 'video' ? 'video' : nm };
   if (kind === 'photo') it.url = URL.createObjectURL(blob);
-  PEND.push(it); pendDraw(); toast((kind === 'audio' ? 'Voice note' : kind === 'photo' ? 'Photo' : 'File') + ' added — press Send · بھیجنے کے لیے Send دبائیں');
+  PEND.push(it); pendDraw(); toast((kind === 'audio' ? 'Voice note' : kind === 'photo' ? 'Photo' : 'File') + ' added — press Send · পাঠাতে Send চাপুন');
 }
 function kindOf(f){ var t = f.type || '', n = f.name || ''; if (/^image\//.test(t)) return 'photo'; if (/^audio\//.test(t) || /\.(opus|ogg|oga|m4a|mp3|aac|amr|wav)$/i.test(n)) return 'audio'; if (/^video\//.test(t) || /\.(mp4|mov|webm)$/i.test(n)) return 'video'; return 'file'; }
 $('afiles').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); this.value = ''; };
@@ -359,13 +363,13 @@ document.getElementById('card').addEventListener('dragover', function(e){ e.prev
 async function sendAll(){
   var c = TH.card; if (!c) return; var text = $('txt').value.trim();
   if (!PEND.length) { if (!text) return; $('txt').value = ''; thSend(text); return; }
-  $('send').disabled = true; toast('Sending ' + PEND.length + ' file' + (PEND.length > 1 ? 's' : '') + '… · بھیجا جا رہا ہے');
+  $('send').disabled = true; toast('Sending ' + PEND.length + ' file' + (PEND.length > 1 ? 's' : '') + '… · পাঠানো হচ্ছে');
   var files = [];
   for (var i = 0; i < PEND.length; i++) { var b64 = await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(PEND[i].blob); }); files.push({ name: PEND[i].name, b64: b64 }); }
   var j = await call({ op: 'up', card: c.id, files: files, text: text, who: WHO }); $('send').disabled = false;
   if (!j.ok) { toast(j.error); return; }
   PEND.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); PEND.length = 0; pendDraw(); $('txt').value = '';
-  toast('✓ Sent · بھیج دیا'); setTimeout(thPull, 1500);
+  toast('✓ Sent · পাঠানো হয়েছে'); setTimeout(thPull, 1500);
 }
 $('send').onclick = sendAll;
 $('txt').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey && !/Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) { e.preventDefault(); sendAll(); } };
@@ -379,13 +383,13 @@ function shrink(file){ return new Promise(function(ok){ var im = new Image(); im
 // voice: hold the mic
 var REC = { r: null, chunks: [], t0: 0 };
 async function recStart(){ if (REC.r) return; REC.t0 = Date.now();
-  try { var st = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch(e){ toast('Allow the microphone · مائیک کی اجازت دیں'); return; }
+  try { var st = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch(e){ toast('Allow the microphone · মাইক্রোফোনের অনুমতি দিন'); return; }
   var type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].filter(function(t){ return window.MediaRecorder && MediaRecorder.isTypeSupported(t); })[0] || '';
   REC.chunks = []; REC.r = new MediaRecorder(st, type ? { mimeType: type } : {}); REC.r.ondataavailable = function(e){ if (e.data.size) REC.chunks.push(e.data); };
   REC.r.onstop = function(){ st.getTracks().forEach(function(x){ x.stop(); }); var sec = Math.round((Date.now() - REC.t0) / 1000), mt = REC.r.mimeType || type || 'audio/mp4', blob = new Blob(REC.chunks, { type: mt }); REC.r = null;
-    if (sec < 1 || blob.size < 1000) { toast('Too short — hold the mic while you speak · بولتے وقت مائیک دبائے رکھیں'); return; }
+    if (sec < 1 || blob.size < 1000) { toast('Too short — hold the mic while you speak · কথা বলার সময় মাইক ধরে রাখুন'); return; }
     pendAdd(blob, 'voice-' + Date.now() + (/mp4/.test(mt) ? '.m4a' : /ogg/.test(mt) ? '.ogg' : '.webm'), 'audio'); };
-  REC.r.start(); $('mic').classList.add('rec'); toast('Recording… release when done · ریکارڈنگ');
+  REC.r.start(); $('mic').classList.add('rec'); toast('Recording… release when done · রেকর্ডিং');
 }
 function recStop(){ if (REC.r && REC.r.state === 'recording') REC.r.stop(); $('mic').classList.remove('rec'); }
 $('mic').onpointerdown = function(e){ e.preventDefault(); recStart(); }; $('mic').onpointerup = $('mic').onpointercancel = $('mic').onpointerleave = recStop;
@@ -396,15 +400,15 @@ function devId(){ var d = ls('sj_fac_dev'); if (!d) { d = Math.random().toString
 var TG = { linked: ls('sj_fac_tg') === '1', timer: null };
 function bellPaint(){ $('bell').classList.toggle('on', TG.linked); }
 $('bell').onclick = async function(){
-  $('tg').hidden = false; $('tgbody').innerHTML = 'Checking… · چیک ہو رہا ہے';
+  $('tg').hidden = false; $('tgbody').innerHTML = 'Checking… · চেক হচ্ছে';
   var j = await call({ op: 'tglink', dev: devId(), who: WHO, again: !TG.linked ? 0 : 1 });
   if (!j.ok) { $('tgbody').innerHTML = '<span style="color:var(--red)">' + esc(j.error) + '</span>'; return; }
-  if (j.linked && !j.code) { TG.linked = true; ls('sj_fac_tg', '1'); bellPaint(); $('tgbody').innerHTML = '✅ This phone is linked. When Abbas writes on a card, Telegram buzzes with a link to it.<br>یہ فون جڑا ہوا ہے۔<br><br><button id="tgre" style="border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font:inherit">Link again · دوبارہ جوڑیں</button>'; $('tgre').onclick = function(){ TG.linked = false; ls('sj_fac_tg', null); $('bell').onclick(); }; return; }
+  if (j.linked && !j.code) { TG.linked = true; ls('sj_fac_tg', '1'); bellPaint(); $('tgbody').innerHTML = '✅ This phone is linked. When Abbas writes on a card, Telegram buzzes with a link to it.<br>এই ফোন যুক্ত আছে।<br><br><button id="tgre" style="border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font:inherit">Link again · আবার যুক্ত করুন</button>'; $('tgre').onclick = function(){ TG.linked = false; ls('sj_fac_tg', null); $('bell').onclick(); }; return; }
   var bot = j.bot ? 'https://t.me/' + j.bot : '';
-  $('tgbody').innerHTML = '1. Open Telegram' + (bot ? ' → <a href="' + bot + '" target="_blank" rel="noopener"><b>@' + esc(j.bot) + '</b></a>' : '') + ' and press <b>Start</b>.<br>2. Send this code to the bot:<div style="font-size:34px;font-weight:800;letter-spacing:.12em;text-align:center;margin:10px 0;color:var(--gold)">' + esc(j.code) + '</div>ٹیلیگرام کھولیں، بوٹ کو Start کریں اور یہ کوڈ بھیجیں۔<div id="tgwait" style="color:var(--mute);margin-top:8px">Waiting for the code… · انتظار</div>';
+  $('tgbody').innerHTML = '1. Open Telegram' + (bot ? ' → <a href="' + bot + '" target="_blank" rel="noopener"><b>@' + esc(j.bot) + '</b></a>' : '') + ' and press <b>Start</b>.<br>2. Send this code to the bot:<div style="font-size:34px;font-weight:800;letter-spacing:.12em;text-align:center;margin:10px 0;color:var(--gold)">' + esc(j.code) + '</div>টেলিগ্রাম খুলুন, বটে Start চাপুন এবং এই কোড পাঠান।<div id="tgwait" style="color:var(--mute);margin-top:8px">Waiting for the code… · অপেক্ষা</div>';
   clearInterval(TG.timer); var tries = 0;
   TG.timer = setInterval(async function(){ if ($('tg').hidden || ++tries > 40) { clearInterval(TG.timer); return; } var c = await call({ op: 'tgcheck', dev: devId() });
-    if (c.ok && c.linked) { clearInterval(TG.timer); TG.linked = true; ls('sj_fac_tg', '1'); bellPaint(); $('tgbody').innerHTML = '✅ Linked! Telegram will buzz when Abbas writes on a card.<br>جڑ گیا! عباس کے لکھنے پر ٹیلیگرام پر پیغام آئے گا۔'; toast('✓ Notifications on'); } }, 4000);
+    if (c.ok && c.linked) { clearInterval(TG.timer); TG.linked = true; ls('sj_fac_tg', '1'); bellPaint(); $('tgbody').innerHTML = '✅ Linked! Telegram will buzz when Abbas writes on a card.<br>যুক্ত হয়েছে! আব্বাস লিখলে টেলিগ্রামে মেসেজ আসবে।'; toast('✓ Notifications on'); } }, 4000);
 };
 $('tgx').onclick = function(){ $('tg').hidden = true; clearInterval(TG.timer); };
 bellPaint();
@@ -416,16 +420,17 @@ window.addEventListener('hashchange', openFromHash);
 function showLogin(){ $('login').hidden = false; $('lname').value = WHO; $('lpw').focus(); }
 $('lgo').onclick = async function(){
   var pw = $('lpw').value, nm = $('lname').value.trim(); $('lerr').textContent = '';
-  if (!pw || !nm) { $('lerr').textContent = 'Type both · دونوں لکھیں'; return; }
+  if (!pw || !nm) { $('lerr').textContent = 'Type both · দুটোই লিখুন'; return; }
   this.disabled = true; this.textContent = 'Checking…';
-  var j = await call({ op: 'list' }, pw); this.disabled = false; this.textContent = 'Open · کھولیں';
-  if (!j.ok) { $('lerr').textContent = j.error === 'wrong password' ? 'Wrong password · غلط پاس ورڈ' : j.error; return; }
+  var j = await call({ op: 'list' }, pw); this.disabled = false; this.textContent = 'Open · খুলুন';
+  if (!j.ok) { $('lerr').textContent = j.error === 'wrong password' ? 'Wrong password · ভুল পাসওয়ার্ড' : j.error; return; }
   PW = pw; WHO = nm; ls('sj_fac_pw', pw); ls('sj_fac_who', nm); $('who').textContent = nm; $('login').hidden = true; load(false);
 };
 document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on this phone?')) { ls('sj_fac_pw', null); PW = ''; showLogin(); } };
 
 // ----- keep fresh: every 30 s while on screen, and when coming back to the app -----
 setInterval(function(){ if (PW && !document.hidden) load(false); }, 30000);
+setInterval(function(){ if (!document.hidden && $('card').hidden) checkVer(); }, 300000);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { load(false); checkVer(); } });
 async function checkVer(){ try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
