@@ -50,6 +50,8 @@ main{padding:12px 14px 40px}
 .hero .info{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:14px;word-break:break-word}
 .hero .info b{display:block;font-size:11px;color:var(--mute);font-weight:600;letter-spacing:.06em}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.hero .desc{padding:0 12px 12px;font-size:14px;white-space:pre-wrap;word-break:break-word;color:var(--ink)}.hero .desc.none{color:var(--mute);font-style:italic}
+.sheet input,.sheet textarea,.sheet select{display:block;width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;font-size:16px;margin-bottom:8px;background:#fff;font-family:inherit}.sheet textarea{min-height:130px;resize:vertical}.sheet label.ck{display:flex;align-items:center;gap:8px;font-size:15px;margin:4px 0 10px}.sheet label.ck input{width:22px;height:22px;margin:0}.sheet button.go{background:var(--gold);color:#fff;border:0;text-align:center}
 .btns button{border:0;border-radius:14px;padding:14px 8px;font-weight:800;font-size:16px;color:#fff;line-height:1.2}
 .btns button small{display:block;font-weight:500;font-size:12px;opacity:.9;margin-top:2px}
 .bdone{background:var(--green);grid-column:1/3;font-size:18px}.bdone:disabled{background:#9bb8a6}
@@ -69,7 +71,7 @@ main{padding:12px 14px 40px}
 .comp button{border:0;background:var(--gold);color:#fff;border-radius:12px;padding:0 14px;height:44px;font-weight:800}.comp button:disabled{opacity:.5}
 .comp .mic{background:#5a4a8a;font-size:20px;padding:0 12px}.comp .mic.rec{background:var(--red);animation:pulse 1s infinite}.comp .cam{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:20px;padding:0 10px}
 @keyframes pulse{50%{opacity:.6}}
-.bprob{background:var(--red);grid-column:1/3}
+.bprob{background:var(--red)}
 .lbs{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.lb{font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;background:#e6dccb;color:#2b2118}
 .lb.green{background:#4bce97;color:#164b35}.lb.yellow{background:#f5cd47;color:#533f04}.lb.orange{background:#fea362;color:#702e00}.lb.red{background:#f87168;color:#5d1f1a}.lb.purple{background:#9f8fef;color:#352c63}.lb.blue{background:#579dff;color:#09326c}.lb.sky{background:#6cc3e0;color:#164555}.lb.lime{background:#94c748;color:#37471f}.lb.pink{background:#e774bb;color:#50253f}.lb.black{background:#8590a2;color:#fff}
 .newb{background:var(--red);color:#fff;border-radius:999px;font-size:11px;font-weight:800;padding:3px 8px;flex:none;letter-spacing:.04em}
@@ -102,7 +104,7 @@ main{padding:12px 14px 40px}
 
 <header>
   <div class="brandbar">AL MUTAGADED GARMENTS</div>
-  <div class="top"><div class="mono">AM</div><h1><span id="who"></span><small>Factory · কারখানা</small></h1><button class="rf" id="bell" title="Notifications" hidden>🔔</button><button class="rf" id="rf" title="Refresh">↻</button></div>
+  <div class="top"><div class="mono">AM</div><h1><span id="who"></span><small>Factory · কারখানা</small></h1><button class="rf" id="bell" title="Notifications" hidden>🔔</button><button class="rf" id="badd" title="New card">＋</button><button class="rf" id="rf" title="Refresh">↻</button></div>
   <div class="stages" id="stages"></div>
   <div class="search"><input id="q" placeholder="Search design number · ডিজাইন নম্বর" inputmode="search" autocomplete="off"></div>
   <div id="msg"></div>
@@ -112,15 +114,15 @@ main{padding:12px 14px 40px}
 <div id="card" hidden>
   <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><span class="pill" id="cstage"></span></div>
   <div class="cbody" id="cbody">
-    <div class="hero"><div class="big" id="cimg"></div><div class="atts" id="catts" hidden></div><div class="ttl" id="cttl"></div><div class="info" id="cinfo"></div></div>
+    <div class="hero"><div class="big" id="cimg"></div><div class="atts" id="catts" hidden></div><div class="ttl" id="cttl"></div><div class="info" id="cinfo"></div><div class="desc" id="cdesc"></div></div>
     <div id="viewer" hidden><img id="vimg" alt=""><button id="vx">✕</button></div>
     <div class="btns">
       <button class="bdone" id="bdone">✅ Done → <span id="bnext"></span><small id="bnextar"></small></button>
       <button class="bmove" id="bmove">↔ Move to… <small>অন্য জায়গায়</small></button>
       <button class="btrello" id="btrello">Open in Trello<small>ট্রেলোতে খুলুন</small></button>
-      <button class="btrello" id="battach">📷 Add photo to Trello<small>ট্রেলোতে ছবি যোগ করুন</small></button>
     </div><input type="file" id="tfile" accept="image/*" multiple hidden>
-    <div class="btns" style="margin-top:0"><button class="bprob" id="bprob">🚩 Problem · সমস্যা<small>fabric short · lace missing · machine</small></button></div>
+    <div class="btns" style="margin-top:0"><button class="btrello" id="battach">📷 Add photo<small>ট্রেলোতে ছবি যোগ করুন</small></button><button class="btrello" id="bedit">✏️ Edit card<small>বিবরণ বদলান</small></button></div>
+    <div class="btns" style="margin-top:0"><button class="btrello" id="bcopy">⧉ Copy card<small>কার্ড কপি করুন</small></button><button class="bprob" id="bprob">🚩 Problem<small>সমস্যা জানান</small></button></div>
     <div class="thr"><h3>CARD CHAT · কার্ড চ্যাট <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
   <div class="compw"><div class="pend" id="pend"></div><div class="chint">🎤 hold to record · মাইক ধরে রাখুন &nbsp;·&nbsp; 📷 photo · ছবি &nbsp;·&nbsp; 📎 files · ফাইল</div><div class="comp"><button class="mic" id="mic" title="hold to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Write or paste… · লিখুন"></textarea><button id="send">Send</button></div></div>
@@ -134,13 +136,16 @@ main{padding:12px 14px 40px}
 <button class="x" id="probx">Cancel</button></div></div>
 <input type="file" id="pfile" accept="image/*" capture="environment" hidden>
 
+<div class="sheet" id="ed" hidden><div class="in"><h3>✏️ Edit card · কার্ড বদলান</h3><input id="edname" placeholder="Title · শিরোনাম"><textarea id="eddesc" placeholder="Description · বিবরণ"></textarea><button class="go" id="edgo">Save · সেভ</button><button class="x" id="edx">Cancel</button></div></div>
+<div class="sheet" id="cp" hidden><div class="in"><h3>⧉ Copy this card · কার্ড কপি</h3><input id="cpname" placeholder="Title of the new card · নতুন শিরোনাম"><select id="cpto"></select><label class="ck"><input type="checkbox" id="cpkeep" checked> Keep photos, labels and details · ছবি ও বিবরণ রাখুন</label><button class="go" id="cpgo">Make the copy · কপি তৈরি করুন</button><button class="x" id="cpx">Cancel</button></div></div>
+<div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
-var VER = '2026-10-13g1';
+var VER = '2026-10-13g2';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -262,9 +267,10 @@ function paintCard(){
   var assigned = Object.keys(c.f || {}).filter(function(k){ return /^(TASLEEM|IRFAN ALI|HASHIM|QADIR|SHAHZAIB|SALMAAN|ZAKIR|USMAN|Anees|SHAWKEEN)$/i.test(k.trim()); });
   if (assigned.length) $('cinfo').innerHTML += '<div style="grid-column:1/3"><b>WORKERS</b>' + assigned.map(function(k){ return esc(k) + ' ' + esc(c.f[k]); }).join(' · ') + '</div>';
   $('bdone').disabled = !nx || !D.w; $('bnext').textContent = nx || '—'; $('bnextar').textContent = nx ? (UR[nx] || '') + ' -এ পাঠান' : '';
-  if (!c._atts) { $('catts').hidden = true; attsLoad(c); } else attsDraw(c);
+  descDraw(c); if (!c._atts) { $('catts').hidden = true; attsLoad(c); } else attsDraw(c);
 }
-async function attsLoad(c){ var j = await call({ op: 'atts', card: c.id }); if (!j.ok || open !== c) return; c._atts = j.atts || []; c._cover = j.cover || ''; attsDraw(c); }
+async function attsLoad(c){ var j = await call({ op: 'atts', card: c.id }); if (!j.ok || open !== c) return; c._atts = j.atts || []; c._cover = j.cover || ''; c.desc = j.desc || ''; descDraw(c); attsDraw(c); }
+function descDraw(c){ var d = $('cdesc'); if (c.desc == null) { d.textContent = ''; return; } d.className = 'desc' + (c.desc ? '' : ' none'); d.textContent = c.desc || 'No description · কোনো বিবরণ নেই'; }
 function attsDraw(c){
   var el = $('catts'), as = c._atts || []; if (!as.length) { el.hidden = true; return; }
   el.hidden = false; el.innerHTML = '<span class="n">' + as.length + '<br>files</span>' + as.map(function(a){ var cv = a.id === c._cover, ic = a.img ? '' : /^video/.test(a.type) ? '🎬' : /pdf/i.test(a.type + a.name) ? '📄' : /^audio/.test(a.type) ? '🎤' : '📎';
@@ -280,6 +286,28 @@ function closeCard(){ $('card').hidden = true; thStop(); open = null; draw(); }
 $('back').onclick = function(){ history.back(); };
 window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
+// ---- 13 Oct 2026 (Abbas): edit the card's description/title, copy the card, add a new card ----
+function listSel(sel, def){ sel.innerHTML = D.lists.map(function(l){ return '<option value="' + esc(l[1]) + '"' + (l[1] === def ? ' selected' : '') + '>' + esc(l[0]) + ' · ' + (UR[l[0]] || '') + '</option>'; }).join(''); }
+function needW(){ if (!D.w) { toast('View only — the relay cannot change cards yet'); return false; } return true; }
+$('bedit').onclick = function(){ if (!open || !needW()) return; $('edname').value = open.name; $('eddesc').value = open.desc || ''; $('ed').hidden = false; $('eddesc').focus(); };
+$('edx').onclick = function(){ $('ed').hidden = true; };
+$('edgo').onclick = async function(){ var c = open; if (!c) return; var nm = $('edname').value.trim(), ds = $('eddesc').value; if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
+  var r = {}; if (nm !== c.name) r.name = nm; if (ds !== (c.desc || '')) r.desc = ds; if (!Object.keys(r).length) { $('ed').hidden = true; return; }
+  this.disabled = true; try { r.op = 'edit'; r.card = c.id; var j = await call(r); if (!j.ok) { toast('✗ ' + j.error); return; }
+    if (r.name != null) c.name = nm; if (r.desc != null) c.desc = ds; $('ed').hidden = true; if (open === c) paintCard(); draw(); toast('✓ Saved to Trello · সেভ হয়েছে'); load(true); } finally { this.disabled = false; } };
+$('bcopy').onclick = function(){ if (!open || !needW()) return; $('cpname').value = open.name; listSel($('cpto'), open.l); $('cpkeep').checked = true; $('cp').hidden = false; };
+$('cpx').onclick = function(){ $('cp').hidden = true; };
+$('cpgo').onclick = async function(){ var c = open; if (!c) return; var nm = $('cpname').value.trim(); if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
+  this.disabled = true; this.textContent = '⏳ Copying… · কপি হচ্ছে'; try { var j = await call({ op: 'copy', card: c.id, name: nm, to: $('cpto').value, keep: $('cpkeep').checked ? 'attachments,labels,customFields,checklists,stickers' : 'labels,customFields' });
+    if (!j.ok) { toast('✗ ' + j.error); return; } $('cp').hidden = true; toast('✓ Card copied · কপি হয়েছে'); await gotoNew(j.id, $('cpto').value); } finally { this.disabled = false; this.textContent = 'Make the copy · কপি তৈরি করুন'; } };
+$('badd').onclick = function(){ if (!needW()) return; $('ncname').value = ''; $('ncdesc').value = ''; listSel($('ncto'), lid(CHIPS[cur][1][0])); $('nc').hidden = false; $('ncname').focus(); };
+$('ncx').onclick = function(){ $('nc').hidden = true; };
+$('ncgo').onclick = async function(){ var nm = $('ncname').value.trim(); if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
+  this.disabled = true; this.textContent = '⏳ Adding… · যোগ হচ্ছে'; try { var j = await call({ op: 'add', name: nm, desc: $('ncdesc').value, to: $('ncto').value });
+    if (!j.ok) { toast('✗ ' + j.error); return; } $('nc').hidden = true; toast('✓ Card added · কার্ড যোগ হয়েছে'); await gotoNew(j.id, $('ncto').value); } finally { this.disabled = false; this.textContent = 'Add card · কার্ড যোগ করুন'; } };
+async function gotoNew(id, listId){ if (!$('card').hidden) { $('card').hidden = true; thStop(); open = null; }
+  var i = CHIPS.findIndex(function(ch){ return ch[1].some(function(n){ return lid(n) === listId; }); }); if (i >= 0) { cur = i; ls('sj_fac_chip', String(cur)); } $('q').value = '';
+  await load(true); var c = D.byId[id]; if (c) openCard(c); else draw(); }
 $('battach').onclick = function(){ if (open) $('tfile').click(); };
 $('tfile').onchange = async function(){                     // 13 Oct 2026 (Abbas): photos from the phone onto the real Trello card (first one becomes the cover when the card has none)
   var fs = Array.from(this.files || []), c = open; this.value = ''; if (!fs.length || !c) return;
@@ -292,7 +320,7 @@ $('tfile').onchange = async function(){                     // 13 Oct 2026 (Abba
     toast('✓ ' + files.length + ' photo' + (files.length > 1 ? 's' : '') + ' added to Trello · ট্রেলোতে যোগ হয়েছে');
     c._atts = null; if (open === c) attsLoad(c); load(true);
   } catch (e) { toast('✗ ' + e.message); }
-  finally { b.disabled = false; b.innerHTML = '📷 Add photo to Trello<small>ট্রেলোতে ছবি যোগ করুন</small>'; }
+  finally { b.disabled = false; b.innerHTML = '📷 Add photo<small>ট্রেলোতে ছবি যোগ করুন</small>'; }
 };
 async function move(toName){
   var c = open, to = lid(toName); if (!c || !to) return;
