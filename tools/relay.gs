@@ -17,7 +17,8 @@
  *
  * ORDER MEMO PDF (job "slackpdf") posts every order memo PDF to #godown and #customer — see slackPdf() below.
  *
- * FACTORY APP (job "fac") - factory.html: live ALM production cards, photo, Done -> next stage. Signed with FACTORY_PASSWORD (or the shop password).
+ * FACTORY APP (job "fac") - factory.html: live ALM production cards, photo, Done -> next stage, card chat = the card's #cutting thread,
+ *   Telegram buzz to the factory phone (facWatch, 1-min timer via setupFacWatch; TG_FACTORY_TOKEN). Signed with FACTORY_PASSWORD (or the shop password).
  * DESIGN ORDERS (job "dorder", owner only) build the Trello card and post the order to the factory Slack — see dorder() below.
  *
  * READY WATCHER (7 Oct 2026: "if you see any changes in Trello let it trigger right away"):
@@ -120,6 +121,55 @@ function facMsg(P, FT, m, root) {                             // one Slack messa
   var sys = /^→ \*/.test(text) && m.bot_id;
   return { ts: m.ts, who: who, app: app, sys: !!sys, root: m.ts === root, text: text.replace(/<(https?:[^|>]+)(\|[^>]*)?>/g, '$1'), files: files };
 }
+// ---- STEP 3 (12-13 Oct 2026): the buzz. When Abbas writes in a card's thread, the factory phone gets a Telegram message with a link
+// straight to that card. A 1-minute timer (setupFacWatch, run once by Abbas) looks at #cutting; the phone is linked once by sending a
+// 6-letter code to the bot. Needs script property TG_FACTORY_TOKEN (the bot token from @BotFather, typed in by Abbas).
+function tgApi(P, method, args) {
+  var tok = P.getProperty('TG_FACTORY_TOKEN'); if (!tok) return { ok: false, error: 'no token' };
+  try { return JSON.parse(UrlFetchApp.fetch('https://api.telegram.org/bot' + tok + '/' + method, { method: 'post', contentType: 'application/json', payload: JSON.stringify(args || {}), muteHttpExceptions: true }).getContentText()); }
+  catch (e) { return { ok: false, error: String(e.message || e) }; }
+}
+function facTgPoll(P) {                                        // read what people sent to the bot: a 6-letter code links that chat to a factory phone
+  var off = +(P.getProperty('TG_OFFSET') || 0), u = tgApi(P, 'getUpdates', { offset: off, timeout: 0, allowed_updates: ['message'] });
+  if (!u.ok) return;
+  (u.result || []).forEach(function (up) {
+    off = Math.max(off, up.update_id + 1);
+    var m = up.message; if (!m || !m.text) return;
+    var code = String(m.text).trim().toUpperCase().replace(/^\/START\s*/, ''), rec = P.getProperty('TG_CODE_' + code);
+    if (rec) { rec = JSON.parse(rec); P.setProperty('TG_FAC_' + rec.dev, JSON.stringify({ chat: m.chat.id, who: rec.who, t: Date.now() })); P.deleteProperty('TG_CODE_' + code);
+      tgApi(P, 'sendMessage', { chat_id: m.chat.id, text: '✅ Linked to the SJ Factory app' + (rec.who ? ' (' + rec.who + ')' : '') + '. You will get a message here when Abbas writes on a card.\nایپ سے جڑ گیا۔ جب عباس کسی کارڈ پر لکھیں گے تو یہاں پیغام آئے گا۔' }); }
+    else if (/^\/start/i.test(m.text)) tgApi(P, 'sendMessage', { chat_id: m.chat.id, text: 'Send the 6-letter code shown in the SJ Factory app (🔔 button).\nایپ میں دکھایا گیا 6 حرفی کوڈ یہاں بھیجیں۔' });
+  });
+  P.setProperty('TG_OFFSET', String(off));
+}
+function facWatch() {                                          // every minute: new replies by a person (not the bot) in a card's thread -> Telegram to the factory phones
+  var P = PropertiesService.getScriptProperties(), FT = P.getProperty('SLACK_FACTORY_TOKEN'); if (!FT || !P.getProperty('TG_FACTORY_TOKEN')) return;
+  var all = P.getProperties(), phones = Object.keys(all).filter(function (k) { return k.indexOf('TG_FAC_') === 0; }).map(function (k) { return JSON.parse(all[k]); });
+  facTgPoll(P);
+  if (!phones.length) return;
+  var byTs = {}; Object.keys(all).forEach(function (k) { if (k.indexOf('FTH_') === 0) byTs[JSON.parse(all[k]).ts] = k.slice(4); });
+  var first = !all['FAC_SEEN'], seen = JSON.parse(all['FAC_SEEN'] || '{}'), hist = slackApi(FT, 'conversations.history', { channel: DOX.CUTTING, limit: 100 }, true), changed = false;
+  if (!hist.ok) return;
+  if (first) { (hist.messages || []).forEach(function (m) { if (byTs[m.ts]) seen[m.ts] = m.latest_reply || m.ts; }); P.setProperty('FAC_SEEN', JSON.stringify(seen)); return; }   // first run: only take note, never buzz about old replies
+  (hist.messages || []).forEach(function (m) {
+    var card = byTs[m.ts]; if (!card || !m.latest_reply) return;
+    var last = seen[m.ts] || m.ts; if (+m.latest_reply <= +last) return;
+    var rp = slackApi(FT, 'conversations.replies', { channel: DOX.CUTTING, ts: m.ts, oldest: last, limit: 50 }, true);
+    var news = (rp.messages || []).filter(function (x) { return x.ts !== m.ts && +x.ts > +last && !x.bot_id; });   // only people, never the factory bot's own lines
+    seen[m.ts] = m.latest_reply; changed = true;
+    if (!news.length) return;
+    var who = facUser(P, FT, news[0].user), no = (String(m.text || '').match(/\d{4,6}/) || [''])[0];
+    var txt = news.map(function (x) { return (x.text ? String(x.text).replace(/<[^>]+>/g, '').slice(0, 200) : '') + ((x.files || []).length ? ' 📎' : ''); }).join('\n');
+    var body = '💬 ' + (no ? 'SJ-' + no : 'a card') + ' · ' + who + ':\n' + txt + '\n\nOpen · کھولیں: https://abbas911-prog.github.io/sj-designs/factory.html#card=' + card;
+    phones.forEach(function (ph) { tgApi(P, 'sendMessage', { chat_id: ph.chat, text: body, disable_web_page_preview: true }); });
+  });
+  if (changed) { var ks = Object.keys(seen); if (ks.length > 300) ks.sort().slice(0, ks.length - 300).forEach(function (k) { delete seen[k]; }); P.setProperty('FAC_SEEN', JSON.stringify(seen)); }
+}
+function setupFacWatch() {                                     // Abbas runs this ONCE from the editor (Run button) and allows the trigger permission
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'facWatch') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('facWatch').timeBased().everyMinutes(1).create();
+  facWatch();
+}
 function fac(reqText, P) {
   var req = JSON.parse(reqText);
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
@@ -199,6 +249,18 @@ function fac(reqText, P) {
       if (mr.getResponseCode() !== 200) return out({ ok: false, error: 'Slack file said ' + mr.getResponseCode() });
       var mb = mr.getBlob(); if (mb.getBytes().length > 20 * 1024 * 1024) return out({ ok: false, error: 'file too big' });
       return out({ ok: true, b64: Utilities.base64Encode(mb.getBytes()), type: mb.getContentType() || f.mimetype || '', name: f.name || '' });
+    }
+    if (req.op === 'tglink') {                                // the factory phone asks for a 6-letter code to send to the Telegram bot
+      if (!P.getProperty('TG_FACTORY_TOKEN')) return out({ ok: false, error: 'Telegram is not set up yet (TG_FACTORY_TOKEN)' });
+      var dev = String(req.dev || '').replace(/[^a-z0-9]/g, '').slice(0, 12), who2 = String(req.who || '').slice(0, 40); if (!dev) return out({ ok: false, error: 'bad request' });
+      var have2 = P.getProperty('TG_FAC_' + dev); if (have2 && !req.again) return out({ ok: true, linked: true });
+      var code = ''; for (var ci = 0; ci < 6; ci++) code += 'ABCDEFGHJKLMNPQRSTUVWXYZ'.charAt(Math.floor(Math.random() * 24));
+      P.setProperty('TG_CODE_' + code, JSON.stringify({ dev: dev, who: who2, t: Date.now() }));
+      var me = tgApi(P, 'getMe', {}); return out({ ok: true, code: code, bot: me.ok ? me.result.username : '' });
+    }
+    if (req.op === 'tgcheck') {                               // has the code been sent to the bot yet? (reads the bot's new messages)
+      var dv = String(req.dev || '').replace(/[^a-z0-9]/g, '').slice(0, 12); facTgPoll(P);
+      return out({ ok: true, linked: !!P.getProperty('TG_FAC_' + dv) });
     }
     if (req.op === 'move') {                                  // "Done -> next stage" (or Move to...): the real Trello card moves, top of the new list
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
