@@ -17,6 +17,7 @@
  *
  * ORDER MEMO PDF (job "slackpdf") posts every order memo PDF to #godown and #customer — see slackPdf() below.
  *
+ * FACTORY APP (job "fac") - factory.html: live ALM production cards, photo, Done -> next stage. Signed with FACTORY_PASSWORD (or the shop password).
  * DESIGN ORDERS (job "dorder", owner only) build the Trello card and post the order to the factory Slack — see dorder() below.
  *
  * READY WATCHER (7 Oct 2026: "if you see any changes in Trello let it trigger right away"):
@@ -32,6 +33,11 @@ function doPost(e) {
     var P = PropertiesService.getScriptProperties();
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
+    if (b.job === 'fac') {                                    // FACTORY APP (12 Oct 2026): its own password (FACTORY_PASSWORD), or the shop password
+      if (typeof b.req !== 'string' || b.req.length > 20000) return out({ ok: false, error: 'bad request' });
+      var fpw = P.getProperty('FACTORY_PASSWORD'), sg = String(b.sig), okf = [fpw, pw].some(function (k) { return k && hex(Utilities.computeHmacSha256Signature(b.req, k, Utilities.Charset.UTF_8)) === sg; });
+      return okf ? fac(b.req, P) : out({ ok: false, error: 'wrong password' });
+    }
     if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'slackpdf2' || b.job === 'dorder' || b.job === 'cash' ? 25000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
     if (b.job === 'live') return live(b.req, P);
@@ -55,6 +61,78 @@ function doPost(e) {
   } catch (err) {
     return out({ ok: false, error: String(err).slice(0, 200) });
   }
+}
+// ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
+// Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
+// card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
+var FAC = { BOARD: '6527c52485d9627f63157296', LISTS: [
+  ['START', '6527c572b12b208471c080cb'], ['CUTTING', '6527c57751007e81a43f55a6'], ['IN LINE', '6527c57cd7e267fbf2a602b4'],
+  ['READY FOR HAND WORK', '6527c585b9300f804906d9bd'], ['IN HAND WORK', '6527c59b796865bd9639b0c3'], ['CAME FROM HAND WORK', '6602ad25e74db40a25ab0296'],
+  ['IN LINE (2)', '6527c5a3964596815651a97f'], ['IRON/CHECKING', '6527c5a93db4d8b8e91a8be9'], ['READY', '6527c5b13129a9ba37acd3ad'],
+  ['READY 2', '699b35ceb77292db0289c473'], ['FINISH', '6527c5b41e630c094b619f5e']],
+  SHOW: 9 };                                                  // cards are listed for the first 9 lists (START .. READY); READY 2 / FINISH are move targets only
+function facCf(tok) {                                         // custom-field names of the ALM board (cached 6 h)
+  var c = CacheService.getScriptCache(), h = c.get('FAC_CF'); if (h) return JSON.parse(h);
+  var m = {}; (trApi('get', '/boards/' + FAC.BOARD + '/customFields', {}, tok) || []).forEach(function (f) { m[f.id] = f.name; });
+  c.put('FAC_CF', JSON.stringify(m), 21600); return m;
+}
+function fac(reqText, P) {
+  var req = JSON.parse(reqText);
+  if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  var rtok = P.getProperty('TRELLO') || P.getProperty('TRELLO_W'), wtok = P.getProperty('TRELLO_W');
+  if (!rtok) return out({ ok: false, error: 'the relay has no Trello key' });
+  var ids = FAC.LISTS.map(function (l) { return l[1]; });
+  try {
+    if (req.op === 'list') {
+      var cache = CacheService.getScriptCache(), hit = cache.get('FAC_LIST');
+      if (hit && !req.fresh) return out(JSON.parse(hit));
+      var show = ids.slice(0, FAC.SHOW), cf = facCf(rtok);
+      var q = '/cards?fields=name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity&customFieldItems=true&attachments=cover&attachment_fields=id,previews,mimeType&key=' + TKEY + '&token=' + rtok;
+      var rs = UrlFetchApp.fetchAll(show.map(function (id) { return { url: 'https://api.trello.com/1/lists/' + id + q, muteHttpExceptions: true }; })), cards = [];
+      for (var i = 0; i < rs.length; i++) { if (rs[i].getResponseCode() !== 200) return out({ ok: false, error: 'Trello said ' + rs[i].getResponseCode() }); cards = cards.concat(JSON.parse(rs[i].getContentText())); }
+      var outc = cards.map(function (c) {
+        var f = {}; (c.customFieldItems || []).forEach(function (it) { var n = cf[it.idCustomField], v = it.value || {}; var x = v.text != null ? v.text : v.number != null ? v.number : v.date || (v.checked === 'true' ? '✓' : null); if (n && x != null && String(x).trim() !== '') f[n] = String(x); });
+        var a = (c.attachments || [])[0], img = a && a.previews && a.previews.length ? a.id : '';
+        return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity };
+      });
+      var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: FAC.SHOW, cards: outc, w: !!wtok };
+      var js = JSON.stringify(res); if (js.length < 95000) cache.put('FAC_LIST', js, 20);
+      return out(res);
+    }
+    if (req.op === 'img') {                                   // a card's cover photo, ~300-600 px, fetched with the auth header (browsers are refused)
+      var cid = String(req.card || '').replace(/[^0-9a-f]/g, ''), aid = String(req.att || '').replace(/[^0-9a-f]/g, '');
+      if (!cid || !aid) return out({ ok: false, error: 'bad request' });
+      var ck = 'FAC_IMG_' + aid, c2 = CacheService.getScriptCache(), have = c2.get(ck); if (have) return out({ ok: true, b64: have });
+      var at = trApi('get', '/cards/' + cid + '/attachments/' + aid, { fields: 'previews,url,mimeType' }, rtok);
+      var pv = (at.previews || []).filter(function (p) { return p.width >= 300; }).sort(function (x, y) { return x.width - y.width; })[0] || (at.previews || []).slice(-1)[0];
+      var u = pv ? pv.url : at.url;
+      var r = UrlFetchApp.fetch(u, { muteHttpExceptions: true, headers: { Authorization: 'OAuth oauth_consumer_key="' + TKEY + '", oauth_token="' + rtok + '"' } });
+      if (r.getResponseCode() !== 200) return out({ ok: false, error: 'photo: Trello said ' + r.getResponseCode() });
+      var b64 = Utilities.base64Encode(r.getBlob().getBytes());
+      if (b64.length > 900000) return out({ ok: false, error: 'photo too big' });
+      if (b64.length < 99000) c2.put(ck, b64, 21600);
+      return out({ ok: true, b64: b64 });
+    }
+    if (req.op === 'move') {                                  // "Done -> next stage" (or Move to...): the real Trello card moves, top of the new list
+      if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
+      var card = String(req.card || '').replace(/[^0-9a-f]/g, ''), to = String(req.to || ''), who = String(req.who || '').slice(0, 40) || 'factory';
+      if (!card || ids.indexOf(to) < 0) return out({ ok: false, error: 'bad request' });
+      var now = trApi('get', '/cards/' + card, { fields: 'idList,name,idBoard' }, wtok);
+      if (now.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
+      if (req.from && now.idList !== req.from) {             // someone moved it meanwhile: say where it is, do nothing
+        var nm = FAC.LISTS.filter(function (l) { return l[1] === now.idList; })[0];
+        return out({ ok: false, moved: true, error: 'This card was already moved to ' + (nm ? nm[0] : 'another list') + ' - press ↻ to refresh' });
+      }
+      if (now.idList !== to) {
+        trApi('put', '/cards/' + card, { idList: to, pos: 'top' }, wtok);
+        var tn = FAC.LISTS.filter(function (l) { return l[1] === to; })[0][0];
+        try { trApi('post', '/cards/' + card + '/actions/comments', { text: '→ ' + tn + ' · ' + who + ' (factory app)' }, wtok); } catch (e) {}
+      }
+      CacheService.getScriptCache().remove('FAC_LIST');
+      return out({ ok: true });
+    }
+    return out({ ok: false, error: 'bad request' });
+  } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 200) }); }
 }
 // LIVE LIST (Abbas, 9 Oct 2026: "I want the process to be instant ... anybody could be searching at a specific moment how many
 // quantity or colors are remaining"). The memo asks for the READY + SAMPLES cards right now; this reads them from Trello with the
