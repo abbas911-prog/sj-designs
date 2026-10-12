@@ -190,7 +190,7 @@ function fac(reqText, P) {
         return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity };
       });
       var th = {}; try { if (P.getProperty('SLACK_FACTORY_TOKEN')) th = facThreads(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
-      var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: FAC.SHOW, cards: outc, w: !!wtok, th: th };
+      var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: FAC.SHOW, cards: outc, w: !!wtok, th: th, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
       var js = JSON.stringify(res); if (js.length < 95000) cache.put('FAC_LIST', js, 20);
       return out(res);
     }
