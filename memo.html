@@ -304,6 +304,17 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 
 .ohd{position:relative}.opv{float:right;width:58px;height:72px;object-fit:cover;border-radius:10px;margin:0 0 4px 10px;background:#EFE9DF}
 .opvbig{display:block;width:100%;border-radius:12px;margin:6px 0 10px;box-shadow:var(--sh)}.opvno{font-size:12px;color:var(--mute);margin:6px 0 10px}
+.osplit{display:block;font-size:12px;font-weight:700;color:#2f6b4f;margin-top:2px}.oloc{font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:6px;color:#fff;background:#9a3b1e}.oloc.o{background:#2f6b4f}.oloc.m{background:#A8864A}
+.gdl{background:#fff;border-radius:12px;padding:10px 12px;margin:8px 0}.gdl:empty{display:none}
+.gdh{font-weight:700;font-size:14px;margin-bottom:6px}.gdh small{display:block;font-weight:500;color:var(--mute);font-size:12px}
+.gdr{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line);flex-wrap:wrap}.gdr .gn{flex:1;min-width:110px;font-size:14px}.gdr .gn small{display:block;color:var(--mute);font-size:12px}
+.gdr.sub{padding:5px 0 5px 18px;border-top:1px dashed var(--line)}.gdr.sub .gn{font-size:13px}
+.gsw{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}.gsw button{border:0;background:#fff;font:inherit;font-size:12px;font-weight:700;padding:6px 10px;color:var(--mute)}
+.gsw button.on[data-v="g"]{background:#9a3b1e;color:#fff}.gsw button.on[data-v="o"]{background:#2f6b4f;color:#fff}
+.gdc{border:0;background:none;color:var(--gold);font:inherit;font-size:12px;font-weight:700;padding:4px 2px}
+.gmix{font-size:11px;font-weight:700;color:var(--gold)}
+.gdt{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.gdt label{display:flex;gap:7px;align-items:center;font-size:14px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;flex:1;min-width:140px}
+.gdt label small{display:block;font-weight:500;color:var(--mute);font-size:11.5px}.gdt input{width:20px;height:20px}.gdt label.off{opacity:.45}
 .slk{font-size:12.5px;color:var(--mute);margin:-4px 2px 8px}.slk:empty{display:none}.slk.ok{color:#2f6b4f;font-weight:700}.slk.bad{color:#9a3b1e}.slk button{margin-left:6px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px}
 
 /* new design order */
@@ -431,6 +442,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
   <div class="dlv"><div class="dlvh">Delivery time · وقت التسليم<small>Type here — it prints on page 1 of the PDF. Leave empty to write by hand.</small></div>
   <div class="dlvr"><span>In office<small>في المكتب</small></span><input id="dl_od" autocomplete="off" placeholder="Date"><input id="dl_ot" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="o">Now</button></div>
   <div class="dlvr"><span>To customer / cargo<small>للعميل / الشحن</small></span><input id="dl_cd" autocomplete="off" placeholder="Date"><input id="dl_ct" autocomplete="off" placeholder="Time"><button type="button" class="dlnow" data-dl="c">Now</button></div></div>
+  <div class="gdl" id="gdl"></div>
   <div class="btns"><button id="send" class="gold" type="button">Send PDF · أرسل PDF</button><button id="copy" type="button">Copy text · نسخ النص</button></div>
   <div id="slk" class="slk"></div>
   <div id="marks"></div>
@@ -670,18 +682,18 @@ function reapply(){
 var WK = 'sj_work', wkT = null;
 function topNo(){ var best = null; document.querySelectorAll('#feed .design').forEach(function(a){ if (a.hidden) return; var r = a.getBoundingClientRect(); if (r.bottom > 60 && !best) best = a.dataset.no; }); return best; }
 function saveWork(){ clearTimeout(wkT); wkT = null; if (!designs.length) return;
-  var w = { t: Date.now(), state: state, prices: prices, dl: dlv(), name: $('name').value, q: $('q').value, at: topNo(), open: !$('done').hidden && B.mode !== 'memo' && B.mode !== 'cat' ? B.mode : '', inv: B.inv, rv: B.rv, pv: B.pv };
+  var w = { t: Date.now(), state: state, prices: prices, loc: LOC, dl: dlv(), name: $('name').value, q: $('q').value, at: topNo(), open: !$('done').hidden && B.mode !== 'memo' && B.mode !== 'cat' ? B.mode : '', inv: B.inv, rv: B.rv, pv: B.pv };
   try { localStorage.setItem(WK, JSON.stringify(w)); } catch(e){} }
 function saveSoon(){ if (!wkT) wkT = setTimeout(saveWork, 400); }
 function loadWork(){ var w; try { w = JSON.parse(localStorage.getItem(WK) || 'null'); } catch(e){} if (!w) return null;
-  state = w.state || {}; prices = w.prices || {}; if (w.name) $('name').value = w.name; if (w.q) $('q').value = w.q; if (w.dl) Object.keys(w.dl).forEach(function(k){ if ($('dl_' + k)) $('dl_' + k).value = w.dl[k] || ''; });
+  state = w.state || {}; prices = w.prices || {}; LOC = w.loc || {}; if (w.name) $('name').value = w.name; if (w.q) $('q').value = w.q; if (w.dl) Object.keys(w.dl).forEach(function(k){ if ($('dl_' + k)) $('dl_' + k).value = w.dl[k] || ''; });
   ['inv', 'rv', 'pv'].forEach(function(k){ if (w[k]) B[k] = w[k]; }); return w; }
 ['input', 'change', 'click'].forEach(function(ev){ document.addEventListener(ev, saveSoon); });
 document.addEventListener('visibilitychange', function(){ if (document.hidden) saveWork(); });
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-12a';
+var VER = '2026-10-12b';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -701,7 +713,7 @@ function paint(row, s, maxSets){
   art.querySelectorAll('.nums span[data-c="' + c + '"]').forEach(function(sp){ sp.classList.toggle('on', !!(s.sets || s.all || s.pcs)); });
 }
 function money(n){ return (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' AED'; }
-function designPcs(no){ var d = byNo(no), t = 0; Object.keys(state).forEach(function(k){ var p = k.split(':'); if (p[0] === no) t += lab(state[k], colPcs(d, +p[1])).pcs; }); return t; }
+function designPcs(no, st){ st = st || state; var d = byNo(no), t = 0; Object.keys(st).forEach(function(k){ var p = k.split(':'); if (p[0] === no) t += lab(st[k], colPcs(d, +p[1])).pcs; }); return t; }
 function orderAmount(){ return Object.keys(byDesign()).reduce(function(a, no){ return a + (prices[no] > 0 ? designPcs(no) * prices[no] : 0); }, 0); }
 function priced(){ return Object.keys(byDesign()).some(function(no){ return prices[no] > 0; }); }
 function refresh(){
@@ -723,7 +735,7 @@ function applySearch(){
 $('tabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; TAB = b.dataset.t;
   document.querySelectorAll('#tabs button').forEach(function(x){ x.classList.toggle('on', x === b); }); applySearch(); window.scrollTo(0, 0); };
 $('q').oninput = applySearch;
-$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; B.inv = null; $('name').value = ''; ls('sj_oid', null); ['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).value = ''; }); try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
+$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; LOC = {}; B.inv = null; $('name').value = ''; ls('sj_oid', null); ['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).value = ''; }); try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
 
 // ---------- memo output ----------
 function orderText(){
@@ -735,33 +747,37 @@ function orderText(){
   var unp = Object.keys(byDesign()).filter(function(x){ return !(prices[x] > 0); }); if (priced() && unp.length) lines.push('(amount covers priced designs only; no price: ' + unp.map(function(x){ return 'SJ-' + shown(x); }).join(', ') + ')');
   return lines.join('\n');
 }
-function byDesign(){ var o = {}; Object.keys(state).sort().forEach(function(k){ var p = k.split(':'); (o[p[0]] = o[p[0]] || {})[p[1]] = state[k]; }); return o; }
+function byDesign(st){ st = st || state; var o = {}; Object.keys(st).sort().forEach(function(k){ var p = k.split(':'); (o[p[0]] = o[p[0]] || {})[p[1]] = st[k]; }); return o; }
 function loadImg(src){ return new Promise(function(ok){ var i = new Image(); i.onload = function(){ ok(i); }; i.onerror = function(){ ok(null); }; i.src = src; }); }
-async function drawPages(){
+async function drawPages(opt){
+  opt = opt || {}; var st = opt.st || state, PK = !!opt.pick, PR = PK ? {} : prices, PRC = !PK && priced();   // 12 Oct 2026: the godown pick list carries no prices
   var W = 1240, H = 1754, P = 60, name = $('name').value.trim(), d = new Date();
   var date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
-  var pages = [], bd = byDesign(), nos = Object.keys(bd), tp = 0;
+  var pages = [], bd = byDesign(st), nos = Object.keys(bd), tp = 0;
   for (var i = 0; i < nos.length; i++){
     var no = nos[i], dz = byNo(no), cv = document.createElement('canvas'); cv.width = W; cv.height = H; var g = cv.getContext('2d');
     g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#6E675D'; g.font = '600 26px Arial'; g.fillText('SJ TRADING · ORDER MEMO', P, P + 10);
+    g.fillStyle = PK ? '#9a3b1e' : '#6E675D'; g.font = '600 26px Arial'; g.fillText(PK ? 'SJ TRADING · GODOWN PICK LIST · قائمة السحب من المستودع' : 'SJ TRADING · ORDER MEMO', P, P + 10);
     g.fillStyle = '#1C1A17'; g.font = 'bold 40px Arial'; g.fillText(name || ' ', P, P + 62);
     g.textAlign = 'right'; g.font = '26px Arial'; g.fillStyle = '#6E675D'; g.fillText(date + '  ·  ' + (i + 1) + '/' + nos.length, W - P, P + 62); g.textAlign = 'left';
-    var T = 0; if (i === 0) { T = 182; drawDelivery(g, P, P + 88, W - 2 * P); g.translate(0, T); }   // 10 Oct 2026 (Abbas): delivery times typed in the memo, printed on page 1
+    var T = 0; if (i === 0) { T = 182; drawDelivery(g, P, P + 88, W - 2 * P);
+      if (PK) { var pt = pickNote(opt), pl = wrapText(g, pt[1], W - 2 * P - 40); g.font = 'bold 28px Arial'; var bh = 58 + pl.length * 34; g.fillStyle = '#F6E7E2'; g.fillRect(P, P + 262, W - 2 * P, bh); g.fillStyle = '#9a3b1e'; g.fillText(pt[0], P + 20, P + 300); g.font = '26px Arial'; pl.forEach(function(t, q){ g.fillText(t, P + 20, P + 336 + q * 34); }); T += bh + 16; }
+      g.translate(0, T); }   // 10 Oct 2026 (Abbas): delivery times typed in the memo, printed on page 1
     g.fillStyle = '#1C1A17'; g.font = 'bold 54px Arial'; g.fillText('SJ-' + shown(no), P, P + 140);
     var rw = rowOf(no); if (rw) { var rt = 'ROW ' + rw.toUpperCase(); g.font = 'bold 46px Arial'; var rwW = Math.max(220, g.measureText(rt).width + 60);
       g.fillStyle = '#A8864A'; g.fillRect(W - P - rwW, P + 88, rwW, 72); g.fillStyle = '#fff'; g.textAlign = 'center'; g.fillText(rt, W - P - rwW / 2, P + 140); g.font = '22px Arial'; g.fillStyle = '#6E675D'; g.fillText('صف · godown row', W - P - rwW / 2, P + 186); g.textAlign = 'left'; }
     var y = P + 196, lines = [];
-    Object.keys(bd[no]).forEach(function(c){ var L = lab(state[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push(dz.sample ? 'SAMPLE  ·  1 pc  ·  عينة' : 'Colour ' + c + '  ·  ' + L.en); });
+    Object.keys(bd[no]).forEach(function(c){ var L = lab(st[no + ':' + c], colPcs(dz, +c)); tp += L.pcs; lines.push(dz.sample ? 'SAMPLE  ·  1 pc  ·  عينة' : 'Colour ' + c + '  ·  ' + L.en); });
     g.font = '30px Arial'; lines.forEach(function(t){ g.fillText(t, P, y); y += 40; });
-    if (prices[no] > 0) { var dp = designPcs(no); g.font = 'bold 32px Arial'; g.fillText(dp + ' pcs × ' + prices[no] + ' AED = ' + money(dp * prices[no]), P, y + 4); y += 48; }
+    if (PK) { var offc = Object.keys(byDesign()[no] || {}).filter(function(c){ return !bd[no][c]; }); if (offc.length) { g.fillStyle = '#9a3b1e'; g.font = 'bold 26px Arial'; g.fillText('Colour ' + offc.join(', ') + ' already in office — do not pick', P, y); g.fillStyle = '#1C1A17'; y += 40; } }
+    if (PR[no] > 0) { var dp = designPcs(no, st); g.font = 'bold 32px Arial'; g.fillText(dp + ' pcs × ' + PR[no] + ' AED = ' + money(dp * PR[no]), P, y + 4); y += 48; }
     if (i === nos.length - 1) {   // last page carries the order total
-      var tpcs = nos.reduce(function(a, x){ return a + designPcs(x); }, 0);
-      g.fillStyle = '#A8864A'; g.fillRect(P, y, W - 2 * P, 62); g.fillStyle = '#fff'; g.font = 'bold 32px Arial';
-      g.fillText('TOTAL  ·  ' + nos.length + (nos.length === 1 ? ' design' : ' designs') + '  ·  ' + tpcs + ' pcs' + (priced() ? '  ·  ' + money(orderAmount()) : ''), P + 20, y + 42);
+      var tpcs = nos.reduce(function(a, x){ return a + designPcs(x, st); }, 0);
+      g.fillStyle = PK ? '#9a3b1e' : '#A8864A'; g.fillRect(P, y, W - 2 * P, 62); g.fillStyle = '#fff'; g.font = 'bold 32px Arial';
+      g.fillText((PK ? 'TO PICK  ·  ' : 'TOTAL  ·  ') + nos.length + (nos.length === 1 ? ' design' : ' designs') + '  ·  ' + tpcs + ' pcs' + (PRC ? '  ·  ' + money(orderAmount()) : ''), P + 20, y + 42);
       g.fillStyle = '#1C1A17'; y += 80;
       var unp = nos.filter(function(x){ return !(prices[x] > 0); });
-      if (priced() && unp.length) { g.font = '24px Arial'; g.fillStyle = '#9a3b1e'; g.fillText('Amount covers priced designs only · no price: ' + unp.map(function(x){ return 'SJ-' + shown(x); }).join(', '), P, y + 12); g.fillStyle = '#1C1A17'; y += 44; }
+      if (PRC && unp.length) { g.font = '24px Arial'; g.fillStyle = '#9a3b1e'; g.fillText('Amount covers priced designs only · no price: ' + unp.map(function(x){ return 'SJ-' + shown(x); }).join(', '), P, y + 12); g.fillStyle = '#1C1A17'; y += 44; }
     }
     y += 10;
     // photos that carry selected colours, with the other colours faded
@@ -821,6 +837,7 @@ $('ok').onclick = async function(){
   slkMsg('');
   $('done').hidden = false; setMode('memo'); B.inv = null; window.scrollTo(0, 0); $('dh').textContent = 'Order memo' + ($('name').value.trim() ? ' · ' + $('name').value.trim() : '');
   $('ds').textContent = 'Preparing…'; $('marks').innerHTML = '';
+  SLK = { g: false, c: false }; gdDraw();      // 12 Oct 2026: nothing goes to a group unless ticked
   memoP = memoRender(); await memoP;
 };
 var memoP = null, dlT = null;
@@ -840,8 +857,10 @@ document.querySelectorAll('.dlnow').forEach(function(b){ b.onclick = function(){
 $('back').onclick = function(){ $('done').hidden = true; };
 $('send').onclick = async function(){
   if (memoP) await memoP; if (!pdfFile) return;
-  var again = !!ls('sj_oid'); ordFromMemo();   // 10 Oct 2026: the memo going out starts its order (step 1 ticked)
-  memoSlack(pdfFile, again);                    // ... and goes to #godown and #customer
+  var plan = gdPlan(); if (plan === null) return;     // asked "already sent to godown — send again?" and he said no to everything
+  var oid = ordFromMemo();                          // 10 Oct 2026: the memo going out starts its order
+  memoSlack2(oid, plan);                            // 12 Oct 2026: only to the groups he ticked (#godown = pick list, #customer = full memo)
+  SLK = { g: false, c: false }; gdDraw();          // ticks clear after each Send, so a second Send never repeats a post by itself
   try { if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) { await navigator.share({ files: [pdfFile], text: orderText() }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   var a = document.createElement('a'); a.href = URL.createObjectURL(pdfFile); a.download = pdfFile.name; a.click();
   window.open('https://wa.me/?text=' + encodeURIComponent(orderText()), '_blank');
@@ -1961,6 +1980,11 @@ function ordRow(o, k, en, ar, sub){
   return '<button type="button" class="ock' + (st ? ' on' : '') + (sub ? ' sub' : '') + '" data-ok="' + k + '" data-oid="' + esc(o.id) + '"><i>' + (st ? '✓' : '') + '</i><span><b>' + en + '</b><small class="ar">' + ar + '</small>' +
     (st ? '<em>' + esc(st.by || 'someone') + ' · ' + ordWhen(st.t) + (st.n ? ' · ' + esc(st.n) : '') + '</em>' : '') + '</span></button>';
 }
+// 12 Oct 2026: which part of the order is already in the office and which comes from the godown
+function ordSplit(o){ var it = o.items || []; if (!it.some(function(x){ return x.loc; })) return '';
+  var off = it.filter(function(x){ return x.loc === 'o'; }), gd = it.filter(function(x){ return x.loc !== 'o'; }), rows = [];
+  gd.forEach(function(x){ if (x.row && rows.indexOf(x.row) < 0) rows.push(x.row); });
+  return '<span class="osplit">' + (off.length ? 'Office: ' + off.length + (off.length === 1 ? ' design' : ' designs') : '') + (off.length && gd.length ? ' · ' : '') + (gd.length ? 'Godown: ' + gd.length + (gd.length === 1 ? ' design' : ' designs') + (rows.length ? ' (row ' + rows.join(', ') + ')' : '') : '') + (!gd.length ? ' — all in office' : '') + '</span>'; }
 function ordDraw(){
   var el = $('ordbody'), L = ORD.list, h = '';
   var open = (L || []).filter(function(o){ return !ordDone(o); }), done = (L || []).filter(ordDone);
@@ -1974,14 +1998,14 @@ function ordDraw(){
     var stg = ordStage(o), dn = ordDone(o), isOpen = !!ORD.open[o.id], nos = (o.items || []).map(function(x){ return 'SJ-' + x.no; });
     var pvs = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o.id) + '.jpg?v=' + (o.upd || o.created || 0));
     h += '<div class="ocard' + (dn ? ' done' : '') + '"><button type="button" class="ohd" data-ot="' + esc(o.id) + '"><img class="opv" loading="lazy" alt="" src="' + pvs + '" onerror="this.remove()"><span class="on1"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + '</small></span>' +
-      '<span class="on2">' + esc(nos.slice(0, 4).join(' · ')) + (nos.length > 4 ? ' +' + (nos.length - 4) : '') + ' · ' + (o.pcs || 0) + ' pcs</span>' +
+      '<span class="on2">' + esc(nos.slice(0, 4).join(' · ')) + (nos.length > 4 ? ' +' + (nos.length - 4) : '') + ' · ' + (o.pcs || 0) + ' pcs</span>' + ordSplit(o) +
       '<span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span>' +
       '<span class="onx">' + (dn ? '✓ Complete · ' + ordWhen(o.done) : 'Next: ' + esc(ordNext(o))) + '</span></button>';
     if (isOpen) {
       h += '<div class="obody"><img class="opvbig" alt="Order photos" src="' + pvs + '" onerror="this.outerHTML=\'<div class=opvno>Order picture not saved yet — it appears a minute after the memo is sent.</div>\'">';
       OSTEPS.forEach(function(s, i){ h += '<div class="ostep"><u>' + (i + 1) + '</u>' + ordRow(o, s[0], s[1], s[2]) + '</div>'; });
       h += '<div class="ostep"><u>4</u><div class="o4"><div class="o4h">Sent to customer <small class="ar">أرسل للعميل</small></div>' + OSUB.map(function(s){ return ordRow(o, s[0], s[1], s[2], true); }).join('') + '</div></div>';
-      h += '<div class="oitems">' + (o.items || []).map(function(x){ return '<div><b>SJ-' + esc(x.no) + '</b> · ' + x.pcs + ' pcs' + (x.c ? ' <small>(' + esc(x.c) + ')</small>' : '') + (x.row ? ' · <b class="orow">ROW ' + esc(String(x.row).toUpperCase()) + '</b>' : '') + '</div>'; }).join('') +
+      h += '<div class="oitems">' + (o.items || []).map(function(x){ return '<div><b>SJ-' + esc(x.no) + '</b> · ' + x.pcs + ' pcs' + (x.c ? ' <small>(' + esc(x.c) + ')</small>' : '') + (x.row ? ' · <b class="orow">ROW ' + esc(String(x.row).toUpperCase()) + '</b>' : '') + (x.loc ? ' <span class="oloc ' + x.loc + '">' + ({ g: 'GODOWN', o: 'IN OFFICE', m: 'MIXED' })[x.loc] + '</span>' : '') + '</div>'; }).join('') +
         (o.dl ? '<div class="odl">' + esc(o.dl) + '</div>' : '') + '<small>Order made by ' + esc(o.by || 'someone') + ' · ' + ordWhen(o.created) + '</small></div>';
       if (isBoss()) h += '<button type="button" class="odel" data-od="' + esc(o.id) + '">Delete order</button>';
       h += '</div>';
@@ -2010,12 +2034,17 @@ $('ordbody').addEventListener('click', async function(ev){
 });
 // the memo just went out: make (or update) its order, with step 1 ticked
 function ordFromMemo(){
-  if (!RELAY) return; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) return;
+  if (!RELAY) return ''; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) return '';
   var oid = ls('sj_oid'); if (!oid) { oid = 'o' + Date.now().toString(36) + devId(); ls('sj_oid', oid); }
-  var items = nos.map(function(no){ var d = byNo(no); return { no: shown(no), pcs: designPcs(no), row: rowOf(no), c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs; }).join(', ') }; });
+  var items = nos.map(function(no){ var d = byNo(no), ls2 = Object.keys(bd[no]).map(function(c){ return locOf(no, c); }), loc = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm';
+    return { no: shown(no), pcs: designPcs(no), row: rowOf(no), loc: loc, c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs + (loc === 'm' ? (locOf(no, c) === 'o' ? ' office' : ' godown') : ''); }).join(', ') }; });
+  var allOff = !gdHas();
   var dv = dlv(), dl = [(dv.od || dv.ot) ? 'Office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '', (dv.cd || dv.ct) ? 'Customer/cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : ''].filter(Boolean).join(' · ');
-  ordCall({ op: 'add', id: oid, name: $('name').value.trim(), items: items, pcs: items.reduce(function(a, x){ return a + x.pcs; }, 0), dl: dl, s1: true, by: me() }).catch(function(e){ ORD.err = e.message; });
+  // 12 Oct 2026: step 1 ticks itself when the pick list is posted to #godown; with nothing to pick, steps 1 and 2 tick themselves ("all in office")
+  ordCall({ op: 'add', id: oid, name: $('name').value.trim(), items: items, pcs: items.reduce(function(a, x){ return a + x.pcs; }, 0), dl: dl, s1: allOff, by: me() })
+    .then(function(){ if (allOff) return ordCall({ op: 'tick', id: oid, step: 's2', on: true, by: me(), note: 'all in office' }); }).catch(function(e){ ORD.err = e.message; });
   ordKeep(oid, bd).catch(function(){});
+  return oid;
 }
 // 10 Oct 2026 (Abbas): "a small preview of the PDF in the orders ... or the photos that have been ordered".
 // One small picture per order - each design's photo with the chosen colours lit and the rest faded, as on the memo PDF -
@@ -2163,6 +2192,88 @@ async function memoSlack(file, again){
     if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version' : (j.error || 'refused'));
     slkMsg('✓ Sent to Slack #godown and #customer', 'ok');
   } catch(e){ slkMsg('Not sent to Slack: ' + esc(e.message) + ' <button type="button" id="slkre">Try again</button>', 'bad'); var b = $('slkre'); if (b) b.onclick = function(){ memoSlack(file, again); }; }
+}
+
+// ----- GODOWN OR OFFICE + WHICH GROUPS (Abbas, 12 Oct 2026) -----
+// "Don't right away send the order memo to #godown and #customer ... give me two options, just like a tick; normally don't send to any group."
+// "A customer selects 10 designs, 5 are already in the office and 5 we need from the godown — an option for what goes to the godown."
+// Every design is GODOWN (default) or IN OFFICE; one colour can differ from its design. #godown gets a PICK LIST of the godown part only
+// (no prices, "already in office — don't pick" listed); #customer and the customer's own PDF get the full memo.
+var LOC = {}, SLK = { g: false, c: false }, GDX = {};
+function locOf(no, c){ return LOC[no + ':' + c] || LOC[no] || 'g'; }
+function gdSel(){ var o = {}; Object.keys(state).forEach(function(k){ var p = k.split(':'); if (locOf(p[0], p[1]) === 'g') o[k] = state[k]; }); return o; }
+function gdHas(){ return Object.keys(gdSel()).length > 0; }
+function pickNote(opt){
+  var all = Object.keys(byDesign()), gs = byDesign(opt.st), g = Object.keys(gs), off = all.filter(function(no){ return !gs[no]; }), pcs = g.reduce(function(a, no){ return a + designPcs(no, opt.st); }, 0);
+  var t1 = 'GODOWN PICK: ' + g.length + ' of ' + all.length + (all.length === 1 ? ' design' : ' designs') + ' · ' + pcs + ' pcs' + (opt.upd ? '  ·  ' + opt.upd : '');
+  var t2 = (off.length ? 'Already in office — do not pick: ' + off.map(function(x){ return 'SJ-' + shown(x); }).join(', ') : 'Everything on this order comes from the godown.') + (opt.chg ? '   Changes: ' + opt.chg : '');
+  return [t1, t2];
+}
+function gdDraw(){
+  var el = $('gdl'); if (!el) return; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) { el.innerHTML = ''; return; }
+  function sw(k, v){ return '<span class="gsw"><button type="button" data-gl="' + k + '" data-v="g" class="' + (v === 'g' ? 'on' : '') + '">GODOWN</button><button type="button" data-gl="' + k + '" data-v="o" class="' + (v === 'o' ? 'on' : '') + '">IN OFFICE</button></span>'; }
+  var h = '<div class="gdh">Where is it? · أين البضاعة<small>GODOWN = the godown man picks it · IN OFFICE = already here. Tap “colours” when one colour is somewhere else.</small></div>';
+  nos.forEach(function(no){ var d = byNo(no), cs = Object.keys(bd[no]), ls2 = cs.map(function(c){ return locOf(no, c); }), v = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm', rw = rowOf(no);
+    h += '<div class="gdr"><span class="gn"><b>SJ-' + esc(shown(no)) + '</b>' + (v === 'm' ? ' <span class="gmix">MIXED</span>' : '') + '<small>' + designPcs(no) + ' pcs' + (rw ? ' · ROW ' + esc(rw.toUpperCase()) : '') + '</small></span>' + sw(no, v === 'm' ? '' : v) +
+      (cs.length > 1 && !(d && d.sample) ? '<button type="button" class="gdc" data-gx="' + no + '">colours ' + (GDX[no] ? '▴' : '▾') + '</button>' : '') + '</div>';
+    if (GDX[no] && cs.length > 1) cs.forEach(function(c){ h += '<div class="gdr sub"><span class="gn">Colour ' + c + '<small>' + lab(state[no + ':' + c], colPcs(d, +c)).en + '</small></span>' + sw(no + ':' + c, locOf(no, c)) + '</div>'; });
+  });
+  var gn = Object.keys(byDesign(gdSel())).length, has = gn > 0; if (!has) SLK.g = false;
+  h += '<div class="gdt"><label class="' + (has ? '' : 'off') + '"><input type="checkbox" id="tg"' + (SLK.g ? ' checked' : '') + (has ? '' : ' disabled') + '><span>#godown<small>' + (has ? 'pick list · ' + gn + ' of ' + nos.length + (nos.length === 1 ? ' design' : ' designs') : 'nothing to pick — all in office') + '</small></span></label>' +
+       '<label><input type="checkbox" id="tc"' + (SLK.c ? ' checked' : '') + '><span>#customer<small>full memo</small></span></label></div>';
+  el.innerHTML = h;
+}
+$('gdl').addEventListener('click', function(e){
+  var b = e.target.closest('[data-gl]'), x = e.target.closest('[data-gx]');
+  if (x) { GDX[x.dataset.gx] = !GDX[x.dataset.gx]; gdDraw(); return; }
+  if (!b) return; var k = b.dataset.gl, v = b.dataset.v;
+  if (k.indexOf(':') < 0) { Object.keys(LOC).forEach(function(z){ if (z.indexOf(k + ':') === 0) delete LOC[z]; }); if (v === 'g') delete LOC[k]; else LOC[k] = v; }
+  else { var no = k.split(':')[0]; if (v === (LOC[no] || 'g')) delete LOC[k]; else LOC[k] = v; }
+  gdDraw(); saveSoon();
+});
+$('gdl').addEventListener('change', function(e){ if (e.target.id === 'tg') SLK.g = e.target.checked; if (e.target.id === 'tc') SLK.c = e.target.checked; });
+function gdSig(){ var g = gdSel(), d = {}; Object.keys(g).forEach(function(k){ var p = k.split(':'); d[p[0]] = (d[p[0]] || 0) + lab(g[k], colPcs(byNo(p[0]), +p[1])).pcs; }); return d; }
+function gdLog(){ try { return JSON.parse(ls('sj_gdlog') || '{}'); } catch(e){ return {}; } }
+function hhmm(t){ var d = new Date(t); return d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2); }
+// what goes where on this Send; null = nothing to do and he said no to the repeat
+function gdPlan(){
+  var want = { g: SLK.g && gdHas(), c: SLK.c }, upd = '', chg = '', oid = ls('sj_oid'), prev = oid ? gdLog()[oid] : null, now = gdSig();
+  if (want.g && prev) {
+    var a = prev.sig || {}, ch = [];
+    Object.keys(now).forEach(function(no){ if (!a[no]) ch.push('+ SJ-' + shown(no) + ' ' + now[no] + ' pcs'); else if (a[no] !== now[no]) ch.push('SJ-' + shown(no) + ' ' + a[no] + ' → ' + now[no] + ' pcs'); });
+    Object.keys(a).forEach(function(no){ if (!now[no]) ch.push('− SJ-' + shown(no) + ' (not needed now)'); });
+    if (!ch.length) { if (!confirm('Already sent to #godown at ' + hhmm(prev.t) + ' — the same pick list. Send it again?')) want.g = false; }
+    else { upd = 'UPDATED — replaces the ' + hhmm(prev.t) + ' list'; chg = ch.join(' · '); }
+  }
+  return { g: want.g, c: want.c, upd: upd, chg: chg };
+}
+async function pdfB64(f){ return await new Promise(function(ok, no){ var r = new FileReader(); r.onload = function(){ ok(String(r.result).split(',')[1]); }; r.onerror = no; r.readAsDataURL(f); }); }
+async function memoSlack2(oid, plan){
+  if (!plan.g && !plan.c) { slkMsg('Not sent to any group (no tick).'); return; }
+  if (!RELAY) return;
+  var done = [], bad = [], d = new Date(), dv = dlv(), nm = $('name').value.trim(), date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
+  var dlt = ((dv.od || dv.ot) ? '\nDelivery in office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '') + ((dv.cd || dv.ct) ? '\nDelivery to customer / cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : '');
+  slkMsg('Sending to ' + [plan.g ? '#godown' : '', plan.c ? '#customer' : ''].filter(Boolean).join(' and ') + '…');
+  async function post(to, file, text){ var j = await relayJson('slackpdf2', { t: Date.now(), dev: devId(), to: to, name: file.name, text: text, pdf: await pdfB64(file) }, 2);
+    if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version (Deploy → New version)' : (j.error || 'refused')); }
+  if (plan.g) {
+    try {
+      var st = gdSel(), gs = byDesign(st), gn = Object.keys(gs), all = Object.keys(byDesign()), off = all.filter(function(no){ return !gs[no]; });
+      var pages = await drawPages({ st: st, pick: true, upd: plan.upd, chg: plan.chg }), f = new File([makePDF(pages)], (nm || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-') + '-GODOWN-pick.pdf', { type: 'application/pdf' });
+      var text = '*GODOWN PICK LIST*' + (plan.upd ? ' — *' + plan.upd + '*' : '') + ' — ' + (nm || 'no name') + '\n' + date + ' · ' + gn.length + ' of ' + all.length + (all.length === 1 ? ' design' : ' designs') + ' · ' + gn.reduce(function(a, no){ return a + designPcs(no, st); }, 0) + ' pcs' + (me() ? ' · sent by ' + me() : '') +
+        '\nPick: ' + gn.map(function(x){ var r = rowOf(x); return 'SJ-' + shown(x) + (r ? ' (row ' + r + ')' : ''); }).join(' · ') + (off.length ? '\nAlready in office — don\'t pick: ' + off.map(function(x){ return 'SJ-' + shown(x); }).join(' · ') : '') + (plan.chg ? '\nChanges: ' + plan.chg : '') + dlt;
+      await post('godown', f, text); done.push('#godown (pick list, ' + gn.length + ' designs)');
+      var L = gdLog(); if (oid) { L[oid] = { t: Date.now(), sig: gdSig() }; ls('sj_gdlog', JSON.stringify(L)); ordCall({ op: 'tick', id: oid, step: 's1', on: true, by: me(), note: 'pick list posted to #godown' }).catch(function(){}); }
+    } catch(e){ bad.push(['g', '#godown: ' + e.message]); }
+  }
+  if (plan.c) {
+    try { var nos = Object.keys(byDesign());
+      var t2 = '*ORDER MEMO* — ' + (nm || 'no name') + '\n' + date + ' · ' + nos.length + (nos.length === 1 ? ' design' : ' designs') + ' · ' + nos.reduce(function(a, x){ return a + designPcs(x); }, 0) + ' pcs' + (me() ? ' · sent by ' + me() : '') + '\n' + nos.map(function(x){ return 'SJ-' + shown(x); }).join(' · ') + dlt;
+      await post('customer', pdfFile, t2); done.push('#customer (full memo)'); } catch(e){ bad.push(['c', '#customer: ' + e.message]); }
+  }
+  if (!bad.length) slkMsg('✓ Sent to ' + done.join(' and '), 'ok');
+  else { slkMsg((done.length ? '✓ ' + done.join(', ') + ' · ' : '') + 'NOT sent: ' + esc(bad.map(function(b){ return b[1]; }).join(' · ')) + ' <button type="button" id="slkre">Try again</button>', 'bad');
+    var rb = $('slkre'); if (rb) rb.onclick = function(){ memoSlack2(oid, { g: bad.some(function(b){ return b[0] === 'g'; }), c: bad.some(function(b){ return b[0] === 'c'; }), upd: plan.upd, chg: plan.chg }); }; }
 }
 
 // ----- NEW DESIGN ORDER (Abbas, 11 Oct 2026): the #order-2 process inside the app, owner only.
