@@ -62,6 +62,17 @@ main{padding:12px 14px 40px}
 .comp .mic{background:#5a4a8a;font-size:20px;padding:0 12px}.comp .mic.rec{background:var(--red);animation:pulse 1s infinite}.comp .cam{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:20px;padding:0 10px}
 @keyframes pulse{50%{opacity:.6}}
 .bprob{background:var(--red);grid-column:1/3}
+.lbs{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.lb{font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;background:#e6dccb;color:#2b2118}
+.lb.green{background:#4bce97;color:#164b35}.lb.yellow{background:#f5cd47;color:#533f04}.lb.orange{background:#fea362;color:#702e00}.lb.red{background:#f87168;color:#5d1f1a}.lb.purple{background:#9f8fef;color:#352c63}.lb.blue{background:#579dff;color:#09326c}.lb.sky{background:#6cc3e0;color:#164555}.lb.lime{background:#94c748;color:#37471f}.lb.pink{background:#e774bb;color:#50253f}.lb.black{background:#8590a2;color:#fff}
+.newb{background:var(--red);color:#fff;border-radius:999px;font-size:11px;font-weight:800;padding:3px 8px;flex:none;letter-spacing:.04em}
+#inbox{background:#fff;border:1.5px solid var(--red);border-radius:16px;padding:10px 12px;margin-bottom:12px}#inbox[hidden]{display:none}
+#inbox h3{margin:0 0 6px;font-size:14px;color:var(--red)}#inbox .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:15px}#inbox .row b{font-weight:800}#inbox .row small{color:var(--mute);font-size:12px;display:block}
+.pend{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0;background:#fff}.pend:empty{display:none}
+.pend .pi{position:relative;width:64px;height:64px;border-radius:10px;background:#f1ebe0 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--line)}
+.pend .pi small{position:absolute;bottom:0;left:0;right:0;font-size:9px;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:1px 2px;border-radius:0 0 9px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pend .pi b{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;line-height:20px;text-align:center}
+.compw{background:#fff;border-top:1px solid var(--line)}.comp{border-top:0}
+.comp .att{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:18px;padding:0 10px}
 #tmsg{font-size:13px;color:var(--red);margin:4px 0}#tmsg:empty{display:none}
 .soon{background:#fff;border:1.5px dashed var(--line);border-radius:16px;padding:14px;color:var(--mute);font-size:14px;text-align:center}
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end}.sheet[hidden]{display:none}
@@ -87,7 +98,7 @@ main{padding:12px 14px 40px}
   <div class="search"><input id="q" placeholder="Search design number · ڈیزائن نمبر" inputmode="search" autocomplete="off"></div>
   <div id="msg"></div>
 </header>
-<main><div id="list"><div class="empty">Loading… · لوڈ ہو رہا ہے</div></div></main>
+<main><div id="inbox" hidden></div><div id="list"><div class="empty">Loading… · لوڈ ہو رہا ہے</div></div></main>
 
 <div id="card" hidden>
   <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><span class="pill" id="cstage"></span></div>
@@ -101,7 +112,7 @@ main{padding:12px 14px 40px}
     <div class="btns" style="margin-top:0"><button class="bprob" id="bprob">🚩 Problem · مسئلہ<small>fabric short · lace missing · machine</small></button></div>
     <div class="thr"><h3>CARD CHAT · کارڈ چیٹ <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
-  <div class="comp"><button class="mic" id="mic" title="hold to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><textarea id="txt" rows="1" placeholder="Write to Abbas… · لکھیں"></textarea><button id="send">Send</button></div>
+  <div class="compw"><div class="pend" id="pend"></div><div class="comp"><button class="mic" id="mic" title="hold to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Write or paste… · لکھیں"></textarea><button id="send">Send</button></div></div>
 </div>
 <div class="sheet" id="probs" hidden><div class="in"><h3>What is the problem? · کیا مسئلہ ہے؟</h3>
 <button data-p="🚩 Fabric short · کپڑا کم ہے">🧵 Fabric short · کپڑا کم ہے</button>
@@ -118,7 +129,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13f4';
+var VER = '2026-10-13f5';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -145,7 +156,7 @@ async function hmacHex(key, msg){
   return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg)))).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
 }
 async function call(obj, pw){
-  obj.t = Date.now(); var req = JSON.stringify(obj), sig = await hmacHex(pw || PW, req), last = '';
+  obj.t = Date.now(); if (!obj.who) obj.who = WHO; var req = JSON.stringify(obj), sig = await hmacHex(pw || PW, req), last = '';
   for (var n = 0; n < 4; n++) {
     if (n) await sleep(2000 * n);
     try {
@@ -198,6 +209,14 @@ async function load(fresh){
   return true;
 }
 function inChip(c, i){ return CHIPS[i][1].indexOf(lname(c.l)) >= 0; }
+function labels(c){ return (c.lb && c.lb.length) ? '<div class="lbs">' + c.lb.map(function(l){ return '<span class="lb ' + esc((l.c || '').split('_')[0]) + '">' + esc(l.n) + '</span>'; }).join('') + '</div>' : ''; }
+function inbox(){
+  var us = D.cards.filter(function(c){ return unread(c); }), el = $('inbox'), tot = us.reduce(function(a, c){ return a + unread(c); }, 0);
+  try { if (navigator.setAppBadge) { tot ? navigator.setAppBadge(tot) : navigator.clearAppBadge(); } } catch(e){}
+  if (!us.length) { el.hidden = true; return; }
+  el.hidden = false; el.innerHTML = '<h3>💬 New messages · نئے پیغامات · ' + tot + '</h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(lname(c.l)) + '</small></div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
+}
+$('inbox').onclick = function(e){ var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
 function draw(){
   $('stages').innerHTML = CHIPS.map(function(ch, i){ var cs0 = D.cards.filter(function(c){ return inChip(c, i); }), n = cs0.length, u = cs0.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0);
     return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i>' + (u ? '<b class="u">' + u + '</b>' : '') + '<small>' + ch[2] + '</small></button>'; }).join('');
@@ -205,9 +224,10 @@ function draw(){
   cs.sort(function(a, b){ return a.pos - b.pos; });
   $('list').innerHTML = cs.length ? cs.map(function(c){ var p = parse(c.name);
     var u = unread(c);
-    return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="badge">' + u + '</span>' : '') + '</div>'; }).join('')
+    return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : '') + '</div>'; }).join('')
     : '<div class="empty">' + (q ? 'No card with ' + esc(q) : 'No cards here · یہاں کوئی کارڈ نہیں') + '</div>';
   document.querySelectorAll('#list .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); });
+  inbox();
 }
 $('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; ls('sj_fac_chip', String(cur)); $('q').value = ''; draw(); window.scrollTo(0, 0); };
 $('q').oninput = draw;
@@ -222,7 +242,7 @@ function paintCard(){
   $('cnm').innerHTML = (p.no ? 'SJ-' + esc(p.no) : 'Card') + '<small>' + [p.pcs && p.pcs + ' pcs', p.col && p.col + ' colours', p.size].filter(Boolean).map(esc).join(' · ') + '</small>';
   $('cstage').textContent = ln;
   var big = $('cimg'); big.setAttribute('data-img', c.img || ''); big.style.backgroundImage = ''; photo(c, big);
-  $('cttl').textContent = c.name;
+  $('cttl').innerHTML = esc(c.name) + labels(c);
   var ks = Object.keys(c.f || {}).filter(function(k){ return !HIDE.test(k.trim()); });
   $('cinfo').innerHTML = ks.length ? ks.map(function(k){ return '<div><b>' + esc(k) + '</b>' + esc(c.f[k]) + '</div>'; }).join('') : '<div style="grid-column:1/3;color:var(--mute)">No details on the card</div>';
   var assigned = Object.keys(c.f || {}).filter(function(k){ return /^(TASLEEM|IRFAN ALI|HASHIM|QADIR|SHAHZAIB|SALMAAN|ZAKIR|USMAN|Anees|SHAWKEEN)$/i.test(k.trim()); });
@@ -252,11 +272,10 @@ $('mvx').onclick = function(){ $('mv').hidden = true; };
 $('mvl').onclick = function(e){ var b = e.target.closest('button[data-n]'); if (!b || b.classList.contains('here')) return; $('mv').hidden = true; move(b.dataset.n); };
 
 // ----- card chat = the card's Slack #cutting thread (both ways) -----
-var SEEN = {}; try { SEEN = JSON.parse(ls('sj_fac_seen') || '{}'); } catch(e){}
-function unread(c){ var t = D.th && D.th[c.id]; if (!t || !t.n) return 0; return (+t.last > +(SEEN[c.id] || 0)) ? t.n : 0; }
-function seen(c, ts){ if (!ts) return; SEEN[c.id] = Math.max(+(SEEN[c.id] || 0), +ts); ls('sj_fac_seen', JSON.stringify(SEEN)); }
+function unread(c){ var t = D.th && D.th[c.id]; return t && t.n ? t.n : 0; }      // what the relay says THIS person has not seen (shared by all their phones)
+function seen(c){ if (D.th && D.th[c.id]) { delete D.th[c.id]; } }
 var TH = { card: null, msgs: [], timer: null, busy: false, none: false }, MEDIA = {};
-function thStart(c){ TH.card = c; TH.msgs = []; TH.none = false; $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · لوڈ ہو رہا ہے</div>'; $('tmsg').textContent = ''; $('tcount').textContent = ''; thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 12000); }
+function thStart(c){ TH.card = c; TH.msgs = []; PEND.length = 0; pendDraw(); seen(c); draw(); TH.none = false; $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · لوڈ ہو رہا ہے</div>'; $('tmsg').textContent = ''; $('tcount').textContent = ''; thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 12000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 async function thPull(){
   var c = TH.card; if (!c || TH.busy) return; TH.busy = true;
@@ -269,7 +288,7 @@ async function thPull(){
   TH.none = false;
   var have = {}; TH.msgs.forEach(function(m){ have[m.ts] = 1; }); var add = (j.msgs || []).filter(function(m){ return !have[m.ts]; });
   if (!add.length && TH.msgs.length) return;
-  TH.msgs = TH.msgs.concat(add); thDraw(); seen(c, TH.msgs[TH.msgs.length - 1].ts); draw();
+  TH.msgs = TH.msgs.concat(add); thDraw(); seen(c); draw();
 }
 function bubble(m){
   var me = m.app && m.who === WHO, cls = m.sys ? 'sys' : me ? 'me' : '', body = esc(m.sys ? m.text.replace(/\*/g, '') : m.text);
@@ -296,26 +315,46 @@ async function thSend(text){
   var c = TH.card; if (!c || !text.trim()) return; $('send').disabled = true;
   var j = await call({ op: 'post', card: c.id, text: text, who: WHO }); $('send').disabled = false;
   if (!j.ok) { toast(j.error); return; }
-  TH.msgs.push({ ts: j.ts, who: WHO, app: true, text: text, files: [] }); thDraw(); seen(c, j.ts); toast('✓ Sent to Abbas · بھیج دیا');
+  TH.msgs.push({ ts: j.ts, who: WHO, app: true, text: text, files: [] }); thDraw(); toast('✓ Sent to Abbas · بھیج دیا');
 }
-$('send').onclick = function(){ var v = $('txt').value; if (!v.trim()) return; $('txt').value = ''; thSend(v); };
-$('txt').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('send').onclick(); } };
+var PEND = [];
+function pendDraw(){ $('pend').innerHTML = PEND.map(function(x, i){ return '<div class="pi"' + (x.url ? ' style="background-image:url(' + x.url + ')"' : '') + '>' + (x.url ? '' : x.kind === 'audio' ? '🎤' : x.kind === 'video' ? '🎬' : '📎') + '<small>' + esc(x.label) + '</small><b data-i="' + i + '">✕</b></div>'; }).join('');
+  $('send').textContent = PEND.length ? 'Send ' + PEND.length + ' 📎' : 'Send'; }
+$('pend').onclick = function(e){ var b = e.target.closest('b[data-i]'); if (!b) return; var x = PEND.splice(+b.dataset.i, 1)[0]; if (x && x.url) URL.revokeObjectURL(x.url); pendDraw(); };
+async function pendAdd(file, name, kind){
+  if (!file) return;
+  var blob = file, nm = name || file.name || 'file';
+  if (kind === 'photo') { blob = await shrink(file); nm = /\.(jpe?g|png|webp|heic)$/i.test(nm) ? nm.replace(/\.(png|webp|heic)$/i, '.jpg') : 'photo-' + Date.now() + '.jpg'; }
+  if (blob.size > 18 * 1024 * 1024) { toast('Too big (max 18 MB) · بہت بڑی فائل'); return; }
+  var it = { blob: blob, name: nm, kind: kind, label: kind === 'photo' ? 'photo' : kind === 'audio' ? 'voice' : kind === 'video' ? 'video' : nm };
+  if (kind === 'photo') it.url = URL.createObjectURL(blob);
+  PEND.push(it); pendDraw(); toast((kind === 'audio' ? 'Voice note' : kind === 'photo' ? 'Photo' : 'File') + ' added — press Send · بھیجنے کے لیے Send دبائیں');
+}
+function kindOf(f){ var t = f.type || '', n = f.name || ''; if (/^image\//.test(t)) return 'photo'; if (/^audio\//.test(t) || /\.(opus|ogg|oga|m4a|mp3|aac|amr|wav)$/i.test(n)) return 'audio'; if (/^video\//.test(t) || /\.(mp4|mov|webm)$/i.test(n)) return 'video'; return 'file'; }
+$('afiles').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); this.value = ''; };
+$('txt').addEventListener('paste', function(e){ var fs = Array.from((e.clipboardData || {}).files || []); if (!fs.length) return; e.preventDefault(); fs.forEach(function(f){ pendAdd(f, f.name || ('pasted-' + Date.now()), kindOf(f)); }); });
+document.getElementById('card').addEventListener('drop', function(e){ e.preventDefault(); Array.from(e.dataTransfer.files || []).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); });
+document.getElementById('card').addEventListener('dragover', function(e){ e.preventDefault(); });
+async function sendAll(){
+  var c = TH.card; if (!c) return; var text = $('txt').value.trim();
+  if (!PEND.length) { if (!text) return; $('txt').value = ''; thSend(text); return; }
+  $('send').disabled = true; toast('Sending ' + PEND.length + ' file' + (PEND.length > 1 ? 's' : '') + '… · بھیجا جا رہا ہے');
+  var files = [];
+  for (var i = 0; i < PEND.length; i++) { var b64 = await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(PEND[i].blob); }); files.push({ name: PEND[i].name, b64: b64 }); }
+  var j = await call({ op: 'up', card: c.id, files: files, text: text, who: WHO }); $('send').disabled = false;
+  if (!j.ok) { toast(j.error); return; }
+  PEND.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); PEND.length = 0; pendDraw(); $('txt').value = '';
+  toast('✓ Sent · بھیج دیا'); setTimeout(thPull, 1500);
+}
+$('send').onclick = sendAll;
+$('txt').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey && !/Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) { e.preventDefault(); sendAll(); } };
 $('bprob').onclick = function(){ $('probs').hidden = false; };
 $('probx').onclick = function(){ $('probs').hidden = true; };
 $('probs').onclick = function(e){ var b = e.target.closest('button[data-p]'); if (!b) return; $('probs').hidden = true; thSend(b.dataset.p); };
-// photo
+// photo -> staged, not sent
 $('cam').onclick = function(){ $('pfile').value = ''; $('pfile').click(); };
-$('pfile').onchange = function(){ var f = this.files[0]; if (f) upFile(f, 'photo-' + Date.now() + '.jpg', true); };
-function shrink(file){ return new Promise(function(ok){ var im = new Image(); im.onload = function(){ var k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); c.toBlob(ok, 'image/jpeg', 0.82); URL.revokeObjectURL(im.src); }; im.onerror = function(){ ok(file); }; im.src = URL.createObjectURL(file); }); }
-async function upFile(file, name, isPhoto){
-  var c = TH.card; if (!c) return; toast(isPhoto ? 'Sending photo… · بھیجی جا رہی ہے' : 'Sending voice note… · بھیجا جا رہا ہے');
-  var blob = isPhoto ? await shrink(file) : file;
-  if (blob.size > 18 * 1024 * 1024) { toast('Too big (max 18 MB)'); return; }
-  var b64 = await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(blob); });
-  var j = await call({ op: 'up', card: c.id, name: name, b64: b64, who: WHO });
-  if (!j.ok) { toast(j.error); return; }
-  toast('✓ Sent · بھیج دیا'); setTimeout(thPull, 1500);
-}
+$('pfile').onchange = function(){ var f = this.files[0]; if (f) pendAdd(f, 'photo-' + Date.now() + '.jpg', 'photo'); };
+function shrink(file){ return new Promise(function(ok){ var im = new Image(); im.onload = function(){ var k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); c.toBlob(function(b){ ok(b || file); }, 'image/jpeg', 0.82); URL.revokeObjectURL(im.src); }; im.onerror = function(){ ok(file); }; im.src = URL.createObjectURL(file); }); }
 // voice: hold the mic
 var REC = { r: null, chunks: [], t0: 0 };
 async function recStart(){ if (REC.r) return; REC.t0 = Date.now();
@@ -324,8 +363,8 @@ async function recStart(){ if (REC.r) return; REC.t0 = Date.now();
   REC.chunks = []; REC.r = new MediaRecorder(st, type ? { mimeType: type } : {}); REC.r.ondataavailable = function(e){ if (e.data.size) REC.chunks.push(e.data); };
   REC.r.onstop = function(){ st.getTracks().forEach(function(x){ x.stop(); }); var sec = Math.round((Date.now() - REC.t0) / 1000), mt = REC.r.mimeType || type || 'audio/mp4', blob = new Blob(REC.chunks, { type: mt }); REC.r = null;
     if (sec < 1 || blob.size < 1000) { toast('Too short — hold the mic while you speak · بولتے وقت مائیک دبائے رکھیں'); return; }
-    upFile(blob, 'voice-' + Date.now() + (/mp4/.test(mt) ? '.m4a' : /ogg/.test(mt) ? '.ogg' : '.webm'), false); };
-  REC.r.start(); $('mic').classList.add('rec'); toast('Recording… release to send · ریکارڈنگ');
+    pendAdd(blob, 'voice-' + Date.now() + (/mp4/.test(mt) ? '.m4a' : /ogg/.test(mt) ? '.ogg' : '.webm'), 'audio'); };
+  REC.r.start(); $('mic').classList.add('rec'); toast('Recording… release when done · ریکارڈنگ');
 }
 function recStop(){ if (REC.r && REC.r.state === 'recording') REC.r.stop(); $('mic').classList.remove('rec'); }
 $('mic').onpointerdown = function(e){ e.preventDefault(); recStart(); }; $('mic').onpointerup = $('mic').onpointercancel = $('mic').onpointerleave = recStop;
@@ -373,7 +412,7 @@ async function checkVer(){ try { var t = await (await fetch('factory.html?t=' + 
 $('who').textContent = WHO;
 if (!PW) showLogin(); else load(false);
 checkVer();
-window.__f = { D: D, parse: parse, call: call, TH: TH };
+window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND };
 })();
 </script>
 </body></html>
