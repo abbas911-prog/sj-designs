@@ -66,7 +66,8 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var FAC = { BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
+var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
+  BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
   ['START', '6527c572b12b208471c080cb'], ['CUTTING', '6527c57751007e81a43f55a6'], ['IN LINE', '6527c57cd7e267fbf2a602b4'],
   ['READY FOR HAND WORK', '6527c585b9300f804906d9bd'], ['IN HAND WORK', '6527c59b796865bd9639b0c3'], ['CAME FROM HAND WORK', '6602ad25e74db40a25ab0296'],
@@ -86,26 +87,29 @@ function slackApi(tok, method, args, get) {            // one Slack Web API call
 }
 function facThread(P, FT, card, rtok, make) {                 // the #cutting message a card's chat lives under: remembered, else found by the card link, else made
   var key = 'FTH_' + card, have = P.getProperty(key); if (have) return JSON.parse(have);
-  var c = trApi('get', '/cards/' + card, { fields: 'name,shortUrl,shortLink' }, rtok);
-  var hist = slackApi(FT, 'conversations.history', { channel: DOX.CUTTING, limit: 200 }, true);
+  var c = trApi('get', '/cards/' + card, { fields: 'name,shortUrl,shortLink,idList' }, rtok);
+  var CH = FAC.SAMPLE_LISTS.indexOf(c.idList) >= 0 ? FAC.SAMPLES_CH : DOX.CUTTING;        // sample cards live in #samples-discuss
+  var hist = slackApi(FT, 'conversations.history', { channel: CH, limit: 200 }, true);
   if (hist.ok) {
     var hit = (hist.messages || []).filter(function (m) { return String(m.text || '').indexOf(c.shortLink) >= 0 || String(m.text || '').indexOf(c.shortUrl) >= 0; }).sort(function (a, b) { return +a.ts - +b.ts; })[0];
-    if (hit) { var t = { ch: DOX.CUTTING, ts: hit.thread_ts || hit.ts }; P.setProperty(key, JSON.stringify(t)); return t; }
+    if (hit) { var t = { ch: CH, ts: hit.thread_ts || hit.ts }; P.setProperty(key, JSON.stringify(t)); return t; }
   } else if (hist.error === 'missing_scope') throw new Error('the factory Slack app needs channels:history + groups:history (then Reinstall)');
   if (!make) return null;
-  var p = slackApi(FT, 'chat.postMessage', { channel: DOX.CUTTING, text: '🧵 ' + c.name + '\n' + c.shortUrl + '\n_card chat · factory app_' });
-  if (!p.ok) throw new Error('Slack said ' + p.error + (p.error === 'not_in_channel' ? ' (invite the factory bot to #cutting)' : ''));
-  var t2 = { ch: DOX.CUTTING, ts: p.ts }; P.setProperty(key, JSON.stringify(t2)); return t2;
+  var p = slackApi(FT, 'chat.postMessage', { channel: CH, text: (CH === FAC.SAMPLES_CH ? '⭐ ' : '🧵 ') + c.name + '\n' + c.shortUrl + '\n_card chat · factory app_' });
+  if (!p.ok) throw new Error('Slack said ' + p.error + (p.error === 'not_in_channel' ? ' (invite the factory bot to ' + (CH === FAC.SAMPLES_CH ? '#samples-discuss' : '#cutting') + ')' : ''));
+  var t2 = { ch: CH, ts: p.ts }; P.setProperty(key, JSON.stringify(t2)); return t2;
 }
 function facThreads(P, FT, cards, fresh) {                    // reply counts for the badges: one #cutting history call, matched to the remembered threads
   var cache = CacheService.getScriptCache(), hit = fresh ? null : cache.get('FAC_TH'); if (hit) return JSON.parse(hit);
   var all = P.getProperties(), byTs = {}, byLink = {}, outm = {};
   cards.forEach(function (c) { var v = all['FTH_' + c.id]; if (v) byTs[JSON.parse(v).ts] = c.id; else if (c.url) byLink[c.url.split('/').pop()] = c.id; });
-  var hist = slackApi(FT, 'conversations.history', { channel: DOX.CUTTING, limit: 200 }, true);
-  (hist.messages || []).forEach(function (m) {
-    var id = byTs[m.ts];
-    if (!id) { var t = String(m.text || ''); for (var k in byLink) if (t.indexOf('/c/' + k) >= 0) { id = byLink[k]; delete byLink[k]; P.setProperty('FTH_' + id, JSON.stringify({ ch: DOX.CUTTING, ts: m.ts })); break; } }   // an order message from before: remembered from now on
-    if (id) outm[id] = { n: m.reply_count || 0, last: m.latest_reply || m.ts };
+  [DOX.CUTTING, FAC.SAMPLES_CH].forEach(function (CH) {                                   // #cutting for production cards, #samples-discuss for sample cards
+    var hist = slackApi(FT, 'conversations.history', { channel: CH, limit: 200 }, true);
+    (hist.messages || []).forEach(function (m) {
+      var id = byTs[m.ts];
+      if (!id) { var t = String(m.text || ''); for (var k in byLink) if (t.indexOf('/c/' + k) >= 0) { id = byLink[k]; delete byLink[k]; P.setProperty('FTH_' + id, JSON.stringify({ ch: CH, ts: m.ts })); break; } }   // an order message from before: remembered from now on
+      if (id) outm[id] = { n: m.reply_count || 0, last: m.latest_reply || m.ts };
+    });
   });
   cache.put('FAC_TH', JSON.stringify(outm), 8); return outm;
 }
@@ -336,6 +340,37 @@ function fac(reqText, P) {
       try { if (FT) { var xth = facThread(P, FT, xc, rtok, true); slackApi(FT, 'chat.postMessage', { channel: xth.ch, thread_ts: xth.ts, text: '→ *TRELLO* · ' + xwho + ' added ' + added.length + (added.length === 1 ? ' photo' : ' photos') + ' to the card' }); } } catch (e) {}
       CacheService.getScriptCache().remove('FAC_LIST');
       return out({ ok: true, ids: added });
+    }
+    if (req.op === 'sample') {                                // 13 Oct 2026 (Abbas): ⭐ NEW SAMPLE - a card on SAMPLES + the details (photos / videos / voice notes) posted in #samples-discuss, which becomes the card's chat
+      if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
+      if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
+      var sname = String(req.name || '').trim().slice(0, 500), sdesc = String(req.desc || '').slice(0, 16000), swho = String(req.who || '').slice(0, 40) || 'factory';
+      var sfs = Array.isArray(req.files) ? req.files : []; if (!sname || sfs.length > 10) return out({ ok: false, error: 'bad request' });
+      var scard2 = trApi('post', '/cards', { idList: FAC.LISTS[0][1], name: sname, desc: sdesc, pos: 'top' }, wtok);
+      var sids = [], stot = 0, satt = 0, scover = false;
+      for (var si = 0; si < sfs.length; si++) {
+        var sn = String(sfs[si].name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 60), sb = Utilities.base64Decode(String(sfs[si].b64 || '')), stype = String(sfs[si].type || 'application/octet-stream');
+        stot += sb.length; if (sb.length > 18 * 1024 * 1024 || stot > 40 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 18 MB each, 40 MB together)' });
+        sids.push(slackUp(FT, sn, sb));
+        if (sb.length <= DOX.TRELLO_MAX) { try {                                                       // the same file onto the Trello card (first picture = cover)
+          var isImg = /^image\//.test(stype), xr2 = UrlFetchApp.fetch('https://api.trello.com/1/cards/' + scard2.id + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true,
+            payload: { file: Utilities.newBlob(sb, stype, sn), name: sn, setCover: (isImg && !scover) ? 'true' : 'false' } });
+          if (xr2.getResponseCode() < 300) { satt++; if (isImg) scover = true; } } catch (e) {} }
+      }
+      var stext = '⭐ *SAMPLE* · ' + sname + (sdesc ? '\n' + sdesc : '') + '\n' + scard2.shortUrl + '\n_' + swho + ' · factory app_', sts = '';
+      if (sids.length) {
+        var sj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + FT }, muteHttpExceptions: true,
+          payload: { files: JSON.stringify(sids.map(function (f) { return { id: f }; })), channel_id: FAC.SAMPLES_CH, initial_comment: stext } }).getContentText());
+        if (!sj.ok) return out({ ok: false, error: 'Slack said ' + sj.error + (sj.error === 'not_in_channel' ? ' (invite the factory bot to #samples-discuss)' : ''), card: scard2.id });
+        try { var sh = (sj.files || [])[0].shares || {}, grp = sh.public || sh.private || {}, arr = grp[FAC.SAMPLES_CH] || []; sts = arr.length ? arr[0].ts : ''; } catch (e) {}
+        if (!sts) { Utilities.sleep(1200); var sh2 = slackApi(FT, 'conversations.history', { channel: FAC.SAMPLES_CH, limit: 20 }, true); var hit2 = (sh2.messages || []).filter(function (m) { return String(m.text || '').indexOf(scard2.shortUrl) >= 0; })[0]; if (hit2) sts = hit2.ts; }
+      } else {
+        var sp = slackApi(FT, 'chat.postMessage', { channel: FAC.SAMPLES_CH, text: stext }); if (!sp.ok) return out({ ok: false, error: 'Slack said ' + sp.error + (sp.error === 'not_in_channel' ? ' (invite the factory bot to #samples-discuss)' : ''), card: scard2.id }); sts = sp.ts;
+      }
+      if (sts) P.setProperty('FTH_' + scard2.id, JSON.stringify({ ch: FAC.SAMPLES_CH, ts: sts }));       // that post IS the card's chat from now on
+      try { trApi('post', '/cards/' + scard2.id + '/actions/comments', { text: '⭐ Sample · ' + swho + ' (factory app) · posted in #samples-discuss' }, wtok); } catch (e) {}
+      CacheService.getScriptCache().remove('FAC_LIST'); CacheService.getScriptCache().remove('FAC_TH');
+      return out({ ok: true, id: scard2.id, url: scard2.shortUrl, files: sids.length, att: satt });
     }
     if (req.op === 'later') {                                 // pin / unpin a card on this person's LATER list (per person, shared by all their phones)
       var lc = String(req.card || '').replace(/[^0-9a-f]/g, ''), lwho = String(req.who || '').trim().toUpperCase().slice(0, 40); if (!lc || !lwho) return out({ ok: false, error: 'bad request' });
