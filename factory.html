@@ -62,7 +62,7 @@ main{padding:12px 14px 40px}
 .msg .bub{background:#fff;border-radius:10px;padding:7px 9px 5px;font-size:15px;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative;min-width:70px}
 .msg.me .bub{background:#dcf8c6}.msg .tm{display:block;text-align:right;font-size:10px;color:#8a7f70;margin-top:3px}
 .msg.sys{align-self:center;max-width:100%;align-items:center}.msg.sys .bub{background:#e1dbd0;color:#5a5047;font-size:12px;padding:3px 10px;box-shadow:none}.msg.sys .tm{display:none}
-.msg.root .bub{background:#fff6dc;border:1px solid #ecd9a8}.msg.prob .bub{background:#fde8ee;color:var(--red);font-weight:700}
+.msg.root .bub{background:#fff6dc;border:1px solid #ecd9a8}.msg.pend .bub{opacity:.6}.msg.prob .bub{background:#fde8ee;color:var(--red);font-weight:700}
 .bub img{max-width:230px;max-height:300px;border-radius:10px;display:block;cursor:zoom-in}.bub .fph{width:200px;height:120px;border-radius:10px;background:#e6dccb;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:12px}
 .bub audio{width:220px;height:36px;display:block}.bub .fl{font-size:13px;color:var(--mute)}
 .comp{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff;align-items:flex-end}
@@ -155,7 +155,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13g8';
+var VER = '2026-10-13g9';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -226,12 +226,18 @@ function pump(){
 }
 
 // ----- list -----
+// 13 Oct 2026 (Abbas: 'very laggy', 'opened the app multiple times and it's still loading'): the last list is kept on the phone and shown
+// at once; the relay is asked in the background. One request at a time - a poll never starts while the last one is still out.
+var LOADING = false;
+function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); $('bell').hidden = !j.tg; }
+function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Last update · ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · refreshing…'; draw(); return true; } catch(e){ return false; } }
 async function load(fresh){
+  if (LOADING) return false; LOADING = true;
   $('rf').classList.add('spin');
   var j = await call({ op: 'list', fresh: !!fresh });
-  $('rf').classList.remove('spin');
+  $('rf').classList.remove('spin'); LOADING = false;
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
-  D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.byId = {}; $('bell').hidden = !j.tg; /* the bell shows only once Telegram is set up in the relay */ D.cards.forEach(function(c){ D.byId[c.id] = c; });
+  applyList(j); j.t = Date.now(); try { ls('sj_fac_list', JSON.stringify(j)); } catch(e){}
   var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? 'Updated · আপডেট ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
   draw(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
   if (!open) openFromHash();
@@ -262,7 +268,10 @@ function cuNext(){ CU.i++; var c = D.byId[CU.ids[CU.i]]; if (!c) { CU.ids = []; 
 $('cunext').onclick = cuNext;
 $('cupin').onclick = function(){ if (open) setLater(open, !(D.later || {})[open.id]); };
 $('inbox').onclick = function(e){ if (e.target.closest('#bcatch')) { catchUp(); return; } var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
-function draw(){
+var DRAWN = '';
+function draw(force){
+  var sig = cur + '|' + $('q').value + '|' + D.cards.map(function(c){ return c.id + c.l + c.pos + c.img + c.name + JSON.stringify(c.lb || '') + (D.th[c.id] ? D.th[c.id].n : 0) + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|' + D.w;
+  if (!force && sig === DRAWN) { inbox(); return; } DRAWN = sig;
   $('stages').innerHTML = CHIPS.map(function(ch, i){ var cs0 = D.cards.filter(function(c){ return inChip(c, i); }), n = cs0.length, u = cs0.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0);
     return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i>' + (u ? '<b class="u">' + u + '</b>' : '') + '<small>' + ch[2] + '</small></button>'; }).join('');
   var q = $('q').value.replace(/\D/g, ''), cs = D.cards.filter(function(c){ return q ? parse(c.name).no.indexOf(q) >= 0 || c.name.indexOf(q) >= 0 : inChip(c, cur); });
@@ -319,7 +328,7 @@ $('edx').onclick = function(){ $('ed').hidden = true; };
 $('edgo').onclick = async function(){ var c = open; if (!c) return; var nm = $('edname').value.trim(), ds = $('eddesc').value; if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
   var r = {}; if (nm !== c.name) r.name = nm; if (ds !== (c.desc || '')) r.desc = ds; if (!Object.keys(r).length) { $('ed').hidden = true; return; }
   this.disabled = true; try { r.op = 'edit'; r.card = c.id; var j = await call(r); if (!j.ok) { toast('✗ ' + j.error); return; }
-    if (r.name != null) c.name = nm; if (r.desc != null) c.desc = ds; $('ed').hidden = true; if (open === c) paintCard(); draw(); toast('✓ Saved to Trello · সেভ হয়েছে'); load(true); } finally { this.disabled = false; } };
+    if (r.name != null) c.name = nm; if (r.desc != null) c.desc = ds; $('ed').hidden = true; if (open === c) paintCard(); draw(true); toast('✓ Saved to Trello · সেভ হয়েছে'); load(false); } finally { this.disabled = false; } };
 $('bcopy').onclick = function(){ if (!open || !needW()) return; $('cpname').value = open.name; listSel($('cpto'), open.l); $('cpkeep').checked = true; $('cp').hidden = false; };
 $('cpx').onclick = function(){ $('cp').hidden = true; };
 $('cpgo').onclick = async function(){ var c = open; if (!c) return; var nm = $('cpname').value.trim(); if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
@@ -332,7 +341,7 @@ $('ncgo').onclick = async function(){ var nm = $('ncname').value.trim(); if (!nm
     if (!j.ok) { toast('✗ ' + j.error); return; } $('nc').hidden = true; toast('✓ Card added · কার্ড যোগ হয়েছে'); await gotoNew(j.id, $('ncto').value); } finally { this.disabled = false; this.textContent = 'Add card · কার্ড যোগ করুন'; } };
 async function gotoNew(id, listId){ if (!$('card').hidden) { $('card').hidden = true; thStop(); open = null; }
   var i = CHIPS.findIndex(function(ch){ return ch[1].some(function(n){ return lid(n) === listId; }); }); if (i >= 0) { cur = i; ls('sj_fac_chip', String(cur)); } $('q').value = '';
-  await load(true); var c = D.byId[id]; if (c) openCard(c); else draw(); }
+  await load(false); var c = D.byId[id]; if (c) openCard(c); else draw(); }
 $('battach').onclick = function(){ if (open) $('tfile').click(); };
 $('tfile').onchange = async function(){                     // 13 Oct 2026 (Abbas): photos from the phone onto the real Trello card (first one becomes the cover when the card has none)
   var fs = Array.from(this.files || []), c = open; this.value = ''; if (!fs.length || !c) return;
@@ -343,20 +352,17 @@ $('tfile').onchange = async function(){                     // 13 Oct 2026 (Abba
     var j = await call({ op: 'attach', card: c.id, files: files, cover: !c.img });
     if (!j.ok) { toast('✗ ' + j.error); return; }
     toast('✓ ' + files.length + ' photo' + (files.length > 1 ? 's' : '') + ' added to Trello · ট্রেলোতে যোগ হয়েছে');
-    c._atts = null; if (open === c) attsLoad(c); load(true);
+    c._atts = null; if (open === c) attsLoad(c); load(false);
   } catch (e) { toast('✗ ' + e.message); }
   finally { b.disabled = false; b.innerHTML = '📷 Add photo<small>ট্রেলোতে ছবি যোগ করুন</small>'; }
 };
 async function move(toName){
   var c = open, to = lid(toName); if (!c || !to) return;
   if (!confirm('Move SJ-' + (parse(c.name).no || '') + ' to ' + toName + '?\n' + (UR[toName] || '') + '-এ পাঠাবেন?')) return;
-  $('bdone').disabled = true; toast('Moving… · পাঠানো হচ্ছে');
-  var j = await call({ op: 'move', card: c.id, from: c.l, to: to, who: WHO });
-  if (!j.ok) { toast(j.error); $('bdone').disabled = false; if (j.moved) load(true); return; }
-  c.l = to; toast('✓ Moved to ' + toName + ' · ' + (UR[toName] || ''));
-  if ((D.show || []).indexOf(to) < 0) { D.cards = D.cards.filter(function(x){ return x !== c; }); delete D.byId[c.id]; history.back(); }
-  else { paintCard(); setTimeout(thPull, 1200); }
-  draw(); setTimeout(function(){ load(true); }, 1500);
+  var from = c.l; c.l = to; c.pos = -1; toast('✓ Moved to ' + toName + ' · ' + (UR[toName] || '')); paintCard(); draw();   // on screen at once
+  var j = await call({ op: 'move', card: c.id, from: from, to: to, who: WHO });
+  if (!j.ok) { c.l = from; paintCard(); draw(); toast('✗ ' + j.error); if (j.moved) load(false); return; }
+  setTimeout(thPull, 800); setTimeout(function(){ load(false); }, 1200);
 }
 $('bdone').onclick = function(){ var nx = NEXT[lname(open.l)]; if (nx) move(nx); };
 $('bmove').onclick = function(){ if (!D.w) { toast('View only — cannot move yet'); return; }
@@ -369,11 +375,12 @@ $('mvl').onclick = function(e){ var b = e.target.closest('button[data-n]'); if (
 function unread(c){ var t = D.th && D.th[c.id]; return t && t.n ? t.n : 0; }      // what the relay says THIS person has not seen (shared by all their phones)
 function seen(c){ if (D.th && D.th[c.id]) { delete D.th[c.id]; } }
 var TH = { card: null, msgs: [], timer: null, busy: false, none: false }, MEDIA = {};
-function thStart(c){ TH.card = c; TH.msgs = []; PEND.length = 0; pendDraw(); seen(c); draw(); TH.none = false; $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tmsg').textContent = ''; $('tcount').textContent = ''; thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 5000); }
+var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
+function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = THC[c.id] || []; PEND.length = 0; pendDraw(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 5000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 async function thPull(){
   var c = TH.card; if (!c || TH.busy) return; TH.busy = true;
-  var last = TH.msgs.length ? TH.msgs[TH.msgs.length - 1].ts : '';
+  var real = TH.msgs.filter(function(m){ return !m.pend; }), last = real.length ? real[real.length - 1].ts : '';
   var j = await call({ op: 'thread', card: c.id, since: last });
   TH.busy = false; if (TH.card !== c) return;
   if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = ''; return; }
@@ -382,7 +389,7 @@ async function thPull(){
   TH.none = false;
   var have = {}; TH.msgs.forEach(function(m){ have[m.ts] = 1; }); var add = (j.msgs || []).filter(function(m){ return !have[m.ts]; });
   if (!add.length && TH.msgs.length) return;
-  TH.msgs = TH.msgs.concat(add); thDraw(); seen(c); draw();
+  var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thDraw(); seen(c); draw();
 }
 function firstName(x){ return String(x || '').trim().split(/[\s·]+/)[0].toUpperCase(); }
 function nrm(x){ return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
@@ -397,8 +404,8 @@ function bubble(m){
     else if (f.audio) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="audio" style="height:44px">▶ voice note · ভয়েস নোট</div>';
     else body += '<div class="fl">📎 ' + esc(f.name) + (f.video ? ' (video — open in Slack)' : '') + '</div>';
   });
-  var t = new Date(+m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
-  return '<div class="msg ' + cls + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + '</div>') + '<div class="bub">' + body + '<span class="tm">' + dd + ' ' + hh + '</span></div></div>';
+  var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
+  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + '</div>') + '<div class="bub">' + body + '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span></div></div>';
 }
 function thDraw(){ $('thread').innerHTML = TH.msgs.map(bubble).join(''); $('tcount').textContent = TH.msgs.length + ' messages';
   var el = $('cbody'); setTimeout(function(){ el.scrollTop = el.scrollHeight; }, 30); autoMedia(); }
@@ -412,10 +419,12 @@ async function loadMedia(e){
 $('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f); };
 async function openBig(src, fid){ $('viewer').hidden = false; $('vimg').src = src || ''; if (fid) { var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && !$('viewer').hidden && /^image/.test(j.type || 'image')) $('vimg').src = 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64; } }
 async function thSend(text){
-  var c = TH.card; if (!c || !text.trim()) return; $('send').disabled = true;
-  var j = await call({ op: 'post', card: c.id, text: text, who: WHO }); $('send').disabled = false;
-  if (!j.ok) { toast(j.error); return; }
-  TH.msgs.push({ ts: j.ts, who: WHO, app: true, text: text, files: [] }); thDraw(); toast('✓ Sent to Abbas · পাঠানো হয়েছে');
+  var c = TH.card; if (!c || !text.trim()) return;
+  var pm = { ts: 'p' + Date.now(), pend: true, who: WHO, app: true, text: text, files: [] }; TH.msgs.push(pm); TH.none = false; thDraw();   // on screen at once
+  var j = await call({ op: 'post', card: c.id, text: text, who: WHO });
+  if (TH.card !== c) return;
+  if (!j.ok) { TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); thDraw(); $('txt').value = text; toast('✗ Not sent — ' + j.error); return; }
+  pm.ts = j.ts; delete pm.pend; thDraw();
 }
 var PEND = [];
 function pendDraw(){ $('pend').innerHTML = PEND.map(function(x, i){ return '<div class="pi"' + (x.url ? ' style="background-image:url(' + x.url + ')"' : '') + '>' + (x.url ? '' : x.kind === 'audio' ? '🎤' : x.kind === 'video' ? '🎬' : '📎') + '<small>' + esc(x.label) + '</small><b data-i="' + i + '">✕</b></div>'; }).join('');
@@ -475,10 +484,13 @@ async function sendAll(){
   $('send').disabled = true; toast('Sending ' + PEND.length + ' file' + (PEND.length > 1 ? 's' : '') + '… · পাঠানো হচ্ছে');
   var files = [];
   for (var i = 0; i < PEND.length; i++) { var b64 = await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(PEND[i].blob); }); files.push({ name: PEND[i].name, b64: b64 }); }
+  var pm = { ts: 'p' + Date.now(), pend: true, who: WHO, app: true, text: (text ? text + '\n' : '') + PEND.map(function(x){ return x.kind === 'audio' ? '🎤 voice note' : x.kind === 'photo' ? '📷 photo' : x.kind === 'video' ? '🎬 video' : '📎 ' + x.name; }).join(' · '), files: [] };
+  TH.msgs.push(pm); TH.none = false; thDraw();
   var j = await call({ op: 'up', card: c.id, files: files, text: text, who: WHO }); $('send').disabled = false;
-  if (!j.ok) { toast(j.error); return; }
+  if (TH.card !== c) return;
+  if (!j.ok) { TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); thDraw(); toast('✗ Not sent — ' + j.error); return; }
   PEND.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); PEND.length = 0; pendDraw(); $('txt').value = '';
-  toast('✓ Sent · পাঠানো হয়েছে'); setTimeout(thPull, 1500);
+  TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); setTimeout(thPull, 800);
 }
 $('send').onclick = sendAll;
 $('txt').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey && !/Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) { e.preventDefault(); sendAll(); } };
@@ -537,19 +549,19 @@ $('lgo').onclick = async function(){
   this.disabled = true; this.textContent = 'Checking…';
   var j = await call({ op: 'list' }, pw); this.disabled = false; this.textContent = 'Open · খুলুন';
   if (!j.ok) { $('lerr').textContent = j.error === 'wrong password' ? 'Wrong password · ভুল পাসওয়ার্ড' : j.error; return; }
-  PW = pw; WHO = nm; ls('sj_fac_pw', pw); ls('sj_fac_who', nm); $('who').textContent = nm; $('login').hidden = true; load(false);
+  PW = pw; WHO = nm; ls('sj_fac_pw', pw); ls('sj_fac_who', nm); $('who').textContent = nm; $('login').hidden = true; ls('sj_fac_list', null); load(false);
 };
 document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on this phone?')) { ls('sj_fac_pw', null); PW = ''; showLogin(); } };
 
 // ----- keep fresh: every 30 s while on screen, and when coming back to the app -----
-setInterval(function(){ if (PW && !document.hidden) load(false); }, 10000);
+var POLLN = 0; setInterval(function(){ POLLN++; if (PW && !document.hidden && ($('card').hidden || POLLN % 2 === 0)) load(false); }, 10000);
 setInterval(function(){ if (!document.hidden && $('card').hidden) checkVer(); }, 300000);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { load(false); checkVer(); } });
 async function checkVer(){ try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
 
 $('who').textContent = WHO;
-if (!PW) showLogin(); else load(false);
+if (!PW) showLogin(); else { loadCached(); load(false); }
 checkVer();
 window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND };
 })();
