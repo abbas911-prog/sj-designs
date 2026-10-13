@@ -712,7 +712,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-13b';
+var VER = '2026-10-13c';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -2701,10 +2701,10 @@ $('cbbody').addEventListener('click', async function(e){
 // run will read it, using that run's own rules (SJ Cash Daily Process); Send posts it to #purchase with the SJ Memo bot, photos
 // attached. The 22:00 run still writes the ledger — nothing here touches the sheet.
 var CASH_VENDORS = ['A-B(S-K)', 'POLI YASIN', 'SHAMSI', 'AL-MU', 'USMAN', 'TUSHAR', 'NADEEM', 'MANIK', 'ARDEE TRADING', 'STONE', 'KAAMI', 'RUSA',
-  'SOUTH WAY TRADING', 'HIGH CHOICE', 'SAROOJ', 'IMRAN LAIS', 'MATIULLAH'];
+  'SOUTH WAY TRADING', 'HIGH CHOICE', 'SAROOJ', 'IMRAN LAIS', 'MATIULLAH', 'MANJAY'];
 var CASH_ALIAS = { 'al mu': 'AL-MU', 'almu': 'AL-MU', 'al-mu': 'AL-MU', 'a-b': 'A-B(S-K)', 'ab': 'A-B(S-K)', 'a b': 'A-B(S-K)', 'poli': 'POLI YASIN', 'poli yasin': 'POLI YASIN',
   'usman hand work': 'USMAN', 'usman handwork': 'USMAN', 'usman': 'USMAN', 'yogesh': 'HIGH CHOICE', 'high choice': 'HIGH CHOICE', 'south way': 'SOUTH WAY TRADING', 'ardee': 'ARDEE TRADING',
-  'imran lais': 'IMRAN LAIS', 'imran': 'IMRAN LAIS', 'mati': 'MATIULLAH' };
+  'imran lais': 'IMRAN LAIS', 'imran': 'IMRAN LAIS', 'mati': 'MATIULLAH', 'manjay': 'MANJAY', 'manjai': 'MANJAY', 'manjey': 'MANJAY' };
 var CASH_EXP = ['Fuel', 'Parking', 'Salary', 'Food', 'Helper', 'Pick up', 'Wifi', 'Electricity', 'Car expense', 'Godown expense', 'Cafeteria', 'Packing', 'Mobile expense', 'Office maintenance', 'Application', 'Fine'];
 var CASH_EXPW = ['fuel', 'petrol', 'parking', 'salary', 'food', 'helper', 'pick up', 'pickup', 'wifi', 'electricity', 'dewa', 'car', 'godown', 'cafeteria', 'packing', 'mobile', 'office', 'application', 'fine', 'rent', 'water', 'tea', 'taxi', 'courier', 'visa', 'stationery', 'cleaning', 'maintenance'];
 var CASH_KINDS = [['out', 'Cash paid (out)'], ['in', 'Cash received (in)'], ['bill', 'Bill (credit)'], ['cp', 'Cash purchase'], ['exp', 'Expense'], ['gave', 'Money given'], ['took', 'Money taken'], ['ucust', 'Customer via Usman']];
@@ -2721,9 +2721,12 @@ function cashAmt(t){ var m = String(t).replace(/,/g, '').match(/=\s*(\d+(?:\.\d+
 // how the 22:00 run reads a #purchase message (its own rules, in its own order)
 function cashRead(text){
   var t = String(text || '').trim(); if (!t) return { cls: '', h: 'Type the line, or tap the buttons above.' };
-  var lines = t.split(/\n|\s\/\s|\s\/|\/\s/).map(function(l){ return l.trim(); }).filter(Boolean), low = t.toLowerCase(), n = cashAmt(t), A = n == null ? '<span class="miss">no amount</span>' : '<b>' + amt(n) + ' AED</b>';
-  var nameOf = function(l){ return l.replace(/=.*$/, '').replace(/\d[\d,.]*\s*(dhs|aed|dh)?/gi, '').trim(); };
-  if (n == null) return { cls: 'bad', h: '⚠ No amount found — write it as <b>= 1400</b>.' };
+  var lines = t.split(/\n|\s\/\s|\s\/|\/\s/).map(function(l){ return l.trim(); }).filter(function(l){ return /[a-z0-9\u0600-\u06ff]/i.test(l); }), low = t.toLowerCase(), n = cashAmt(t), A = n == null ? '<span class="miss">no amount</span>' : '<b>' + amt(n) + ' AED</b>';
+  var nameOf = function(l){ return l.replace(/=.*$/, '').replace(/\d[\d,.]*\s*(dhs|aed|dh)?/gi, '').replace(/\b(bill|invoice|inv)\b/ig, '').replace(/\s+/g, ' ').trim(); };
+  var NOAMT = n == null ? ' <span class="miss">(no amount — it goes as written; the run will read the bill photo or ask)</span>' : '';   // 13 Oct 2026 (Abbas): never blocked
+  var _r = cashRead2(t, lines, low, n, A, nameOf); if (NOAMT) { _r.cls = _r.cls || 'warn'; _r.h += NOAMT; } return _r;
+}
+function cashRead2(t, lines, low, n, A, nameOf){
   if (/new vendor create|make a new ledger/.test(low)) return { cls: '', h: '→ <b>NEW VENDOR</b> tab is created and ' + A + ' posted as its first bill.' };
   if (/cash purchase/.test(low)) { var x = nameOf(t.replace(/cash purchase/i, '')); return { cls: '', h: '→ <b>CASH PURCHASE</b> ' + esc(x || '') + ' ' + A + ' — out of the <b>purchase account</b> only, no vendor tab.' }; }
   if (/usman/.test(low) && /customer/.test(low) && /cash/.test(low)) { var cu = (t.match(/customer\s+([A-Za-z][\w ]*)/i) || [, '?'])[1].trim(); return { cls: '', h: '→ <b>CASH IN from customer ' + esc(cu.toUpperCase()) + '</b> (via Usman hand work) ' + A + ' — purchase account + the customer\'s tab in the Usman hand work sheet.' }; }
@@ -2779,7 +2782,6 @@ async function cashCall(o){ o.t = Date.now(); o.dev = devId(); o.chk = await svC
   if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version — Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy' : (j.error || 'refused')); return j; }
 async function cashSend(){
   if (CSH.busy) return; var text = $('cashtxt').value.trim(); if (!text) { alert('Type the line first.'); return; }
-  var r = cashRead(text); if (r.cls === 'bad') { alert('No amount — write it as = 1400'); return; }
   var plain = $('cashread').innerText.replace(/^How the 22:00 run will read it:\s*/, '');
   if (!confirm('Send to #purchase?\n\n' + text + '\n\n' + plain)) return;
   CSH.busy = true; $('cashsend').disabled = true; CSH.msg = 'Sending…'; cashUpd();
@@ -2817,7 +2819,7 @@ $('cashbody').addEventListener('change', async function(e){
 });
 
 boot();
-window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; } };
+window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; }, cashRead: cashRead, cashVendor: cashVendor, vendors: CASH_VENDORS };
 })();
 </script>
 </body></html>
