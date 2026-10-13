@@ -75,6 +75,11 @@ main{padding:12px 14px 40px}
 .lb.green{background:#4bce97;color:#164b35}.lb.yellow{background:#f5cd47;color:#533f04}.lb.orange{background:#fea362;color:#702e00}.lb.red{background:#f87168;color:#5d1f1a}.lb.purple{background:#9f8fef;color:#352c63}.lb.blue{background:#579dff;color:#09326c}.lb.sky{background:#6cc3e0;color:#164555}.lb.lime{background:#94c748;color:#37471f}.lb.pink{background:#e774bb;color:#50253f}.lb.black{background:#8590a2;color:#fff}
 .newb{background:var(--red);color:#fff;border-radius:999px;font-size:11px;font-weight:800;padding:3px 8px;flex:none;letter-spacing:.04em}
 #inbox{background:#fff;border:1.5px solid var(--red);border-radius:16px;padding:10px 12px;margin-bottom:12px}#inbox[hidden]{display:none}
+#inbox h3 button,#later h3 button{float:right;border:0;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800;color:#fff;background:var(--red)}#later h3 button{background:#b8860b}
+#later{background:#fff;border:1.5px solid #b8860b;border-radius:16px;padding:10px 12px;margin-bottom:12px}#later[hidden]{display:none}#later h3{margin:0 0 6px;font-size:14px;color:#8a6508}#later .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:15px}#later .row b{font-weight:800}#later .row small{color:var(--mute);font-size:12px;display:block}
+.pinb{background:#fff7e0;color:#8a6508;border-radius:999px;font-size:11px;font-weight:800;padding:3px 8px;flex:none;border:1px solid #e3c36b}
+.chd .pin{font-size:20px;padding:4px 6px;opacity:.45}.chd .pin.on{opacity:1}
+#cu{display:flex;align-items:center;gap:8px;background:#fff3f5;border-bottom:1px solid #f1c4cf;padding:8px 14px;font-size:14px;font-weight:700;color:var(--red)}#cu[hidden]{display:none}#cu span{flex:1}#cu button{border:0;border-radius:999px;padding:7px 12px;font-weight:800;font-size:13px;background:#fff;color:var(--ink);border:1.5px solid var(--line)}#cu button.nx{background:var(--red);color:#fff;border-color:var(--red)}
 #inbox h3{margin:0 0 6px;font-size:14px;color:var(--red)}#inbox .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:15px}#inbox .row b{font-weight:800}#inbox .row small{color:var(--mute);font-size:12px;display:block}
 .pend{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0;background:#fff}.pend:empty{display:none}
 .pend .pi{position:relative;width:64px;height:64px;border-radius:10px;background:#f1ebe0 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--line)}
@@ -108,10 +113,11 @@ main{padding:12px 14px 40px}
   <div class="search"><input id="q" placeholder="Search design number · ডিজাইন নম্বর" inputmode="search" autocomplete="off"></div>
   <div id="msg"></div>
 </header>
-<main><div id="inbox" hidden></div><div id="list"><div class="empty">Loading… · লোড হচ্ছে</div></div></main>
+<main><div id="inbox" hidden></div><div id="later" hidden></div><div id="list"><div class="empty">Loading… · লোড হচ্ছে</div></div></main>
 
 <div id="card" hidden>
-  <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><span class="pill" id="cstage"></span></div>
+  <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><button class="pin" id="bpin" title="Later">📌</button><span class="pill" id="cstage"></span></div>
+  <div id="cu" hidden><span id="cutxt"></span><button id="cupin">📌 Later</button><button class="nx" id="cunext">Next ›</button></div>
   <div class="cbody" id="cbody">
     <div class="hero"><div class="big" id="cimg"></div><div class="atts" id="catts" hidden></div><div class="ttl" id="cttl"></div><div class="info" id="cinfo"></div></div>
     <div id="viewer" hidden><img id="vimg" alt=""><button id="vx">✕</button></div>
@@ -144,7 +150,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13g3';
+var VER = '2026-10-13g4';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -163,7 +169,7 @@ var NEXT = { 'SAMPLES': 'SAMPLE DONE', 'START': 'CUTTING', 'CUTTING': 'IN LINE',
   'CAME FROM HAND WORK': 'IN LINE (2)', 'IN LINE (2)': 'IRON/CHECKING', 'IRON/CHECKING': 'READY', 'READY': 'FINISH', 'READY 2': 'FINISH', 'SAMPLE DONE': 'FINISH SAMPLES' };
 var UR = { 'SAMPLES': 'স্যাম্পল', 'SAMPLE DONE': 'স্যাম্পল হয়ে গেছে', 'START': 'শুরু', 'CUTTING': 'কাটিং', 'IN LINE': 'লাইন', 'READY FOR HAND WORK': 'হ্যান্ড ওয়ার্কের জন্য রেডি', 'IN HAND WORK': 'হ্যান্ড ওয়ার্কে', 'CAME FROM HAND WORK': 'হ্যান্ড ওয়ার্ক থেকে এসেছে',
   'IN LINE (2)': 'লাইন (2)', 'IRON/CHECKING': 'ইস্ত্রি · চেকিং', 'READY': 'রেডি', 'READY 2': 'রেডি 2', 'FINISH': 'শেষ', 'FINISH SAMPLES': 'স্যাম্পল শেষ' };
-var D = { lists: [], cards: [], byId: {}, w: true }, cur = +(ls('sj_fac_chip') || 2), open = null;
+var D = { lists: [], cards: [], byId: {}, w: true, later: {} }, cur = +(ls('sj_fac_chip') || 2), open = null;
 function lname(id){ var l = D.lists.filter(function(x){ return x[1] === id; })[0]; return l ? l[0] : '?'; }
 function lid(name){ var l = D.lists.filter(function(x){ return x[0] === name; })[0]; return l ? l[1] : null; }
 
@@ -220,7 +226,7 @@ async function load(fresh){
   var j = await call({ op: 'list', fresh: !!fresh });
   $('rf').classList.remove('spin');
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
-  D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.byId = {}; $('bell').hidden = !j.tg; /* the bell shows only once Telegram is set up in the relay */ D.cards.forEach(function(c){ D.byId[c.id] = c; });
+  D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.byId = {}; $('bell').hidden = !j.tg; /* the bell shows only once Telegram is set up in the relay */ D.cards.forEach(function(c){ D.byId[c.id] = c; });
   var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? 'Updated · আপডেট ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
   draw(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
   if (!open) openFromHash();
@@ -232,9 +238,25 @@ function inbox(){
   var us = D.cards.filter(function(c){ return unread(c); }), el = $('inbox'), tot = us.reduce(function(a, c){ return a + unread(c); }, 0);
   try { if (navigator.setAppBadge) { tot ? navigator.setAppBadge(tot) : navigator.clearAppBadge(); } } catch(e){}
   if (!us.length) { el.hidden = true; return; }
-  el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '</h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(lname(c.l)) + '</small></div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
+  el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '<button id="bcatch">⚡ Catch up</button></h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(lname(c.l)) + '</small></div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
 }
-$('inbox').onclick = function(e){ var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
+// ---- 13 Oct 2026 (Abbas): "like Slack's Catch up" - read but cannot do it now -> 📌 LATER, per person, stays on the home screen until unpinned ----
+function laterBox(){ var el = $('later'), ids = Object.keys(D.later || {}), cs = ids.map(function(id){ return D.byId[id]; }).filter(Boolean).sort(function(a, b){ return +D.later[b.id] - +D.later[a.id]; });
+  if (!cs.length) { el.hidden = true; return; }
+  el.hidden = false; el.innerHTML = '<h3>📌 Later · পরে করব · ' + cs.length + '</h3>' + cs.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(lname(c.l)) + '</small></div><span class="pinb">📌</span></div>'; }).join(''); }
+$('later').onclick = function(e){ var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
+async function setLater(c, on){ if (!c) return; if (on) D.later[c.id] = String(Date.now()); else delete D.later[c.id]; pinPaint(); draw();
+  var j = await call({ op: 'later', card: c.id, on: on ? 1 : 0 }); if (!j.ok) { toast('✗ ' + j.error); return; } D.later = j.later || D.later; pinPaint(); draw(); toast(on ? '📌 Kept for later · পরে করার জন্য রাখা হলো' : '✓ Removed from Later · সরানো হলো'); }
+function pinPaint(){ var on = open && (D.later || {})[open.id]; $('bpin').className = 'pin' + (on ? ' on' : ''); $('cupin').textContent = on ? '✓ Kept' : '📌 Later'; }
+$('bpin').onclick = function(){ if (open) setLater(open, !(D.later || {})[open.id]); };
+var CU = { ids: [], i: -1 };                                   // Catch up: walk through every card with new messages, one by one
+function catchUp(){ CU.ids = D.cards.filter(function(c){ return unread(c); }).sort(function(a, b){ return a.pos - b.pos; }).map(function(c){ return c.id; }); CU.i = -1; cuNext(); }
+function cuNext(){ CU.i++; var c = D.byId[CU.ids[CU.i]]; if (!c) { CU.ids = []; CU.i = -1; $('cu').hidden = true; if (!$('card').hidden) history.back(); toast('✓ All caught up · সব দেখা হয়েছে'); return; }
+  if ($('card').hidden) openCard(c); else { open = c; paintCard(); $('cbody').scrollTop = 0; thStart(c); }
+  $('cu').hidden = false; $('cutxt').textContent = '⚡ Catch up ' + (CU.i + 1) + ' / ' + CU.ids.length; $('cunext').textContent = CU.i + 1 < CU.ids.length ? 'Next ›' : 'Finish ✓'; pinPaint(); }
+$('cunext').onclick = cuNext;
+$('cupin').onclick = function(){ if (open) setLater(open, !(D.later || {})[open.id]); };
+$('inbox').onclick = function(e){ if (e.target.closest('#bcatch')) { catchUp(); return; } var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
 function draw(){
   $('stages').innerHTML = CHIPS.map(function(ch, i){ var cs0 = D.cards.filter(function(c){ return inChip(c, i); }), n = cs0.length, u = cs0.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0);
     return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i>' + (u ? '<b class="u">' + u + '</b>' : '') + '<small>' + ch[2] + '</small></button>'; }).join('');
@@ -242,10 +264,10 @@ function draw(){
   cs.sort(function(a, b){ return a.pos - b.pos; });
   $('list').innerHTML = cs.length ? cs.map(function(c){ var p = parse(c.name);
     var u = unread(c);
-    return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : '') + '</div>'; }).join('')
+    return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : (D.later || {})[c.id] ? '<span class="pinb">📌 LATER</span>' : '') + '</div>'; }).join('')
     : '<div class="empty">' + (q ? 'No card with ' + esc(q) : 'No cards here · এখানে কোনো কার্ড নেই') + '</div>';
   document.querySelectorAll('#list .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); });
-  inbox();
+  inbox(); laterBox();
 }
 $('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; ls('sj_fac_chip', String(cur)); $('q').value = ''; draw(); window.scrollTo(0, 0); var on = document.querySelector('#stages button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' }); };
 $('q').oninput = draw;
@@ -254,7 +276,7 @@ $('rf').onclick = function(){ load(true); };
 
 // ----- card screen -----
 var HIDE = /^(TASLEEM|IRFAN ALI|HASHIM|QADIR|SHAHZAIB|SALMAAN|ZAKIR|USMAN|Anees|SHAWKEEN|IBRAHEEM|US|COST|SALE|CHAT)$/i;
-function openCard(c){ open = c; $('card').hidden = false; paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); thStart(c); }
+function openCard(c){ open = c; $('card').hidden = false; pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); thStart(c); }
 function paintCard(){
   var c = open, p = parse(c.name), ln = lname(c.l), nx = NEXT[ln];
   $('cnm').innerHTML = (p.no ? 'SJ-' + esc(p.no) : 'Card') + '<small>' + [p.pcs && p.pcs + ' pcs', p.col && p.col + ' colours', p.size].filter(Boolean).map(esc).join(' · ') + '</small>';
@@ -280,7 +302,7 @@ $('catts').onclick = async function(e){ var a = e.target.closest('.a'); if (!a) 
   else window.open(a.dataset.url, '_blank'); };
 $('vx').onclick = function(){ $('viewer').hidden = true; $('vimg').src = ''; };
 $('cimg').onclick = function(){ if (open && open.img) { $('viewer').hidden = false; $('vimg').src = IMG[open.img] ? 'data:image/jpeg;base64,' + IMG[open.img] : ''; call({ op: 'img', card: open.id, att: open.img, big: 1 }).then(function(j){ if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }); } };
-function closeCard(){ $('card').hidden = true; thStop(); open = null; draw(); }
+function closeCard(){ $('card').hidden = true; $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; draw(); }
 $('back').onclick = function(){ history.back(); };
 window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
