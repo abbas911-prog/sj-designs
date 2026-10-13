@@ -155,7 +155,10 @@ function facMsg(P, FT, m, root) {                             // one Slack messa
   if (m.bot_id && mm) { who = mm[1]; text = mm[2]; app = true; }
   else if (m.bot_id) { who = m.username || 'SJ'; }
   else if (m.user) { var fu = facUser(P, FT, m.user); who = fu.n; wn = fu.wn; }
-  var files = (m.files || []).map(function (f) { return { id: f.id, name: f.name, type: f.mimetype || '', size: f.size || 0, img: /^image\//.test(f.mimetype || ''), audio: /^audio\//.test(f.mimetype || '') || /\.(m4a|opus|ogg|webm|mp3|aac|amr|wav)$/i.test(f.name || ''), video: /^video\//.test(f.mimetype || '') }; });
+  var files = (m.files || []).map(function (f) { var mt = f.mimetype || '', nm = f.name || '';
+    var video = /^video\//.test(mt) || (!/^audio\//.test(mt) && /\.(mp4|mov|m4v|webm|3gp)$/i.test(nm));
+    var audio = !video && (/^audio\//.test(mt) || /\.(m4a|opus|ogg|oga|mp3|aac|amr|wav)$/i.test(nm) || (/\.webm$/i.test(nm) && /^voice/i.test(nm)));
+    return { id: f.id, name: nm, type: mt, size: f.size || 0, img: /^image\//.test(mt), audio: audio, video: video }; });
   var sys = /^→ \*/.test(text) && m.bot_id;
   return { ts: m.ts, who: who, wn: wn, app: app, sys: !!sys, root: m.ts === root, text: text.replace(/<(https?:[^|>]+)(\|[^>]*)?>/g, '$1'), files: files };
 }
@@ -299,9 +302,10 @@ function fac(reqText, P) {
       var mf = String(req.file || '').replace(/[^A-Z0-9]/g, ''); if (!mf) return out({ ok: false, error: 'bad request' });
       var fi = slackApi(FT, 'files.info', { file: mf }, true); if (!fi.ok) return out({ ok: false, error: 'Slack said ' + fi.error + (fi.error === 'missing_scope' ? ' (the factory bot needs files:read)' : '') });
       var f = fi.file || {}, mu = (req.full ? null : (f.thumb_720 || f.thumb_480 || f.thumb_360)) || f.url_private_download || f.url_private;
+      if ((f.size || 0) > 20 * 1024 * 1024) return out({ ok: false, error: 'file too big', link: f.permalink || '' });   // 13 Oct 2026: a big video opens in Slack instead
       var mr = UrlFetchApp.fetch(mu, { muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + FT } });
-      if (mr.getResponseCode() !== 200) return out({ ok: false, error: 'Slack file said ' + mr.getResponseCode() });
-      var mb = mr.getBlob(); if (mb.getBytes().length > 20 * 1024 * 1024) return out({ ok: false, error: 'file too big' });
+      if (mr.getResponseCode() !== 200) return out({ ok: false, error: 'Slack file said ' + mr.getResponseCode(), link: f.permalink || '' });
+      var mb = mr.getBlob(); if (mb.getBytes().length > 20 * 1024 * 1024) return out({ ok: false, error: 'file too big', link: f.permalink || '' });
       return out({ ok: true, b64: Utilities.base64Encode(mb.getBytes()), type: mb.getContentType() || f.mimetype || '', name: f.name || '' });
     }
     if (req.op === 'setpw') {                                 // 13 Oct 2026: the factory password is set from the order memo (owner key-check), not the read-only settings page
