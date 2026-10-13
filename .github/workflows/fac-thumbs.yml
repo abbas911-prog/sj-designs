@@ -1,0 +1,27 @@
+name: fac-thumbs
+# Factory app photos: the cover of every open ALM card -> facthumbs/<attachmentId>.jpg, served by GitHub Pages (13 Oct 2026).
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: fac-thumbs
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow
+      - run: python tools/facthumbs.py
+        env:
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+      - run: |
+          git config user.name "memo-bot"
+          git config user.email "memo-bot@users.noreply.github.com"
+          git add -A facthumbs
+          git diff --cached --quiet || (git commit -m "factory photos sync" && git pull --rebase && git push)
