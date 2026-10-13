@@ -155,7 +155,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13g6';
+var VER = '2026-10-13g7';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -446,12 +446,24 @@ $('nsgo').onclick = async function(){ var nm = $('nsname').value.trim(); if (!nm
   try {
     var files = [];
     for (var i = 0; i < SP.length; i++) { files.push({ name: SP[i].name, type: SP[i].blob.type || '', b64: await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(SP[i].blob); }) }); }
-    var j = await call({ op: 'sample', name: nm, desc: $('nsdesc').value, files: files });
+    // Abbas 13 Oct: the Trello card gets ONLY a cover - the first photo, else a frame of the first video; the rest goes to Slack
+    var cover = null, ph = SP.filter(function(x){ return x.kind === 'photo'; })[0], vd = SP.filter(function(x){ return x.kind === 'video'; })[0];
+    if (ph) cover = { name: 'cover.jpg', b64: files[SP.indexOf(ph)].b64 };
+    else if (vd) { var fr = await videoFrame(vd.blob); if (fr) cover = { name: 'cover.jpg', b64: await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(fr); }) }; }
+    var j = await call({ op: 'sample', name: nm, desc: $('nsdesc').value, files: files, cover: cover });
     if (!j.ok) { toast('✗ ' + j.error); if (j.card) { $('ns').hidden = true; await gotoNew(j.card, lid('SAMPLES')); } return; }
     SP.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); SP.length = 0; spDraw(); $('ns').hidden = true;
     toast('⭐ Sample card made · posted in #samples-discuss'); await gotoNew(j.id, lid('SAMPLES'));
   } catch (e) { toast('✗ ' + e.message); }
   finally { btn.disabled = false; btn.textContent = '⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন'; } };
+function videoFrame(blob){ return new Promise(function(ok){ try { var v = document.createElement('video'), done = false, url = URL.createObjectURL(blob);
+    function fin(res){ if (done) return; done = true; try { URL.revokeObjectURL(url); } catch(e){} ok(res); }
+    var tm = setTimeout(function(){ fin(null); }, 8000);
+    v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; v.src = url;
+    v.onloadedmetadata = function(){ try { v.currentTime = Math.min(0.7, (v.duration || 1) / 3); } catch(e){ fin(null); } };
+    v.onseeked = function(){ try { var k = Math.min(1, 1200 / Math.max(v.videoWidth, v.videoHeight, 1)), c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * k) || 320; c.height = Math.round(v.videoHeight * k) || 240; c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); c.toBlob(function(b){ clearTimeout(tm); fin(b); }, 'image/jpeg', 0.85); } catch(e){ fin(null); } };
+    v.onerror = function(){ clearTimeout(tm); fin(null); }; v.load();
+  } catch(e){ ok(null); } }); }
 function kindOf(f){ var t = f.type || '', n = f.name || ''; if (/^image\//.test(t)) return 'photo'; if (/^audio\//.test(t) || /\.(opus|ogg|oga|m4a|mp3|aac|amr|wav)$/i.test(n)) return 'audio'; if (/^video\//.test(t) || /\.(mp4|mov|webm)$/i.test(n)) return 'video'; return 'file'; }
 $('afiles').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); this.value = ''; };
 $('txt').addEventListener('paste', function(e){ var fs = Array.from((e.clipboardData || {}).files || []); if (!fs.length) return; e.preventDefault(); fs.forEach(function(f){ pendAdd(f, f.name || ('pasted-' + Date.now()), kindOf(f)); }); });
