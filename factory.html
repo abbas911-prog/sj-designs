@@ -156,7 +156,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-13h3';
+var VER = '2026-10-13h4';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -415,7 +415,8 @@ function bubble(m){
   (m.files || []).forEach(function(f){
     if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="img">tap to load photo</div>';
     else if (f.audio) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="audio" style="height:44px">▶ voice note · ভয়েস নোট</div>';
-    else body += '<div class="fl">📎 ' + esc(f.name) + (f.video ? ' (video — open in Slack)' : '') + '</div>';
+    else if (f.video) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="video" style="height:120px;flex-direction:column"><span style="font-size:28px">🎬</span>video · tap to play · ভিডিও</div>';
+    else body += '<div class="fl">📎 ' + esc(f.name) + '</div>';
   });
   var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
   return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + '</div>') + '<div class="bub">' + body + '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span></div></div>';
@@ -425,8 +426,12 @@ function thDraw(){ $('thread').innerHTML = TH.msgs.map(bubble).join(''); $('tcou
 function autoMedia(){ document.querySelectorAll('#thread .fph[data-k="img"]').forEach(function(e){ loadMedia(e); }); }
 async function loadMedia(e){
   var id = e.dataset.f, k = e.dataset.k; if (e.dataset.busy) return; e.dataset.busy = '1';
-  var have = MEDIA[id]; if (!have) { e.textContent = '…'; var j = await call({ op: 'media', file: id, full: k === 'audio' ? 1 : 0 }); if (!j.ok) { e.textContent = 'could not load'; e.dataset.busy = ''; return; } have = MEDIA[id] = 'data:' + (j.type || (k === 'audio' ? 'audio/mp4' : 'image/jpeg')) + ';base64,' + j.b64; }
+  var have = MEDIA[id]; if (!have) { e.textContent = k === 'video' ? '⏳ loading video…' : '…'; var j = await call({ op: 'media', file: id, full: k === 'audio' || k === 'video' ? 1 : 0 });
+    if (!j.ok) { if (j.link) { e.textContent = (j.error === 'file too big' ? 'Video too big for the app — ' : '') + 'open in Slack ↗'; e.dataset.busy = ''; e.onclick = function(ev){ ev.stopPropagation(); window.open(j.link, '_blank'); }; } else { e.textContent = 'could not load'; e.dataset.busy = ''; } return; }
+    if (k === 'video') { var bin = atob(j.b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); have = MEDIA[id] = URL.createObjectURL(new Blob([u8], { type: j.type || 'video/mp4' })); }   // a blob URL, not a data: URL - phones choke on 10 MB data: videos
+    else have = MEDIA[id] = 'data:' + (j.type || (k === 'audio' ? 'audio/mp4' : 'image/jpeg')) + ';base64,' + j.b64; }
   if (k === 'img') { var im = document.createElement('img'); im.src = have; im.dataset.f = id; e.replaceWith(im); }
+  else if (k === 'video') { var vd = document.createElement('video'); vd.controls = true; vd.playsInline = true; vd.setAttribute('playsinline', ''); vd.src = have; vd.style.cssText = 'max-width:230px;max-height:300px;border-radius:10px;display:block;background:#000'; e.replaceWith(vd); vd.play().catch(function(){}); }
   else { var au = document.createElement('audio'); au.controls = true; au.src = have; e.replaceWith(au); au.play().catch(function(){}); }
 }
 $('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f); };
