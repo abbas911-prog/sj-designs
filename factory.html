@@ -155,7 +155,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13g5';
+var VER = '2026-10-13g6';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -441,6 +441,7 @@ $('nscam').onchange = function(){ Array.from(this.files).forEach(function(f){ pe
 $('nsfiles').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); this.value = ''; };
 $('nsmic').onpointerdown = function(e){ e.preventDefault(); REC.btn = this; recStart(); }; $('nsmic').onpointerup = $('nsmic').onpointercancel = $('nsmic').onpointerleave = recStop; $('nsmic').oncontextmenu = function(e){ e.preventDefault(); };
 $('nsgo').onclick = async function(){ var nm = $('nsname').value.trim(); if (!nm) { toast('Give the sample a name · নাম লিখুন'); return; }
+  var tot = SP.reduce(function(a, x){ return a + x.blob.size; }, 0); if (tot > 24 * 1024 * 1024) { toast('Too big together: ' + Math.round(tot / 1048576) + ' MB (max 24 MB) — shorten the video · ভিডিও ছোট করুন'); return; }
   var btn = this; btn.disabled = true; btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
   try {
     var files = [];
