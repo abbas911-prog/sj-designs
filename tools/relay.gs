@@ -114,6 +114,10 @@ function facSeen(P, who, card, ts) {                           // FSEEN_<who> = 
   var k = 'FSEEN_' + who.toUpperCase().slice(0, 40), rec = JSON.parse(P.getProperty(k) || '{}'); if (!rec._t0) rec._t0 = String(Date.now() / 1000);
   if (!(+rec[card] >= +ts)) { rec[card] = String(ts); var ks = Object.keys(rec).filter(function (x) { return x !== '_t0'; }); if (ks.length > 400) ks.sort(function (a, b) { return +rec[a] - +rec[b]; }).slice(0, ks.length - 400).forEach(function (x) { delete rec[x]; }); P.setProperty(k, JSON.stringify(rec)); CacheService.getScriptCache().remove('FAC_UN_' + who.toUpperCase().slice(0, 20)); }
 }
+function facLater(P, who) {                                   // FLATER_<who> = { <cardId>: when pinned } - "read it, cannot do it now, keep it in front of me" (Abbas 13 Oct: like Slack's Catch up)
+  who = String(who || '').trim(); if (!who) return {};
+  return JSON.parse(P.getProperty('FLATER_' + who.toUpperCase().slice(0, 40)) || '{}');
+}
 function facUnread(P, FT, cards, who, fresh) {                         // what THIS person has not seen yet: replies by others, newer than their last look (and newer than their first use)
   who = String(who || '').trim(); if (!who || !FT) return {};
   var k = 'FSEEN_' + who.toUpperCase().slice(0, 40), rec = JSON.parse(P.getProperty(k) || 'null');
@@ -205,7 +209,7 @@ function fac(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = cache.get('FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -221,6 +225,7 @@ function fac(reqText, P) {
       var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: listIds, cards: outc, w: !!wtok, th: {}, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
       var js = JSON.stringify(res); if (js.length < 95000) cache.put('FAC_LIST', js, 8);
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
+      res.later = facLater(P, who0);
       return out(res);
     }
     if (req.op === 'img') {                                   // a card's cover photo, ~300-600 px, fetched with the auth header (browsers are refused)
@@ -331,6 +336,13 @@ function fac(reqText, P) {
       try { if (FT) { var xth = facThread(P, FT, xc, rtok, true); slackApi(FT, 'chat.postMessage', { channel: xth.ch, thread_ts: xth.ts, text: '→ *TRELLO* · ' + xwho + ' added ' + added.length + (added.length === 1 ? ' photo' : ' photos') + ' to the card' }); } } catch (e) {}
       CacheService.getScriptCache().remove('FAC_LIST');
       return out({ ok: true, ids: added });
+    }
+    if (req.op === 'later') {                                 // pin / unpin a card on this person's LATER list (per person, shared by all their phones)
+      var lc = String(req.card || '').replace(/[^0-9a-f]/g, ''), lwho = String(req.who || '').trim().toUpperCase().slice(0, 40); if (!lc || !lwho) return out({ ok: false, error: 'bad request' });
+      var lk = 'FLATER_' + lwho, lrec = JSON.parse(P.getProperty(lk) || '{}');
+      if (req.on) lrec[lc] = String(Date.now()); else delete lrec[lc];
+      var lks = Object.keys(lrec); if (lks.length > 200) lks.sort(function (a, b) { return +lrec[a] - +lrec[b]; }).slice(0, lks.length - 200).forEach(function (k) { delete lrec[k]; });
+      P.setProperty(lk, JSON.stringify(lrec)); return out({ ok: true, later: lrec });
     }
     if (req.op === 'edit') {                                  // 13 Oct 2026 (Abbas): "let me edit the description of the trello card" (title too)
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
