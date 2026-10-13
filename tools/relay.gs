@@ -927,7 +927,7 @@ function cashPost(reqText, P) {
   if (req.op !== 'post') return out({ ok: false, error: 'bad request' });
   var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return out({ ok: false, error: 'the relay has no SLACK_BOT_TOKEN' });
   var id = String(req.id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40), text = String(req.text || '').slice(0, 3000);
-  if (!id || !text.trim()) return out({ ok: false, error: 'bad request' });
+  var nph = (req.photos || []).length; if (!id || (!text.trim() && !nph)) return out({ ok: false, error: 'nothing to send - type a line or attach a photo' });   // 13 Oct 2026 (Abbas): a photo alone is enough, text may be blank
   var key = 'CASH_' + id, st = JSON.parse(P.getProperty(key) || '{}');
   if (st.done) return out({ ok: true, again: true });               // pressing Send again never posts twice
   try {
@@ -938,7 +938,7 @@ function cashPost(reqText, P) {
     });
     slackShare(tok, st.files, [PURCHASE_CH], text);
     st.done = Date.now(); P.setProperty(key, JSON.stringify(st));
-    var log = JSON.parse(P.getProperty('CASHLOG') || '[]'); log.unshift({ t: st.done, text: text.slice(0, 300), n: st.files.length, read: String(req.read || '').slice(0, 160) });
+    var log = JSON.parse(P.getProperty('CASHLOG') || '[]'); log.unshift({ t: st.done, text: (text.trim() || '(photo only)').slice(0, 300), n: st.files.length, read: String(req.read || '').slice(0, 160) });
     P.setProperty('CASHLOG', JSON.stringify(log.slice(0, 30)));
     return out({ ok: true });
   } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 200) + (/not_in_channel|channel_not_found/.test(String(e)) ? ' - invite @SJ Memo to #purchase' : '') }); }
