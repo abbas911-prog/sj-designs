@@ -712,7 +712,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-13c';
+var VER = '2026-10-13d';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -2720,7 +2720,7 @@ function cashDist(a, b){ var m = [], i, j; for (i = 0; i <= a.length; i++) { m[i
 function cashAmt(t){ var m = String(t).replace(/,/g, '').match(/=\s*(\d+(?:\.\d+)?)/) || String(t).replace(/,/g, '').match(/(\d+(?:\.\d+)?)\s*(?:dhs|aed|dh)?\s*$/i); return m ? +m[1] : null; }
 // how the 22:00 run reads a #purchase message (its own rules, in its own order)
 function cashRead(text){
-  var t = String(text || '').trim(); if (!t) return { cls: '', h: 'Type the line, or tap the buttons above.' };
+  var t = String(text || '').trim(); if (!t) return CSH.photos.length ? { cls: 'warn', h: '📎 <b>Photo only</b> — the 22:00 run reads the vendor and the amount off the bill. Add a line if you want to say more.' } : { cls: '', h: 'Type the line, or tap the buttons above.' };
   var lines = t.split(/\n|\s\/\s|\s\/|\/\s/).map(function(l){ return l.trim(); }).filter(function(l){ return /[a-z0-9\u0600-\u06ff]/i.test(l); }), low = t.toLowerCase(), n = cashAmt(t), A = n == null ? '<span class="miss">no amount</span>' : '<b>' + amt(n) + ' AED</b>';
   var nameOf = function(l){ return l.replace(/=.*$/, '').replace(/\d[\d,.]*\s*(dhs|aed|dh)?/gi, '').replace(/\b(bill|invoice|inv)\b/ig, '').replace(/\s+/g, ' ').trim(); };
   var NOAMT = n == null ? ' <span class="miss">(no amount — it goes as written; the run will read the bill photo or ask)</span>' : '';   // 13 Oct 2026 (Abbas): never blocked
@@ -2778,19 +2778,19 @@ function cashPh(){ $('cashph').innerHTML = CSH.photos.map(function(p, i){ return
 function cashUpd(){ CSH.text = $('cashtxt').value; var r = cashRead(CSH.text); $('cashread').className = 'cshread ' + r.cls; $('cashread').innerHTML = '<small style="color:var(--mute)">How the 22:00 run will read it:</small><br>' + r.h; $('cashmsg').innerHTML = CSH.msg; }
 function cashLogDraw(){ var L = CSH.log; if (!L || !L.length) { $('cashlog').innerHTML = ''; return; }
   $('cashlog').innerHTML = '<div class="ffs">Sent from the app</div>' + L.map(function(x){ return '<div class="dorl"><b>' + esc(x.text).replace(/\n/g, ' · ') + '</b><small>' + ordWhen(x.t) + (x.n ? ' · ' + x.n + ' photo' + (x.n === 1 ? '' : 's') : '') + (x.read ? ' · ' + esc(x.read) : '') + '</small></div>'; }).join(''); }
-async function cashCall(o){ o.t = Date.now(); o.dev = devId(); o.chk = await svChk(); var j = await relayJson('cash', o, o.op === 'post' ? 1 : 2);
+async function cashCall(o){ o.t = Date.now(); o.dev = devId(); o.chk = await svChk(); var j = await relayJson('cash', o, o.op === 'post' ? 2 : 2);
   if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version — Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy' : (j.error || 'refused')); return j; }
 async function cashSend(){
-  if (CSH.busy) return; var text = $('cashtxt').value.trim(); if (!text) { alert('Type the line first.'); return; }
+  if (CSH.busy) return; var text = $('cashtxt').value.trim(); if (!text && !CSH.photos.length) { alert('Type a line or attach the bill photo.'); return; }   // 13 Oct 2026 (Abbas): a photo alone goes through
   var plain = $('cashread').innerText.replace(/^How the 22:00 run will read it:\s*/, '');
-  if (!confirm('Send to #purchase?\n\n' + text + '\n\n' + plain)) return;
-  CSH.busy = true; $('cashsend').disabled = true; CSH.msg = 'Sending…'; cashUpd();
+  if (!confirm('Send to #purchase?\n\n' + (text || '(photo only — the run reads the bill)') + '\n\n' + plain)) return;
+  CSH.busy = true; $('cashsend').disabled = true; CSH.msg = 'Sending…'; cashUpd(); var t0 = Date.now(), tk = setInterval(function(){ if (!CSH.busy) { clearInterval(tk); return; } CSH.msg = 'Sending… ' + Math.round((Date.now() - t0) / 1000) + ' s' + (CSH.photos.length ? ' (' + CSH.photos.length + ' photo' + (CSH.photos.length > 1 ? 's' : '') + ')' : ''); cashUpd(); }, 1000);
   var sig = text + '|' + CSH.photos.length; if (!CSH.run || CSH.run.sig !== sig) CSH.run = { sig: sig, id: 'c' + Date.now().toString(36) + devId() };
   try { await cashCall({ op: 'post', id: CSH.run.id, text: text, read: plain.slice(0, 160), photos: CSH.photos.map(function(p){ return p.b64; }) });
     CSH.msg = '<b class="okc">✓ Posted to #purchase.</b> The 22:00 run puts it in the ledger.'; CSH.run = null; CSH.photos.forEach(function(p){ URL.revokeObjectURL(p.url); }); CSH.photos = []; CSH.kind = ''; CSH.who = ''; CSH.amt = ''; CSH.what = ''; CSH.text = '';
     $('cashtxt').value = ''; cashDraw(); cashLoad(); }
   catch(e){ CSH.msg = '<span class="miss">Not sent: ' + esc(e.message) + '</span> — press Send again (it never posts twice).'; cashUpd(); }
-  finally { CSH.busy = false; if ($('cashsend')) $('cashsend').disabled = false; }
+  finally { CSH.busy = false; clearInterval(tk); if ($('cashsend')) $('cashsend').disabled = false; cashUpd(); }
 }
 async function cashLoad(){ try { CSH.log = (await cashCall({ op: 'list' })).log || []; } catch(e){} if (!$('cash').hidden) cashLogDraw(); }
 function cashOpen(){ if (!isBoss()) return; $('mysheet').hidden = true; $('cash').hidden = false; CSH.msg = ''; cashDraw(); cashLoad(); }
