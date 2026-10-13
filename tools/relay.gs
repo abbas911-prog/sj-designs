@@ -429,7 +429,7 @@ function fac(reqText, P) {
       CacheService.getScriptCache().remove('FAC_LIST');
       return out({ ok: true });
     }
-    return out({ ok: false, error: 'bad request' });
+    return out({ ok: false, error: 'the relay does not know "' + String(req.op) + '" yet - Abbas must deploy the new version (Deploy → Manage deployments → ✏️ → New version)' });
   } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 200) }); }
 }
 // LIVE LIST (Abbas, 9 Oct 2026: "I want the process to be instant ... anybody could be searching at a specific moment how many
