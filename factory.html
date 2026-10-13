@@ -155,7 +155,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13g9';
+var VER = '2026-10-13h1';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -214,9 +214,16 @@ function imgKey(c){ return 'sj_fac_i_' + c.img; }
 function ptxt(el, t){ Array.from(el.childNodes).forEach(function(n){ if (n.nodeType === 3) n.remove(); }); if (t) el.insertBefore(document.createTextNode(t), el.firstChild); }
 function photo(c, el){
   if (!c.img) { ptxt(el, 'no photo'); return; }
-  var have = IMG[c.img] || ls(imgKey(c)); if (have) { IMG[c.img] = have; el.style.backgroundImage = 'url(data:image/jpeg;base64,' + have + ')'; ptxt(el, ''); return; }
-  ptxt(el, '…'); IMGQ.push([c, el]); pump();
+  var have = IMG[c.img] || ls(imgKey(c)); if (have) { IMG[c.img] = have; el.style.backgroundImage = 'url(' + imgSrc(have) + ')'; ptxt(el, ''); return; }
+  ptxt(el, '…');
+  // 13 Oct 2026 (Abbas: 'the photos are not loading'): photos come from the site first (facthumbs/<id>.jpg, made every 20 min by the
+  // fac-thumbs job, served instantly by GitHub Pages); only a card the job has not seen yet is fetched through the relay
+  var u = 'facthumbs/' + c.img + '.jpg', im = new Image();
+  im.onload = function(){ IMG[c.img] = u; document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(' + u + ')'; ptxt(e, ''); }); };
+  im.onerror = function(){ IMGQ.push([c, el]); pump(); };
+  im.src = u;
 }
+function imgSrc(v){ return /^facthumbs\//.test(v) ? v : 'data:image/jpeg;base64,' + v; }
 function pump(){
   while (imgBusy < 3 && IMGQ.length) { var x = IMGQ.shift(); imgBusy++;
     (function(c, el){ call({ op: 'img', card: c.id, att: c.img }).then(function(j){ imgBusy--;
@@ -312,10 +319,10 @@ function attsDraw(c){
   as.filter(function(a){ return a.img; }).forEach(function(a){ photo({ id: c.id, img: a.id }, el.querySelector('[data-a="' + a.id + '"]')); });
 }
 $('catts').onclick = async function(e){ var a = e.target.closest('.a'); if (!a) return;
-  if (a.dataset.img) { $('viewer').hidden = false; $('vimg').src = IMG[a.dataset.img] ? 'data:image/jpeg;base64,' + IMG[a.dataset.img] : ''; var j = await call({ op: 'img', card: open.id, att: a.dataset.img, big: 1 }); if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }
+  if (a.dataset.img) { $('viewer').hidden = false; $('vimg').src = IMG[a.dataset.img] ? imgSrc(IMG[a.dataset.img]) : ''; var j = await call({ op: 'img', card: open.id, att: a.dataset.img, big: 1 }); if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }
   else window.open(a.dataset.url, '_blank'); };
 $('vx').onclick = function(){ $('viewer').hidden = true; $('vimg').src = ''; };
-$('cimg').onclick = function(){ if (open && open.img) { $('viewer').hidden = false; $('vimg').src = IMG[open.img] ? 'data:image/jpeg;base64,' + IMG[open.img] : ''; call({ op: 'img', card: open.id, att: open.img, big: 1 }).then(function(j){ if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }); } };
+$('cimg').onclick = function(){ if (open && open.img) { $('viewer').hidden = false; $('vimg').src = IMG[open.img] ? imgSrc(IMG[open.img]) : ''; call({ op: 'img', card: open.id, att: open.img, big: 1 }).then(function(j){ if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }); } };
 function closeCard(){ if (REC.r) recStop(); $('card').hidden = true; $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; draw(); }
 $('back').onclick = function(){ history.back(); };
 window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
