@@ -68,7 +68,7 @@ main{padding:12px 14px 40px}
 .comp{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff;align-items:flex-end}
 .comp textarea{flex:1;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:16px;resize:none;max-height:120px;min-height:44px}
 .comp button{border:0;background:var(--gold);color:#fff;border-radius:12px;padding:0 14px;height:44px;font-weight:800}.comp button:disabled{opacity:.5}
-.comp .mic{background:#5a4a8a;font-size:20px;padding:0 12px}.comp .mic.rec{background:var(--red);animation:pulse 1s infinite}.comp .cam{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:20px;padding:0 10px}
+.comp .mic{background:#5a4a8a;font-size:20px;padding:0 12px;min-width:64px;font-variant-numeric:tabular-nums}.comp .mic.rec{background:var(--red);animation:pulse 1s infinite}.comp .cam{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:20px;padding:0 10px}
 @keyframes pulse{50%{opacity:.6}}
 .bprob{background:var(--red)}
 .lbs{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.lb{font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;background:#e6dccb;color:#2b2118}
@@ -132,7 +132,7 @@ main{padding:12px 14px 40px}
     <div class="btns" style="margin-top:0"><button class="btrello" id="bcopy">⧉ Copy card<small>কার্ড কপি করুন</small></button><button class="bprob" id="bprob">🚩 Problem<small>সমস্যা জানান</small></button></div>
     <div class="thr"><h3>CARD CHAT · কার্ড চ্যাট <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
-  <div class="compw"><div class="pend" id="pend"></div><div class="chint">🎤 hold to record · মাইক ধরে রাখুন &nbsp;·&nbsp; 📷 photo · ছবি &nbsp;·&nbsp; 📎 files · ফাইল</div><div class="comp"><button class="mic" id="mic" title="hold to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Write or paste… · লিখুন"></textarea><button id="send">Send</button></div></div>
+  <div class="compw"><div class="pend" id="pend"></div><div class="chint">🎤 tap to record, tap again to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo &nbsp;·&nbsp; 📎 files</div><div class="comp"><button class="mic" id="mic" title="tap to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Write or paste… · লিখুন"></textarea><button id="send">Send</button></div></div>
 </div>
 <div class="sheet" id="probs" hidden><div class="in"><h3>What is the problem? · সমস্যা কী?</h3>
 <button data-p="🚩 Fabric short · কাপড় কম">🧵 Fabric short · কাপড় কম</button>
@@ -146,7 +146,7 @@ main{padding:12px 14px 40px}
 <div class="sheet" id="ed" hidden><div class="in"><h3>✏️ Edit card · কার্ড বদলান</h3><input id="edname" placeholder="Title · শিরোনাম"><textarea id="eddesc" placeholder="Description · বিবরণ"></textarea><button class="go" id="edgo">Save · সেভ</button><button class="x" id="edx">Cancel</button></div></div>
 <div class="sheet" id="cp" hidden><div class="in"><h3>⧉ Copy this card · কার্ড কপি</h3><input id="cpname" placeholder="Title of the new card · নতুন শিরোনাম"><select id="cpto"></select><label class="ck"><input type="checkbox" id="cpkeep" checked> Keep photos, labels and details · ছবি ও বিবরণ রাখুন</label><button class="go" id="cpgo">Make the copy · কপি তৈরি করুন</button><button class="x" id="cpx">Cancel</button></div></div>
 <div class="sheet" id="ns" hidden><div class="in"><h3>⭐ New sample · নতুন স্যাম্পল</h3><input id="nsname" placeholder="Sample name, e.g. SJ-58429 SAMPLE · নাম"><textarea id="nsdesc" placeholder="What to make · কী বানাতে হবে (optional)"></textarea>
-<div class="pend" id="nspend"></div><div class="tools"><button class="mic" id="nsmic" title="hold to record">🎤</button><label title="photo">📷<input type="file" id="nscam" accept="image/*,video/*" capture="environment" hidden></label><label title="files">📎<input type="file" id="nsfiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div><div class="hint">🎤 hold to record · মাইক ধরে রাখুন &nbsp;·&nbsp; 📷 photo / video &nbsp;·&nbsp; 📎 files</div>
+<div class="pend" id="nspend"></div><div class="tools"><button class="mic" id="nsmic" title="tap to record">🎤</button><label title="photo">📷<input type="file" id="nscam" accept="image/*,video/*" capture="environment" hidden></label><label title="files">📎<input type="file" id="nsfiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div><div class="hint">🎤 tap to record, tap to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo / video &nbsp;·&nbsp; 📎 files</div>
 <button class="go" id="nsgo">⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন</button><button class="x" id="nsx">Cancel</button></div></div>
 <div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
@@ -155,7 +155,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13g7';
+var VER = '2026-10-13g8';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -307,7 +307,7 @@ $('catts').onclick = async function(e){ var a = e.target.closest('.a'); if (!a) 
   else window.open(a.dataset.url, '_blank'); };
 $('vx').onclick = function(){ $('viewer').hidden = true; $('vimg').src = ''; };
 $('cimg').onclick = function(){ if (open && open.img) { $('viewer').hidden = false; $('vimg').src = IMG[open.img] ? 'data:image/jpeg;base64,' + IMG[open.img] : ''; call({ op: 'img', card: open.id, att: open.img, big: 1 }).then(function(j){ if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }); } };
-function closeCard(){ $('card').hidden = true; $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; draw(); }
+function closeCard(){ if (REC.r) recStop(); $('card').hidden = true; $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; draw(); }
 $('back').onclick = function(){ history.back(); };
 window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
@@ -436,10 +436,10 @@ var SP = [];
 function spDraw(){ $('nspend').innerHTML = SP.map(function(x, i){ return '<div class="pi"' + (x.url ? ' style="background-image:url(' + x.url + ')"' : '') + '>' + (x.url ? '' : x.kind === 'audio' ? '🎤' : x.kind === 'video' ? '🎬' : '📎') + '<small>' + esc(x.label) + '</small><b data-i="' + i + '">✕</b></div>'; }).join(''); }
 $('nspend').onclick = function(e){ var b = e.target.closest('b[data-i]'); if (!b) return; var x = SP.splice(+b.dataset.i, 1)[0]; if (x && x.url) URL.revokeObjectURL(x.url); spDraw(); };
 $('bstar').onclick = function(){ if (!needW()) return; $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('ns').hidden = false; $('nsname').focus(); };
-$('nsx').onclick = function(){ $('ns').hidden = true; };
+$('nsx').onclick = function(){ if (REC.r) recStop(); $('ns').hidden = true; };
 $('nscam').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name || ('photo-' + Date.now() + '.jpg'), kindOf(f)); }); this.value = ''; };
 $('nsfiles').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); this.value = ''; };
-$('nsmic').onpointerdown = function(e){ e.preventDefault(); REC.btn = this; recStart(); }; $('nsmic').onpointerup = $('nsmic').onpointercancel = $('nsmic').onpointerleave = recStop; $('nsmic').oncontextmenu = function(e){ e.preventDefault(); };
+$('nsmic').onclick = function(){ recToggle(this); }; $('nsmic').oncontextmenu = function(e){ e.preventDefault(); };
 $('nsgo').onclick = async function(){ var nm = $('nsname').value.trim(); if (!nm) { toast('Give the sample a name · নাম লিখুন'); return; }
   var tot = SP.reduce(function(a, x){ return a + x.blob.size; }, 0); if (tot > 24 * 1024 * 1024) { toast('Too big together: ' + Math.round(tot / 1048576) + ' MB (max 24 MB) — shorten the video · ভিডিও ছোট করুন'); return; }
   var btn = this; btn.disabled = true; btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
@@ -496,12 +496,16 @@ async function recStart(){ if (REC.r) return; REC.t0 = Date.now();
   var type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].filter(function(t){ return window.MediaRecorder && MediaRecorder.isTypeSupported(t); })[0] || '';
   REC.chunks = []; REC.r = new MediaRecorder(st, type ? { mimeType: type } : {}); REC.r.ondataavailable = function(e){ if (e.data.size) REC.chunks.push(e.data); };
   REC.r.onstop = function(){ st.getTracks().forEach(function(x){ x.stop(); }); var sec = Math.round((Date.now() - REC.t0) / 1000), mt = REC.r.mimeType || type || 'audio/mp4', blob = new Blob(REC.chunks, { type: mt }); REC.r = null;
-    if (sec < 1 || blob.size < 1000) { toast('Too short — hold the mic while you speak · কথা বলার সময় মাইক ধরে রাখুন'); return; }
+    if (sec < 1 || blob.size < 1000) { toast('Too short · খুব ছোট'); return; }
     pendAdd(blob, 'voice-' + Date.now() + (/mp4/.test(mt) ? '.m4a' : /ogg/.test(mt) ? '.ogg' : '.webm'), 'audio'); };
-  REC.r.start(); (REC.btn || $('mic')).classList.add('rec'); toast('Recording… release when done · রেকর্ডিং');
+  REC.r.start(); var bt = REC.btn || $('mic'); bt.classList.add('rec'); bt.textContent = '■ 0:00';
+  REC.tick = setInterval(function(){ var sc = Math.floor((Date.now() - REC.t0) / 1000); bt.textContent = '■ ' + Math.floor(sc / 60) + ':' + ('0' + sc % 60).slice(-2); }, 500);
+  toast('Recording — tap the mic again to stop · রেকর্ডিং — থামাতে আবার মাইক চাপুন');
 }
-function recStop(){ if (REC.r && REC.r.state === 'recording') REC.r.stop(); (REC.btn || $('mic')).classList.remove('rec'); REC.btn = null; }
-$('mic').onpointerdown = function(e){ e.preventDefault(); REC.btn = null; recStart(); }; $('mic').onpointerup = $('mic').onpointercancel = $('mic').onpointerleave = recStop;
+function recStop(){ if (REC.r && REC.r.state === 'recording') REC.r.stop(); clearInterval(REC.tick); var bt = REC.btn || $('mic'); bt.classList.remove('rec'); bt.textContent = '🎤'; REC.btn = null; }
+// 13 Oct 2026 (Abbas): "like Slack - press to start, press again to stop" (was hold-to-record)
+function recToggle(btn){ if (REC.r) { recStop(); return; } REC.btn = btn === $('mic') ? null : btn; recStart(); }
+$('mic').onclick = function(){ recToggle(this); };
 $('mic').oncontextmenu = function(e){ e.preventDefault(); };
 
 // ----- notifications: Telegram buzz when Abbas writes (linked once with a 6-letter code) -----
