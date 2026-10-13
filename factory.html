@@ -86,7 +86,7 @@ main{padding:12px 14px 40px}
 .pend .pi small{position:absolute;bottom:0;left:0;right:0;font-size:9px;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:1px 2px;border-radius:0 0 9px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pend .pi b{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;line-height:20px;text-align:center}
 .rf.star{color:#c99a1a;font-size:20px}
-#ns .in{background:#fffaf0}#ns h3{color:#8a6508;font-size:17px}#ns .pend{padding:0 0 8px;background:transparent}#ns .tools{display:flex;gap:8px;margin:0 0 10px}#ns .tools button{display:flex;align-items:center;justify-content:center;flex:1;height:46px;margin:0;font-size:20px;text-align:center;border-radius:12px}#ns .tools .mic{background:#5a4a8a;color:#fff;border:0}#ns .tools .mic.rec{background:var(--red);animation:pulse 1s infinite}#ns .tools label{flex:1;display:flex;align-items:center;justify-content:center;height:46px;border:1.5px solid var(--line);border-radius:12px;font-size:20px;background:#fff}#ns .hint{font-size:12px;color:var(--mute);margin:-4px 0 10px;text-align:center}
+#ns .in{background:#fffaf0}#ns h3{color:#8a6508;font-size:17px}#ns .pend{padding:0 0 8px;background:transparent}#ns .tools{display:flex;gap:8px;margin:0 0 10px}#ns .tools button{display:flex;align-items:center;justify-content:center;flex:1;height:46px;margin:0;font-size:20px;text-align:center;border-radius:12px}#ns .tools .mic{background:#5a4a8a;color:#fff;border:0}#ns .tools #nspaste{background:#fff;border:1.5px solid var(--line)}#ns .tools .mic.rec{background:var(--red);animation:pulse 1s infinite}#ns .tools label{flex:1;display:flex;align-items:center;justify-content:center;height:46px;border:1.5px solid var(--line);border-radius:12px;font-size:20px;background:#fff}#ns .hint{font-size:12px;color:var(--mute);margin:-4px 0 10px;text-align:center}
 .compw{background:#fff;border-top:1px solid var(--line)}.chint{font-size:11px;color:var(--mute);text-align:center;padding:6px 10px 0}.comp{border-top:0}
 .comp .att{background:#fff;color:var(--ink);border:1.5px solid var(--line);font-size:18px;padding:0 10px}
 #tmsg{font-size:13px;color:var(--red);margin:4px 0}#tmsg:empty{display:none}
@@ -146,7 +146,7 @@ main{padding:12px 14px 40px}
 <div class="sheet" id="ed" hidden><div class="in"><h3>✏️ Edit card · কার্ড বদলান</h3><input id="edname" placeholder="Title · শিরোনাম"><textarea id="eddesc" placeholder="Description · বিবরণ"></textarea><button class="go" id="edgo">Save · সেভ</button><button class="x" id="edx">Cancel</button></div></div>
 <div class="sheet" id="cp" hidden><div class="in"><h3>⧉ Copy this card · কার্ড কপি</h3><input id="cpname" placeholder="Title of the new card · নতুন শিরোনাম"><select id="cpto"></select><label class="ck"><input type="checkbox" id="cpkeep" checked> Keep photos, labels and details · ছবি ও বিবরণ রাখুন</label><button class="go" id="cpgo">Make the copy · কপি তৈরি করুন</button><button class="x" id="cpx">Cancel</button></div></div>
 <div class="sheet" id="ns" hidden><div class="in"><h3>⭐ New sample · নতুন স্যাম্পল</h3><input id="nsname" placeholder="Sample name, e.g. SJ-58429 SAMPLE · নাম"><textarea id="nsdesc" placeholder="What to make · কী বানাতে হবে (optional)"></textarea>
-<div class="pend" id="nspend"></div><div class="tools"><button class="mic" id="nsmic" title="tap to record">🎤</button><label title="photo">📷<input type="file" id="nscam" accept="image/*,video/*" capture="environment" hidden></label><label title="files">📎<input type="file" id="nsfiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div><div class="hint">🎤 tap to record, tap to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo / video &nbsp;·&nbsp; 📎 files</div>
+<div class="pend" id="nspend"></div><div class="tools"><button class="mic" id="nsmic" title="tap to record">🎤</button><label title="photo">📷<input type="file" id="nscam" accept="image/*,video/*" capture="environment" hidden></label><button id="nspaste" title="paste">📋</button><label title="files">📎<input type="file" id="nsfiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div><div class="hint">🎤 record &nbsp;·&nbsp; 📷 photo / video &nbsp;·&nbsp; 📋 paste · পেস্ট &nbsp;·&nbsp; 📎 files<br>or paste straight into the boxes · বক্সে পেস্ট করলেও হবে</div>
 <button class="go" id="nsgo">⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন</button><button class="x" id="nsx">Cancel</button></div></div>
 <div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
@@ -155,7 +155,7 @@ main{padding:12px 14px 40px}
 
 <script>
 (function(){
-var VER = '2026-10-13h1';
+var VER = '2026-10-13h2';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -453,6 +453,15 @@ function spDraw(){ $('nspend').innerHTML = SP.map(function(x, i){ return '<div c
 $('nspend').onclick = function(e){ var b = e.target.closest('b[data-i]'); if (!b) return; var x = SP.splice(+b.dataset.i, 1)[0]; if (x && x.url) URL.revokeObjectURL(x.url); spDraw(); };
 $('bstar').onclick = function(){ if (!needW()) return; $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('ns').hidden = false; $('nsname').focus(); };
 $('nsx').onclick = function(){ if (REC.r) recStop(); $('ns').hidden = true; };
+// 13 Oct 2026 (Abbas): paste a photo / video / file into the sample - Ctrl-V / long-press Paste in a box, or the 📋 button (reads the clipboard)
+function pasteItems(items){ var n = 0; Array.from(items || []).forEach(function(it){ var f = it.kind === 'file' ? it.getAsFile() : null; if (f) { n++; pendAdd(f, f.name || ((/^image\//.test(f.type) ? 'pasted-' : 'file-') + Date.now() + (f.type === 'image/png' ? '.png' : /^image\//.test(f.type) ? '.jpg' : '')), kindOf(f)); } }); return n; }
+$('ns').addEventListener('paste', function(e){ var n = pasteItems((e.clipboardData || {}).items); if (n) e.preventDefault(); });
+$('nspaste').onclick = async function(){
+  try { if (!navigator.clipboard || !navigator.clipboard.read) throw new Error('no api');
+    var its = await navigator.clipboard.read(), n = 0;
+    for (var i = 0; i < its.length; i++) { var ty = its[i].types.filter(function(t){ return /^(image|video)\//.test(t); })[0]; if (!ty) continue; var bl = await its[i].getType(ty); n++; pendAdd(new File([bl], 'pasted-' + Date.now() + (ty === 'image/png' ? '.png' : /^image/.test(ty) ? '.jpg' : '.mp4'), { type: ty }), null, /^image/.test(ty) ? 'photo' : 'video'); }
+    if (!n) toast('Nothing to paste — copy a photo first · আগে ছবি কপি করুন');
+  } catch(e) { toast('Long-press a box and choose Paste · বক্সে চেপে ধরে Paste চাপুন'); $('nsdesc').focus(); } };
 $('nscam').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name || ('photo-' + Date.now() + '.jpg'), kindOf(f)); }); this.value = ''; };
 $('nsfiles').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); this.value = ''; };
 $('nsmic').onclick = function(){ recToggle(this); }; $('nsmic').oncontextmenu = function(e){ e.preventDefault(); };
