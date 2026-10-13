@@ -111,13 +111,17 @@ function facThreads(P, FT, cards, fresh) {                    // reply counts fo
       if (id) outm[id] = { n: m.reply_count || 0, last: m.latest_reply || m.ts };
     });
   });
-  cache.put('FAC_TH', JSON.stringify(outm), 8); return outm;
+  cache.put('FAC_TH', JSON.stringify(outm), 6); return outm;
 }
 function facSeen(P, who, card, ts) {                           // FSEEN_<who> = { _t0: first use, <cardId>: last ts seen } - shared by every phone that person signs in on
   who = String(who || '').trim(); if (!who || !card) return;
   var k = 'FSEEN_' + who.toUpperCase().slice(0, 40), rec = JSON.parse(P.getProperty(k) || '{}'); if (!rec._t0) rec._t0 = String(Date.now() / 1000);
   if (!(+rec[card] >= +ts)) { rec[card] = String(ts); var ks = Object.keys(rec).filter(function (x) { return x !== '_t0'; }); if (ks.length > 400) ks.sort(function (a, b) { return +rec[a] - +rec[b]; }).slice(0, ks.length - 400).forEach(function (x) { delete rec[x]; }); P.setProperty(k, JSON.stringify(rec)); CacheService.getScriptCache().remove('FAC_UN_' + who.toUpperCase().slice(0, 20)); }
 }
+// the board list is often > 100 KB (Google's cap per cache value) - so it is cached in 90 KB pieces (13 Oct 2026: 'the app is very laggy' - an uncached list meant a full Trello read on every poll of every phone)
+function bigPut(cache, key, js, ttl) { var o = {}, n = 0; for (var i = 0; i < js.length; i += 90000) o[key + '_' + (n++)] = js.slice(i, i + 90000); o[key + '_N'] = String(n); cache.putAll(o, ttl); }
+function bigGet(cache, key) { var n = +(cache.get(key + '_N') || 0); if (!n) return null; var ks = []; for (var i = 0; i < n; i++) ks.push(key + '_' + i); var m = cache.getAll(ks), out = ''; for (i = 0; i < n; i++) { if (m[key + '_' + i] == null) return null; out += m[key + '_' + i]; } return out; }
+function bigDrop(cache, key) { cache.remove(key + '_N'); }
 function facLater(P, who) {                                   // FLATER_<who> = { <cardId>: when pinned } - "read it, cannot do it now, keep it in front of me" (Abbas 13 Oct: like Slack's Catch up)
   who = String(who || '').trim(); if (!who) return {};
   return JSON.parse(P.getProperty('FLATER_' + who.toUpperCase().slice(0, 40)) || '{}');
@@ -130,14 +134,14 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
   var th = facThreads(P, FT, cards, fresh), all = P.getProperties(), outm = {}, looked = 0;
   var byCard = {}; Object.keys(all).forEach(function (x) { if (x.indexOf('FTH_') === 0) byCard[x.slice(4)] = JSON.parse(all[x]); });
   Object.keys(th).forEach(function (cid) {
-    var t = th[cid], seen = Math.max(+(rec[cid] || 0), +rec._t0); if (!(+t.last > seen) || !byCard[cid] || looked >= 15) return;
+    var t = th[cid], seen = Math.max(+(rec[cid] || 0), +rec._t0); if (!(+t.last > seen) || !byCard[cid] || looked >= 8) return;
     looked++;
     var rp = slackApi(FT, 'conversations.replies', { channel: byCard[cid].ch, ts: byCard[cid].ts, oldest: String(seen), limit: 50 }, true);
     var n = 0, lastOther = '';
     (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if (mm.sys) return; if (String(mm.who).toUpperCase() === who.toUpperCase()) return; n++; lastOther = m.ts; });
     if (n) outm[cid] = { n: n, last: lastOther };
   });
-  cache.put(ck, JSON.stringify(outm), 8); return outm;
+  cache.put(ck, JSON.stringify(outm), 6); return outm;
 }
 function facUser(P, FT, uid) {                               // {n: first name as shown, wn: every name Slack has for this person (for the "my side" match)}
   var c = CacheService.getScriptCache(), k = 'FAC_U2_' + uid, h = c.get(k); if (h) return JSON.parse(h);
@@ -212,7 +216,7 @@ function fac(reqText, P) {
   var ids = FAC.LISTS.map(function (l) { return l[1]; });
   try {
     if (req.op === 'list') {
-      var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = cache.get('FAC_LIST');
+      var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
       if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
@@ -227,7 +231,7 @@ function fac(reqText, P) {
         return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity, lb: (c.labels || []).filter(function (l) { return l.name; }).map(function (l) { return { n: l.name, c: l.color || '' }; }) };
       });
       var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: listIds, cards: outc, w: !!wtok, th: {}, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
-      var js = JSON.stringify(res); if (js.length < 95000) cache.put('FAC_LIST', js, 8);
+      try { bigPut(cache, 'FAC_LIST', JSON.stringify(res), 10); } catch (e) {}
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
       return out(res);
@@ -338,7 +342,7 @@ function fac(reqText, P) {
         var xj = JSON.parse(xr.getContentText()); added.push(xj.id);
       }
       try { if (FT) { var xth = facThread(P, FT, xc, rtok, true); slackApi(FT, 'chat.postMessage', { channel: xth.ch, thread_ts: xth.ts, text: '→ *TRELLO* · ' + xwho + ' added ' + added.length + (added.length === 1 ? ' photo' : ' photos') + ' to the card' }); } } catch (e) {}
-      CacheService.getScriptCache().remove('FAC_LIST');
+      bigDrop(CacheService.getScriptCache(), 'FAC_LIST');
       return out({ ok: true, ids: added });
     }
     if (req.op === 'sample') {                                // 13 Oct 2026 (Abbas): ⭐ NEW SAMPLE - a card on SAMPLES + the details (photos / videos / voice notes) posted in #samples-discuss, which becomes the card's chat
@@ -370,7 +374,7 @@ function fac(reqText, P) {
       }
       if (sts) P.setProperty('FTH_' + scard2.id, JSON.stringify({ ch: FAC.SAMPLES_CH, ts: sts }));       // that post IS the card's chat from now on
       try { trApi('post', '/cards/' + scard2.id + '/actions/comments', { text: '⭐ Sample · ' + swho + ' (factory app) · posted in #samples-discuss' }, wtok); } catch (e) {}
-      CacheService.getScriptCache().remove('FAC_LIST'); CacheService.getScriptCache().remove('FAC_TH');
+      bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); CacheService.getScriptCache().remove('FAC_TH');
       return out({ ok: true, id: scard2.id, url: scard2.shortUrl, files: sids.length, att: satt });
     }
     if (req.op === 'later') {                                 // pin / unpin a card on this person's LATER list (per person, shared by all their phones)
@@ -390,7 +394,7 @@ function fac(reqText, P) {
       var ecard = trApi('get', '/cards/' + ec, { fields: 'idBoard' }, wtok); if (ecard.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
       trApi('put', '/cards/' + ec, eset, wtok);
       try { if (FT) { var eth = facThread(P, FT, ec, rtok, true); slackApi(FT, 'chat.postMessage', { channel: eth.ch, thread_ts: eth.ts, text: '→ *EDIT* · ' + ewho + ' changed the ' + Object.keys(eset).map(function (k) { return k === 'desc' ? 'description' : 'title'; }).join(' and ') }); } } catch (e) {}
-      CacheService.getScriptCache().remove('FAC_LIST');
+      bigDrop(CacheService.getScriptCache(), 'FAC_LIST');
       return out({ ok: true });
     }
     if (req.op === 'copy' || req.op === 'add') {              // 13 Oct 2026 (Abbas): "copying the card and adding a new card" - a real Trello card, top of the chosen list
@@ -408,7 +412,7 @@ function fac(reqText, P) {
       var ln2 = FAC.LISTS.filter(function (l) { return l[1] === nto; })[0];
       try { trApi('post', '/cards/' + ncard.id + '/actions/comments', { text: (req.op === 'copy' ? 'Copied from ' + scard.shortUrl : 'Added') + ' · ' + nwho + ' (factory app)' }, wtok); } catch (e) {}
       try { if (FT) { var nth = facThread(P, FT, ncard.id, rtok, true); slackApi(FT, 'chat.postMessage', { channel: nth.ch, thread_ts: nth.ts, text: '→ *' + (ln2 ? ln2[0] : 'NEW') + '* · ' + nwho + (req.op === 'copy' ? ' copied this card from ' + scard.shortUrl : ' added this card') }); } } catch (e) {}
-      CacheService.getScriptCache().remove('FAC_LIST');
+      bigDrop(CacheService.getScriptCache(), 'FAC_LIST');
       return out({ ok: true, id: ncard.id, url: ncard.shortUrl });
     }
     if (req.op === 'move') {                                  // "Done -> next stage" (or Move to...): the real Trello card moves, top of the new list
@@ -427,7 +431,7 @@ function fac(reqText, P) {
         try { trApi('post', '/cards/' + card + '/actions/comments', { text: '→ ' + tn + ' · ' + who + ' (factory app)' }, wtok); } catch (e) {}
         try { var mth = P.getProperty('FTH_' + card); if (mth && FT) { mth = JSON.parse(mth); slackApi(FT, 'chat.postMessage', { channel: mth.ch, thread_ts: mth.ts, text: '→ *' + tn + '* · ' + who }); } } catch (e) {}
       }
-      CacheService.getScriptCache().remove('FAC_LIST');
+      bigDrop(CacheService.getScriptCache(), 'FAC_LIST');
       return out({ ok: true });
     }
     return out({ ok: false, error: 'the relay does not know "' + String(req.op) + '" yet - Abbas must deploy the new version (Deploy → Manage deployments → ✏️ → New version)' });
