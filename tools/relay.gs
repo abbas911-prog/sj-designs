@@ -347,15 +347,16 @@ function fac(reqText, P) {
       var sname = String(req.name || '').trim().slice(0, 500), sdesc = String(req.desc || '').slice(0, 16000), swho = String(req.who || '').slice(0, 40) || 'factory';
       var sfs = Array.isArray(req.files) ? req.files : []; if (!sname || sfs.length > 10) return out({ ok: false, error: 'bad request' });
       var scard2 = trApi('post', '/cards', { idList: FAC.LISTS[0][1], name: sname, desc: sdesc, pos: 'top' }, wtok);
-      var sids = [], stot = 0, satt = 0, scover = false;
+      // Abbas 13 Oct: the Trello card gets ONLY a cover - the first photo, or a frame of the video (made on the phone) - everything else goes to Slack only
+      var satt = 0; if (req.cover && req.cover.b64) { try {
+        var cb = Utilities.base64Decode(String(req.cover.b64)), cn = String(req.cover.name || 'cover.jpg').replace(/[^\w.\-]/g, '_').slice(0, 60);
+        if (cb.length <= DOX.TRELLO_MAX) { var xr2 = UrlFetchApp.fetch('https://api.trello.com/1/cards/' + scard2.id + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true,
+          payload: { file: Utilities.newBlob(cb, 'image/jpeg', cn), name: cn, setCover: 'true' } }); if (xr2.getResponseCode() < 300) satt = 1; } } catch (e) {} }
+      var sids = [], stot = 0;
       for (var si = 0; si < sfs.length; si++) {
-        var sn = String(sfs[si].name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 60), sb = Utilities.base64Decode(String(sfs[si].b64 || '')), stype = String(sfs[si].type || 'application/octet-stream');
+        var sn = String(sfs[si].name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 60), sb = Utilities.base64Decode(String(sfs[si].b64 || ''));
         stot += sb.length; if (sb.length > 18 * 1024 * 1024 || stot > 40 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 18 MB each, 40 MB together)' });
         sids.push(slackUp(FT, sn, sb));
-        if (sb.length <= DOX.TRELLO_MAX) { try {                                                       // the same file onto the Trello card (first picture = cover)
-          var isImg = /^image\//.test(stype), xr2 = UrlFetchApp.fetch('https://api.trello.com/1/cards/' + scard2.id + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true,
-            payload: { file: Utilities.newBlob(sb, stype, sn), name: sn, setCover: (isImg && !scover) ? 'true' : 'false' } });
-          if (xr2.getResponseCode() < 300) { satt++; if (isImg) scover = true; } } catch (e) {} }
       }
       var stext = '⭐ *SAMPLE* · ' + sname + (sdesc ? '\n' + sdesc : '') + '\n' + scard2.shortUrl + '\n_' + swho + ' · factory app_', sts = '';
       if (sids.length) {
