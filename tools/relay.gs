@@ -148,6 +148,20 @@ function facChans(FT) {                                        // every open cha
   try { c.put('FAC_CHANS', JSON.stringify(outc), 120); } catch (e) {}
   return outc;
 }
+function nrmName(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
+function facUsers(FT) {                                        // the people of the workspace (no bots, no deleted), for "new direct chat with..."; cached 10 min
+  var c = CacheService.getScriptCache(), h = c.get('FAC_USERS'); if (h) return JSON.parse(h);
+  var outu = [], cur = '';
+  for (var i = 0; i < 5; i++) {
+    var j = slackApi(FT, 'users.list', { limit: 200, cursor: cur }, true);
+    if (!j.ok) { if (j.error === 'missing_scope') throw new Error('the factory Slack app needs users:read'); break; }
+    (j.members || []).forEach(function (u) { if (u.deleted || u.is_bot || u.id === 'USLACKBOT') return; var pr = u.profile || {}; outu.push({ id: u.id, name: pr.real_name || u.real_name || u.name, handle: u.name, dn: pr.display_name || '' }); });
+    cur = (j.response_metadata || {}).next_cursor || ''; if (!cur) break;
+  }
+  outu.sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; });
+  try { c.put('FAC_USERS', JSON.stringify(outu), 600); } catch (e) {}
+  return outu;
+}
 function facDmHist(FT, dm, since, limit) {                     // the direct chat = the channel's own messages (not thread replies), oldest first
   var rq = { channel: dm.ch, limit: limit || 100 }; if (since) rq.oldest = String(since);
   var j = slackApi(FT, 'conversations.history', rq, true);
@@ -294,6 +308,24 @@ function fac(reqText, P) {
     if (req.op === 'dmch') {                                  // the channels the bot can see, for the direct-chat picker
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
       return out({ ok: true, dm: facDm(P, FT), chans: facChans(FT) });
+    }
+    if (req.op === 'dmusers') {                               // the people, for "new direct chat with..."
+      if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
+      return out({ ok: true, users: facUsers(FT) });
+    }
+    if (req.op === 'dmnew') {                                 // 14 Oct 2026 (Abbas): "make one specific for direct message for mohammod" - a NEW private channel with that person (+ the bot + whoever asked), becomes the direct chat
+      if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
+      var nu = String(req.user || '').replace(/[^A-Z0-9]/g, ''), nwho2 = String(req.who || '').slice(0, 40) || 'factory'; if (!nu) return out({ ok: false, error: 'bad request' });
+      var us = facUsers(FT), person = us.filter(function (u) { return u.id === nu; })[0]; if (!person) return out({ ok: false, error: 'no such person' });
+      var slug = ('dm-' + String(person.name || person.handle).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')).slice(0, 70), cj = null, nm = slug;
+      for (var ni = 0; ni < 4; ni++) { cj = slackApi(FT, 'conversations.create', { name: nm, is_private: true }); if (cj.ok || cj.error !== 'name_taken') break; nm = slug + '-' + (ni + 2); }
+      if (!cj.ok) return out({ ok: false, error: 'Slack said ' + cj.error + (cj.error === 'missing_scope' ? ' (the factory Slack app needs groups:write, then Reinstall)' : '') });
+      var nch = cj.channel.id, invite = [nu], me = nrmName(nwho2), mine = us.filter(function (u) { return u.id !== nu && [u.name, u.handle, u.dn].some(function (x) { x = nrmName(String(x || '').split(/[\s._-]+/)[0]); return x.length >= 2 && me.length >= 2 && (x === me || x.indexOf(me) === 0 || me.indexOf(x) === 0); }); });
+      if (mine.length === 1) invite.push(mine[0].id);          // the person who asked, when their sign-in name matches exactly one Slack member
+      var ij = slackApi(FT, 'conversations.invite', { channel: nch, users: invite.join(',') }); if (!ij.ok && ij.error !== 'already_in_channel') return out({ ok: false, error: 'made #' + nm + ' but could not invite: Slack said ' + ij.error });
+      var dnew2 = { ch: nch, name: nm, user: nu }; P.setProperty('FAC_DM', JSON.stringify(dnew2)); CacheService.getScriptCache().remove('FAC_CHANS');
+      try { slackApi(FT, 'chat.postMessage', { channel: nch, text: '→ *DIRECT CHAT* · ' + nwho2 + ' opened this chat with ' + person.name + ' from the factory app' }); } catch (e) {}
+      return out({ ok: true, dm: dnew2, invited: invite.length, me: mine.length === 1 ? mine[0].name : '' });
     }
     if (req.op === 'dmset') {                                 // choose (or change) the direct-chat channel; a system line in the channel says who did it
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
