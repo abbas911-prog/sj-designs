@@ -153,14 +153,14 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 <div class="pend" id="nspend"></div><div class="tools"><button class="mic" id="nsmic" title="tap to record">🎤</button><label title="photo">📷<input type="file" id="nscam" accept="image/*,video/*" capture="environment" hidden></label><button id="nspaste" title="paste">📋</button><label title="files">📎<input type="file" id="nsfiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div><div class="hint">🎤 record &nbsp;·&nbsp; 📷 photo / video &nbsp;·&nbsp; 📋 paste · পেস্ট &nbsp;·&nbsp; 📎 files<br>or paste straight into the boxes · বক্সে পেস্ট করলেও হবে</div>
 <button class="go" id="nsgo">⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন</button><button class="x" id="nsx">Cancel</button></div></div>
 <div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
-<div class="sheet" id="dms" hidden><div class="in"><h3>💬 Direct chat · which Slack channel? · কোন চ্যানেল</h3><input id="dmq" placeholder="Search channel · চ্যানেল খুঁজুন" autocomplete="off"><div id="dml" style="max-height:50vh;overflow:auto"><div class="empty">Loading…</div></div><button class="x" id="dmx">Cancel</button></div></div>
+<div class="sheet" id="dms" hidden><div class="in"><h3 id="dmh">💬 Direct chat · which Slack channel? · কোন চ্যানেল</h3><button class="go" id="dmnewb" style="margin:0 0 8px">👤 New direct chat with a person · নতুন সরাসরি চ্যাট</button><input id="dmq" placeholder="Search · খুঁজুন" autocomplete="off"><div id="dml" style="max-height:46vh;overflow:auto"><div class="empty">Loading…</div></div><div id="dmnote" style="font-size:12px;color:var(--mute);margin-top:6px">A private group shows here only when the bot is inside it — in Slack type <b>/invite @SJ Orders</b> in that group, or make a new chat above.</div><button class="x" id="dmx">Cancel</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
-var VER = '2026-10-14a';
+var VER = '2026-10-14b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -261,15 +261,27 @@ function labels(c){ return (c.lb && c.lb.length) ? '<div class="lbs">' + c.lb.ma
 function dmRow(){ var el = $('dm'), u = unread(DMC); el.hidden = false;
   el.innerHTML = '<div class="ic">💬</div><div class="t"><b>Direct chat · সরাসরি কথা</b>' + (D.dm ? '<small>#' + esc(D.dm.name) + ' · Abbas ↔ factory</small>' : '<em>Tap to choose the Slack channel · চ্যানেল বেছে নিন</em>') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : (D.later || {}).dm ? '<span class="pinb">📌 LATER</span>' : '<span style="color:var(--mute);font-size:20px">›</span>'); }
 $('dm').onclick = function(){ if (D.dm) openCard(DMC); else dmPick(); };
-async function dmPick(){ $('dms').hidden = false; $('dmq').value = ''; $('dml').innerHTML = '<div class="empty">Loading… · লোড হচ্ছে</div>';
+async function dmPick(){ $('dms').hidden = false; $('dmq').value = ''; DMS.mode = 'chans'; $('dmnewb').textContent = '👤 New direct chat with a person · নতুন সরাসরি চ্যাট'; $('dmh').textContent = '💬 Direct chat · which Slack channel? · কোন চ্যানেল'; $('dmnote').hidden = false; $('dml').innerHTML = '<div class="empty">Loading… · লোড হচ্ছে</div>';
   var j = await call({ op: 'dmch' }); if (!j.ok) { $('dml').innerHTML = '<div class="empty">' + esc(j.error) + '</div>'; return; }
   DMS.chans = j.chans || []; dmList(); }
-var DMS = { chans: [] };
-function dmList(){ var q = $('dmq').value.trim().toLowerCase(), cs = DMS.chans.filter(function(c){ return !q || c.name.indexOf(q) >= 0; });
+var DMS = { chans: [], users: [], mode: 'chans' };
+function dmList(){ var q = $('dmq').value.trim().toLowerCase();
+  if (DMS.mode === 'users') { var us = DMS.users.filter(function(u){ return !q || (u.name + ' ' + u.handle + ' ' + u.dn).toLowerCase().indexOf(q) >= 0; });
+    us.sort(function(a, b){ return (/moham/i.test(b.name + b.handle) - /moham/i.test(a.name + a.handle)) || (a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1); });
+    $('dml').innerHTML = us.length ? us.map(function(u){ return '<div class="ch" data-u="' + esc(u.id) + '"><span>👤 ' + esc(u.name) + '</span><small>@' + esc(u.handle) + '</small></div>'; }).join('') : '<div class="empty">No one found</div>'; return; }
+  var cs = DMS.chans.filter(function(c){ return !q || c.name.indexOf(q) >= 0; });
   cs.sort(function(a, b){ return (b.member - a.member) || (/trello|moham/.test(b.name) - /trello|moham/.test(a.name)) || (a.name < b.name ? -1 : 1); });
-  $('dml').innerHTML = cs.length ? cs.slice(0, 80).map(function(c){ return '<div class="ch' + (c.member ? '' : ' off') + '" data-ch="' + esc(c.id) + '"><span>' + (c.priv ? '🔒 ' : '# ') + esc(c.name) + ((D.dm || {}).ch === c.id ? ' ✓' : '') + '</span><small>' + (c.member ? 'bot inside' : 'invite the bot first') + '</small></div>'; }).join('') : '<div class="empty">No channel</div>'; }
+  $('dml').innerHTML = cs.length ? cs.map(function(c){ return '<div class="ch' + (c.member ? '' : ' off') + '" data-ch="' + esc(c.id) + '"><span>' + (c.priv ? '🔒 ' : '# ') + esc(c.name) + ((D.dm || {}).ch === c.id ? ' ✓' : '') + '</span><small>' + (c.member ? 'bot inside' : 'invite the bot first') + '</small></div>'; }).join('') + '<div style="font-size:12px;color:var(--mute);padding:8px 4px">' + cs.length + ' channels the bot can see</div>' : '<div class="empty">No channel</div>'; }
 $('dmq').oninput = dmList; $('dmx').onclick = function(){ $('dms').hidden = true; };
-$('dml').onclick = async function(e){ var r = e.target.closest('.ch'); if (!r) return; toast('Linking… · যুক্ত হচ্ছে');
+$('dmnewb').onclick = async function(){ if (DMS.mode === 'users') { DMS.mode = 'chans'; $('dmnewb').textContent = '👤 New direct chat with a person · নতুন সরাসরি চ্যাট'; $('dmh').textContent = '💬 Direct chat · which Slack channel? · কোন চ্যানেল'; $('dmnote').hidden = false; $('dmq').value = ''; dmList(); return; }
+  DMS.mode = 'users'; $('dmnewb').textContent = '‹ Back to channels · চ্যানেলে ফিরুন'; $('dmh').textContent = '👤 Direct chat with whom? · কার সাথে?'; $('dmnote').hidden = true; $('dmq').value = ''; $('dml').innerHTML = '<div class="empty">Loading people… · লোড হচ্ছে</div>';
+  if (!DMS.users.length) { var j = await call({ op: 'dmusers' }); if (!j.ok) { $('dml').innerHTML = '<div class="empty">' + esc(j.error) + '</div>'; return; } DMS.users = j.users || []; }
+  dmList(); };
+$('dml').onclick = async function(e){ var r = e.target.closest('.ch'); if (!r) return;
+  if (r.dataset.u) { var nm = r.querySelector('span').textContent.replace('👤 ', ''); if (!confirm('Make a new private chat with ' + nm + '? It becomes the Direct chat of this app.\n' + nm + '-এর সাথে নতুন চ্যাট?')) return; toast('Making the chat… · তৈরি হচ্ছে');
+    var jn = await call({ op: 'dmnew', user: r.dataset.u, who: WHO }); if (!jn.ok) { toast('✗ ' + jn.error); return; }
+    D.dm = jn.dm; $('dms').hidden = true; THC.dm = null; DMS.chans = []; DMS.mode = 'chans'; draw(true); toast('✓ #' + jn.dm.name + ' made · ' + (jn.me ? 'you (' + jn.me + ') and ' : '') + nm + ' invited'); openCard(DMC); return; }
+  toast('Linking… · যুক্ত হচ্ছে');
   var j = await call({ op: 'dmset', ch: r.dataset.ch, who: WHO }); if (!j.ok) { toast('✗ ' + j.error); return; }
   D.dm = j.dm; $('dms').hidden = true; THC.dm = null; draw(true); toast('✓ Direct chat = #' + j.dm.name); openCard(DMC); };
 function inbox(){
