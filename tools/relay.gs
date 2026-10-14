@@ -126,6 +126,34 @@ function facLater(P, who) {                                   // FLATER_<who> = 
   who = String(who || '').trim(); if (!who) return {};
   return JSON.parse(P.getProperty('FLATER_' + who.toUpperCase().slice(0, 40)) || '{}');
 }
+// ---- 14 Oct 2026 (Abbas): "one chat at the main page for me to have a direct conversation with the employee" - a Slack channel of the
+// ChatGPT workspace (his words: the Mohammod chat, "trello") shown as ONE direct chat at the top of the factory app; its new messages count in Catch up
+function facDm(P, FT) {                                         // {ch, name} of the direct-chat channel: remembered, else the bot's channel whose name says trello / mohammod
+  var have = P.getProperty('FAC_DM'); if (have) return JSON.parse(have);
+  if (!FT) return null;
+  var cs = facChans(FT).filter(function (c) { return c.member; }), pick = cs.filter(function (c) { return /trello/i.test(c.name); })[0] || cs.filter(function (c) { return /moham/i.test(c.name); })[0];
+  if (!pick) return null;
+  var d = { ch: pick.id, name: pick.name }; P.setProperty('FAC_DM', JSON.stringify(d)); return d;
+}
+function facChans(FT) {                                        // every open channel the bot can see (needs channels:read + groups:read, which it has); cached 2 min
+  var c = CacheService.getScriptCache(), h = c.get('FAC_CHANS'); if (h) return JSON.parse(h);
+  var outc = [], cur = '';
+  for (var i = 0; i < 5; i++) {
+    var j = slackApi(FT, 'conversations.list', { types: 'public_channel,private_channel', exclude_archived: 'true', limit: 200, cursor: cur }, true);
+    if (!j.ok) { if (j.error === 'missing_scope') throw new Error('the factory Slack app needs channels:read + groups:read'); break; }
+    (j.channels || []).forEach(function (ch) { outc.push({ id: ch.id, name: ch.name, member: !!ch.is_member, priv: !!ch.is_private }); });
+    cur = (j.response_metadata || {}).next_cursor || ''; if (!cur) break;
+  }
+  outc.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+  try { c.put('FAC_CHANS', JSON.stringify(outc), 120); } catch (e) {}
+  return outc;
+}
+function facDmHist(FT, dm, since, limit) {                     // the direct chat = the channel's own messages (not thread replies), oldest first
+  var rq = { channel: dm.ch, limit: limit || 100 }; if (since) rq.oldest = String(since);
+  var j = slackApi(FT, 'conversations.history', rq, true);
+  if (!j.ok) throw new Error('Slack said ' + j.error + (j.error === 'not_in_channel' ? ' (invite the factory bot to #' + dm.name + ')' : j.error === 'missing_scope' ? ' (the factory Slack app needs channels:history + groups:history)' : ''));
+  return (j.messages || []).filter(function (m) { return !m.subtype || m.subtype === 'bot_message' || m.subtype === 'file_share' || m.subtype === 'thread_broadcast'; }).sort(function (a, b) { return +a.ts - +b.ts; });
+}
 function facUnread(P, FT, cards, who, fresh) {                         // what THIS person has not seen yet: replies by others, newer than their last look (and newer than their first use)
   who = String(who || '').trim(); if (!who || !FT) return {};
   var k = 'FSEEN_' + who.toUpperCase().slice(0, 40), rec = JSON.parse(P.getProperty(k) || 'null');
@@ -141,6 +169,11 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
     (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if (mm.sys) return; if (String(mm.who).toUpperCase() === who.toUpperCase()) return; n++; lastOther = m.ts; });
     if (n) outm[cid] = { n: n, last: lastOther };
   });
+  try { var dm = facDm(P, FT); if (dm) {                      // the direct chat counts too (Abbas 14 Oct: "include those chats notifications in catchup")
+    var seenD = Math.max(+(rec.dm || 0), +rec._t0), nd = 0, lastD = '';
+    facDmHist(FT, dm, String(seenD), 50).forEach(function (m) { if (+m.ts <= seenD) return; var md = facMsg(P, FT, m, null); if (md.sys) return; if (String(md.who).toUpperCase() === who.toUpperCase()) return; nd++; lastD = m.ts; });
+    if (nd) outm.dm = { n: nd, last: lastD };
+  } } catch (e) {}
   cache.put(ck, JSON.stringify(outm), 6); return outm;
 }
 function facUser(P, FT, uid) {                               // {n: first name as shown, wn: every name Slack has for this person (for the "my side" match)}
@@ -220,7 +253,7 @@ function fac(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -237,6 +270,7 @@ function fac(reqText, P) {
       try { bigPut(cache, 'FAC_LIST', JSON.stringify(res), 10); } catch (e) {}
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
+      try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; }
       return out(res);
     }
     if (req.op === 'img') {                                   // a card's cover photo, ~300-600 px, fetched with the auth header (browsers are refused)
@@ -257,6 +291,36 @@ function fac(reqText, P) {
     }
     // ---- STEP 2 (12 Oct 2026): the card chat = the card's Slack #cutting thread, both ways ----
     var FT = P.getProperty('SLACK_FACTORY_TOKEN');
+    if (req.op === 'dmch') {                                  // the channels the bot can see, for the direct-chat picker
+      if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
+      return out({ ok: true, dm: facDm(P, FT), chans: facChans(FT) });
+    }
+    if (req.op === 'dmset') {                                 // choose (or change) the direct-chat channel; a system line in the channel says who did it
+      if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
+      var dch = String(req.ch || '').replace(/[^A-Z0-9]/g, ''), dwho = String(req.who || '').slice(0, 40) || 'factory'; if (!dch) return out({ ok: false, error: 'bad request' });
+      var dpick = facChans(FT).filter(function (c) { return c.id === dch; })[0]; if (!dpick) return out({ ok: false, error: 'no such channel' });
+      if (!dpick.member) { var dj = slackApi(FT, 'conversations.join', { channel: dch }); if (!dj.ok) return out({ ok: false, error: 'the factory bot is not in #' + dpick.name + ' - open the channel in Slack and type /invite @SJ Orders, then choose it again' }); CacheService.getScriptCache().remove('FAC_CHANS'); }
+      var dnew = { ch: dch, name: dpick.name }; P.setProperty('FAC_DM', JSON.stringify(dnew));
+      try { slackApi(FT, 'chat.postMessage', { channel: dch, text: '→ *DIRECT CHAT* · ' + dwho + ' linked this channel to the factory app' }); } catch (e) {}
+      return out({ ok: true, dm: dnew });
+    }
+    if (req.op === 'thread' && req.card === 'dm') {           // the direct chat: the channel's messages (oldest first), only those after req.since when given
+      if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
+      var ddm = facDm(P, FT); if (!ddm) return out({ ok: false, error: 'no direct chat channel chosen yet' });
+      var dms = facDmHist(FT, ddm, req.since ? String(req.since) : '', req.since ? 100 : 60).filter(function (m) { return !req.since || m.ts !== String(req.since); });
+      var dlast = dms.reduce(function (a, m) { return +m.ts > +a ? m.ts : a; }, req.since || '0');
+      if (+dlast > 0) facSeen(P, String(req.who || ''), 'dm', dlast); else if (!req.since) facSeen(P, String(req.who || ''), 'dm', String(Date.now() / 1000));
+      return out({ ok: true, ch: ddm.ch, name: ddm.name, msgs: dms.map(function (m) { return facMsg(P, FT, m, null); }) });
+    }
+    if (req.op === 'post' && req.card === 'dm') {             // a line into the direct chat
+      if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
+      var pdm = facDm(P, FT), ptx2 = String(req.text || '').slice(0, 3000), pwho2 = String(req.who || '').slice(0, 40) || 'factory';
+      if (!pdm) return out({ ok: false, error: 'no direct chat channel chosen yet' }); if (!ptx2.trim()) return out({ ok: false, error: 'bad request' });
+      var pj2 = slackApi(FT, 'chat.postMessage', { channel: pdm.ch, text: '*' + pwho2 + ':* ' + ptx2 });
+      if (!pj2.ok) return out({ ok: false, error: 'Slack said ' + pj2.error + (pj2.error === 'not_in_channel' ? ' (invite the factory bot to #' + pdm.name + ')' : '') });
+      facSeen(P, pwho2, 'dm', pj2.ts); CacheService.getScriptCache().remove('FAC_UN_' + pwho2.toUpperCase().slice(0, 20));
+      return out({ ok: true, ts: pj2.ts });
+    }
     if (req.op === 'thread') {                                // the thread of one card: root + replies (only those after req.since when given)
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
       var tc = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!tc) return out({ ok: false, error: 'bad request' });
@@ -281,10 +345,11 @@ function fac(reqText, P) {
     }
     if (req.op === 'up') {                                    // photos / voice notes / files from the factory phone -> ONE message in the thread (Abbas 13 Oct: "like Slack ... all as one message")
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
-      var uc = String(req.card || '').replace(/[^0-9a-f]/g, ''), uwho = String(req.who || '').slice(0, 40) || 'factory';
+      var udm = req.card === 'dm' ? facDm(P, FT) : null, uc = udm ? 'dm' : String(req.card || '').replace(/[^0-9a-f]/g, ''), uwho = String(req.who || '').slice(0, 40) || 'factory';
       var ufs = Array.isArray(req.files) ? req.files : (req.b64 ? [{ name: req.name, b64: req.b64 }] : []);
+      if (req.card === 'dm' && !udm) return out({ ok: false, error: 'no direct chat channel chosen yet' });
       if (!uc || !ufs.length || ufs.length > 10) return out({ ok: false, error: 'bad request' });
-      var uth = facThread(P, FT, uc, rtok, true), fids = [], tot = 0;
+      var uth = udm ? { ch: udm.ch, ts: '' } : facThread(P, FT, uc, rtok, true), fids = [], tot = 0;
       for (var ui = 0; ui < ufs.length; ui++) {
         var un = String(ufs[ui].name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 60), ub = Utilities.base64Decode(String(ufs[ui].b64 || ''));
         tot += ub.length; if (ub.length > 18 * 1024 * 1024 || tot > 40 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 18 MB each, 40 MB together)' });
@@ -292,9 +357,9 @@ function fac(reqText, P) {
       }
       var utext = '*' + uwho + ':* ' + (req.text ? String(req.text).slice(0, 3000) : ufs.map(function (f) { var n = String(f.name || ''); return /^voice/i.test(n) ? '🎤 voice note' : /\.(jpe?g|png|webp|heic)$/i.test(n) ? '📷 photo' : /\.(mp4|mov|webm)$/i.test(n) ? '🎬 video' : '📎 ' + n; }).join(' · '));
       var uj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + FT }, muteHttpExceptions: true,
-        payload: { files: JSON.stringify(fids.map(function (f) { return { id: f }; })), channel_id: uth.ch, thread_ts: uth.ts, initial_comment: utext } }).getContentText());
+        payload: uth.ts ? { files: JSON.stringify(fids.map(function (f) { return { id: f }; })), channel_id: uth.ch, thread_ts: uth.ts, initial_comment: utext } : { files: JSON.stringify(fids.map(function (f) { return { id: f }; })), channel_id: uth.ch, initial_comment: utext } }).getContentText());
       if (!uj.ok) return out({ ok: false, error: 'Slack said ' + uj.error });
-      facSeen(P, uwho, uc, String(Date.now() / 1000));
+      facSeen(P, uwho, uc, String(Date.now() / 1000)); if (udm) CacheService.getScriptCache().remove('FAC_UN_' + uwho.toUpperCase().slice(0, 20));
       return out({ ok: true, fids: fids });
     }
     if (req.op === 'media') {                                 // one Slack file for the phone (photo thumbnail or the voice note), through the bot token
@@ -382,7 +447,7 @@ function fac(reqText, P) {
       return out({ ok: true, id: scard2.id, url: scard2.shortUrl, files: sids.length, att: satt });
     }
     if (req.op === 'later') {                                 // pin / unpin a card on this person's LATER list (per person, shared by all their phones)
-      var lc = String(req.card || '').replace(/[^0-9a-f]/g, ''), lwho = String(req.who || '').trim().toUpperCase().slice(0, 40); if (!lc || !lwho) return out({ ok: false, error: 'bad request' });
+      var lc = req.card === 'dm' ? 'dm' : String(req.card || '').replace(/[^0-9a-f]/g, ''), lwho = String(req.who || '').trim().toUpperCase().slice(0, 40); if (!lc || !lwho) return out({ ok: false, error: 'bad request' });
       var lk = 'FLATER_' + lwho, lrec = JSON.parse(P.getProperty(lk) || '{}');
       if (req.on) lrec[lc] = String(Date.now()); else delete lrec[lc];
       var lks = Object.keys(lrec); if (lks.length > 200) lks.sort(function (a, b) { return +lrec[a] - +lrec[b]; }).slice(0, lks.length - 200).forEach(function (k) { delete lrec[k]; });
