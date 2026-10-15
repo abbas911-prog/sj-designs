@@ -164,7 +164,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15i';
+var VER = '2026-10-15j';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -563,7 +563,7 @@ function outLabel(it){ return (it.text ? it.text + (it.files.length ? '\n' : '')
 function outAdd(c, text, files){ var it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10), card: c.id, cname: c.dm ? 'Direct chat' : (parse(c.name).no ? 'SJ-' + parse(c.name).no : String(c.name || '').slice(0, 30)), text: text || '', files: files || [], who: WHO, at: Date.now(), tries: 0, err: '' };
   OUT.push(it); oput(it); outPaint(); outRun(); return it; }
 function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(function(x){ return x.tries >= 3; });
-  if (!n) { el.hidden = true; } else { el.hidden = false; el.className = bad.length ? 'bad' : ''; el.innerHTML = (bad.length ? '⚠ ' + n + ' message' + (n > 1 ? 's' : '') + ' not sent yet — trying again · tap' : '📤 Sending ' + n + ' message' + (n > 1 ? 's' : '') + '… · পাঠানো হচ্ছে') + '<small>' + esc(OUT.map(function(x){ return x.cname; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' · ')) + (bad.length && bad[0].err ? ' — ' + esc(bad[0].err) : '') + '</small>'; }
+  if (!n) { el.hidden = true; } else { el.hidden = false; el.className = bad.length ? 'bad' : ''; el.innerHTML = (bad.length ? '⚠ ' + n + ' message' + (n > 1 ? 's' : '') + ' not sent yet — ' + (bad[0].tries >= 5 ? 'tap to try again' : 'trying again · tap') : '📤 Sending ' + n + ' message' + (n > 1 ? 's' : '') + '… · পাঠানো হচ্ছে') + '<small>' + esc(OUT.map(function(x){ return x.cname; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' · ')) + (bad.length && bad[0].err ? ' — ' + esc(bad[0].err) : '') + '</small>'; }
   if (TH.card && !$('card').hidden && !playing()) thDraw(); }
 $('outbar').onclick = function(){ var it = OUT[0]; if (!it) return; outRun(true); var c = D.byId[it.card]; if (c) openCard(c); };
 function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 60000; }); return OUT.concat(SENT.filter(function(x){ return x.card === cid && !(TH.lastPull > x.done + 500); })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + esc(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
@@ -571,7 +571,7 @@ async function outOne(it){
   if (!it.files.length) return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id });
   var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
   if (!it.fids) { try { it.fids = await slackDirect(it.files); oput(it); } catch(e){ it.fids = null; } }      // originals straight to Slack (full quality)
-  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, labels: labels, text: it.text, who: it.who, rid: it.id }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; oput(it); } }
+  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.dtry = (it.dtry || 0) + 1) }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; oput(it); } }
   if (tot > 18 * 1024 * 1024) return { ok: false, error: 'Slack did not take the upload' };
   var files = []; for (var i = 0; i < it.files.length; i++) files.push({ name: it.files[i].name, b64: await b64of(it.files[i].blob) });
   return await call({ op: 'up', card: it.card, files: files, text: it.text, who: it.who, rid: it.id + 'b' });
@@ -585,7 +585,7 @@ async function outRun(now){
         outPaint(); if (TH.card && TH.card.id === it.card) setTimeout(thPull, 300); continue; }
       it.tries++; it.err = String((j && j.error) || 'no answer').slice(0, 80); oput(it); outPaint(); break; } }
   finally { OUTRUN = false; }
-  if (OUT.length) OUTT = setTimeout(outRun, Math.min(30000, 4000 * Math.max(1, OUT[0].tries)));
+  if (OUT.length) { var o0 = OUT[0], big = o0.files.reduce(function(a, x){ return a + x.blob.size; }, 0) > 18 * 1024 * 1024; if (big && o0.tries >= 5 && !now) return; OUTT = setTimeout(outRun, Math.min(big ? 60000 : 30000, 4000 * Math.max(1, o0.tries))); }
 }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) outRun(true); });
 window.addEventListener('online', function(){ outRun(true); });
