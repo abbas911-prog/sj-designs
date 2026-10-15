@@ -110,6 +110,20 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 #login button{width:100%;border:0;border-radius:12px;padding:13px;background:var(--gold);color:#fff;font-weight:800;font-size:17px}
 #lerr{color:var(--red);font-size:14px;min-height:18px;margin-top:8px}
 .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 14px;border-radius:12px;font-size:14px;z-index:50;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center}.toast.show{opacity:1}
+#rets{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #6d4c41;border-radius:16px;padding:10px 14px;margin-bottom:12px;cursor:pointer}#rets[hidden]{display:none}
+#rets .ic{width:42px;height:42px;border-radius:50%;background:#efe5df;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}#rets .t{flex:1;min-width:0}#rets b{display:block;font-size:15px}#rets small{display:block;color:var(--mute);font-size:13px}
+#rets .rgo{font-size:13px;font-weight:800;color:#6d4c41}#rets.warn{border-color:#e0a100;background:#fffaf0}#rets.late{border-color:var(--red);background:#fff5f5}#rets.late small{color:var(--red);font-weight:700}#rets.none{border-style:dashed;border-color:var(--line);padding:7px 14px}#rets.none .ic{width:30px;height:30px;font-size:15px}
+.btns .bret{grid-column:1/-1;background:#efe5df;border:1.5px solid #c8b2a6;color:#4e342e}
+#cret{margin:0 0 10px}#cret[hidden]{display:none}#cret div{background:#fff7f0;border:1.5px solid #e0a100;border-radius:12px;padding:9px 12px;margin-bottom:6px;font-size:14px;cursor:pointer}#cret b{font-weight:800}
+.rtabs{display:flex;gap:6px;margin-bottom:8px}.sheet .rtabs button{flex:1;text-align:center;font-size:13px;padding:9px 6px;margin:0}.sheet .rtabs button.on{background:#4e342e;color:#fff;border-color:#4e342e}
+.rr{border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px}.rr.late{border-color:var(--red)}.rr.warn{border-color:#e0a100}
+.rr .rh{display:flex;justify-content:space-between;align-items:center;gap:8px}.rr .rh b{font-size:16px}.rr .st{font-size:12px;font-weight:800;border-radius:999px;padding:3px 9px;white-space:nowrap;background:#efe5df;color:#4e342e}
+.rr .st.fixed{background:#e3f2fd;color:#0d47a1}.rr .st.back{background:#e8f5e9;color:#1b5e20}.rr .st.cancel{background:#eee;color:#777}.rr.late .st.out{background:#ffebee;color:var(--red)}
+.rr .rm{font-size:14px;margin-top:4px}.rr .rn{font-size:13px;color:var(--mute);margin-top:2px;white-space:pre-wrap}.rr .rbar{height:6px;border-radius:3px;background:#eee;margin:8px 0 6px;overflow:hidden}.rr .rbar i{display:block;height:100%;background:#2e7d32}
+.sheet .rr .rbtns{display:flex;flex-wrap:wrap;gap:6px}.sheet .rr .rbtns button{display:inline-block;width:auto;flex:1 1 auto;margin:0;padding:9px 10px;font-size:14px;text-align:center}.sheet .rr .rbtns button.b1{background:#e8f5e9;border-color:#a5d6a7}.sheet .rr .rbtns button[data-a=note],.sheet .rr .rbtns button[data-a=cancel]{flex:0 0 48px}
+.rr details{font-size:12.5px;color:var(--mute);margin-top:6px}.rr details div{padding:2px 0}
+.whys{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.sheet .whys button{display:inline-block;width:auto;margin:0;padding:8px 11px;font-size:14px;font-weight:600}.sheet .whys button.on{background:#4e342e;color:#fff;border-color:#4e342e}
+.rnph{display:block;border:1.5px dashed var(--line);border-radius:12px;padding:11px;text-align:center;font-size:15px;margin-bottom:8px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -123,7 +137,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
   <div class="search"><input id="q" placeholder="Search design number · ডিজাইন নম্বর" inputmode="search" autocomplete="off"></div>
   <div id="msg"></div>
 </header>
-<main><div id="outbar" hidden></div><div id="dm" hidden></div><div id="inbox" hidden></div><div id="later" hidden></div><div id="list"><div class="empty">Loading… · লোড হচ্ছে</div></div></main>
+<main><div id="outbar" hidden></div><div id="dm" hidden></div><div id="rets" hidden></div><div id="inbox" hidden></div><div id="later" hidden></div><div id="list"><div class="empty">Loading… · লোড হচ্ছে</div></div></main>
 
 <div id="card" hidden>
   <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><button class="pin" id="bpin" title="Later">📌</button><span class="pill" id="cstage"></span></div>
@@ -138,6 +152,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
     </div><input type="file" id="tfile" accept="image/*" multiple hidden>
     <div class="btns" style="margin-top:0"><button class="btrello" id="battach">📷 Add photo<small>ট্রেলোতে ছবি যোগ করুন</small></button><button class="btrello" id="bedit">✏️ Edit card<small>বিবরণ বদলান</small></button></div>
     <div class="btns" style="margin-top:0"><button class="btrello" id="bcopy">⧉ Copy card<small>কার্ড কপি করুন</small></button><button class="bprob" id="bprob">🚩 Problem<small>সমস্যা জানান</small></button></div>
+    <div class="btns" style="margin-top:0"><button class="bret" id="bret">↩️ Return pieces to factory<small>কারখানায় পিস ফেরত</small></button></div><div id="cret" hidden></div>
     <div class="thr"><h3><span id="thh" style="float:none;font-weight:700">CARD CHAT · কার্ড চ্যাট</span> <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
   <div class="compw"><div class="pend" id="pend"></div><div class="chint">🎤 tap to record, tap again to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo &nbsp;·&nbsp; 📎 files</div><div class="comp"><button class="mic" id="mic" title="tap to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Write or paste… · লিখুন"></textarea><button id="send">Send</button></div></div>
@@ -160,11 +175,18 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 <div class="sheet" id="dms" hidden><div class="in"><h3 id="dmh">💬 Direct chat · which Slack channel? · কোন চ্যানেল</h3><button class="go" id="dmnewb" style="margin:0 0 8px">👤 New direct chat with a person · নতুন সরাসরি চ্যাট</button><input id="dmq" placeholder="Search · খুঁজুন" autocomplete="off"><div id="dml" style="max-height:46vh;overflow:auto"><div class="empty">Loading…</div></div><div id="dmnote" style="font-size:12px;color:var(--mute);margin-top:6px">A private group shows here only when the bot is inside it — in Slack type <b>/invite @SJ Orders</b> in that group, or make a new chat above.</div><button class="x" id="dmx">Cancel</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
+<div class="sheet" id="rt" hidden><div class="in"><h3>↩️ Returns · ফেরত পিস</h3><div class="rtabs"><button data-t="open" class="on">At the factory · কারখানায়</button><button data-t="done">Back / closed · ফেরত এসেছে</button></div><button class="go" id="rtnew">＋ New return · নতুন ফেরত</button><div id="rtl"></div><button class="x" id="rtx">Close · বন্ধ</button></div></div>
+<div class="sheet" id="rn" hidden><div class="in"><h3>↩️ New return · নতুন ফেরত</h3><input id="rnno" placeholder="Design number, e.g. 58429 · ডিজাইন নম্বর" inputmode="numeric" autocomplete="off"><select id="rncard"></select>
+<input id="rnpcs" type="number" min="1" inputmode="numeric" placeholder="How many pieces? · কত পিস?"><input id="rncol" placeholder="Colour / size (optional) · রং / সাইজ" autocomplete="off">
+<div class="whys" id="rnwhy"></div><textarea id="rnnote" placeholder="What must be fixed? · কী ঠিক করতে হবে?" style="min-height:80px"></textarea>
+<div class="pend" id="rnpend"></div><label class="rnph">📷 Add photos / video of the fault · ছবি যোগ করুন<input type="file" id="rnfiles" accept="image/*,video/*" multiple hidden></label>
+<button class="go" id="rngo">↩️ Save return · সেভ করুন</button><button class="x" id="rnx">Cancel</button></div></div>
+<div class="sheet" id="rs" hidden><div class="in"><h3 id="rsh"></h3><div id="rsinfo" style="font-size:14px;color:var(--mute);margin-bottom:8px"></div><input id="rsn" type="number" min="1" inputmode="numeric" placeholder="Pieces · পিস"><input id="rsnote" placeholder="Note (optional) · নোট" autocomplete="off"><button class="go" id="rsgo">Save · সেভ</button><button class="x" id="rsx">Cancel</button></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
-var VER = '2026-10-15l';
+var VER = '2026-10-16b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -197,7 +219,7 @@ async function hmacHex(key, msg){
 var NET = { busy: 0, heavy: 0, hi: [], lo: [], log: [] };
 function netPick(q){ for (var i = 0; i < q.length; i++) if (!q[i].h || q[i].top || NET.heavy < 2) return q.splice(i, 1)[0]; return null; }   // big transfers: at most 2 at once, so chat requests always get through
 function netGo(){ while (NET.busy < 4) { var f = netPick(NET.hi) || netPick(NET.lo); if (!f) break; NET.busy++; if (f.h) NET.heavy++; f(); } }
-var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later)$/;
+var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset)$/;
 async function call(obj, pw, top){
   if (ONCE.test(obj.op) && !obj.rid) obj.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);   // a retry of the same action is answered once, never done twice
   var heavy = /^(up|attach|sample)$/.test(obj.op) || (obj.op === 'media' && obj.full && !obj.pre);
@@ -269,7 +291,7 @@ function pump(){
 // at once; the relay is asked in the background. One request at a time - a poll never starts while the last one is still out.
 var LOADING = false;
 var DMC = { id: 'dm', dm: true, name: 'Direct chat', l: '', pos: -1, f: {}, lb: [] };          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
-function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; bellPaint(); }
+function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; if (j.ret) D.ret = j.ret; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; bellPaint(); }
 function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); if (j.live && PW) liveStart(j.live); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards'; draw(); return true; } catch(e){ return false; } }
 async function load(fresh){
   if (LOADING && Date.now() - LOADING < 30000) return false; LOADING = Date.now();
@@ -349,13 +371,16 @@ function draw(force){
     return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : (D.later || {})[c.id] ? '<span class="pinb">📌 LATER</span>' : '') + '</div>'; }).join('')
     : '<div class="empty">' + (q ? 'No card with ' + esc(q) : 'No cards here · এখানে কোনো কার্ড নেই') + '</div>';
   document.querySelectorAll('#list .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); });
-  inbox(); laterBox();
+  inbox(); laterBox(); retBox();
 }
 $('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; ls('sj_fac_chip', String(cur)); $('q').value = ''; draw(); window.scrollTo(0, 0); var on = document.querySelector('#stages button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' }); };
 $('q').oninput = draw;
 $('list').onclick = function(e){ var r = e.target.closest('.cardrow'); if (r) openCard(D.byId[r.dataset.id]); };
-$('msg').onclick = function(){ var L = NET.log.slice(0, 20); if (!L.length) return; alertBox('Last requests · speed', L.map(function(x){ return (x.at.getHours() + ':' + ('0' + x.at.getMinutes()).slice(-2) + ':' + ('0' + x.at.getSeconds()).slice(-2)) + '  ' + x.op + '  ' + (x.ms / 1000).toFixed(1) + ' s  ' + (x.ok ? '✓' : '✗ ' + x.e); }).join('\n')); };
-function alertBox(t, body){ $('tg').hidden = false; $('tg').querySelector('h3').textContent = t; $('tgbody').innerHTML = '<pre style="white-space:pre-wrap;font-size:12.5px;margin:0">' + esc(body) + '</pre>'; }
+$('msg').onclick = function(){ var L = NET.log.slice(0, 20); alertBox('Last requests · speed', L.map(function(x){ return (x.at.getHours() + ':' + ('0' + x.at.getMinutes()).slice(-2) + ':' + ('0' + x.at.getSeconds()).slice(-2)) + '  ' + x.op + '  ' + (x.ms / 1000).toFixed(1) + ' s  ' + (x.ok ? '✓' : '✗ ' + x.e); }).join('\n')); };
+function alertBox(t, body){ $('tg').hidden = false; $('tg').querySelector('h3').textContent = t; $('tgbody').innerHTML = '<pre style="white-space:pre-wrap;font-size:12.5px;margin:0">' + esc(body) + '</pre>';
+  if (/speed/.test(t)) { $('tgbody').insertAdjacentHTML('afterbegin', '<div style="border:1.5px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px;font-size:14px"><b>🚀 Fast lane</b> · ' + (FAST.url ? (fastOn() ? '<span style="color:#2e7d32">ON</span>' : '<span style="color:var(--red)">resting - the relay is used</span>') + '<br><small style="color:var(--mute);word-break:break-all">' + esc(FAST.url) + '</small>' : 'off — chats go through the Google relay') + '<input id="fastu" placeholder="https://sj-fast.NAME.workers.dev" autocomplete="off" style="display:block;width:100%;border:1.5px solid var(--line);border-radius:10px;padding:9px;margin:8px 0 6px;font-size:15px" value="' + esc(FAST.url) + '"><button id="fastgo" style="text-align:center;margin:0">Save link · সেভ</button></div>');
+    $('fastgo').onclick = async function(){ var u = $('fastu').value.trim(); this.disabled = true; this.textContent = 'Checking… · দেখা হচ্ছে'; var j = await call({ op: 'fastset', url: u }); this.disabled = false; this.textContent = 'Save link · সেভ';
+      if (!j.ok) { toast('✗ ' + j.error); return; } fastSet(j.fast); FAST.k = ''; var h = j.fast ? await fast({ op: 'hello' }, true) : { ok: true }; toast(j.fast ? (h && h.ok ? '🚀 Fast lane ON for every phone' : '✗ Saved, but this phone could not reach it: ' + ((h && h.error) || 'no answer')) : 'Fast lane off'); $('tg').hidden = true; }; } }
 $('rf').onclick = function(){ load(true).then(function(){ ping(true); }); };
 
 // ----- card screen -----
@@ -365,7 +390,7 @@ function cardShow(on){ if (on) { SCY = window.scrollY || 0; document.body.classL
 // iPhone: when the keyboard opens the visible area shrinks and Safari scrolls the page; the card follows the visible area and snaps back when the keyboard closes
 function vvFit(){ var vv = window.visualViewport, el = $('card'); if (!vv || el.hidden) return; var full = Math.abs(vv.height - window.innerHeight) < 2 && vv.offsetTop < 2; el.style.height = full ? '' : vv.height + 'px'; el.style.top = full ? '' : vv.offsetTop + 'px'; if (full) window.scrollTo(0, 0); }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', vvFit); window.visualViewport.addEventListener('scroll', vvFit); }
-function openCard(c){ open = c; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
+function openCard(c){ open = c; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); cretPaint(); if (!RT.list) retLoad(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
 function paintCard(){
   var c = open; $('card').classList.toggle('dm', !!c.dm);
   if (c.dm) { $('cnm').innerHTML = '💬 Direct chat<small>সরাসরি কথা · Abbas ↔ factory</small>'; $('cstage').textContent = '#' + ((D.dm || {}).name || ''); $('cstage').onclick = function(){ dmPick(); }; $('cstage').style.cursor = 'pointer'; $('tcount').textContent = ''; $('thh').textContent = 'DIRECT CHAT · সরাসরি কথা'; return; }
@@ -467,12 +492,43 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
 window.__LOOK = LOOK; window.__call = function(o, pw, t){ return call(o, pw, t); };
 function looking(){ return !document.hidden && Date.now() - LOOK.vis > 1500 && Date.now() - LOOK.act < 60000; }
 var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
-function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (document.hidden) return; if (LIVE.ok && (TH.tick = (TH.tick || 0) + 1) % 3) return; thPull(); }, 4000); }
+function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (document.hidden) return; TH.tick = (TH.tick || 0) + 1; if (LIVE.ok && TH.tick % 3) return; if (!LIVE.ok && fastOn() && TH.tick % 2) return; thPull(); }, 4000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
+
+// ===== FAST LANE (16 Oct 2026, Abbas: "you have to think better and do something about this chat .. not flawless at all"). The Google relay
+// needs 1-3 s (sometimes 10 s) for every request - that was the lag. When the free Cloudflare worker is set up (tools/fast-worker.js, link pasted
+// under the status line), chats, the Direct chat, text sends and photos / voice notes / videos go phone -> worker -> Slack in ~0.2 s, media in
+// ORIGINAL quality. Everything else (Trello, uploads, returns, new-message counts) stays on the relay, and if the worker ever fails the app
+// quietly uses the relay again, exactly as before.
+var FAST = { url: ls('sj_fac_fast') || '', k: '', down: 0, refs: {}, fb: 0, fq: [] };
+try { FAST.refs = JSON.parse(ls('sj_fac_refs') || '{}') || {}; } catch(e){}
+async function fastKey(){ if (FAST.k || !PW) return FAST.k; var d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('sjfast|' + PW)); FAST.k = Array.from(new Uint8Array(d)).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join(''); return FAST.k; }
+function fastOn(){ return !!FAST.url && Date.now() > FAST.down; }
+function fastSet(u){ u = u || ''; if (u === FAST.url) return; FAST.url = u; FAST.down = 0; ls('sj_fac_fast', u || null); liveMark(); }
+function refsSet(r, merge){ if (!r) return; FAST.refs = merge ? Object.assign(FAST.refs, r) : r; try { ls('sj_fac_refs', JSON.stringify(FAST.refs)); } catch(e){} }
+async function fast(obj, force){
+  if (!FAST.url || (!force && Date.now() < FAST.down)) return null; await fastKey(); obj.k = FAST.k;
+  var file = obj.op === 'file', t0 = Date.now(), lim = file ? 120000 : obj.op === 'post' ? 15000 : 8000, ac = new AbortController(), tm = setTimeout(function(){ ac.abort(); }, lim), j = null;
+  if (file && !obj.top) { while (FAST.fb >= 3) await sleep(150); } if (file) FAST.fb++;
+  try {
+    var r = await fetch(FAST.url + (file ? '/f' : '/'), { method: 'POST', body: JSON.stringify(obj), cache: 'no-store', credentials: 'omit', signal: ac.signal });
+    if (file) { if (r.ok) { var bl = await r.blob(); j = { ok: true, blob: bl }; } else { try { j = await r.json(); } catch(e){ j = { ok: false, error: 'worker ' + r.status }; } } }
+    else j = await r.json();
+    if (j && j.auth) FAST.down = Date.now() + 600000;              // the password changed: the relay is used until the next sign-in
+  } catch(e){ j = null; FAST.down = Date.now() + 20000; FAST.fail = { quick: e.name !== 'AbortError' && Date.now() - t0 < 3000 }; }
+  finally { clearTimeout(tm); if (file) FAST.fb--; }
+  NET.log.unshift({ op: '🚀' + obj.op, ms: Date.now() - t0, ok: !!(j && j.ok), e: j && !j.ok ? String(j.error || '').slice(0, 60) : j ? '' : 'no answer', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
+  return j;
+}
+var SEENSENT = {};
+function fastSeen(c, msgs, last){ var top = last || ''; (msgs || []).forEach(function(m){ if (/^\d+\.\d+$/.test(m.ts) && +m.ts > +(top || 0)) top = m.ts; }); if (!top || SEENSENT[c.id] === top) return; SEENSENT[c.id] = top; call({ op: 'seen', card: c.id, ts: top }); }
 async function thPull(){
   var c = TH.card; if (!c) return; if (TH.busy && Date.now() - TH.busy < 30000) { TH.again = true; return; } TH.busy = Date.now(); TH.again = false;
   var real = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }), last = real.length ? real[real.length - 1].ts : '';
-  TH.n = (TH.n || 0) + 1; var look = looking(), frc = TH.n % 4 === 0 || TH.force; TH.force = false; var j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0, force: frc ? 1 : 0 });
+  TH.n = (TH.n || 0) + 1; var look = looking(), frc = TH.n % 4 === 0 || TH.force; TH.force = false; var j = null;
+  if (fastOn()) { var rf = c.dm ? (D.dm ? [D.dm.ch] : null) : FAST.refs[c.id];
+    if (rf) { j = await fast(c.dm ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (j && !j.ok) j = null; if (j && look) fastSeen(c, j.msgs, last); } }
+  if (!j) { j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0, force: frc ? 1 : 0 }); if (j && j.ok && j.ch && j.ts && !c.dm) { var rr = {}; rr[c.id] = [j.ch, j.ts]; refsSet(rr, true); } }
   TH.busy = 0; if (TH.again) { TH.again = false; setTimeout(thPull, 30); } if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; } if (j && j.ok) TH.lastPull = Date.now();
   if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = '<div class="empty" style="padding:14px">⏳ ' + esc(j.error) + '<br>আবার চেষ্টা করা হচ্ছে…</div>'; return; }
   $('tmsg').textContent = '';
@@ -523,6 +579,8 @@ function getMedia(id, k, top, pre){
   w.p = (async function(){
     var key = 'https://fac.media/' + id + (k === 'img' ? '-t' : '');
     try { if (MCACHE) { var hit = await MCACHE.match(key); if (hit) { var bl = await hit.blob(); return { url: (MEDIA[id] = URL.createObjectURL(bl)) }; } } } catch(e){}
+    if (fastOn()) { var fj = await fast({ op: 'file', id: id, thumb: k === 'img' ? 1 : 0, top: w.top });
+      if (fj && fj.ok && fj.blob && fj.blob.size) { delete MWAIT[id]; var fb = fj.blob; try { if (MCACHE && fb.size < 8 * 1024 * 1024) MCACHE.put(key, new Response(fb, { headers: { 'Content-Type': fb.type } })); } catch(e){} return { url: (MEDIA[id] = URL.createObjectURL(fb)) }; } }
     w.obj = { op: 'media', file: id, full: k === 'img' ? 0 : 1, pre: pre && !top ? 1 : 0 }; var j = await call(w.obj, null, w.top);
     delete MWAIT[id];
     if (!j.ok) return { err: j.error, link: j.link };
@@ -551,6 +609,82 @@ async function loadMedia(e, tap){
 }
 $('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f); };
 async function openBig(src, fid){ $('viewer').hidden = false; $('vimg').src = src || ''; if (fid) { var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && !$('viewer').hidden && /^image/.test(j.type || 'image')) $('vimg').src = 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64; } }
+
+// ===== RETURNS (16 Oct 2026, Abbas: "some pieces get returned to the factory … once the alteration or errors are done I get it back — I need a
+// tracking system in this app"). One record per return: design, pieces given, reason, photos; the factory marks pieces FIXED, the office marks
+// them RECEIVED BACK (part by part). Each step also drops a line into that card's chat, so the other side gets the usual new-message alert.
+var RT = { list: null, tab: 'open', why: '', files: [], cur: null, act: '' };
+var WHYS = [['Alteration', 'অল্টারেশন'], ['Stitching fault', 'সেলাই ভুল'], ['Size wrong', 'সাইজ ভুল'], ['Stain / damage', 'দাগ / ক্ষতি'], ['Missing work', 'কাজ বাকি'], ['Other', 'অন্য']];
+function rdays(t){ return Math.max(0, Math.floor((Date.now() - t) / 86400000)); }
+function rage(t){ var d = rdays(t); return d ? d + ' day' + (d > 1 ? 's' : '') : 'today'; }
+function retSum(){ var L = RT.list; if (!L) return D.ret || null; var o = L.filter(function(r){ return !r.done && r.st !== 'cancel'; }), pcs = 0, old = 0; o.forEach(function(r){ pcs += r.pcs - r.back; if (!old || r.at < old) old = r.at; }); return { n: o.length, pcs: pcs, old: old }; }
+function retBox(){ var el = $('rets'), s = D.ret; if (!PW || !D.cards || !D.cards.length) { el.hidden = true; return; } el.hidden = false;
+  if (!s || !s.n) { el.className = 'none'; el.innerHTML = '<div class="ic">↩️</div><div class="t"><b style="font-size:14px">Returns · ফেরত</b><small>Nothing at the factory · কিছু নেই</small></div><span class="rgo">Open ›</span>'; return; }
+  var d = s.old ? rdays(s.old) : 0; el.className = d >= 7 ? 'late' : d >= 3 ? 'warn' : '';
+  el.innerHTML = '<div class="ic">↩️</div><div class="t"><b>Returns at the factory · কারখানায় ফেরত</b><small>' + s.n + ' return' + (s.n > 1 ? 's' : '') + ' · <b style="display:inline;font-size:13px">' + s.pcs + ' pcs</b> still out · oldest ' + rage(s.old) + '</small></div><span class="rgo">Open ›</span>'; }
+$('rets').onclick = function(){ retOpen(); };
+async function retLoad(){ var j = await call({ op: 'retlist' }); if (j.ok) { RT.list = j.rets || []; D.ret = retSum(); retBox(); retDraw(); cretPaint(); } else if (!RT.list) $('rtl').innerHTML = '<div class="empty">' + esc(j.error) + '</div>'; }
+function retOpen(tab){ RT.tab = tab || 'open'; $('rt').hidden = false; retTabs(); if (!RT.list) $('rtl').innerHTML = '<div class="empty">Loading… · লোড হচ্ছে</div>'; else retDraw(); retLoad(); }
+function retTabs(){ document.querySelectorAll('#rt .rtabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t === RT.tab); }); }
+document.querySelector('#rt .rtabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; RT.tab = b.dataset.t; retTabs(); retDraw(); };
+$('rtx').onclick = function(){ $('rt').hidden = true; };
+function rname(r){ return 'R' + r.id + ' · ' + (r.no || 'no design no.'); }
+function retRow(r){ var left = r.pcs - r.back, d = rdays(r.at), open0 = !r.done && r.st !== 'cancel', cls = open0 ? (d >= 7 ? ' late' : d >= 3 ? ' warn' : '') : '';
+  var st = r.st === 'cancel' ? '<span class="st cancel">Cancelled</span>' : r.st === 'back' ? '<span class="st back">✅ All back</span>' : r.fixed ? '<span class="st fixed">🧵 ' + r.fixed + ' fixed · ready</span>' : '<span class="st out">At factory · ' + rage(r.at) + '</span>';
+  var ev = (r.ev || []).map(function(e){ var t = new Date(e[0]); return '<div>' + t.getDate() + '/' + (t.getMonth() + 1) + ' ' + ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) + ' · ' + esc(e[1]) + ' · ' + ({ out: '↩️ gave ' + e[3] + ' pcs to the factory', fixed: '🧵 ' + e[3] + ' pcs fixed', back: '📥 ' + e[3] + ' pcs received back', note: '📝 ' + esc(e[4] || ''), cancel: '✖️ cancelled' }[e[2]] || e[2]) + '</div>'; }).join('');
+  return '<div class="rr' + cls + '" data-id="' + r.id + '"><div class="rh"><b>' + esc(rname(r)) + '</b>' + st + '</div>'
+    + '<div class="rm"><b>' + r.pcs + ' pcs</b> given · <b>' + r.back + '</b> back' + (open0 ? ' · <b style="color:var(--red)">' + left + ' still out</b>' : '') + (r.why ? ' · ' + esc(r.why) : '') + (r.col ? ' · ' + esc(r.col) : '') + '</div>'
+    + (r.note ? '<div class="rn">' + esc(r.note) + '</div>' : '') + '<div class="rbar"><i style="width:' + Math.round(100 * r.back / r.pcs) + '%"></i></div>'
+    + '<div class="rbtns">' + (open0 ? '<button data-a="fixed">🧵 Fixed · ঠিক হয়েছে</button><button data-a="back" class="b1">📥 Received back · ফেরত পেয়েছি</button>' : '') + '<button data-a="chat">💬 Chat</button>' + (open0 ? '<button data-a="note">📝</button><button data-a="cancel">✖</button>' : '') + '</div>'
+    + '<details><summary>History · ইতিহাস (' + (r.ev || []).length + ')</summary>' + ev + '</details></div>'; }
+function retDraw(){ if ($('rt').hidden || !RT.list) return; var L = RT.list.filter(function(r){ return RT.tab === 'open' ? !r.done && r.st !== 'cancel' : r.done || r.st === 'cancel'; });
+  if (RT.tab === 'open') L.sort(function(a, b){ return a.at - b.at; });
+  $('rtl').innerHTML = L.length ? L.map(retRow).join('') : '<div class="empty">' + (RT.tab === 'open' ? 'Nothing at the factory · কারখানায় কিছু নেই' : 'Nothing closed in the last 45 days') + '</div>'; }
+$('rtl').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; var rr = e.target.closest('.rr'), r = (RT.list || []).filter(function(x){ return String(x.id) === rr.dataset.id; })[0]; if (!r) return;
+  var a = b.dataset.a;
+  if (a === 'chat') { var c = r.card && D.byId[r.card] ? D.byId[r.card] : DMC; if (c === DMC && !D.dm) { toast('No chat for this return'); return; } $('rt').hidden = true; openCard(c); return; }
+  if (a === 'cancel') { if (!confirm('Cancel ' + rname(r) + '? · বাতিল করবেন?')) return; retStep(r, 'cancel', 0, ''); return; }
+  RT.cur = r; RT.act = a; var left = r.pcs - r.back;
+  $('rsh').textContent = a === 'fixed' ? '🧵 Pieces fixed · কত পিস ঠিক হয়েছে?' : a === 'back' ? '📥 Pieces received back · কত পিস ফেরত পেয়েছেন?' : '📝 Note · নোট';
+  $('rsinfo').textContent = rname(r) + ' · ' + r.pcs + ' given · ' + r.back + ' back · ' + left + ' still out';
+  $('rsn').hidden = a === 'note'; $('rsn').value = a === 'note' ? '' : String(left); $('rsnote').value = ''; $('rsnote').placeholder = a === 'note' ? 'Write the note · নোট লিখুন' : 'Note (optional) · নোট'; $('rs').hidden = false; };
+$('rsx').onclick = function(){ $('rs').hidden = true; };
+$('rsgo').onclick = function(){ var r = RT.cur, n = Math.floor(+$('rsn').value || 0), left = r.pcs - r.back;
+  if (RT.act !== 'note' && !(n >= 1 && n <= left)) { toast('Pieces: 1 to ' + left); return; } if (RT.act === 'note' && !$('rsnote').value.trim()) { toast('Write the note'); return; }
+  $('rs').hidden = true; retStep(r, RT.act, n, $('rsnote').value.trim()); };
+async function retStep(r, st, n, note){ toast('Saving… · সেভ হচ্ছে'); var j = await call({ op: 'retset', id: r.id, st: st, n: n, note: note });
+  if (!j.ok) { toast('✗ ' + j.error); return; } RT.list = j.rets || RT.list; D.ret = retSum(); retBox(); retDraw(); cretPaint();
+  toast(st === 'back' ? (j.ret.st === 'back' ? '✅ All ' + j.ret.pcs + ' pcs back · সব ফেরত এসেছে' : '📥 ' + n + ' pcs back · ' + (j.ret.pcs - j.ret.back) + ' still out') : st === 'fixed' ? '🧵 Saved · the office is told' : '✓ Saved'); }
+// new return
+function rnCards(){ var q = $('rnno').value.replace(/\D/g, ''), sel = $('rncard'), keep = sel.value, ms = q.length >= 3 ? D.cards.filter(function(c){ return parse(c.name).no === q || parse(c.name).no.replace(/-.*/, '') === q; }) : [];
+  if (q.length >= 3 && !ms.length) ms = D.cards.filter(function(c){ return parse(c.name).no.indexOf(q) === 0; }).slice(0, 6);
+  sel.innerHTML = ms.map(function(c){ return '<option value="' + c.id + '">SJ-' + esc(parse(c.name).no) + ' · ' + esc(lname(c.l)) + ' · ' + esc(c.name.slice(0, 40)) + '</option>'; }).join('') + '<option value="">' + (q ? 'No card — the line goes in the Direct chat' : 'Type the design number above') + '</option>';
+  if (keep && ms.some(function(c){ return c.id === keep; })) sel.value = keep; }
+$('rnno').oninput = rnCards;
+$('rnwhy').innerHTML = WHYS.map(function(w){ return '<button data-w="' + w[0] + '">' + w[0] + ' · ' + w[1] + '</button>'; }).join('');
+$('rnwhy').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; RT.why = RT.why === b.dataset.w ? '' : b.dataset.w; document.querySelectorAll('#rnwhy button').forEach(function(x){ x.classList.toggle('on', x.dataset.w === RT.why); }); };
+function retNew(c){ RT.why = ''; RT.files = []; rnPend(); document.querySelectorAll('#rnwhy button').forEach(function(x){ x.classList.remove('on'); });
+  $('rnno').value = c && !c.dm ? parse(c.name).no : ''; $('rnpcs').value = ''; $('rncol').value = ''; $('rnnote').value = ''; rnCards(); if (c && !c.dm) $('rncard').value = c.id;
+  $('rn').hidden = false; setTimeout(function(){ ($('rnno').value ? $('rnpcs') : $('rnno')).focus(); }, 150); }
+$('rtnew').onclick = function(){ retNew(null); };
+$('bret').onclick = function(){ if (open) retNew(open); };
+$('rnx').onclick = function(){ $('rn').hidden = true; };
+$('rnfiles').onchange = function(){ Array.from(this.files || []).forEach(function(f){ RT.files.push({ name: f.name || 'photo.jpg', kind: /^video\//.test(f.type) ? 'video' : /^image\//.test(f.type) ? 'photo' : 'file', blob: f }); }); this.value = ''; rnPend(); };
+function rnPend(){ $('rnpend').innerHTML = RT.files.map(function(f, i){ if (f.kind === 'photo' && !f.url) f.url = URL.createObjectURL(f.blob); return '<div class="pi" data-i="' + i + '"' + (f.kind === 'photo' ? ' style="background-image:url(' + f.url + ')"' : '') + '>' + (f.kind === 'photo' ? '' : '🎬') + '<small>' + mb(f.blob.size) + '</small><b>✕</b></div>'; }).join(''); }
+$('rnpend').onclick = function(e){ var x = e.target.closest('[data-i]'); if (!x) return; var f = RT.files.splice(+x.dataset.i, 1)[0]; if (f && f.url) URL.revokeObjectURL(f.url); rnPend(); };
+$('rngo').onclick = async function(){ var no = $('rnno').value.replace(/\D/g, ''), pcs = Math.floor(+$('rnpcs').value || 0), cid = $('rncard').value, c = cid ? D.byId[cid] : null;
+  if (!no && !cid) { toast('Type the design number · ডিজাইন নম্বর'); $('rnno').focus(); return; } if (!(pcs >= 1)) { toast('How many pieces? · কত পিস?'); $('rnpcs').focus(); return; }
+  if (!RT.why && !$('rnnote').value.trim()) { toast('Choose the reason or write what to fix · কারণ লিখুন'); return; }
+  var b = this; b.disabled = true; b.textContent = 'Saving… · সেভ হচ্ছে';
+  var j = await call({ op: 'retnew', card: cid, no: c ? 'SJ-' + parse(c.name).no : 'SJ-' + no, title: c ? c.name : '', pcs: pcs, why: RT.why, col: $('rncol').value.trim(), note: $('rnnote').value.trim() });
+  b.disabled = false; b.textContent = '↩️ Save return · সেভ করুন';
+  if (!j.ok) { toast('✗ ' + j.error + ' — nothing lost, try Save again'); return; }
+  if (RT.files.length) { var dest = c || (D.dm ? DMC : null); if (dest) outAdd(dest, '↩️ R' + j.ret.id + ' · photos of the fault · ত্রুটির ছবি', RT.files.map(function(f){ return { name: f.name, kind: f.kind, blob: f.blob }; })); }
+  RT.files = []; $('rn').hidden = true; RT.list = j.rets || RT.list; D.ret = retSum(); retBox(); cretPaint(); if (!$('rt').hidden) { RT.tab = 'open'; retTabs(); retDraw(); }
+  toast('↩️ R' + j.ret.id + ' saved · ' + pcs + ' pcs at the factory' + (j.chat !== 'ok' ? ' (' + j.chat + ')' : '')); };
+function cretPaint(){ var el = $('cret'); if (!open || open.dm || !RT.list) { el.hidden = true; return; } var L = RT.list.filter(function(r){ return r.card === open.id && !r.done && r.st !== 'cancel'; });
+  el.hidden = !L.length; el.innerHTML = L.map(function(r){ return '<div data-id="' + r.id + '">↩️ <b>R' + r.id + '</b> · ' + (r.pcs - r.back) + ' of ' + r.pcs + ' pcs still at the factory · ' + rage(r.at) + (r.fixed ? ' · 🧵 ' + r.fixed + ' fixed' : '') + ' ›</div>'; }).join(''); }
+$('cret').onclick = function(){ retOpen('open'); };
 // ===== OUTBOX (15 Oct 2026, Abbas: "when I press Send and I'm in a hurry, it says sending, I go back, do something else, come back and the
 // message is nowhere to be found"). A message (text and/or files) is saved ON THE PHONE the moment Send is pressed (IndexedDB) and sent by a
 // background sender that does not care which screen is open, keeps trying (also after the app was closed / the phone locked) and uses one
@@ -569,7 +703,11 @@ function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(func
 $('outbar').onclick = function(){ var it = OUT[0]; if (!it) return; outRun(true); var c = D.byId[it.card]; if (c) openCard(c); };
 function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 600000 && !((TH.lastMine || 0) * 1000 > x.done - 15000); }); return OUT.concat(SENT.filter(function(x){ return x.card === cid; })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + esc(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
 async function outOne(it){
-  if (!it.files.length) return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id });
+  if (!it.files.length) { var rf = it.card === 'dm' ? (D.dm ? [D.dm.ch, ''] : null) : FAST.refs[it.card];
+    if (FAST.url && rf && (fastOn() || it.fastTried) && !(it.fastTried && it.tries >= 6)) { it.fastTried = true;
+      var fj = await fast({ op: 'post', ch: rf[0], ts: rf[1] || '', text: it.text, who: it.who, rid: it.id, card: it.card, topic: LIVE.topic }, true);
+      if (fj && fj.ok) return fj; if (!fj && !(FAST.fail || {}).quick) return { ok: false, error: 'no answer from the fast lane - trying again' }; }   // no answer after a wait: maybe sent - only the fast lane (once-only id) is asked again; refused at once (offline worker): the relay sends it
+    return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id }); }
   var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
   if (!it.fids) { try { it.fids = await slackDirect(it.files); oput(it); } catch(e){ it.fids = null; } }      // originals straight to Slack (full quality)
   if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.dtry = (it.dtry || 0) + 1) }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; oput(it); } }
@@ -765,7 +903,7 @@ $('lgo').onclick = async function(){
   this.disabled = true; this.textContent = 'Checking…';
   var j = await call({ op: 'list' }, pw); this.disabled = false; this.textContent = 'Open · খুলুন';
   if (!j.ok) { $('lerr').textContent = j.error === 'wrong password' ? 'Wrong password · ভুল পাসওয়ার্ড' : j.error; return; }
-  PW = pw; WHO = nm; ls('sj_fac_pw', pw); ls('sj_fac_who', nm); $('who').textContent = nm; $('login').hidden = true; ls('sj_fac_list', null); load(false);
+  PW = pw; WHO = nm; FAST.k = ''; FAST.down = 0; ls('sj_fac_pw', pw); ls('sj_fac_who', nm); $('who').textContent = nm; $('login').hidden = true; ls('sj_fac_list', null); load(false);
 };
 document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on this phone?')) { ls('sj_fac_pw', null); PW = ''; showLogin(); } };
 
@@ -777,12 +915,12 @@ var PAGAIN = false;
 async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now() - PINGING < 30000) { PAGAIN = true; return; } PINGING = Date.now(); PAGAIN = false;
   var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
-  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.live) liveStart(j.live); draw(); alertNew(); liveMark(); prefetch(); }
+  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); if (j.ret) { var rc = !D.ret || D.ret.n !== j.ret.n || D.ret.pcs !== j.ret.pcs; D.ret = j.ret; if (rc && RT.list) retLoad(); } draw(); alertNew(); liveMark(); prefetch(); }
 // 15 Oct 2026 (Abbas: "you see how long it is taking refreshing? I run a business - when a message comes I want it as instant as possible, without
 // any long loading of the chats"): (a) the "anything new?" check no longer waits behind the card-list refresh; (b) the status line shows the
 // time of the last check ("● Live 16:46:05"); (c) the newest message text is shown right on the home screen; (d) the chats with new messages
 // are fetched in the background, so opening one shows the message at once; (e) every chat seen on this phone is kept on the phone.
-function liveMark(){ var n = new Date(); if (!D.w) return; $('msg').className = 'ok live'; $('msg').textContent = (LIVE.ok ? '⚡ Live ' : '● Live ') + [n.getHours(), n.getMinutes(), n.getSeconds()].map(function(x){ return ('0' + x).slice(-2); }).join(':') + ' · ' + D.cards.length + ' cards'; }
+function liveMark(){ var n = new Date(); if (!D.w) return; $('msg').className = 'ok live'; $('msg').textContent = (LIVE.ok ? '⚡ Live ' : '● Live ') + [n.getHours(), n.getMinutes(), n.getSeconds()].map(function(x){ return ('0' + x).slice(-2); }).join(':') + ' · ' + D.cards.length + ' cards' + (FAST.url ? (fastOn() ? ' · 🚀 fast' : ' · relay') : ''); }
 var PREF = {};
 async function prefetch(){ var ids = Object.keys(D.th || {}).filter(function(id){ var u = D.th[id]; if (!u || !u.n || (open && open.id === id)) return false; var have = THC[id] || []; var top = have.length ? have[have.length - 1].ts : ''; return !(top && +top >= +u.last) && !(PREF[id] && Date.now() - PREF[id] < 8000); }).slice(0, 3);
   for (var i = 0; i < ids.length; i++) { var id = ids[i]; PREF[id] = Date.now(); var have = THC[id] || [], last = have.length ? have[have.length - 1].ts : '';
@@ -803,6 +941,7 @@ function liveStart(topic, force){ if (!topic || !window.EventSource) return; if 
   es.onerror = function(){ LIVE.ok = false; };
   es.onmessage = function(e){ var d = null; try { d = JSON.parse(e.data); } catch(x){} if (!d || d.event !== 'message') return; LIVE.ok = true; liveNudge(String(d.message || '').replace(/^c=/, '')); }; }
 function liveNudge(c){ LIVE.t = Date.now();
+  if (/^ret:/.test(c)) { if (RT.list) retLoad(); clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(false); }, 250); return; }
   if (/^list:/.test(c)) { setTimeout(function(){ load(false); }, 400); c = c.slice(5); }
   if (open && (open.id === c || !c)) { TH.force = true; thPull(); }
   clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(false); }, 250); }
