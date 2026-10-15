@@ -160,7 +160,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15a';
+var VER = '2026-10-15b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -193,12 +193,14 @@ async function call(obj, pw){
   for (var n = 0; n < 4; n++) {
     if (n) await sleep(2000 * n);
     try {
-      var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: 'fac', req: req, sig: sig }), cache: 'no-store', credentials: 'omit' });
-      var t = await r.text(), j = null; try { j = JSON.parse(t); } catch(e){}
+      // 15 Oct 2026: a request that never comes back (phone locked / app in the background / weak LTE) used to keep "Loading chat…" forever - every try now has a time limit
+      var ac = window.AbortController ? new AbortController() : null, lim = /^(up|sample|attach|media)$/.test(obj.op) ? 120000 : /^(thread|ping|post)$/.test(obj.op) ? 12000 : 25000, tm = ac ? setTimeout(function(){ ac.abort(); }, lim) : null;
+      var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: 'fac', req: req, sig: sig }), cache: 'no-store', credentials: 'omit', signal: ac ? ac.signal : undefined });
+      var t = await r.text(), j = null; clearTimeout(tm); try { j = JSON.parse(t); } catch(e){}
       if (j && j.relay === 'sj-memo' && Object.keys(j).length <= 2) { last = 'Google passed the request on without its contents'; continue; }
       if (j) return j;
       last = 'Google sent a web page instead of an answer (' + r.status + ')';
-    } catch(e){ last = e.message; }
+    } catch(e){ clearTimeout(tm); last = e.name === 'AbortError' ? 'no answer in ' + Math.round(lim / 1000) + ' s' : e.message; if (obj.op === 'ping') break; }
   }
   return { ok: false, error: last + ' — check the internet and try again' };
 }
@@ -245,10 +247,10 @@ var DMC = { id: 'dm', dm: true, name: 'Direct chat', l: '', pos: -1, f: {}, lb: 
 function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; $('bell').hidden = !j.tg; }
 function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Last update · ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · refreshing…'; draw(); return true; } catch(e){ return false; } }
 async function load(fresh){
-  if (LOADING) return false; LOADING = true;
+  if (LOADING && Date.now() - LOADING < 30000) return false; LOADING = Date.now();
   $('rf').classList.add('spin');
   var j = await call({ op: 'list', fresh: !!fresh });
-  $('rf').classList.remove('spin'); LOADING = false;
+  $('rf').classList.remove('spin'); LOADING = 0;
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
   applyList(j); j.t = Date.now(); try { ls('sj_fac_list', JSON.stringify(j)); } catch(e){}
   var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? 'Updated · আপডেট ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
@@ -336,7 +338,7 @@ function cardShow(on){ if (on) { SCY = window.scrollY || 0; document.body.classL
 // iPhone: when the keyboard opens the visible area shrinks and Safari scrolls the page; the card follows the visible area and snaps back when the keyboard closes
 function vvFit(){ var vv = window.visualViewport, el = $('card'); if (!vv || el.hidden) return; var full = Math.abs(vv.height - window.innerHeight) < 2 && vv.offsetTop < 2; el.style.height = full ? '' : vv.height + 'px'; el.style.top = full ? '' : vv.offsetTop + 'px'; if (full) window.scrollTo(0, 0); }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', vvFit); window.visualViewport.addEventListener('scroll', vvFit); }
-function openCard(c){ open = c; $('card').hidden = false; cardShow(true); pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); thStart(c); }
+function openCard(c){ open = c; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
 function paintCard(){
   var c = open; $('card').classList.toggle('dm', !!c.dm);
   if (c.dm) { $('cnm').innerHTML = '💬 Direct chat<small>সরাসরি কথা · Abbas ↔ factory</small>'; $('cstage').textContent = '#' + ((D.dm || {}).name || ''); $('cstage').onclick = function(){ dmPick(); }; $('cstage').style.cursor = 'pointer'; $('tcount').textContent = ''; $('thh').textContent = 'DIRECT CHAT · সরাসরি কথা'; return; }
@@ -428,11 +430,11 @@ var THC = {};                                                   // last seen thr
 function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = THC[c.id] || []; PEND.length = 0; pendDraw(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 4000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 async function thPull(){
-  var c = TH.card; if (!c || TH.busy) return; TH.busy = true;
+  var c = TH.card; if (!c || (TH.busy && Date.now() - TH.busy < 30000)) return; TH.busy = Date.now();
   var real = TH.msgs.filter(function(m){ return !m.pend; }), last = real.length ? real[real.length - 1].ts : '';
   var j = await call({ op: 'thread', card: c.id, since: last });
-  TH.busy = false; if (TH.card !== c) return;
-  if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = ''; return; }
+  TH.busy = 0; if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; }
+  if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = '<div class="empty" style="padding:14px">⏳ ' + esc(j.error) + '<br>আবার চেষ্টা করা হচ্ছে…</div>'; return; }
   $('tmsg').textContent = '';
   if (j.none) { TH.none = true; $('thread').innerHTML = '<div class="empty" style="padding:14px">No chat yet — write the first message, send a photo or a voice note.<br>এখনো কোনো মেসেজ নেই — প্রথম মেসেজ লিখুন</div>'; $('tcount').textContent = ''; return; }
   TH.none = false;
@@ -622,8 +624,8 @@ document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on t
 // 15 Oct 2026 (Abbas: "no catch up ... make the message appear as instant as possible"): a cheap "anything new?" (op ping, no Trello) every 4 s on the
 // home screen and every 12 s inside a card; the full card list every 30 s; and at once when the app comes back to the front.
 var POLLN = 0, PINGING = false, LASTTOT = -1;
-async function ping(fresh){ if (!PW || PINGING || LOADING || !D.cards) return; PINGING = true;
-  var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = false; if (!j || !j.ok) return;
+async function ping(fresh){ if (!PW || (PINGING && Date.now() - PINGING < 30000) || LOADING || !D.cards) return; PINGING = Date.now();
+  var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (!j || !j.ok) return;
   var th = j.th || {}; if (open) delete th[open.id];                 // the open chat is being read right now
   D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; draw(); alertNew(); }
 function totUnread(){ return Object.keys(D.th || {}).reduce(function(a, k){ return a + ((D.th[k] || {}).n || 0); }, 0); }
