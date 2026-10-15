@@ -79,6 +79,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 #dms .ch{display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-top:1px solid var(--line);font-size:15px}#dms .ch small{color:var(--mute);font-size:12px}#dms .ch.off{opacity:.55}#dms input{width:100%;margin-bottom:6px}
 #card.dm .hero,#card.dm .btns,#card.dm #bpin{display:none}#card.dm .thr{margin-top:0}
 .msg.nw .bub{box-shadow:0 0 0 2.5px #c0392b}.msg.nw .who:after{content:' · NEW';color:#c0392b;font-weight:800}
+#inbox .itx{display:block;font-style:normal;font-size:14px;color:#3b2f1e;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}#msg.live{color:#2e7d32}
 #inbox{background:#fff;border:1.5px solid var(--red);border-radius:16px;padding:10px 12px;margin-bottom:12px}#inbox[hidden]{display:none}
 #inbox h3 button,#later h3 button{float:right;border:0;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800;color:#fff;background:var(--red)}#later h3 button{background:#b8860b}
 #later{background:#fff;border:1.5px solid #b8860b;border-radius:16px;padding:10px 12px;margin-bottom:12px}#later[hidden]{display:none}#later h3{margin:0 0 6px;font-size:14px;color:#8a6508}#later .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:15px}#later .row b{font-weight:800}#later .row small{color:var(--mute);font-size:12px;display:block}
@@ -161,7 +162,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15d';
+var VER = '2026-10-15e';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -260,7 +261,7 @@ function pump(){
 var LOADING = false;
 var DMC = { id: 'dm', dm: true, name: 'Direct chat', l: '', pos: -1, f: {}, lb: [] };          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
 function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; bellPaint(); }
-function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Last update · ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · refreshing…'; draw(); return true; } catch(e){ return false; } }
+function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards'; draw(); return true; } catch(e){ return false; } }
 async function load(fresh){
   if (LOADING && Date.now() - LOADING < 30000) return false; LOADING = Date.now();
   $('rf').classList.add('spin');
@@ -269,7 +270,7 @@ async function load(fresh){
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
   applyList(j); j.t = Date.now(); try { ls('sj_fac_list', JSON.stringify(j)); } catch(e){}
   var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? 'Updated · আপডেট ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
-  draw(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
+  draw(); liveMark(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
   if (!open) openFromHash();
   return true;
 }
@@ -305,7 +306,7 @@ function inbox(){
   var us = (unread(DMC) ? [DMC] : []).concat(D.cards.filter(function(c){ return unread(c); })), el = $('inbox'), tot = us.reduce(function(a, c){ return a + unread(c); }, 0);
   try { if (navigator.setAppBadge) { tot ? navigator.setAppBadge(tot) : navigator.clearAppBadge(); } } catch(e){}
   if (!us.length) { el.hidden = true; return; }
-  el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '<button id="bcatch">⚡ Catch up</button></h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small></div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
+  el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '<button id="bcatch">⚡ Catch up</button></h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small>' + ((D.th[c.id] || {}).tx ? '<em class="itx">' + esc(D.th[c.id].tx) + '</em>' : '') + '</div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
 }
 // ---- 13 Oct 2026 (Abbas): "like Slack's Catch up" - read but cannot do it now -> 📌 LATER, per person, stays on the home screen until unpinned ----
 function laterBox(){ var el = $('later'), ids = Object.keys(D.later || {}), cs = ids.map(function(id){ return D.byId[id]; }).filter(Boolean).sort(function(a, b){ return +D.later[b.id] - +D.later[a.id]; });
@@ -468,7 +469,7 @@ async function thPull(){
   if (!add.length && TH.msgs.length) return;
   if (!add.length && !TH.msgs.length) { $('thread').innerHTML = '<div class="empty" style="padding:14px">No messages yet — write the first one.<br>এখনো কোনো মেসেজ নেই</div>'; $('tcount').textContent = ''; return; }
   var fresh = last ? add.filter(function(m){ return !m.sys && !isMe(m); }) : []; fresh.forEach(function(m){ m.nw = 1; });
-  var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thDraw(); if (look) seen(c); draw();
+  var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thcSave(); thDraw(); if (look) seen(c); draw();
   if (fresh.length) { beep(); toast('💬 New: ' + (fresh[fresh.length - 1].who || '') + ' · নতুন মেসেজ'); }
 }
 function firstName(x){ return String(x || '').trim().split(/[\s·]+/)[0].toUpperCase(); }
@@ -663,10 +664,25 @@ document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on t
 // 15 Oct 2026 (Abbas: "no catch up ... make the message appear as instant as possible"): a cheap "anything new?" (op ping, no Trello) every 4 s on the
 // home screen and every 12 s inside a card; the full card list every 30 s; and at once when the app comes back to the front.
 var POLLN = 0, PINGING = false, LASTTOT = -1;
-async function ping(fresh){ if (!PW || (PINGING && Date.now() - PINGING < 30000) || LOADING || !D.cards) return; PINGING = Date.now();
+async function ping(fresh){ if (!PW || (PINGING && Date.now() - PINGING < 30000) || !D.cards) return; PINGING = Date.now();
   var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
-  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; draw(); alertNew(); }
+  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; draw(); alertNew(); liveMark(); prefetch(); }
+// 15 Oct 2026 (Abbas: "you see how long it is taking refreshing? I run a business - when a message comes I want it as instant as possible, without
+// any long loading of the chats"): (a) the "anything new?" check no longer waits behind the card-list refresh; (b) the status line shows the
+// time of the last check ("● Live 16:46:05"); (c) the newest message text is shown right on the home screen; (d) the chats with new messages
+// are fetched in the background, so opening one shows the message at once; (e) every chat seen on this phone is kept on the phone.
+function liveMark(){ var n = new Date(); if (!D.w) return; $('msg').className = 'ok live'; $('msg').textContent = '● Live ' + [n.getHours(), n.getMinutes(), n.getSeconds()].map(function(x){ return ('0' + x).slice(-2); }).join(':') + ' · ' + D.cards.length + ' cards'; }
+var PREF = {};
+async function prefetch(){ var ids = Object.keys(D.th || {}).filter(function(id){ var u = D.th[id]; if (!u || !u.n || (open && open.id === id)) return false; var have = THC[id] || []; var top = have.length ? have[have.length - 1].ts : ''; return !(top && +top >= +u.last) && !(PREF[id] && Date.now() - PREF[id] < 8000); }).slice(0, 3);
+  for (var i = 0; i < ids.length; i++) { var id = ids[i]; PREF[id] = Date.now(); var have = THC[id] || [], last = have.length ? have[have.length - 1].ts : '';
+    var j = await call({ op: 'thread', card: id, since: last, look: 0, pre: 1 }); if (!j.ok || j.none) continue; if (open && open.id === id) continue;
+    var hv = {}; have.forEach(function(m){ hv[m.ts] = 1; }); THC[id] = have.concat((j.msgs || []).filter(function(m){ return !hv[m.ts]; })); thcSave(); } }
+function thcLoad(){ try { var o = JSON.parse(ls('sj_fac_thc') || '{}'); Object.keys(o).forEach(function(k){ if (!THC[k]) THC[k] = o[k]; }); } catch(e){} }
+var THCT = null;
+function thcSave(){ clearTimeout(THCT); THCT = setTimeout(function(){ try { var o = {}, ks = Object.keys(THC).filter(function(k){ return THC[k] && THC[k].length; });
+  ks.sort(function(a, b){ return +(THC[b][THC[b].length - 1].ts) - +(THC[a][THC[a].length - 1].ts); }).slice(0, 40).forEach(function(k){ o[k] = THC[k].slice(-40).map(function(m){ var x = {}; for (var q in m) if (q !== 'nw' && q !== 'pend') x[q] = m[q]; return x; }); });
+  ls('sj_fac_thc', JSON.stringify(o)); } catch(e){} }, 800); }
 function totUnread(){ return Object.keys(D.th || {}).reduce(function(a, k){ return a + ((D.th[k] || {}).n || 0); }, 0); }
 function alertNew(){ var t = totUnread(); document.title = (t ? '(' + t + ') ' : '') + 'AL MUTAGADED · Factory';
   if (LASTTOT >= 0 && t > LASTTOT) beep(); LASTTOT = t; }
@@ -682,7 +698,8 @@ async function checkVer(){ try { var t = await (await fetch('factory.html?t=' + 
   if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
 
 $('who').textContent = WHO;
-if (!PW) showLogin(); else { if (loadCached()) openFromHash(); load(false); }
+thcLoad();
+if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } load(false); }
 checkVer();
 window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND };
 })();
