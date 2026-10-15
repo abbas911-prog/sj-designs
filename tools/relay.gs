@@ -35,7 +35,7 @@ function doPost(e) {
     // 15 Oct 2026: Slack's Event Subscriptions point here. The event is only a nudge ("something was written in a channel"): it makes every
     // phone's next poll re-read Slack at once. Nothing in it is trusted or stored, so a fake one can only cause an extra re-read.
     if (b.type === 'url_verification' && b.challenge) return ContentService.createTextOutput(String(b.challenge)).setMimeType(ContentService.MimeType.TEXT);
-    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} return out({ ok: true }); }
+    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
     if (b.job === 'fac') {                                    // FACTORY APP (12 Oct 2026): its own password (FACTORY_PASSWORD), or the shop password
@@ -160,6 +160,26 @@ function facNotifyTick() {                                       // the fallback
 function setupFacNotify() {                                      // Abbas can also run this once from the editor (▶ Run) if the 🔔 screen says the timer could not start
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'facNotifyTick') ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('facNotifyTick').timeBased().everyMinutes(1).create(); return true;
+}
+// 15 Oct 2026 (Abbas: voice notes "still taking a lot of time"): a file fetched once is kept in the relay's cache for 6 h (in pieces, up to
+// ~1.5 MB), so every other phone gets it without Slack; and a voice note is fetched INTO that cache the moment Slack says it was posted.
+function facMedia(FT, mf, full) {
+  var c = CacheService.getScriptCache(), key = 'FAC_MD_' + mf + (full ? 'F' : 'T'), hit = bigGet(c, key); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var fi = slackApi(FT, 'files.info', { file: mf }, true); if (!fi.ok) return { ok: false, error: 'Slack said ' + fi.error + (fi.error === 'missing_scope' ? ' (the factory bot needs files:read)' : '') };
+  var f = fi.file || {}, mu = (full ? null : (f.thumb_720 || f.thumb_480 || f.thumb_360)) || f.url_private_download || f.url_private;
+  if ((f.size || 0) > 20 * 1024 * 1024 && full) return { ok: false, error: 'file too big', link: f.permalink || '' };   // 13 Oct 2026: a big video opens in Slack instead
+  var mr = UrlFetchApp.fetch(mu, { muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + FT } });
+  if (mr.getResponseCode() !== 200) return { ok: false, error: 'Slack file said ' + mr.getResponseCode(), link: f.permalink || '' };
+  var mb = mr.getBlob(), by = mb.getBytes(); if (by.length > 20 * 1024 * 1024) return { ok: false, error: 'file too big', link: f.permalink || '' };
+  var res = { ok: true, b64: Utilities.base64Encode(by), type: mb.getContentType() || f.mimetype || '', name: f.name || '' };
+  if (res.b64.length < 1500000) { try { bigPut(c, key, JSON.stringify(res), 21600); } catch (e) {} }
+  return res;
+}
+function facWarm(P, ev) {                                        // a message with a voice note (or photo) just arrived: get it ready for the phones
+  var FT = P.getProperty('SLACK_FACTORY_TOKEN'); if (!FT) return;
+  (ev.files || []).slice(0, 3).forEach(function (f) { var mt = String(f.mimetype || ''), nm = String(f.name || '');
+    if ((/^audio\//.test(mt) || /\.(m4a|webm|ogg|opus|mp3|aac)$/i.test(nm)) && (+f.size || 0) <= 1100000) { try { facMedia(FT, f.id, true); } catch (e) {} }
+    else if (/^image\//.test(mt)) { try { facMedia(FT, f.id, false); } catch (e) {} } });
 }
 function facBump() { CacheService.getScriptCache().put('FAC_GEN', String(Date.now()), 21600); }
 function facGen() { return CacheService.getScriptCache().get('FAC_GEN') || '0'; }   // bumped by every Slack event: all "what's new" caches start again
@@ -550,16 +570,10 @@ function fac0(reqText, P) {
       try { facSeen(P, uwho, uc, String(Date.now() / 1000)); } catch (e) {} facBump();
       return out({ ok: true, fids: fids });
     }
-    if (req.op === 'media') {                                 // one Slack file for the phone (photo thumbnail or the voice note), through the bot token
+    if (req.op === 'media') {                                 // one Slack file for the phone (photo preview, voice note, video), through the bot token
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
       var mf = String(req.file || '').replace(/[^A-Z0-9]/g, ''); if (!mf) return out({ ok: false, error: 'bad request' });
-      var fi = slackApi(FT, 'files.info', { file: mf }, true); if (!fi.ok) return out({ ok: false, error: 'Slack said ' + fi.error + (fi.error === 'missing_scope' ? ' (the factory bot needs files:read)' : '') });
-      var f = fi.file || {}, mu = (req.full ? null : (f.thumb_720 || f.thumb_480 || f.thumb_360)) || f.url_private_download || f.url_private;
-      if ((f.size || 0) > 20 * 1024 * 1024) return out({ ok: false, error: 'file too big', link: f.permalink || '' });   // 13 Oct 2026: a big video opens in Slack instead
-      var mr = UrlFetchApp.fetch(mu, { muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + FT } });
-      if (mr.getResponseCode() !== 200) return out({ ok: false, error: 'Slack file said ' + mr.getResponseCode(), link: f.permalink || '' });
-      var mb = mr.getBlob(); if (mb.getBytes().length > 20 * 1024 * 1024) return out({ ok: false, error: 'file too big', link: f.permalink || '' });
-      return out({ ok: true, b64: Utilities.base64Encode(mb.getBytes()), type: mb.getContentType() || f.mimetype || '', name: f.name || '' });
+      var md = facMedia(FT, mf, !!req.full); return out(md);
     }
     if (req.op === 'setpw') {                                 // 13 Oct 2026: the factory password is set from the order memo (owner key-check), not the read-only settings page
       if (!ownerOk(P, req.chk)) return out({ ok: false, error: 'owner password does not match' });
