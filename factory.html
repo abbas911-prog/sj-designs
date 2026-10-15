@@ -164,7 +164,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15j';
+var VER = '2026-10-15k';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -472,7 +472,7 @@ function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 async function thPull(){
   var c = TH.card; if (!c || (TH.busy && Date.now() - TH.busy < 30000)) return; TH.busy = Date.now();
   var real = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }), last = real.length ? real[real.length - 1].ts : '';
-  var look = looking(), j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0 });
+  TH.n = (TH.n || 0) + 1; var look = looking(), j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0, force: (TH.n % 4 === 0 || TH.force) ? 1 : 0 }); TH.force = false;
   TH.busy = 0; if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; } if (j && j.ok) TH.lastPull = Date.now();
   if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = '<div class="empty" style="padding:14px">⏳ ' + esc(j.error) + '<br>আবার চেষ্টা করা হচ্ছে…</div>'; return; }
   $('tmsg').textContent = '';
@@ -482,6 +482,7 @@ async function thPull(){
   if (!add.length && TH.msgs.length) return;
   if (!add.length && !TH.msgs.length) { $('thread').innerHTML = '<div class="empty" style="padding:14px">No messages yet — write the first one.<br>এখনো কোনো মেসেজ নেই</div>'; $('tcount').textContent = ''; return; }
   var fresh = last ? add.filter(function(m){ return !m.sys && !isMe(m); }) : []; fresh.forEach(function(m){ m.nw = 1; });
+  add.forEach(function(m){ if (isMe(m) && +m.ts > (TH.lastMine || 0)) TH.lastMine = +m.ts; });
   var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thcSave(); if (playing() && !pend.length) { $('thread').insertAdjacentHTML('beforeend', add.map(bubble).join('')); $('tcount').textContent = TH.msgs.length + ' messages'; } else thDraw(); if (look) seen(c); draw();
   if (fresh.length) { beep(); toast('💬 New: ' + (fresh[fresh.length - 1].who || '') + ' · নতুন মেসেজ'); }
 }
@@ -566,7 +567,7 @@ function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(func
   if (!n) { el.hidden = true; } else { el.hidden = false; el.className = bad.length ? 'bad' : ''; el.innerHTML = (bad.length ? '⚠ ' + n + ' message' + (n > 1 ? 's' : '') + ' not sent yet — ' + (bad[0].tries >= 5 ? 'tap to try again' : 'trying again · tap') : '📤 Sending ' + n + ' message' + (n > 1 ? 's' : '') + '… · পাঠানো হচ্ছে') + '<small>' + esc(OUT.map(function(x){ return x.cname; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' · ')) + (bad.length && bad[0].err ? ' — ' + esc(bad[0].err) : '') + '</small>'; }
   if (TH.card && !$('card').hidden && !playing()) thDraw(); }
 $('outbar').onclick = function(){ var it = OUT[0]; if (!it) return; outRun(true); var c = D.byId[it.card]; if (c) openCard(c); };
-function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 60000; }); return OUT.concat(SENT.filter(function(x){ return x.card === cid && !(TH.lastPull > x.done + 500); })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + esc(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
+function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 600000 && !((TH.lastMine || 0) * 1000 > x.done - 15000); }); return OUT.concat(SENT.filter(function(x){ return x.card === cid; })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + esc(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
 async function outOne(it){
   if (!it.files.length) return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id });
   var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
@@ -582,7 +583,7 @@ async function outRun(now){
       if (j && j.ok) { OUT.shift(); odel(it.id);
         if (!it.files.length && j.ts) { var real = { ts: j.ts, who: it.who, app: true, text: it.text, files: [] }; THC[it.card] = (THC[it.card] || []).concat([real]); thcSave(); if (TH.card && TH.card.id === it.card && !TH.msgs.some(function(m){ return m.ts === j.ts; })) TH.msgs.push(real); }
         else { it.done = Date.now(); SENT.push(it); }                 // files: shown as "✓ sent" until the chat brings the real message
-        outPaint(); if (TH.card && TH.card.id === it.card) setTimeout(thPull, 300); continue; }
+        outPaint(); if (TH.card && TH.card.id === it.card) { TH.force = true; setTimeout(thPull, 300); setTimeout(function(){ TH.force = true; thPull(); }, 4000); } continue; }
       it.tries++; it.err = String((j && j.error) || 'no answer').slice(0, 80); oput(it); outPaint(); break; } }
   finally { OUTRUN = false; }
   if (OUT.length) { var o0 = OUT[0], big = o0.files.reduce(function(a, x){ return a + x.blob.size; }, 0) > 18 * 1024 * 1024; if (big && o0.tries >= 5 && !now) return; OUTT = setTimeout(outRun, Math.min(big ? 60000 : 30000, 4000 * Math.max(1, o0.tries))); }
