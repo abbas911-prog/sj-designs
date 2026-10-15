@@ -110,6 +110,16 @@ function facThread(P, FT, card, rtok, make) {                 // the #cutting me
 // badge came back EMPTY; (3) only the newest 200 #cutting messages were scanned. Now: one shared, compact history per channel (2 pages = 400),
 // each thread's answer cached by its latest reply (Slack is asked again only when that thread really changes), last good answer kept when Slack
 // refuses, and Slack's own push (Event Subscriptions -> this doPost) marks "something changed" so the next poll (every 4 s) picks it up at once.
+// 15 Oct 2026 (2nd): after the deploy the chat did not open for minutes - the unread count asked Slack for up to 25 threads on EVERY 4-s ping
+// (first pass, nothing cached yet), Slack answered "ratelimited" (~50 thread reads a minute), failures were not remembered, so every ping
+// tried again and the chat itself (same Slack method) was refused too. Now the background count has a small budget (15 thread reads a minute,
+// shared by all phones) and stops for 30 s when Slack says "slow down"; the open chat always goes first.
+function facBudget() {
+  var c = CacheService.getScriptCache(); if (c.get('FAC_RL')) return false;
+  var k = 'FAC_RB_' + Math.floor(Date.now() / 60000), used = +(c.get(k) || 0); if (used >= 15) return false;
+  c.put(k, String(used + 1), 120); return true;
+}
+function facSlow(j) { if (j && j.error === 'ratelimited') CacheService.getScriptCache().put('FAC_RL', '1', 30); }
 function facBump() { CacheService.getScriptCache().put('FAC_GEN', String(Date.now()), 21600); }
 function facGen() { return CacheService.getScriptCache().get('FAC_GEN') || '0'; }   // bumped by every Slack event: all "what's new" caches start again
 function facTtl(P) { return P.getProperty('FAC_EVENTS_ON') ? 45 : 10; }               // with Slack pushing changes, the fallback re-scan can be slow
@@ -117,7 +127,7 @@ function facHist(P, FT, CH, fresh) {                            // newest 400 to
   var c = CacheService.getScriptCache(), g = facGen(), k = 'FAC_H_' + CH + '_' + g, h = fresh ? null : c.get(k); if (h) return JSON.parse(h);
   var cut = function (m) { var lk = String(m.text || '').match(/trello\.com\/c\/([A-Za-z0-9]+)/); return { t: m.ts, rc: m.reply_count || 0, lr: m.latest_reply || '', l: lk ? lk[1] : '' }; };
   var j = slackApi(FT, 'conversations.history', { channel: CH, limit: 200 }, true);
-  if (!j.ok) { if (j.error === 'missing_scope') throw new Error('the factory Slack app needs channels:history + groups:history (then Reinstall)'); var lg = c.get('FAC_H_' + CH + '_L'); if (lg) return JSON.parse(lg); throw new Error('Slack said ' + j.error); }
+  if (!j.ok) { facSlow(j); if (j.error === 'missing_scope') throw new Error('the factory Slack app needs channels:history + groups:history (then Reinstall)'); var lg = c.get('FAC_H_' + CH + '_L'); if (lg) return JSON.parse(lg); throw new Error('Slack said ' + j.error); }
   var ms = (j.messages || []).map(cut), k2 = 'FAC_H2_' + CH, h2 = c.get(k2), older = [];
   if (h2) older = JSON.parse(h2); else if (j.has_more && j.response_metadata && j.response_metadata.next_cursor) {   // the older page changes rarely: re-read once a minute
     var j2 = slackApi(FT, 'conversations.history', { channel: CH, limit: 200, cursor: j.response_metadata.next_cursor }, true);
@@ -203,14 +213,14 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
   var th = null; try { th = facThreads(P, FT, cards, fresh); } catch (e) { th = null; }
   if (th) {
     var all = P.getProperties(), byCard = {}; Object.keys(all).forEach(function (x) { if (x.indexOf('FTH_') === 0) byCard[x.slice(4)] = JSON.parse(all[x]); });
-    Object.keys(th).forEach(function (cid) {
+    Object.keys(th).sort(function (a, b) { return +th[b].last - +th[a].last; }).forEach(function (cid) {   // newest activity first: a fresh message is counted before old move lines
       var t = th[cid], seen = Math.max(+(rec[cid] || 0), +rec._t0); if (!(+t.last > seen) || !byCard[cid]) return;
       var rk = 'FUR_' + W + '_' + cid + '_' + t.last + '_' + seen, rh = cache.get(rk);
       if (rh) { var r0 = JSON.parse(rh); if (r0.n) outm[cid] = r0; return; }             // this thread has not changed since we last counted it
-      if (looked >= 25) { if (lastGood[cid]) outm[cid] = lastGood[cid]; return; }
+      if (!facBudget()) { if (lastGood[cid]) outm[cid] = lastGood[cid]; return; }
       looked++;
       var rp = slackApi(FT, 'conversations.replies', { channel: byCard[cid].ch, ts: byCard[cid].ts, oldest: String(seen), limit: 100 }, true);
-      if (!rp.ok) { if (lastGood[cid]) outm[cid] = lastGood[cid]; return; }               // Slack busy: keep what we knew, never blank it
+      if (!rp.ok) { facSlow(rp); if (lastGood[cid]) outm[cid] = lastGood[cid]; return; }  // Slack busy: keep what we knew, never blank it
       var n = 0, lastOther = '';
       (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if (mm.sys || mine(mm)) return; n++; lastOther = m.ts; });
       var r = { n: n, last: lastOther }; try { cache.put(rk, JSON.stringify(r), 21600); } catch (e) {} if (n) outm[cid] = r;
@@ -234,7 +244,7 @@ function facDmMsgs(P, FT, dm, fresh) {                         // the direct cha
     outm.push(slim(m));
     if (m.reply_count && m.latest_reply) {                     // someone answered inside a thread of the direct chat (Slack's "reply in thread")
       var rk = 'FAC_DMR_' + m.ts + '_' + m.latest_reply, rh = c.get(rk), reps = null;
-      if (rh) reps = JSON.parse(rh); else { var rj = slackApi(FT, 'conversations.replies', { channel: dm.ch, ts: m.ts, limit: 100 }, true); if (rj.ok) { reps = (rj.messages || []).filter(function (x) { return x.ts !== m.ts; }).map(function (x) { return slim(x, true); }); try { c.put(rk, JSON.stringify(reps), 21600); } catch (e) {} } }
+      if (rh) reps = JSON.parse(rh); else { var rj = slackApi(FT, 'conversations.replies', { channel: dm.ch, ts: m.ts, limit: 100 }, true); facSlow(rj); if (rj.ok) { reps = (rj.messages || []).filter(function (x) { return x.ts !== m.ts; }).map(function (x) { return slim(x, true); }); try { c.put(rk, JSON.stringify(reps), 21600); } catch (e) {} } }
       (reps || []).forEach(function (x) { outm.push(x); });
     }
   });
@@ -419,6 +429,8 @@ function fac(reqText, P) {
       if (!th) return out({ ok: true, none: true, msgs: [] });
       var rq = { channel: th.ch, ts: th.ts, limit: 200 }; if (req.since) rq.oldest = String(req.since);
       var rp = slackApi(FT, 'conversations.replies', rq, true);
+      if (!rp.ok && rp.error === 'ratelimited') { facSlow(rp); Utilities.sleep(1500); rp = slackApi(FT, 'conversations.replies', rq, true); }
+      if (!rp.ok) return out({ ok: false, error: rp.error === 'ratelimited' ? 'Slack is busy - trying again in a few seconds' : 'Slack said ' + rp.error });
       var ms = (rp.messages || []).filter(function (m) { return !req.since || m.ts !== String(req.since); }).map(function (m) { return facMsg(P, FT, m, th.ts); });
       var lastTs = (rp.messages || []).reduce(function (a, m) { return +m.ts > +a ? m.ts : a; }, req.since || th.ts);
       facSeen(P, String(req.who || ''), tc, lastTs);                // this person has now seen the thread up to here (shared by all their phones)
