@@ -35,7 +35,7 @@ function doPost(e) {
     // 15 Oct 2026: Slack's Event Subscriptions point here. The event is only a nudge ("something was written in a channel"): it makes every
     // phone's next poll re-read Slack at once. Nothing in it is trusted or stored, so a fake one can only cause an extra re-read.
     if (b.type === 'url_verification' && b.challenge) return ContentService.createTextOutput(String(b.challenge)).setMimeType(ContentService.MimeType.TEXT);
-    if (b.type === 'event_callback') { try { facBump(); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} return out({ ok: true }); }
+    if (b.type === 'event_callback') { try { facBump(); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} return out({ ok: true }); }
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
     if (b.job === 'fac') {                                    // FACTORY APP (12 Oct 2026): its own password (FACTORY_PASSWORD), or the shop password
@@ -120,6 +120,46 @@ function facBudget() {
   c.put(k, String(used + 1), 120); return true;
 }
 function facSlow(j) { if (j && j.error === 'ratelimited') CacheService.getScriptCache().put('FAC_RL', '1', 30); }
+// ---- 15 Oct 2026 (Abbas: "I need a work around for a notification for this app"): a web page cannot buzz a locked iPhone, so the relay
+// sends a real phone notification through ntfy (free app on the App Store, no account). Each person turns it on from 🔔 in the factory
+// app: the app makes a secret topic name, the relay keeps it (FNTFY = {NAME: topic}), and whenever Slack tells the relay something was
+// written (Event Subscriptions) - or every minute from a timer as a fallback - the relay works out each person's NEW unread messages
+// (same rules as Catch up) and sends "SJ-17841 · Mohammod: …" with a link that opens that card. Already-sent ones are remembered (FNOTE_<NAME>).
+function facLine(mm) { var t = String(mm.text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(); if (!t && (mm.files || []).length) t = mm.files.map(function (f) { return f.audio ? '🎤 voice note' : f.img ? '📷 photo' : f.video ? '🎬 video' : '📎 ' + f.name; }).join(' · '); return (mm.who ? mm.who + ': ' : '') + t.slice(0, 160); }
+function facNtfy(topic, o) {
+  try { var r = UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify({ topic: topic, title: o.title, message: o.msg, click: o.click, tags: ['speech_balloon'], priority: 4 }) }); return r.getResponseCode() === 200; } catch (e) { return false; }
+}
+function facNotifyScan(P, why) {
+  var map = JSON.parse(P.getProperty('FNTFY') || '{}'), names = Object.keys(map); if (!names.length) return 0;
+  var FT = P.getProperty('SLACK_FACTORY_TOKEN'); if (!FT) return 0;
+  var lock = LockService.getScriptLock(); if (!lock.tryLock(200)) return 0;          // one scan at a time - never two notifications for one message
+  var sent = 0;
+  try {
+    var c = CacheService.getScriptCache(), lc = bigGet(c, 'FAC_LIST_L') || bigGet(c, 'FAC_LIST'), cards = lc ? JSON.parse(lc).cards : [], byId = {};
+    if (!cards.length) cards = Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('FTH_') === 0; }).map(function (k) { return { id: k.slice(4) }; });
+    cards.forEach(function (x) { byId[x.id] = x; });
+    var dm = null; try { dm = facDm(P, FT); } catch (e) {}
+    names.forEach(function (nm) {
+      var un = {}; try { un = facUnread(P, FT, cards, nm, false); } catch (e) { return; }
+      var nk = 'FNOTE_' + nm.toUpperCase().slice(0, 40), noted = JSON.parse(P.getProperty(nk) || '{}'), changed = false;
+      Object.keys(un).forEach(function (id) {
+        var u = un[id]; if (!u || !u.n || !u.last || +noted[id] >= +u.last) return;
+        var card = byId[id], ttl = id === 'dm' ? '💬 Direct chat' + (dm ? ' #' + dm.name : '') : (card && card.name ? (String(card.name).match(/\d{3,6}/) ? 'SJ-' + String(card.name).match(/\d{3,6}/)[0] : String(card.name).slice(0, 40)) : 'Card chat');
+        if (facNtfy(map[nm], { title: ttl + (u.n > 1 ? ' · ' + u.n + ' new' : ''), msg: u.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/factory.html#card=' + id })) { sent++; noted[id] = u.last; changed = true; }
+      });
+      if (changed) { var ks = Object.keys(noted); if (ks.length > 300) ks.sort(function (a, b) { return +noted[a] - +noted[b]; }).slice(0, ks.length - 300).forEach(function (k) { delete noted[k]; }); P.setProperty(nk, JSON.stringify(noted)); }
+    });
+  } finally { lock.releaseLock(); }
+  return sent;
+}
+function facNotifyTick() {                                       // the fallback timer (every minute): when Slack's push is on, only every 5th minute
+  var P = PropertiesService.getScriptProperties(); if (P.getProperty('FAC_EVENTS_ON') && new Date().getMinutes() % 5) return;
+  try { facNotifyScan(P, 'tick'); } catch (e) {}
+}
+function setupFacNotify() {                                      // Abbas can also run this once from the editor (▶ Run) if the 🔔 screen says the timer could not start
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'facNotifyTick') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('facNotifyTick').timeBased().everyMinutes(1).create(); return true;
+}
 function facBump() { CacheService.getScriptCache().put('FAC_GEN', String(Date.now()), 21600); }
 function facGen() { return CacheService.getScriptCache().get('FAC_GEN') || '0'; }   // bumped by every Slack event: all "what's new" caches start again
 function facTtl(P) { return P.getProperty('FAC_EVENTS_ON') ? 45 : 10; }               // with Slack pushing changes, the fallback re-scan can be slow
@@ -221,15 +261,15 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
       looked++;
       var rp = slackApi(FT, 'conversations.replies', { channel: byCard[cid].ch, ts: byCard[cid].ts, oldest: String(seen), limit: 100 }, true);
       if (!rp.ok) { facSlow(rp); if (lastGood[cid]) outm[cid] = lastGood[cid]; return; }  // Slack busy: keep what we knew, never blank it
-      var n = 0, lastOther = '';
-      (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if (mm.sys || mine(mm)) return; n++; lastOther = m.ts; });
-      var r = { n: n, last: lastOther }; try { cache.put(rk, JSON.stringify(r), 21600); } catch (e) {} if (n) outm[cid] = r;
+      var n = 0, lastOther = '', tx = '';
+      (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if (mm.sys || mine(mm)) return; n++; lastOther = m.ts; tx = facLine(mm); });
+      var r = { n: n, last: lastOther, tx: tx }; try { cache.put(rk, JSON.stringify(r), 21600); } catch (e) {} if (n) outm[cid] = r;
     });
   } else Object.keys(lastGood).forEach(function (x) { if (x !== 'dm') outm[x] = lastGood[x]; });
   try { var dm = facDm(P, FT); if (dm) {                      // the direct chat counts too (Abbas 14 Oct: "include those chats notifications in catchup")
-    var seenD = Math.max(+(rec.dm || 0), +rec._t0), nd = 0, lastD = '';
-    facDmMsgs(P, FT, dm, fresh).forEach(function (m) { if (+m.ts <= seenD) return; var md = facMsg(P, FT, m, null); if (md.sys || mine(md)) return; nd++; lastD = m.ts; });
-    if (nd) outm.dm = { n: nd, last: lastD };
+    var seenD = Math.max(+(rec.dm || 0), +rec._t0), nd = 0, lastD = '', txD = '';
+    facDmMsgs(P, FT, dm, fresh).forEach(function (m) { if (+m.ts <= seenD) return; var md = facMsg(P, FT, m, null); if (md.sys || mine(md)) return; nd++; lastD = m.ts; txD = facLine(md); });
+    if (nd) outm.dm = { n: nd, last: lastD, tx: txD };
   } } catch (e) { if (lastGood.dm) outm.dm = lastGood.dm; }
   try { cache.put(ck + '_' + g + '_' + (rec._v || 0), JSON.stringify(outm), facTtl(P)); cache.put(ck + '_L', JSON.stringify(outm), 3600); } catch (e) {}
   return outm;
@@ -356,6 +396,22 @@ function fac(reqText, P) {
       var pdm = null; try { pdm = facDm(P, FTp); } catch (e) {}
       return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON') });
     }
+    if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
+      var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });
+      var nmap = JSON.parse(P.getProperty('FNTFY') || '{}');
+      if (req.on && ntp.length >= 12) nmap[nw] = ntp; else delete nmap[nw];
+      P.setProperty('FNTFY', JSON.stringify(nmap));
+      var timer = '';
+      if (req.on) { try { var has = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'facNotifyTick'; }); if (!has) setupFacNotify(); timer = 'ok'; } catch (e) { timer = String(e.message || e).slice(0, 120); }
+        // nothing old: everything unread right now counts as already sent, so turning it on does not fire 20 notifications
+        try { var cc0 = CacheService.getScriptCache(), lc1 = bigGet(cc0, 'FAC_LIST_L') || bigGet(cc0, 'FAC_LIST'), un0 = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), lc1 ? JSON.parse(lc1).cards : [], nw, false), nt0 = {}; Object.keys(un0).forEach(function (k) { if (un0[k].last) nt0[k] = un0[k].last; }); P.setProperty('FNOTE_' + nw, JSON.stringify(nt0)); } catch (e) {} }
+      return out({ ok: true, on: !!nmap[nw], timer: timer, events: !!P.getProperty('FAC_EVENTS_ON') });
+    }
+    if (req.op === 'ntfytest') {
+      var tw = String(req.who || '').trim().toUpperCase().slice(0, 40), tmap = JSON.parse(P.getProperty('FNTFY') || '{}'); if (!tmap[tw]) return out({ ok: false, error: 'notifications are off for ' + tw });
+      return out({ ok: facNtfy(tmap[tw], { title: 'AL MUTAGADED · test', msg: '✅ Notifications work · নোটিফিকেশন চালু আছে', click: 'https://abbas911-prog.github.io/sj-designs/factory.html' }) });
+    }
+    if (req.op === 'ntfyget') { var gm = JSON.parse(P.getProperty('FNTFY') || '{}'), gw = String(req.who || '').trim().toUpperCase().slice(0, 40); return out({ ok: true, on: !!gm[gw], topic: gm[gw] || '', events: !!P.getProperty('FAC_EVENTS_ON') }); }
     if (req.op === 'img') {                                   // a card's cover photo, ~300-600 px, fetched with the auth header (browsers are refused)
       var cid = String(req.card || '').replace(/[^0-9a-f]/g, ''), aid = String(req.att || '').replace(/[^0-9a-f]/g, '');
       if (!cid || !aid) return out({ ok: false, error: 'bad request' });
