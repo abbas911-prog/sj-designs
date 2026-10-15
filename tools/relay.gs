@@ -38,6 +38,11 @@ function doPost(e) {
     if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') facNudge(P, facCardOf(P, evc)); } catch (x) {} try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
+    if (b.job === 'fastchk') {                                // 16 Oct 2026: the FAST LANE worker (Cloudflare) asks "is this phone key right?" - key = sha256("sjfast|" + password)
+      var fcC = CacheService.getScriptCache(), fcN = +(fcC.get('FASTCHK_N') || 0); if (fcN > 30) return out({ ok: false, error: 'slow down' });
+      var fk = String(b.k || ''), okk = [P.getProperty('FACTORY_PASSWORD'), pw].some(function (k) { return k && hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'sjfast|' + k, Utilities.Charset.UTF_8)) === fk; });
+      if (!okk) fcC.put('FASTCHK_N', String(fcN + 1), 60); return out({ ok: okk });
+    }
     if (b.job === 'fac') {                                    // FACTORY APP (12 Oct 2026): its own password (FACTORY_PASSWORD), or the shop password
       if (typeof b.req !== 'string' || b.req.length > 25000000) return out({ ok: false, error: 'bad request' });
       var fpw = P.getProperty('FACTORY_PASSWORD'), sg = String(b.sig), okf = [fpw, pw].some(function (k) { return k && hex(Utilities.computeHmacSha256Signature(b.req, k, Utilities.Charset.UTF_8)) === sg; });
@@ -192,6 +197,19 @@ function facCardOf(P, ev) {                                     // which card (o
   var dm = JSON.parse(P.getProperty('FAC_DM') || 'null'); if (dm && dm.ch === ch) return 'dm';
   var all = P.getProperties(), hit = ''; Object.keys(all).some(function (k) { if (k.indexOf('FTH_') === 0 && all[k].indexOf('"' + ts + '"') >= 0) { hit = k.slice(4); return true; } return false; });
   return hit;
+}
+function facRets(P, withDone) {                                 // every return: open ones + those closed in the last 45 days (older closed ones are tidied away)
+  var all = P.getProperties(), outr = [], cut = Date.now() - 45 * 86400000;
+  Object.keys(all).forEach(function (k) { if (k.indexOf('FRT_') !== 0 || k === 'FRT_N') return; var r; try { r = JSON.parse(all[k]); } catch (e) { return; }
+    if (r.done && r.done < cut) { P.deleteProperty(k); return; } if (!withDone && r.done) return; outr.push(r); });
+  return outr.sort(function (a, b) { return b.id - a.id; });
+}
+function facRefs(P) {                                           // card id -> [channel, thread ts] of its chat, for the FAST LANE (the phone reads Slack through the worker)
+  var all = P.getProperties(), r = {}; Object.keys(all).forEach(function (k) { if (k.indexOf('FTH_') !== 0) return; try { var v = JSON.parse(all[k]); if (v && v.ch && v.ts) r[k.slice(4)] = [v.ch, v.ts]; } catch (e) {} }); return r;
+}
+function facRetSum(P) {                                         // the home-screen line: open returns, pieces still at the factory, the oldest
+  var r = facRets(P, false), pcs = 0, old = 0; r.forEach(function (x) { if (x.st === 'cancel') return; pcs += x.pcs - x.back; if (!old || x.at < old) old = x.at; });
+  return { n: r.filter(function (x) { return x.st !== 'cancel'; }).length, pcs: pcs, old: old };
 }
 function facBump() { CacheService.getScriptCache().put('FAC_GEN', String(Date.now()), 21600); }
 function facGen() { return CacheService.getScriptCache().get('FAC_GEN') || '0'; }   // bumped by every Slack event: all "what's new" caches start again
@@ -400,7 +418,7 @@ function setupFacWatch() {                                     // Abbas runs thi
 }
 // 15 Oct 2026 audit: a phone that lost the answer (LTE, locked screen) retries - for a post / upload / new card that used to do it TWICE.
 // Every action now carries a once-only id (rid): the first answer is kept 10 min and any retry gets that same answer.
-var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later)$/;
+var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset)$/;
 function fac(reqText, P) {
   var rq0 = {}; try { rq0 = JSON.parse(reqText); } catch (e) {}
   var rid = FAC_ONCE.test(rq0.op || '') ? String(rq0.rid || '').replace(/[^\w-]/g, '').slice(0, 40) : '', cR = CacheService.getScriptCache();
@@ -418,7 +436,7 @@ function fac0(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.live = facLive(P); return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -438,7 +456,7 @@ function fac0(reqText, P) {
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
       try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; }
-      res.live = facLive(P);
+      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P);
       return out(res);
     }
     if (req.op === 'ping') {                                  // 15 Oct 2026: the cheap "anything new?" every 4 s - no Trello call; the cards come from the cached list
@@ -446,7 +464,8 @@ function fac0(reqText, P) {
       var pcards = lc0 ? JSON.parse(lc0).cards : Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('FTH_') === 0; }).map(function (k) { return { id: k.slice(4) }; });
       var pth = {}; try { pth = facUnread(P, FTp, pcards, whp, !!req.fresh); } catch (e) {}
       var pdm = null; try { pdm = facDm(P, FTp); } catch (e) {}
-      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P) });
+      var prs = null; try { prs = facRetSum(P); } catch (e) {}
+      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '' });
     }
     if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
       var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });
@@ -482,6 +501,58 @@ function fac0(reqText, P) {
     }
     // ---- STEP 2 (12 Oct 2026): the card chat = the card's Slack #cutting thread, both ways ----
     var FT = P.getProperty('SLACK_FACTORY_TOKEN');
+    if (req.op === 'seen') {                                  // 16 Oct 2026: the phone read a chat through the FAST LANE - remember it as seen (no Slack call)
+      var sc = req.card === 'dm' ? 'dm' : String(req.card || '').replace(/[^0-9a-f]/g, ''), sts = String(req.ts || '');
+      if (!sc || !/^\d+\.\d+$/.test(sts)) return out({ ok: false, error: 'bad request' });
+      facSeen(P, String(req.who || ''), sc, sts); return out({ ok: true });
+    }
+    if (req.op === 'fastset') {                               // 16 Oct 2026: the FAST LANE link (Cloudflare worker), pasted in the app - checked before it is kept
+      var fu = String(req.url || '').trim().replace(/\/+$/, '');
+      if (!fu) { P.deleteProperty('FAC_FAST'); return out({ ok: true, fast: '' }); }
+      if (!/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.workers\.dev$/i.test(fu)) return out({ ok: false, error: 'the link must look like https://sj-fast.NAME.workers.dev' });
+      var fr = null; try { fr = JSON.parse(UrlFetchApp.fetch(fu + '/', { muteHttpExceptions: true }).getContentText()); } catch (e) {}
+      if (!fr || fr.sj !== 'fast') return out({ ok: false, error: 'that link is not the SJ fast-lane worker (paste the code and press Deploy first)' });
+      if (!fr.slack) return out({ ok: false, error: 'the worker has no SLACK_TOKEN secret yet (Settings -> Variables and Secrets)' });
+      P.setProperty('FAC_FAST', fu); return out({ ok: true, fast: fu });
+    }
+    // ---- RETURNS (16 Oct 2026, Abbas: "some pieces get returned to the factory … once the alteration or errors are done I get it back. I need a
+    // tracking system in this app"). One record per return (FRT_<n>): design, pieces given, pieces back, reason, who/when for every step.
+    // Every step also writes a line into that card's chat (or the Direct chat), so the other side gets the usual new-message alert.
+    if (/^ret(list|new|set)$/.test(req.op)) {
+      var rwho = String(req.who || '').slice(0, 40) || 'factory';
+      if (req.op === 'retlist') return out({ ok: true, rets: facRets(P, true) });
+      var rlk = LockService.getScriptLock(); rlk.waitLock(15000);
+      try {
+        var rr, rline = '';
+        if (req.op === 'retnew') {
+          var rpcs = Math.floor(+req.pcs || 0); if (!(rpcs > 0 && rpcs < 10000)) return out({ ok: false, error: 'how many pieces?' });
+          var rcard = String(req.card || '').replace(/[^0-9a-f]/g, '').slice(0, 24), rn = +(P.getProperty('FRT_N') || 0) + 1; P.setProperty('FRT_N', String(rn));
+          rr = { id: rn, card: rcard, no: String(req.no || '').slice(0, 30), title: String(req.title || '').slice(0, 120), pcs: rpcs, back: 0, fixed: 0, why: String(req.why || '').slice(0, 60), col: String(req.col || '').slice(0, 120), note: String(req.note || '').slice(0, 500), by: rwho, at: Date.now(), st: 'out', ev: [[Date.now(), rwho, 'out', rpcs]] };
+          rline = '↩️ *RETURN R' + rn + '* · ' + rpcs + ' pcs given back to the factory' + (rr.why ? ' · ' + rr.why : '') + (rr.col ? ' · ' + rr.col : '') + (rr.note ? '\n' + rr.note : '') + '\n_ফেরত R' + rn + ' · ' + rpcs + ' পিস কারখানায় দেওয়া হয়েছে_';
+        } else {
+          rr = JSON.parse(P.getProperty('FRT_' + Math.floor(+req.id || 0)) || 'null'); if (!rr) return out({ ok: false, error: 'return not found' });
+          var left = rr.pcs - rr.back, rcn = Math.floor(+req.n || 0), rnote = String(req.note || '').slice(0, 300);
+          if (req.st === 'fixed') { rcn = Math.min(Math.max(rcn || left, 1), left); rr.fixed = Math.min(left, Math.max(rr.fixed || 0, rcn)); if (rr.st === 'out') rr.st = 'fixed'; rr.ev.push([Date.now(), rwho, 'fixed', rcn]);
+            rline = '🧵 *R' + rr.id + '* · ' + rcn + ' pcs fixed - ready to send back' + (rnote ? '\n' + rnote : '') + '\n_R' + rr.id + ' · ' + rcn + ' পিস ঠিক করা হয়েছে, ফেরত পাঠানোর জন্য রেডি_'; }
+          else if (req.st === 'back') { if (left <= 0) return out({ ok: false, error: 'all pieces are already back' }); rcn = Math.min(Math.max(rcn || left, 1), left); rr.back += rcn; rr.fixed = Math.max(0, (rr.fixed || 0) - rcn); rr.st = rr.back >= rr.pcs ? 'back' : (rr.fixed ? 'fixed' : 'out'); rr.ev.push([Date.now(), rwho, 'back', rcn]); if (rr.st === 'back') rr.done = Date.now();
+            rline = '📥 *R' + rr.id + '* · ' + rcn + ' pcs received back' + (rr.st === 'back' ? ' ✅ all ' + rr.pcs + ' back' : ' · ' + (rr.pcs - rr.back) + ' still at the factory') + (rnote ? '\n' + rnote : '') + '\n_R' + rr.id + ' · ' + rcn + ' পিস ফেরত এসেছে_'; }
+          else if (req.st === 'note') { if (!rnote) return out({ ok: false, error: 'write the note' }); rr.ev.push([Date.now(), rwho, 'note', 0, rnote]); rline = '📝 *R' + rr.id + '* · ' + rnote; }
+          else if (req.st === 'cancel') { rr.st = 'cancel'; rr.done = Date.now(); rr.ev.push([Date.now(), rwho, 'cancel', 0]); rline = '✖️ *R' + rr.id + '* cancelled' + (rnote ? ' · ' + rnote : ''); }
+          else return out({ ok: false, error: 'bad request' });
+          if (rr.ev.length > 40) rr.ev = rr.ev.slice(-40);
+        }
+        P.setProperty('FRT_' + rr.id, JSON.stringify(rr));
+        var rts = '', rerr = '';
+        if (FT) { try {                                         // the line in the chat (card thread, else the Direct chat)
+          var rdest = null; if (rr.card) { var rth = facThread(P, FT, rr.card, rtok, true); if (rth) rdest = { channel: rth.ch, thread_ts: rth.ts, key: rr.card }; }
+          if (!rdest) { var rdm = facDm(P, FT); if (rdm) rdest = { channel: rdm.ch, key: 'dm' }; }
+          if (rdest) { var rpost = { channel: rdest.channel, text: '*' + rwho + ':* ' + (rr.card ? '' : (rr.no ? rr.no + ' · ' : '')) + rline }; if (rdest.thread_ts) rpost.thread_ts = rdest.thread_ts;
+            var rj = slackApi(FT, 'chat.postMessage', rpost); if (rj.ok) { rts = rj.ts; try { facSeen(P, rwho, rdest.key, rj.ts); } catch (e) {} facBump(); facNudge(P, rdest.key); } else rerr = rj.error; }
+        } catch (e) { rerr = String(e.message || e); } }
+        facNudge(P, 'ret:' + rr.id);
+        return out({ ok: true, ret: rr, ts: rts, chat: rerr ? 'saved - but the chat line failed: ' + rerr : 'ok', rets: facRets(P, true) });
+      } finally { rlk.releaseLock(); }
+    }
     if (req.op === 'dmch') {                                  // the channels the bot can see, for the direct-chat picker
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
       return out({ ok: true, dm: facDm(P, FT), chans: facChans(FT) });
