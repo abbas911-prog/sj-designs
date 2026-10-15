@@ -557,6 +557,9 @@ function fac0(reqText, P) {
       var ufs = Array.isArray(req.files) ? req.files : (req.b64 ? [{ name: req.name, b64: req.b64 }] : []), pre = Array.isArray(req.fids) ? req.fids.map(function (x) { return String(x).replace(/[^A-Z0-9]/g, ''); }).filter(String).slice(0, 10) : [];
       if (req.card === 'dm' && !udm) return out({ ok: false, error: 'no direct chat channel chosen yet' });
       if (!uc || (!ufs.length && !pre.length) || ufs.length + pre.length > 10) return out({ ok: false, error: 'bad request' });
+      if (pre.length && Array.isArray(req.sizes)) {           // the phone uploaded straight to Slack: make sure every byte arrived before the message is posted
+        for (var vi = 0; vi < pre.length; vi++) { var vf = slackApi(FT, 'files.info', { file: pre[vi] }, true), vs = vf.ok ? +((vf.file || {}).size || 0) : -1, want = +req.sizes[vi] || 0;
+          if (vf.ok && vs > 0 && want > 0 && vs !== want) return out({ ok: false, error: 'upload incomplete (' + vs + ' of ' + want + ' bytes)', retry: true }); } }
       var uth = udm ? { ch: udm.ch, ts: '' } : facThread(P, FT, uc, rtok, true), fids = pre.slice(), tot = 0;
       for (var ui = 0; ui < ufs.length; ui++) {
         var un = String(ufs[ui].name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 60), ub = Utilities.base64Decode(String(ufs[ui].b64 || ''));
