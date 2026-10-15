@@ -394,7 +394,7 @@ function fac(reqText, P) {
   var rid = FAC_ONCE.test(rq0.op || '') ? String(rq0.rid || '').replace(/[^\w-]/g, '').slice(0, 40) : '', cR = CacheService.getScriptCache();
   if (rid) { var prev = cR.get('FRID_' + rid); if (prev === 'busy') return out({ ok: false, busy: true, error: 'still sending - one moment' }); if (prev) return ContentService.createTextOutput(prev).setMimeType(ContentService.MimeType.JSON); cR.put('FRID_' + rid, 'busy', 120); }
   var res = fac0(reqText, P);
-  if (rid) { try { var txt = res.getContent(), jj = JSON.parse(txt); if (jj.ok && txt.length < 90000) cR.put('FRID_' + rid, txt, 600); else cR.remove('FRID_' + rid); } catch (e) { cR.remove('FRID_' + rid); } }
+  if (rid) { try { var txt = res.getContent(), jj = JSON.parse(txt); if (jj.ok && txt.length < 90000) cR.put('FRID_' + rid, txt, 21600); else cR.remove('FRID_' + rid); } catch (e) { cR.remove('FRID_' + rid); } }
   return res;
 }
 function fac0(reqText, P) {
