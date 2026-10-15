@@ -160,7 +160,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-14b';
+var VER = '2026-10-15a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -327,7 +327,7 @@ function draw(force){
 $('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; ls('sj_fac_chip', String(cur)); $('q').value = ''; draw(); window.scrollTo(0, 0); var on = document.querySelector('#stages button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' }); };
 $('q').oninput = draw;
 $('list').onclick = function(e){ var r = e.target.closest('.cardrow'); if (r) openCard(D.byId[r.dataset.id]); };
-$('rf').onclick = function(){ load(true); };
+$('rf').onclick = function(){ load(true).then(function(){ ping(true); }); };
 
 // ----- card screen -----
 var HIDE = /^(TASLEEM|IRFAN ALI|HASHIM|QADIR|SHAHZAIB|SALMAAN|ZAKIR|USMAN|Anees|SHAWKEEN|IBRAHEEM|US|COST|SALE|CHAT)$/i;
@@ -425,7 +425,7 @@ function unread(c){ var t = D.th && D.th[c.id]; return t && t.n ? t.n : 0; }    
 function seen(c){ if (D.th && D.th[c.id]) { delete D.th[c.id]; } }
 var TH = { card: null, msgs: [], timer: null, busy: false, none: false }, MEDIA = {};
 var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
-function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = THC[c.id] || []; PEND.length = 0; pendDraw(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 5000); }
+function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = THC[c.id] || []; PEND.length = 0; pendDraw(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 4000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 async function thPull(){
   var c = TH.card; if (!c || TH.busy) return; TH.busy = true;
@@ -619,9 +619,24 @@ $('lgo').onclick = async function(){
 document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on this phone?')) { ls('sj_fac_pw', null); PW = ''; showLogin(); } };
 
 // ----- keep fresh: every 30 s while on screen, and when coming back to the app -----
-var POLLN = 0; setInterval(function(){ POLLN++; if (PW && !document.hidden && ($('card').hidden || POLLN % 2 === 0)) load(false); }, 10000);
+// 15 Oct 2026 (Abbas: "no catch up ... make the message appear as instant as possible"): a cheap "anything new?" (op ping, no Trello) every 4 s on the
+// home screen and every 12 s inside a card; the full card list every 30 s; and at once when the app comes back to the front.
+var POLLN = 0, PINGING = false, LASTTOT = -1;
+async function ping(fresh){ if (!PW || PINGING || LOADING || !D.cards) return; PINGING = true;
+  var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = false; if (!j || !j.ok) return;
+  var th = j.th || {}; if (open) delete th[open.id];                 // the open chat is being read right now
+  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; draw(); alertNew(); }
+function totUnread(){ return Object.keys(D.th || {}).reduce(function(a, k){ return a + ((D.th[k] || {}).n || 0); }, 0); }
+function alertNew(){ var t = totUnread(); document.title = (t ? '(' + t + ') ' : '') + 'AL MUTAGADED · Factory';
+  if (LASTTOT >= 0 && t > LASTTOT) beep(); LASTTOT = t; }
+var ACX = null; document.addEventListener('pointerdown', function(){ try { if (!ACX) ACX = new (window.AudioContext || window.webkitAudioContext)(); if (ACX.state === 'suspended') ACX.resume(); } catch(e){} }, { once: false, passive: true });
+function beep(){ try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); if (!ACX) return; var o = ACX.createOscillator(), g = ACX.createGain(); o.type = 'sine'; o.frequency.value = 880; g.gain.setValueAtTime(0.0001, ACX.currentTime); g.gain.exponentialRampToValueAtTime(0.25, ACX.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ACX.currentTime + 0.35); o.connect(g); g.connect(ACX.destination); o.start(); o.stop(ACX.currentTime + 0.4); } catch(e){} }
+setInterval(function(){ POLLN++; if (!PW || document.hidden) return; var home = $('card').hidden;
+  if (POLLN % 8 === 0) { load(false).then(alertNew); return; }          // every 32 s: the cards themselves
+  if (home || POLLN % 3 === 0) ping(false); }, 4000);
 setInterval(function(){ if (!document.hidden && $('card').hidden) checkVer(); }, 300000);
-document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { load(false); checkVer(); } });
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { ping(true); checkVer(); if (open) thPull(); } });
+window.addEventListener('pageshow', function(){ if (PW) ping(true); });
 async function checkVer(){ try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
 
