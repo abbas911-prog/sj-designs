@@ -162,7 +162,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15f';
+var VER = '2026-10-15g';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -192,12 +192,16 @@ async function hmacHex(key, msg){
 }
 // 15 Oct 2026 (Abbas: "still lagging"): at most 4 relay requests at a time from this phone, and the chat / sending / "anything new?" always go
 // before photos and attachments - before, a queue of cover-photo and chat-photo downloads could hold every connection and the chat waited behind them.
-var NET = { busy: 0, hi: [], lo: [], log: [] };
-function netGo(){ while (NET.busy < 4 && (NET.hi.length || NET.lo.length)) { NET.busy++; (NET.hi.length ? NET.hi : NET.lo).shift()(); } }
+var NET = { busy: 0, heavy: 0, hi: [], lo: [], log: [] };
+function netPick(q){ for (var i = 0; i < q.length; i++) if (!q[i].h || NET.heavy < 2) return q.splice(i, 1)[0]; return null; }   // big transfers: at most 2 at once, so chat requests always get through
+function netGo(){ while (NET.busy < 4) { var f = netPick(NET.hi) || netPick(NET.lo); if (!f) break; NET.busy++; if (f.h) NET.heavy++; f(); } }
+var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later)$/;
 async function call(obj, pw, top){
-  var lo = !top && /^(img|media|atts)$/.test(obj.op); await new Promise(function(ok){ obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
+  if (ONCE.test(obj.op) && !obj.rid) obj.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);   // a retry of the same action is answered once, never done twice
+  var heavy = /^(up|attach|sample)$/.test(obj.op) || (obj.op === 'media' && obj.full);
+  var lo = !top && /^(img|media|atts)$/.test(obj.op); await new Promise(function(ok){ ok.h = heavy; obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
   var t0 = Date.now(), res;
-  try { res = await call0(obj, pw); } finally { NET.busy--; netGo(); }
+  try { res = await call0(obj, pw); } finally { NET.busy--; if (heavy) NET.heavy--; netGo(); }
   NET.log.unshift({ op: obj.op, ms: Date.now() - t0, ok: !!(res && res.ok), e: res && !res.ok ? String(res.error || '').slice(0, 60) : '', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
   return res;
 }
@@ -207,10 +211,11 @@ async function call0(obj, pw){
     if (n) await sleep(2000 * n);
     try {
       // 15 Oct 2026: a request that never comes back (phone locked / app in the background / weak LTE) used to keep "Loading chat…" forever - every try now has a time limit
-      var ac = window.AbortController ? new AbortController() : null, lim = /^(up|sample|attach)$/.test(obj.op) ? 120000 : obj.op === 'media' ? 45000 : /^(thread|ping|post)$/.test(obj.op) ? 12000 : 25000, tm = ac ? setTimeout(function(){ ac.abort(); }, lim) : null;
+      var ac = window.AbortController ? new AbortController() : null, lim = /^(up|sample|attach)$/.test(obj.op) ? 120000 : obj.op === 'media' ? 45000 : obj.op === 'post' ? 30000 : /^(thread|ping)$/.test(obj.op) ? 12000 : 25000, tm = ac ? setTimeout(function(){ ac.abort(); }, lim) : null;
       var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: 'fac', req: req, sig: sig }), cache: 'no-store', credentials: 'omit', signal: ac ? ac.signal : undefined });
       var t = await r.text(), j = null; clearTimeout(tm); try { j = JSON.parse(t); } catch(e){}
       if (j && j.relay === 'sj-memo' && Object.keys(j).length <= 2) { last = 'Google passed the request on without its contents'; continue; }
+      if (j && j.busy && n < 3) { await sleep(1500); n--; continue; }   // the first try is still running on the relay: wait for its answer
       if (j) return j;
       last = 'Google sent a web page instead of an answer (' + r.status + ')';
     } catch(e){ clearTimeout(tm); last = e.name === 'AbortError' ? 'no answer in ' + Math.round(lim / 1000) + ' s' : e.message; if (obj.op === 'ping' || (obj.op === 'media' && n >= 1)) break; }
@@ -234,23 +239,24 @@ function imgKey(c){ return 'sj_fac_i_' + c.img; }
 function ptxt(el, t){ Array.from(el.childNodes).forEach(function(n){ if (n.nodeType === 3) n.remove(); }); if (t) el.insertBefore(document.createTextNode(t), el.firstChild); }
 function photo(c, el){
   if (!c.img) { ptxt(el, 'no photo'); return; }
-  var have = IMG[c.img] || ls(imgKey(c)); if (have) { IMG[c.img] = have; el.style.backgroundImage = 'url(' + imgSrc(have) + ')'; ptxt(el, ''); return; }
+  var have = IMG[c.img]; if (have) { IMG[c.img] = have; el.style.backgroundImage = 'url(' + imgSrc(have) + ')'; ptxt(el, ''); return; }
   ptxt(el, '…');
   // 13 Oct 2026 (Abbas: 'the photos are not loading'): photos come from the site first (facthumbs/<id>.jpg, made every 20 min by the
   // fac-thumbs job, served instantly by GitHub Pages); only a card the job has not seen yet is fetched through the relay
   if (IMGWANT[c.img] || (IMGFAIL[c.img] && Date.now() - IMGFAIL[c.img] < 600000)) { ptxt(el, IMGFAIL[c.img] ? 'photo?' : '…'); return; }
   var u = 'facthumbs/' + c.img + '.jpg', im = new Image();
   im.onload = function(){ IMG[c.img] = u; document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(' + u + ')'; ptxt(e, ''); }); };
-  im.onerror = function(){ if (IMGWANT[c.img] || (IMGFAIL[c.img] && Date.now() - IMGFAIL[c.img] < 600000)) return; IMGWANT[c.img] = 1; IMGQ.push([c, el]); pump(); };
+  im.onerror = async function(){ try { if (MCACHE) { var hc = await MCACHE.match('https://fac.cover/' + c.img); if (hc) { var bu = URL.createObjectURL(await hc.blob()); IMG[c.img] = bu; document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(' + bu + ')'; ptxt(e, ''); }); return; } } } catch(e){} if (IMGWANT[c.img] || (IMGFAIL[c.img] && Date.now() - IMGFAIL[c.img] < 600000)) return; IMGWANT[c.img] = 1; IMGQ.push([c, el]); pump(); };
   im.src = u;
 }
-function imgSrc(v){ return /^facthumbs\//.test(v) ? v : 'data:image/jpeg;base64,' + v; }
+function imgSrc(v){ return /^(facthumbs\/|blob:)/.test(v) ? v : 'data:image/jpeg;base64,' + v; }
+try { Object.keys(localStorage).forEach(function(k){ if (k.indexOf('sj_fac_i_') === 0) localStorage.removeItem(k); }); } catch(e){}   // old cover copies: phone storage is for the app's own data
 var IMGWANT = {}, IMGFAIL = {};
 function pump(){
   while (imgBusy < 2 && IMGQ.length) { var x = IMGQ.shift(); imgBusy++;
     (function(c, el){ call({ op: 'img', card: c.id, att: c.img }).then(function(j){ imgBusy--;
       delete IMGWANT[c.img]; if (!j.ok) IMGFAIL[c.img] = Date.now();
-      if (j.ok) { IMG[c.img] = j.b64; if (j.b64.length < 150000) ls(imgKey(c), j.b64); document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(data:image/jpeg;base64,' + j.b64 + ')'; ptxt(e, ''); }); }
+      if (j.ok) { IMG[c.img] = j.b64; try { if (MCACHE) MCACHE.put('https://fac.cover/' + c.img, new Response(b64blob(j.b64, 'image/jpeg'))); } catch(e){} document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(data:image/jpeg;base64,' + j.b64 + ')'; ptxt(e, ''); }); }
       else ptxt(el, 'photo?');
       pump(); }); })(x[0], x[1]); }
 }
@@ -270,7 +276,7 @@ async function load(fresh){
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
   applyList(j); j.t = Date.now(); try { ls('sj_fac_list', JSON.stringify(j)); } catch(e){}
   var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? 'Updated · আপডেট ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
-  draw(); liveMark(); if (open && D.byId[open.id]) { open = D.byId[open.id]; paintCard(); }
+  draw(); liveMark(); if (open && D.byId[open.id] && open !== D.byId[open.id]) { var oc = open; open = D.byId[open.id]; ['_atts', '_cover', 'desc'].forEach(function(k){ if (oc[k] !== undefined) open[k] = oc[k]; }); if (TH.card && TH.card.id === open.id) TH.card = open; paintCard(); }
   if (!open) openFromHash();
   return true;
 }
@@ -385,7 +391,7 @@ $('catts').onclick = async function(e){ var a = e.target.closest('.a'); if (!a) 
   else window.open(a.dataset.url, '_blank'); };
 $('vx').onclick = function(){ $('viewer').hidden = true; $('vimg').src = ''; };
 $('cimg').onclick = function(){ if (open && open.img) { $('viewer').hidden = false; $('vimg').src = IMG[open.img] ? imgSrc(IMG[open.img]) : ''; call({ op: 'img', card: open.id, att: open.img, big: 1 }).then(function(j){ if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }); } };
-function closeCard(){ if (REC.r) recStop(); $('card').hidden = true; cardShow(false); $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; draw(); }
+function closeCard(){ if (REC.r) recStop(); try { if (open && TH.opened && LOOK.act > TH.opened) { var rl = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }); call({ op: 'thread', card: open.id, since: rl.length ? rl[rl.length - 1].ts : '', look: 1 }); } } catch(e){} $('card').hidden = true; cardShow(false); $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; draw(); }
 $('back').onclick = function(){ history.back(); };
 window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
@@ -416,11 +422,15 @@ $('tfile').onchange = async function(){                     // 13 Oct 2026 (Abba
   var fs = Array.from(this.files || []), c = open; this.value = ''; if (!fs.length || !c) return;
   var b = $('battach'); b.disabled = true; b.innerHTML = '⏳ Sending ' + fs.length + '…<small>পাঠানো হচ্ছে</small>';
   try {
-    var files = [];
-    for (var i = 0; i < fs.length; i++) { var bl = await shrink(fs[i]); files.push({ name: (fs[i].name || 'photo').replace(/\.(png|webp|heic|jpeg)$/i, '') .replace(/\.jpg$/i, '') + '.jpg', type: 'image/jpeg', b64: await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(bl); }) }); }
-    var j = await call({ op: 'attach', card: c.id, files: files, cover: !c.img });
-    if (!j.ok) { toast('✗ ' + j.error); return; }
-    toast('✓ ' + files.length + ' photo' + (files.length > 1 ? 's' : '') + ' added to Trello · ট্রেলোতে যোগ হয়েছে');
+    var done = 0, big = 0;                                       // 15 Oct 2026: the ORIGINAL photo goes to Trello (no compression), one per request
+    for (var i = 0; i < fs.length; i++) {
+      if (fs[i].size > 10 * 1024 * 1024) { big++; continue; }     // Trello's free plan takes up to 10 MB per file
+      b.innerHTML = '⏳ ' + (i + 1) + ' / ' + fs.length + ' · ' + mb(fs[i].size) + '<small>পাঠানো হচ্ছে</small>';
+      var j = await call({ op: 'attach', card: c.id, files: [{ name: (fs[i].name || 'photo-' + Date.now() + '.jpg'), type: fs[i].type || 'image/jpeg', b64: await b64of(fs[i]) }], cover: !c.img && done === 0 });
+      if (!j.ok) { toast('✗ ' + j.error); break; } done++; }
+    if (big) toast('⚠ ' + big + ' photo' + (big > 1 ? 's are' : ' is') + ' over 10 MB — Trello (free plan) refuses those · send it in the chat instead');
+    if (!done) return;
+    toast('✓ ' + done + ' photo' + (done > 1 ? 's' : '') + ' added to Trello in full quality · ট্রেলোতে যোগ হয়েছে');
     c._atts = null; if (open === c) attsLoad(c); load(false);
   } catch (e) { toast('✗ ' + e.message); }
   finally { b.disabled = false; b.innerHTML = '📷 Add photo<small>ট্রেলোতে ছবি যোগ করুন</small>'; }
@@ -454,11 +464,11 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
 window.__LOOK = LOOK;
 function looking(){ return !document.hidden && Date.now() - LOOK.vis > 1500 && Date.now() - LOOK.act < 60000; }
 var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
-function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = THC[c.id] || []; PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 4000); }
+function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 4000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 async function thPull(){
   var c = TH.card; if (!c || (TH.busy && Date.now() - TH.busy < 30000)) return; TH.busy = Date.now();
-  var real = TH.msgs.filter(function(m){ return !m.pend; }), last = real.length ? real[real.length - 1].ts : '';
+  var real = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }), last = real.length ? real[real.length - 1].ts : '';
   var look = looking(), j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0 });
   TH.busy = 0; if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; }
   if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = '<div class="empty" style="padding:14px">⏳ ' + esc(j.error) + '<br>আবার চেষ্টা করা হচ্ছে…</div>'; return; }
@@ -469,7 +479,7 @@ async function thPull(){
   if (!add.length && TH.msgs.length) return;
   if (!add.length && !TH.msgs.length) { $('thread').innerHTML = '<div class="empty" style="padding:14px">No messages yet — write the first one.<br>এখনো কোনো মেসেজ নেই</div>'; $('tcount').textContent = ''; return; }
   var fresh = last ? add.filter(function(m){ return !m.sys && !isMe(m); }) : []; fresh.forEach(function(m){ m.nw = 1; });
-  var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thcSave(); thDraw(); if (look) seen(c); draw();
+  var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thcSave(); if (playing() && !pend.length) { $('thread').insertAdjacentHTML('beforeend', add.map(bubble).join('')); $('tcount').textContent = TH.msgs.length + ' messages'; } else thDraw(); if (look) seen(c); draw();
   if (fresh.length) { beep(); toast('💬 New: ' + (fresh[fresh.length - 1].who || '') + ' · নতুন মেসেজ'); }
 }
 function firstName(x){ return String(x || '').trim().split(/[\s·]+/)[0].toUpperCase(); }
@@ -489,8 +499,11 @@ function bubble(m){
   var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
   return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + '</div>') + '<div class="bub">' + body + '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span></div></div>';
 }
-function thDraw(){ $('thread').innerHTML = TH.msgs.map(bubble).join(''); $('tcount').textContent = TH.msgs.length + ' messages';
-  var el = $('cbody'); setTimeout(function(){ el.scrollTop = el.scrollHeight; }, 30); autoMedia(); }
+function thDedupe(){ var seenTs = {}; TH.msgs = TH.msgs.filter(function(m){ if (m.pend) return true; if (seenTs[m.ts]) return false; seenTs[m.ts] = 1; return true; }); }
+function thDraw(){ thDedupe(); $('thread').innerHTML = TH.msgs.map(bubble).join(''); $('tcount').textContent = TH.msgs.length + ' messages';
+  var el = $('cbody'); if (TH.stick !== false) setTimeout(function(){ el.scrollTop = el.scrollHeight; }, 30); autoMedia(); }
+$('cbody').addEventListener('scroll', function(){ var el = $('cbody'); TH.stick = el.scrollHeight - el.scrollTop - el.clientHeight < 160; }, { passive: true });
+function playing(){ return Array.from(document.querySelectorAll('#thread audio, #thread video')).some(function(m){ return !m.paused && !m.ended; }); }
 // 15 Oct 2026 (Abbas: "been waiting more than one minute opening a voice note, it is still loading"): (1) a voice note / video he TAPS jumps to the
 // front of the queue (before, it waited behind every chat photo and cover download); (2) voice notes are played from a blob URL - iPhone Safari
 // can hang on "loading" with a big data: URL; (3) the newest voice notes of an open chat are fetched in the background, so a tap plays at once;
@@ -537,19 +550,20 @@ async function thSend(text){
   var c = TH.card; if (!c || !text.trim()) return;
   var pm = { ts: 'p' + Date.now(), pend: true, who: WHO, app: true, text: text, files: [] }; TH.msgs.push(pm); TH.none = false; thDraw();   // on screen at once
   var j = await call({ op: 'post', card: c.id, text: text, who: WHO });
+  if (!j.ok) { toast('✗ Not sent — ' + j.error + (TH.card !== c ? ' (' + (c.dm ? 'Direct chat' : parse(c.name).no ? 'SJ-' + parse(c.name).no : 'card') + ')' : '')); DRAFT[c.id] = text; if (TH.card !== c) return; TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); thDraw(); $('txt').value = text; return; }
   if (TH.card !== c) return;
-  if (!j.ok) { TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); thDraw(); $('txt').value = text; toast('✗ Not sent — ' + j.error); return; }
-  pm.ts = j.ts; delete pm.pend; thDraw();
+  if (TH.msgs.some(function(m){ return m !== pm && m.ts === j.ts; })) TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); else { pm.ts = j.ts; delete pm.pend; }
+  THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thcSave(); thDraw();
 }
-var PEND = [];
+var PEND = [], DRAFT = {}, LASTSEND = {};
 function pendDraw(){ $('pend').innerHTML = PEND.map(function(x, i){ return '<div class="pi"' + (x.url ? ' style="background-image:url(' + x.url + ')"' : '') + '>' + (x.url ? '' : x.kind === 'audio' ? '🎤' : x.kind === 'video' ? '🎬' : '📎') + '<small>' + esc(x.label) + '</small><b data-i="' + i + '">✕</b></div>'; }).join('');
   $('send').textContent = PEND.length ? 'Send ' + PEND.length + ' 📎' : 'Send'; }
 $('pend').onclick = function(e){ var b = e.target.closest('b[data-i]'); if (!b) return; var x = PEND.splice(+b.dataset.i, 1)[0]; if (x && x.url) URL.revokeObjectURL(x.url); pendDraw(); };
 async function pendAdd(file, name, kind){
   if (!file) return;
   var blob = file, nm = name || file.name || 'file';
-  if (kind === 'photo') { blob = await shrink(file); nm = /\.(jpe?g|png|webp|heic)$/i.test(nm) ? nm.replace(/\.(png|webp|heic)$/i, '.jpg') : 'photo-' + Date.now() + '.jpg'; }
-  if (blob.size > 18 * 1024 * 1024) { toast('Too big (max 18 MB) · ফাইল খুব বড়'); return; }
+  if (kind === 'photo' && !/\.(jpe?g|png|webp|heic|heif|gif)$/i.test(nm)) nm = 'photo-' + Date.now() + (/png/.test(file.type) ? '.png' : /heic|heif/.test(file.type) ? '.heic' : '.jpg');   // 15 Oct 2026 (Abbas): photos and videos go as they are - never compressed
+  if (blob.size > 900 * 1024 * 1024) { toast('Too big (max 900 MB) · ফাইল খুব বড়'); return; }
   var it = { blob: blob, name: nm, kind: kind, label: kind === 'photo' ? 'photo' : kind === 'audio' ? 'voice' : kind === 'video' ? 'video' : nm };
   if (kind === 'photo') it.url = URL.createObjectURL(blob);
   if (!$('ns').hidden) { SP.push(it); spDraw(); toast((kind === 'audio' ? 'Voice note' : kind === 'photo' ? 'Photo' : 'File') + ' added · যোগ হয়েছে'); return; }
@@ -574,16 +588,20 @@ $('nscam').onchange = function(){ Array.from(this.files).forEach(function(f){ pe
 $('nsfiles').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); this.value = ''; };
 $('nsmic').onclick = function(){ recToggle(this); }; $('nsmic').oncontextmenu = function(e){ e.preventDefault(); };
 $('nsgo').onclick = async function(){ var nm = $('nsname').value.trim(); if (!nm) { toast('Give the sample a name · নাম লিখুন'); return; }
-  var tot = SP.reduce(function(a, x){ return a + x.blob.size; }, 0); if (tot > 24 * 1024 * 1024) { toast('Too big together: ' + Math.round(tot / 1048576) + ' MB (max 24 MB) — shorten the video · ভিডিও ছোট করুন'); return; }
+  var tot = SP.reduce(function(a, x){ return a + x.blob.size; }, 0);
   var btn = this; btn.disabled = true; btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
   try {
-    var files = [];
-    for (var i = 0; i < SP.length; i++) { files.push({ name: SP[i].name, type: SP[i].blob.type || '', b64: await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(SP[i].blob); }) }); }
     // Abbas 13 Oct: the Trello card gets ONLY a cover - the first photo, else a frame of the first video; the rest goes to Slack
+    // Abbas 15 Oct: nothing compressed - the files go to Slack as they are (straight from the phone), the cover is the original photo
     var cover = null, ph = SP.filter(function(x){ return x.kind === 'photo'; })[0], vd = SP.filter(function(x){ return x.kind === 'video'; })[0];
-    if (ph) cover = { name: 'cover.jpg', b64: files[SP.indexOf(ph)].b64 };
-    else if (vd) { var fr = await videoFrame(vd.blob); if (fr) cover = { name: 'cover.jpg', b64: await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(fr); }) }; }
-    var j = await call({ op: 'sample', name: nm, desc: $('nsdesc').value, files: files, cover: cover });
+    if (ph && ph.blob.size <= 10 * 1024 * 1024) cover = { name: ph.name, b64: await b64of(ph.blob) };
+    else if (vd || ph) { var fr = vd ? await videoFrame(vd.blob) : null; if (fr) cover = { name: 'cover.jpg', b64: await b64of(fr) }; }
+    btn.textContent = '⏳ Sending ' + mb(tot) + ' in full quality… · পাঠানো হচ্ছে';
+    var fids = [], files = [];
+    try { if (SP.length) fids = await slackDirect(SP, function(i){ btn.textContent = '⏳ ' + (i + 1) + ' / ' + SP.length + ' · ' + mb(SP[i].blob.size) + '…'; }); }
+    catch (e) { if (tot > 18 * 1024 * 1024) throw new Error('Slack refused the upload (' + e.message + ')'); fids = []; for (var i = 0; i < SP.length; i++) files.push({ name: SP[i].name, type: SP[i].blob.type || '', b64: await b64of(SP[i].blob) }); }
+    btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
+    var j = await call({ op: 'sample', name: nm, desc: $('nsdesc').value, files: files, fids: fids, cover: cover });
     if (!j.ok) { toast('✗ ' + j.error); if (j.card) { $('ns').hidden = true; await gotoNew(j.card, lid('SAMPLES')); } return; }
     SP.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); SP.length = 0; spDraw(); $('ns').hidden = true;
     toast('⭐ Sample card made · posted in #samples-discuss'); await gotoNew(j.id, lid('SAMPLES'));
@@ -594,7 +612,7 @@ function videoFrame(blob){ return new Promise(function(ok){ try { var v = docume
     var tm = setTimeout(function(){ fin(null); }, 8000);
     v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; v.src = url;
     v.onloadedmetadata = function(){ try { v.currentTime = Math.min(0.7, (v.duration || 1) / 3); } catch(e){ fin(null); } };
-    v.onseeked = function(){ try { var k = Math.min(1, 1200 / Math.max(v.videoWidth, v.videoHeight, 1)), c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * k) || 320; c.height = Math.round(v.videoHeight * k) || 240; c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); c.toBlob(function(b){ clearTimeout(tm); fin(b); }, 'image/jpeg', 0.85); } catch(e){ fin(null); } };
+    v.onseeked = function(){ try { var k = 1, c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * k) || 320; c.height = Math.round(v.videoHeight * k) || 240; c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); c.toBlob(function(b){ clearTimeout(tm); fin(b); }, 'image/jpeg', 0.95); } catch(e){ fin(null); } };
     v.onerror = function(){ clearTimeout(tm); fin(null); }; v.load();
   } catch(e){ ok(null); } }); }
 function kindOf(f){ var t = f.type || '', n = f.name || ''; if (/^image\//.test(t)) return 'photo'; if (/^audio\//.test(t) || /\.(opus|ogg|oga|m4a|mp3|aac|amr|wav)$/i.test(n)) return 'audio'; if (/^video\//.test(t) || /\.(mp4|mov|webm)$/i.test(n)) return 'video'; return 'file'; }
@@ -602,19 +620,37 @@ $('afiles').onchange = function(){ Array.from(this.files).forEach(function(f){ p
 $('txt').addEventListener('paste', function(e){ var fs = Array.from((e.clipboardData || {}).files || []); if (!fs.length) return; e.preventDefault(); fs.forEach(function(f){ pendAdd(f, f.name || ('pasted-' + Date.now()), kindOf(f)); }); });
 document.getElementById('card').addEventListener('drop', function(e){ e.preventDefault(); Array.from(e.dataTransfer.files || []).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); });
 document.getElementById('card').addEventListener('dragover', function(e){ e.preventDefault(); });
+// 15 Oct 2026 (Abbas: "I don't want you to compress my photos and videos .. the details are very important"): files go to Slack in FULL
+// quality, straight from the phone (the relay only asks Slack for an upload address and then posts the message) - no size limit from the
+// relay, no base64 detour, much faster. If Slack refuses the direct way, files up to 18 MB still go the old way through the relay, unchanged.
+function b64of(blob){ return new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(blob); }); }
+async function slackDirect(items, onStep){
+  var j = await call({ op: 'upurl', files: items.map(function(x){ return { name: x.name, size: x.blob.size }; }) });
+  if (!j.ok) throw new Error(j.error || 'no upload address');
+  for (var i = 0; i < items.length; i++) { if (onStep) onStep(i);
+    var fd = new FormData(); fd.append('filename', items[i].blob, items[i].name);
+    var ac = window.AbortController ? new AbortController() : null, tm = ac ? setTimeout(function(){ ac.abort(); }, 15 * 60000) : null;
+    try { await fetch(j.urls[i].url, { method: 'POST', mode: 'no-cors', body: fd, signal: ac ? ac.signal : undefined }); } finally { clearTimeout(tm); } }
+  return j.urls.map(function(u){ return u.id; });
+}
+function mb(n){ return n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
 async function sendAll(){
   var c = TH.card; if (!c) return; var text = $('txt').value.trim();
-  if (!PEND.length) { if (!text) return; $('txt').value = ''; thSend(text); return; }
-  $('send').disabled = true; toast('Sending ' + PEND.length + ' file' + (PEND.length > 1 ? 's' : '') + '… · পাঠানো হচ্ছে');
-  var files = [];
-  for (var i = 0; i < PEND.length; i++) { var b64 = await new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(PEND[i].blob); }); files.push({ name: PEND[i].name, b64: b64 }); }
-  var pm = { ts: 'p' + Date.now(), pend: true, who: WHO, app: true, text: (text ? text + '\n' : '') + PEND.map(function(x){ return x.kind === 'audio' ? '🎤 voice note' : x.kind === 'photo' ? '📷 photo' : x.kind === 'video' ? '🎬 video' : '📎 ' + x.name; }).join(' · '), files: [] };
+  if (!PEND.length) { if (!text) return; if (LASTSEND.t === text && LASTSEND.c === c.id && Date.now() - LASTSEND.at < 3000) { $('txt').value = ''; return; } LASTSEND = { t: text, c: c.id, at: Date.now() }; $('txt').value = ''; thSend(text); return; }   // a double tap on Send sends once
+  var items = PEND.slice(), tot = items.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = items.map(function(x){ return x.name; });
+  $('send').disabled = true; toast('Sending ' + items.length + ' file' + (items.length > 1 ? 's' : '') + ' · ' + mb(tot) + ' · full quality… · পাঠানো হচ্ছে');
+  var pm = { ts: 'p' + Date.now(), pend: true, who: WHO, app: true, text: (text ? text + '\n' : '') + items.map(function(x){ return x.kind === 'audio' ? '🎤 voice note' : x.kind === 'photo' ? '📷 photo' : x.kind === 'video' ? '🎬 video' : '📎 ' + x.name; }).join(' · ') + ' · ' + mb(tot), files: [] };
   TH.msgs.push(pm); TH.none = false; thDraw();
-  var j = await call({ op: 'up', card: c.id, files: files, text: text, who: WHO }); $('send').disabled = false;
-  if (TH.card !== c) return;
-  if (!j.ok) { TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); thDraw(); toast('✗ Not sent — ' + j.error); return; }
-  PEND.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); PEND.length = 0; pendDraw(); $('txt').value = '';
-  TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); setTimeout(thPull, 800);
+  var j = null;
+  try { var fids = await slackDirect(items, function(i){ if (items.length > 1) toast('Sending ' + (i + 1) + ' / ' + items.length + ' · ' + mb(items[i].blob.size)); });
+    j = await call({ op: 'up', card: c.id, fids: fids, labels: labels, text: text, who: WHO }); } catch(e){ j = { ok: false, error: e.message }; }
+  if (!j.ok && tot <= 18 * 1024 * 1024) {                       // the old way through the relay - still the original files
+    var files = []; for (var i = 0; i < items.length; i++) files.push({ name: items[i].name, b64: await b64of(items[i].blob) });
+    j = await call({ op: 'up', card: c.id, files: files, text: text, who: WHO }); }
+  $('send').disabled = false;
+  if (!j.ok) { toast('✗ Not sent — ' + j.error + (TH.card !== c ? ' (other chat)' : '')); if (TH.card === c) { TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); thDraw(); } return; }
+  if (TH.card === c) { PEND.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); PEND.length = 0; pendDraw(); $('txt').value = ''; TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); setTimeout(thPull, 800); }
+  else toast('✓ Sent · পাঠানো হয়েছে');
 }
 $('send').onclick = sendAll;
 // 15 Oct 2026 (screenshot 17:10): after typing, the card stayed squeezed to the keyboard height and the card list showed underneath - iPhone does not
@@ -712,10 +748,10 @@ async function prefetch(){ var ids = Object.keys(D.th || {}).filter(function(id)
   for (var i = 0; i < ids.length; i++) { var id = ids[i]; PREF[id] = Date.now(); var have = THC[id] || [], last = have.length ? have[have.length - 1].ts : '';
     var j = await call({ op: 'thread', card: id, since: last, look: 0, pre: 1 }); if (!j.ok || j.none) continue; if (open && open.id === id) continue;
     var hv = {}; have.forEach(function(m){ hv[m.ts] = 1; }); THC[id] = have.concat((j.msgs || []).filter(function(m){ return !hv[m.ts]; })); thcSave(); } }
-function thcLoad(){ try { var o = JSON.parse(ls('sj_fac_thc') || '{}'); Object.keys(o).forEach(function(k){ if (!THC[k]) THC[k] = o[k]; }); } catch(e){} }
+function thcLoad(){ try { var o = JSON.parse(ls('sj_fac_thc') || '{}'); Object.keys(o).forEach(function(k){ if (!THC[k]) THC[k] = (o[k] || []).filter(function(m){ return /^\d+\.\d+$/.test(m.ts); }); }); } catch(e){} }
 var THCT = null;
 function thcSave(){ clearTimeout(THCT); THCT = setTimeout(function(){ try { var o = {}, ks = Object.keys(THC).filter(function(k){ return THC[k] && THC[k].length; });
-  ks.sort(function(a, b){ return +(THC[b][THC[b].length - 1].ts) - +(THC[a][THC[a].length - 1].ts); }).slice(0, 40).forEach(function(k){ o[k] = THC[k].slice(-40).map(function(m){ var x = {}; for (var q in m) if (q !== 'nw' && q !== 'pend') x[q] = m[q]; return x; }); });
+  ks.sort(function(a, b){ return +(THC[b][THC[b].length - 1].ts) - +(THC[a][THC[a].length - 1].ts); }).slice(0, 40).forEach(function(k){ o[k] = THC[k].filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }).slice(-40).map(function(m){ var x = {}; for (var q in m) if (q !== 'nw' && q !== 'pend') x[q] = m[q]; return x; }); });
   ls('sj_fac_thc', JSON.stringify(o)); } catch(e){} }, 800); }
 function totUnread(){ return Object.keys(D.th || {}).reduce(function(a, k){ return a + ((D.th[k] || {}).n || 0); }, 0); }
 function alertNew(){ var t = totUnread(); document.title = (t ? '(' + t + ') ' : '') + 'AL MUTAGADED · Factory';
@@ -728,7 +764,8 @@ setInterval(function(){ POLLN++; if (!PW || document.hidden) return; var home = 
 setInterval(function(){ if (!document.hidden && $('card').hidden) checkVer(); }, 300000);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { ping(true); checkVer(); if (open) thPull(); } });
 window.addEventListener('pageshow', function(){ if (PW) ping(true); });
-async function checkVer(){ try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
+function busyWork(){ return PEND.length || SP.length || $('txt').value.trim() || NET.busy > 1 || REC.r || Array.from(document.querySelectorAll('.sheet')).some(function(x){ return !x.hidden; }); }
+async function checkVer(){ if (busyWork()) return; try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
 
 $('who').textContent = WHO;
