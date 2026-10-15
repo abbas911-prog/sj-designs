@@ -35,7 +35,7 @@ function doPost(e) {
     // 15 Oct 2026: Slack's Event Subscriptions point here. The event is only a nudge ("something was written in a channel"): it makes every
     // phone's next poll re-read Slack at once. Nothing in it is trusted or stored, so a fake one can only cause an extra re-read.
     if (b.type === 'url_verification' && b.challenge) return ContentService.createTextOutput(String(b.challenge)).setMimeType(ContentService.MimeType.TEXT);
-    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
+    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') facNudge(P, facCardOf(P, evc)); } catch (x) {} try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
     if (b.job === 'fac') {                                    // FACTORY APP (12 Oct 2026): its own password (FACTORY_PASSWORD), or the shop password
@@ -180,6 +180,18 @@ function facWarm(P, ev) {                                        // a message wi
   (ev.files || []).slice(0, 3).forEach(function (f) { var mt = String(f.mimetype || ''), nm = String(f.name || '');
     if ((/^audio\//.test(mt) || /\.(m4a|webm|ogg|opus|mp3|aac)$/i.test(nm)) && (+f.size || 0) <= 1100000) { try { facMedia(FT, f.id, true); } catch (e) {} }
     else if (/^image\//.test(mt)) { try { facMedia(FT, f.id, false); } catch (e) {} } });
+}
+// ---- 15 Oct 2026 (Abbas: "just make my existing chats more flawless somehow" - no Firebase, no cost): LIVE NUDGE. The relay cannot push to
+// a phone, so it rings a free doorbell instead: the moment Slack says something was written (or a phone posts / moves a card), the relay
+// sends a tiny "card X changed" (no text, no names) to a private ntfy.sh topic. Every open app listens on that topic and pulls that chat
+// at once - a message shows on the other phone in about a second instead of up to 4-10 s of polling. If the doorbell is down, polling still works.
+function facLive(P) { var t = P.getProperty('FAC_LIVE'); if (!t) { t = 'sjlive-' + Utilities.getUuid().replace(/-/g, '').slice(0, 22); P.setProperty('FAC_LIVE', t); } return t; }
+function facNudge(P, card) { try { UrlFetchApp.fetch('https://ntfy.sh/' + facLive(P), { method: 'post', payload: 'c=' + String(card || ''), headers: { 'Cache': 'no', 'Firebase': 'no' }, muteHttpExceptions: true }); } catch (e) {} }
+function facCardOf(P, ev) {                                     // which card (or 'dm' / '') a Slack message belongs to
+  var ch = String(ev.channel || ''), ts = String(ev.thread_ts || ev.ts || ''); if (!ch) return '';
+  var dm = JSON.parse(P.getProperty('FAC_DM') || 'null'); if (dm && dm.ch === ch) return 'dm';
+  var all = P.getProperties(), hit = ''; Object.keys(all).some(function (k) { if (k.indexOf('FTH_') === 0 && all[k].indexOf('"' + ts + '"') >= 0) { hit = k.slice(4); return true; } return false; });
+  return hit;
 }
 function facBump() { CacheService.getScriptCache().put('FAC_GEN', String(Date.now()), 21600); }
 function facGen() { return CacheService.getScriptCache().get('FAC_GEN') || '0'; }   // bumped by every Slack event: all "what's new" caches start again
@@ -406,7 +418,7 @@ function fac0(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.live = facLive(P); return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -426,6 +438,7 @@ function fac0(reqText, P) {
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
       try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; }
+      res.live = facLive(P);
       return out(res);
     }
     if (req.op === 'ping') {                                  // 15 Oct 2026: the cheap "anything new?" every 4 s - no Trello call; the cards come from the cached list
@@ -433,7 +446,7 @@ function fac0(reqText, P) {
       var pcards = lc0 ? JSON.parse(lc0).cards : Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('FTH_') === 0; }).map(function (k) { return { id: k.slice(4) }; });
       var pth = {}; try { pth = facUnread(P, FTp, pcards, whp, !!req.fresh); } catch (e) {}
       var pdm = null; try { pdm = facDm(P, FTp); } catch (e) {}
-      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON') });
+      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P) });
     }
     if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
       var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });
@@ -515,7 +528,7 @@ function fac0(reqText, P) {
       if (!pdm) return out({ ok: false, error: 'no direct chat channel chosen yet' }); if (!ptx2.trim()) return out({ ok: false, error: 'bad request' });
       var pj2 = slackApi(FT, 'chat.postMessage', { channel: pdm.ch, text: '*' + pwho2 + ':* ' + ptx2 });
       if (!pj2.ok) return out({ ok: false, error: 'Slack said ' + pj2.error + (pj2.error === 'not_in_channel' ? ' (invite the factory bot to #' + pdm.name + ')' : '') });
-      try { facSeen(P, pwho2, 'dm', pj2.ts); } catch (e) {} facBump();
+      try { facSeen(P, pwho2, 'dm', pj2.ts); } catch (e) {} facBump(); facNudge(P, 'dm');
       return out({ ok: true, ts: pj2.ts });
     }
     if (req.op === 'thread') {                                // the thread of one card: root + replies (only those after req.since when given)
@@ -541,7 +554,7 @@ function fac0(reqText, P) {
       var pth = facThread(P, FT, pc, rtok, true);
       var pj = slackApi(FT, 'chat.postMessage', { channel: pth.ch, thread_ts: pth.ts, text: '*' + pwho + ':* ' + ptx });
       if (!pj.ok) return out({ ok: false, error: 'Slack said ' + pj.error });
-      try { facSeen(P, pwho, pc, pj.ts); } catch (e) {} facBump();
+      try { facSeen(P, pwho, pc, pj.ts); } catch (e) {} facBump(); facNudge(P, pc);
       return out({ ok: true, ts: pj.ts });
     }
     if (req.op === 'upurl') {                                 // 15 Oct 2026 (Abbas: "don't compress my photos and videos"): the phone sends the ORIGINAL file straight to Slack
@@ -570,7 +583,7 @@ function fac0(reqText, P) {
       var uj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + FT }, muteHttpExceptions: true,
         payload: uth.ts ? { files: JSON.stringify(fids.map(function (f) { return { id: f }; })), channel_id: uth.ch, thread_ts: uth.ts, initial_comment: utext } : { files: JSON.stringify(fids.map(function (f) { return { id: f }; })), channel_id: uth.ch, initial_comment: utext } }).getContentText());
       if (!uj.ok) return out({ ok: false, error: 'Slack said ' + uj.error });
-      try { facSeen(P, uwho, uc, String(Date.now() / 1000)); } catch (e) {} facBump();
+      try { facSeen(P, uwho, uc, String(Date.now() / 1000)); } catch (e) {} facBump(); facNudge(P, uc);
       return out({ ok: true, fids: fids });
     }
     if (req.op === 'media') {                                 // one Slack file for the phone (photo preview, voice note, video), through the bot token
@@ -705,7 +718,7 @@ function fac0(reqText, P) {
         try { trApi('post', '/cards/' + card + '/actions/comments', { text: '→ ' + tn + ' · ' + who + ' (factory app)' }, wtok); } catch (e) {}
         try { var mth = P.getProperty('FTH_' + card); if (mth && FT) { mth = JSON.parse(mth); slackApi(FT, 'chat.postMessage', { channel: mth.ch, thread_ts: mth.ts, text: '→ *' + tn + '* · ' + who }); } } catch (e) {}
       }
-      bigDrop(CacheService.getScriptCache(), 'FAC_LIST');
+      bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facNudge(P, 'list:' + card);
       return out({ ok: true });
     }
     return out({ ok: false, error: 'the relay does not know "' + String(req.op) + '" yet - Abbas must deploy the new version (Deploy → Manage deployments → ✏️ → New version)' });
