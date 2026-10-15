@@ -1210,3 +1210,21 @@ function setupTimer() {
   ScriptApp.newTrigger('kick').timeBased().everyMinutes(10).create();
   kick();
 }
+// 15 Oct 2026: read-only check run from the editor (▶ Run facDiag) - prints what the factory app's "new messages" logic sees. No keys or tokens are printed.
+function facDiag() {
+  var P = PropertiesService.getScriptProperties(), FT = P.getProperty('SLACK_FACTORY_TOKEN'), c = CacheService.getScriptCache(), L = [];
+  var dm = JSON.parse(P.getProperty('FAC_DM') || 'null'); L.push('direct chat: ' + JSON.stringify(dm));
+  L.push('slack push seen: ' + (P.getProperty('FAC_EVENTS_ON') ? new Date(+P.getProperty('FAC_EVENTS_ON')).toISOString() : 'NEVER') + ' · gen ' + facGen() + ' · slow-down ' + (c.get('FAC_RL') || 'no'));
+  L.push('notify people: ' + Object.keys(JSON.parse(P.getProperty('FNTFY') || '{}')).join(',') + ' · timers: ' + ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); }).join(','));
+  ['ABBAS'].forEach(function (w) { var r = JSON.parse(P.getProperty('FSEEN_' + w) || '{}'); L.push('seen ' + w + ': first use ' + r._t0 + ' · dm ' + r.dm + ' · v ' + r._v); });
+  if (dm && FT) {
+    var h = slackApi(FT, 'conversations.history', { channel: dm.ch, limit: 8 }, true);
+    L.push('dm history ok=' + h.ok + (h.ok ? '' : ' err=' + h.error));
+    (h.messages || []).forEach(function (m) { L.push('  ' + m.ts + ' ' + (m.user ? 'user ' + facUser(P, FT, m.user).n : 'bot') + (m.subtype ? ' [' + m.subtype + ']' : '') + (m.reply_count ? ' replies ' + m.reply_count + ' last ' + m.latest_reply : '') + ' · ' + String(m.text || '').slice(0, 50)); });
+  }
+  var lc = bigGet(c, 'FAC_LIST_L') || bigGet(c, 'FAC_LIST'); L.push('cached list: ' + (lc ? JSON.parse(lc).cards.length + ' cards' : 'none'));
+  try { L.push('unread ABBAS: ' + JSON.stringify(facUnread(P, FT, lc ? JSON.parse(lc).cards : [], 'Abbas', true))); } catch (e) { L.push('unread error: ' + e.message); }
+  var cut = slackApi(FT, 'conversations.history', { channel: DOX.CUTTING, limit: 5 }, true); L.push('#cutting ok=' + cut.ok + (cut.ok ? '' : ' err=' + cut.error));
+  (cut.messages || []).forEach(function (m) { L.push('  root ' + m.ts + ' replies ' + (m.reply_count || 0) + ' last ' + (m.latest_reply || '-') + ' · ' + String(m.text || '').slice(0, 40).replace(/\n/g, ' ')); });
+  Logger.log(L.join('\n')); return L.join('\n');
+}
