@@ -164,7 +164,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15k';
+var VER = '2026-10-15l';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -270,14 +270,14 @@ function pump(){
 var LOADING = false;
 var DMC = { id: 'dm', dm: true, name: 'Direct chat', l: '', pos: -1, f: {}, lb: [] };          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
 function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; bellPaint(); }
-function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards'; draw(); return true; } catch(e){ return false; } }
+function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); if (j.live && PW) liveStart(j.live); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards'; draw(); return true; } catch(e){ return false; } }
 async function load(fresh){
   if (LOADING && Date.now() - LOADING < 30000) return false; LOADING = Date.now();
   $('rf').classList.add('spin');
   var j = await call({ op: 'list', fresh: !!fresh });
   $('rf').classList.remove('spin'); LOADING = 0;
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
-  applyList(j); j.t = Date.now(); try { ls('sj_fac_list', JSON.stringify(j)); } catch(e){}
+  applyList(j); if (j.live) liveStart(j.live); j.t = Date.now(); try { ls('sj_fac_list', JSON.stringify(j)); } catch(e){}
   var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? 'Updated · আপডেট ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards' : '⚠ View only — the relay\'s Trello key cannot move cards yet';
   draw(); liveMark(); if (open && D.byId[open.id] && open !== D.byId[open.id]) { var oc = open; open = D.byId[open.id]; ['_atts', '_cover', 'desc'].forEach(function(k){ if (oc[k] !== undefined) open[k] = oc[k]; }); if (TH.card && TH.card.id === open.id) TH.card = open; paintCard(); }
   if (!open) openFromHash();
@@ -467,13 +467,13 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
 window.__LOOK = LOOK; window.__call = function(o, pw, t){ return call(o, pw, t); };
 function looking(){ return !document.hidden && Date.now() - LOOK.vis > 1500 && Date.now() - LOOK.act < 60000; }
 var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
-function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 4000); }
+function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (document.hidden) return; if (LIVE.ok && (TH.tick = (TH.tick || 0) + 1) % 3) return; thPull(); }, 4000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 async function thPull(){
-  var c = TH.card; if (!c || (TH.busy && Date.now() - TH.busy < 30000)) return; TH.busy = Date.now();
+  var c = TH.card; if (!c) return; if (TH.busy && Date.now() - TH.busy < 30000) { TH.again = true; return; } TH.busy = Date.now(); TH.again = false;
   var real = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }), last = real.length ? real[real.length - 1].ts : '';
-  TH.n = (TH.n || 0) + 1; var look = looking(), j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0, force: (TH.n % 4 === 0 || TH.force) ? 1 : 0 }); TH.force = false;
-  TH.busy = 0; if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; } if (j && j.ok) TH.lastPull = Date.now();
+  TH.n = (TH.n || 0) + 1; var look = looking(), frc = TH.n % 4 === 0 || TH.force; TH.force = false; var j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0, force: frc ? 1 : 0 });
+  TH.busy = 0; if (TH.again) { TH.again = false; setTimeout(thPull, 30); } if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; } if (j && j.ok) TH.lastPull = Date.now();
   if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = '<div class="empty" style="padding:14px">⏳ ' + esc(j.error) + '<br>আবার চেষ্টা করা হচ্ছে…</div>'; return; }
   $('tmsg').textContent = '';
   if (j.none) { TH.none = true; $('thread').innerHTML = '<div class="empty" style="padding:14px">No chat yet — write the first message, send a photo or a voice note.<br>এখনো কোনো মেসেজ নেই — প্রথম মেসেজ লিখুন</div>'; $('tcount').textContent = ''; return; }
@@ -773,15 +773,16 @@ document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on t
 // 15 Oct 2026 (Abbas: "no catch up ... make the message appear as instant as possible"): a cheap "anything new?" (op ping, no Trello) every 4 s on the
 // home screen and every 12 s inside a card; the full card list every 30 s; and at once when the app comes back to the front.
 var POLLN = 0, PINGING = false, LASTTOT = -1;
-async function ping(fresh){ if (!PW || (PINGING && Date.now() - PINGING < 30000) || !D.cards) return; PINGING = Date.now();
-  var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (!j || !j.ok) return;
+var PAGAIN = false;
+async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now() - PINGING < 30000) { PAGAIN = true; return; } PINGING = Date.now(); PAGAIN = false;
+  var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
-  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; draw(); alertNew(); liveMark(); prefetch(); }
+  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.live) liveStart(j.live); draw(); alertNew(); liveMark(); prefetch(); }
 // 15 Oct 2026 (Abbas: "you see how long it is taking refreshing? I run a business - when a message comes I want it as instant as possible, without
 // any long loading of the chats"): (a) the "anything new?" check no longer waits behind the card-list refresh; (b) the status line shows the
 // time of the last check ("● Live 16:46:05"); (c) the newest message text is shown right on the home screen; (d) the chats with new messages
 // are fetched in the background, so opening one shows the message at once; (e) every chat seen on this phone is kept on the phone.
-function liveMark(){ var n = new Date(); if (!D.w) return; $('msg').className = 'ok live'; $('msg').textContent = '● Live ' + [n.getHours(), n.getMinutes(), n.getSeconds()].map(function(x){ return ('0' + x).slice(-2); }).join(':') + ' · ' + D.cards.length + ' cards'; }
+function liveMark(){ var n = new Date(); if (!D.w) return; $('msg').className = 'ok live'; $('msg').textContent = (LIVE.ok ? '⚡ Live ' : '● Live ') + [n.getHours(), n.getMinutes(), n.getSeconds()].map(function(x){ return ('0' + x).slice(-2); }).join(':') + ' · ' + D.cards.length + ' cards'; }
 var PREF = {};
 async function prefetch(){ var ids = Object.keys(D.th || {}).filter(function(id){ var u = D.th[id]; if (!u || !u.n || (open && open.id === id)) return false; var have = THC[id] || []; var top = have.length ? have[have.length - 1].ts : ''; return !(top && +top >= +u.last) && !(PREF[id] && Date.now() - PREF[id] < 8000); }).slice(0, 3);
   for (var i = 0; i < ids.length; i++) { var id = ids[i]; PREF[id] = Date.now(); var have = THC[id] || [], last = have.length ? have[have.length - 1].ts : '';
@@ -792,6 +793,19 @@ var THCT = null;
 function thcSave(){ clearTimeout(THCT); THCT = setTimeout(function(){ try { var o = {}, ks = Object.keys(THC).filter(function(k){ return THC[k] && THC[k].length; });
   ks.sort(function(a, b){ return +(THC[b][THC[b].length - 1].ts) - +(THC[a][THC[a].length - 1].ts); }).slice(0, 40).forEach(function(k){ o[k] = THC[k].filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }).slice(-40).map(function(m){ var x = {}; for (var q in m) if (q !== 'nw' && q !== 'pend') x[q] = m[q]; return x; }); });
   ls('sj_fac_thc', JSON.stringify(o)); } catch(e){} }, 800); }
+// ---- LIVE (15 Oct 2026, Abbas: "just make my existing chats more flawless"): the relay rings a free doorbell (ntfy.sh, private topic, only
+// "card X changed" - no text) the moment anything is written; the app listens and pulls that chat at once. Polling stays as the safety net.
+var LIVE = { es: null, topic: '', ok: false, t: 0, pt: null };
+function liveStart(topic, force){ if (!topic || !window.EventSource) return; if (!force && LIVE.es && LIVE.topic === topic && LIVE.es.readyState !== 2) return;
+  try { if (LIVE.es) LIVE.es.close(); } catch(e){} LIVE.topic = topic; LIVE.ok = false;
+  var es = LIVE.es = new EventSource('https://ntfy.sh/' + topic + '/sse');
+  es.onopen = function(){ LIVE.ok = true; liveMark(); };
+  es.onerror = function(){ LIVE.ok = false; };
+  es.onmessage = function(e){ var d = null; try { d = JSON.parse(e.data); } catch(x){} if (!d || d.event !== 'message') return; LIVE.ok = true; liveNudge(String(d.message || '').replace(/^c=/, '')); }; }
+function liveNudge(c){ LIVE.t = Date.now();
+  if (/^list:/.test(c)) { setTimeout(function(){ load(false); }, 400); c = c.slice(5); }
+  if (open && (open.id === c || !c)) { TH.force = true; thPull(); }
+  clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(false); }, 250); }
 function totUnread(){ return Object.keys(D.th || {}).reduce(function(a, k){ return a + ((D.th[k] || {}).n || 0); }, 0); }
 function alertNew(){ var t = totUnread(); document.title = (t ? '(' + t + ') ' : '') + 'AL MUTAGADED · Factory';
   if (LASTTOT >= 0 && t > LASTTOT) beep(); LASTTOT = t; }
@@ -799,9 +813,10 @@ var ACX = null; document.addEventListener('pointerdown', function(){ try { if (!
 function beep(){ try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); if (!ACX) return; var o = ACX.createOscillator(), g = ACX.createGain(); o.type = 'sine'; o.frequency.value = 880; g.gain.setValueAtTime(0.0001, ACX.currentTime); g.gain.exponentialRampToValueAtTime(0.25, ACX.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ACX.currentTime + 0.35); o.connect(g); g.connect(ACX.destination); o.start(); o.stop(ACX.currentTime + 0.4); } catch(e){} }
 setInterval(function(){ POLLN++; if (!PW || document.hidden) return; var home = $('card').hidden;
   if (POLLN % 8 === 0) { load(false).then(alertNew); return; }          // every 32 s: the cards themselves
+  if (LIVE.ok && POLLN % 4 !== 0) return;                             // doorbell working: a safety check every 16 s is enough
   if (home || POLLN % 3 === 0) ping(false); }, 4000);
 setInterval(function(){ if (!document.hidden && $('card').hidden) checkVer(); }, 300000);
-document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { ping(true); checkVer(); if (open) thPull(); } });
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { if (LIVE.topic) liveStart(LIVE.topic, true); ping(true); checkVer(); if (open) thPull(); } });
 window.addEventListener('pageshow', function(){ if (PW) ping(true); });
 function busyWork(){ return OUT.length || PEND.length || SP.length || $('txt').value.trim() || NET.busy > 1 || REC.r || Array.from(document.querySelectorAll('.sheet')).some(function(x){ return !x.hidden; }); }
 async function checkVer(){ if (busyWork()) return; try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
