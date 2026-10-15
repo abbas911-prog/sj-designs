@@ -192,7 +192,7 @@ function facHist(P, FT, CH, fresh) {                            // newest 400 to
   var ms = (j.messages || []).map(cut), k2 = 'FAC_H2_' + CH, h2 = c.get(k2), older = [];
   if (h2) older = JSON.parse(h2); else if (j.has_more && j.response_metadata && j.response_metadata.next_cursor) {   // the older page changes rarely: re-read once a minute
     var j2 = slackApi(FT, 'conversations.history', { channel: CH, limit: 200, cursor: j.response_metadata.next_cursor }, true);
-    if (j2.ok) { older = (j2.messages || []).map(cut); try { c.put(k2, JSON.stringify(older), 60); } catch (e) {} }
+    if (j2.ok) { older = (j2.messages || []).map(function (m) { var x = cut(m); x.o = 1; return x; }); try { c.put(k2, JSON.stringify(older), 60); } catch (e) {} }
   }
   var all = ms.concat(older); try { c.put(k, JSON.stringify(all), facTtl(P)); c.put('FAC_H_' + CH + '_L', JSON.stringify(all), 3600); } catch (e) {}
   return all;
@@ -524,7 +524,7 @@ function fac0(reqText, P) {
       var th = facThread(P, FT, tc, rtok, !!req.make);
       if (!th) return out({ ok: true, none: true, msgs: [] });
       if (req.since && !/^\d+\.\d+$/.test(String(req.since))) req.since = '';
-      if (req.since) { try { var hh0 = facHist(P, FT, th.ch, false).filter(function (m) { return m.t === th.ts; })[0]; if (hh0 && +(hh0.lr || hh0.t) <= +req.since) { if (req.look !== 0) facSeen(P, String(req.who || ''), tc, req.since); return out({ ok: true, ch: th.ch, ts: th.ts, msgs: [] }); } } catch (e) {} }   // nothing new: no Slack call
+      if (req.since && !req.force) { try { var hh0 = facHist(P, FT, th.ch, false).filter(function (m) { return m.t === th.ts; })[0]; if (hh0 && !hh0.o && +(hh0.lr || hh0.t) <= +req.since) { if (req.look !== 0) facSeen(P, String(req.who || ''), tc, req.since); return out({ ok: true, ch: th.ch, ts: th.ts, msgs: [] }); } } catch (e) {} }   // nothing new (fresh page only; the phone forces a real read now and then): no Slack call
       var rq = { channel: th.ch, ts: th.ts, limit: 200 }; if (req.since) rq.oldest = String(req.since);
       var rp = slackApi(FT, 'conversations.replies', rq, true);
       if (!rp.ok && rp.error === 'ratelimited') { facSlow(rp); Utilities.sleep(1500); rp = slackApi(FT, 'conversations.replies', rq, true); }
