@@ -80,6 +80,8 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 #card.dm .hero,#card.dm .btns,#card.dm #bpin{display:none}#card.dm .thr{margin-top:0}
 .msg.nw .bub{box-shadow:0 0 0 2.5px #c0392b}.msg.nw .who:after{content:' · NEW';color:#c0392b;font-weight:800}
 #inbox .itx{display:block;font-style:normal;font-size:14px;color:#3b2f1e;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}#msg.live{color:#2e7d32}
+#outbar{background:#fff8e6;border:1.5px solid #e0a800;border-radius:14px;padding:10px 12px;margin-bottom:12px;font-size:14.5px;font-weight:700;color:#7a5a00}#outbar[hidden]{display:none}#outbar.bad{background:#fdecef;border-color:var(--red);color:var(--red)}#outbar small{display:block;font-weight:500;color:var(--mute);font-size:12.5px}
+.msg.out .bub{opacity:.75}.msg.out.bad .bub{box-shadow:0 0 0 2px var(--red);opacity:1}
 #inbox{background:#fff;border:1.5px solid var(--red);border-radius:16px;padding:10px 12px;margin-bottom:12px}#inbox[hidden]{display:none}
 #inbox h3 button,#later h3 button{float:right;border:0;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800;color:#fff;background:var(--red)}#later h3 button{background:#b8860b}
 #later{background:#fff;border:1.5px solid #b8860b;border-radius:16px;padding:10px 12px;margin-bottom:12px}#later[hidden]{display:none}#later h3{margin:0 0 6px;font-size:14px;color:#8a6508}#later .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:15px}#later .row b{font-weight:800}#later .row small{color:var(--mute);font-size:12px;display:block}
@@ -121,7 +123,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
   <div class="search"><input id="q" placeholder="Search design number · ডিজাইন নম্বর" inputmode="search" autocomplete="off"></div>
   <div id="msg"></div>
 </header>
-<main><div id="dm" hidden></div><div id="inbox" hidden></div><div id="later" hidden></div><div id="list"><div class="empty">Loading… · লোড হচ্ছে</div></div></main>
+<main><div id="outbar" hidden></div><div id="dm" hidden></div><div id="inbox" hidden></div><div id="later" hidden></div><div id="list"><div class="empty">Loading… · লোড হচ্ছে</div></div></main>
 
 <div id="card" hidden>
   <div class="chd"><button id="back">‹ Back</button><div class="nm" id="cnm"></div><button class="pin" id="bpin" title="Later">📌</button><span class="pill" id="cstage"></span></div>
@@ -162,7 +164,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15h';
+var VER = '2026-10-15i';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -199,9 +201,10 @@ var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later)$
 async function call(obj, pw, top){
   if (ONCE.test(obj.op) && !obj.rid) obj.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);   // a retry of the same action is answered once, never done twice
   var heavy = /^(up|attach|sample)$/.test(obj.op) || (obj.op === 'media' && obj.full && !obj.pre);
-  var lo = !top && /^(img|media|atts)$/.test(obj.op); await new Promise(function(ok){ ok.h = heavy; ok.top = !!top; obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
+  var now = /^(post|up|upurl|move)$/.test(obj.op);                // 15 Oct 2026 ("taking this long just for OK"): a send never waits behind downloads
+  var lo = !top && /^(img|media|atts)$/.test(obj.op); if (!now) await new Promise(function(ok){ ok.h = heavy; ok.top = !!top; obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
   var t0 = Date.now(), res;
-  try { res = await call0(obj, pw); } finally { NET.busy--; if (heavy) NET.heavy--; netGo(); }
+  if (now) { try { res = await call0(obj, pw); } catch(e){ res = { ok: false, error: e.message }; } } else { try { res = await call0(obj, pw); } finally { NET.busy--; if (heavy) NET.heavy--; netGo(); } }
   NET.log.unshift({ op: obj.op, ms: Date.now() - t0, ok: !!(res && res.ok), e: res && !res.ok ? String(res.error || '').slice(0, 60) : '', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
   return res;
 }
@@ -215,7 +218,7 @@ async function call0(obj, pw){
       var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: 'fac', req: req, sig: sig }), cache: 'no-store', credentials: 'omit', signal: ac ? ac.signal : undefined });
       var t = await r.text(), j = null; clearTimeout(tm); try { j = JSON.parse(t); } catch(e){}
       if (j && j.relay === 'sj-memo' && Object.keys(j).length <= 2) { last = 'Google passed the request on without its contents'; continue; }
-      if (j && j.busy && n < 3) { await sleep(1500); n--; continue; }   // the first try is still running on the relay: wait for its answer
+      if (j && j.busy && (obj._bw = (obj._bw || 0) + 1) < 40) { await sleep(1500); n--; continue; }   // the first try is still running on the relay: wait for its answer
       if (j) return j;
       last = 'Google sent a web page instead of an answer (' + r.status + ')';
     } catch(e){ clearTimeout(tm); last = e.name === 'AbortError' ? 'no answer in ' + Math.round(lim / 1000) + ' s' : e.message; if (obj.op === 'ping' || (obj.op === 'media' && n >= 1)) break; }
@@ -461,7 +464,7 @@ var TH = { card: null, msgs: [], timer: null, busy: false, none: false }, MEDIA 
 var LOOK = { act: Date.now(), vis: Date.now() };
 ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(function(ev){ document.addEventListener(ev, function(){ LOOK.act = Date.now(); }, { passive: true, capture: true }); });
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) LOOK.vis = Date.now(); });
-window.__LOOK = LOOK;
+window.__LOOK = LOOK; window.__call = function(o, pw, t){ return call(o, pw, t); };
 function looking(){ return !document.hidden && Date.now() - LOOK.vis > 1500 && Date.now() - LOOK.act < 60000; }
 var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
 function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 4000); }
@@ -470,7 +473,7 @@ async function thPull(){
   var c = TH.card; if (!c || (TH.busy && Date.now() - TH.busy < 30000)) return; TH.busy = Date.now();
   var real = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }), last = real.length ? real[real.length - 1].ts : '';
   var look = looking(), j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0 });
-  TH.busy = 0; if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; }
+  TH.busy = 0; if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; } if (j && j.ok) TH.lastPull = Date.now();
   if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = '<div class="empty" style="padding:14px">⏳ ' + esc(j.error) + '<br>আবার চেষ্টা করা হচ্ছে…</div>'; return; }
   $('tmsg').textContent = '';
   if (j.none) { TH.none = true; $('thread').innerHTML = '<div class="empty" style="padding:14px">No chat yet — write the first message, send a photo or a voice note.<br>এখনো কোনো মেসেজ নেই — প্রথম মেসেজ লিখুন</div>'; $('tcount').textContent = ''; return; }
@@ -500,7 +503,7 @@ function bubble(m){
   return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + '</div>') + '<div class="bub">' + body + '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span></div></div>';
 }
 function thDedupe(){ var seenTs = {}; TH.msgs = TH.msgs.filter(function(m){ if (m.pend) return true; if (seenTs[m.ts]) return false; seenTs[m.ts] = 1; return true; }); }
-function thDraw(){ thDedupe(); $('thread').innerHTML = TH.msgs.map(bubble).join(''); $('tcount').textContent = TH.msgs.length + ' messages';
+function thDraw(){ thDedupe(); $('thread').innerHTML = TH.msgs.filter(function(m){ return !m.pend; }).map(bubble).join('') + (TH.card ? outBubbles(TH.card.id) : ''); $('tcount').textContent = TH.msgs.length + ' messages';
   var el = $('cbody'); if (TH.stick !== false) setTimeout(function(){ el.scrollTop = el.scrollHeight; }, 30); autoMedia(); }
 $('cbody').addEventListener('scroll', function(){ var el = $('cbody'); TH.stick = el.scrollHeight - el.scrollTop - el.clientHeight < 160; }, { passive: true });
 function playing(){ return Array.from(document.querySelectorAll('#thread audio, #thread video')).some(function(m){ return !m.paused && !m.ended; }); }
@@ -547,7 +550,51 @@ async function loadMedia(e, tap){
 }
 $('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f); };
 async function openBig(src, fid){ $('viewer').hidden = false; $('vimg').src = src || ''; if (fid) { var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && !$('viewer').hidden && /^image/.test(j.type || 'image')) $('vimg').src = 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64; } }
+// ===== OUTBOX (15 Oct 2026, Abbas: "when I press Send and I'm in a hurry, it says sending, I go back, do something else, come back and the
+// message is nowhere to be found"). A message (text and/or files) is saved ON THE PHONE the moment Send is pressed (IndexedDB) and sent by a
+// background sender that does not care which screen is open, keeps trying (also after the app was closed / the phone locked) and uses one
+// once-only id per message, so a retry can never post it twice. Until Slack has it, it shows in its chat as "🕓 sending…" and on the home screen.
+var OUT = [], SENT = [], OUTDB = null, OUTRUN = false, OUTT = null;
+function odb(){ return new Promise(function(ok){ if (OUTDB) return ok(OUTDB); try { var r = indexedDB.open('fac-outbox', 1); r.onupgradeneeded = function(){ r.result.createObjectStore('q', { keyPath: 'id' }); }; r.onsuccess = function(){ OUTDB = r.result; ok(OUTDB); }; r.onerror = function(){ ok(null); }; } catch(e){ ok(null); } }); }
+async function oput(it){ var d = await odb(); if (!d) return; try { d.transaction('q', 'readwrite').objectStore('q').put(it); } catch(e){} }
+async function odel(id){ var d = await odb(); if (!d) return; try { d.transaction('q', 'readwrite').objectStore('q').delete(id); } catch(e){} }
+async function oload(){ var d = await odb(); if (!d) return; await new Promise(function(ok){ try { var rq = d.transaction('q').objectStore('q').getAll(); rq.onsuccess = function(){ (rq.result || []).forEach(function(it){ if (!OUT.some(function(x){ return x.id === it.id; })) OUT.push(it); }); OUT.sort(function(a, b){ return a.at - b.at; }); ok(); }; rq.onerror = function(){ ok(); }; } catch(e){ ok(); } }); outPaint(); outRun(); }
+function outLabel(it){ return (it.text ? it.text + (it.files.length ? '\n' : '') : '') + it.files.map(function(x){ return x.kind === 'audio' ? '🎤 voice note' : x.kind === 'photo' ? '📷 photo' : x.kind === 'video' ? '🎬 video' : '📎 ' + x.name; }).join(' · '); }
+function outAdd(c, text, files){ var it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10), card: c.id, cname: c.dm ? 'Direct chat' : (parse(c.name).no ? 'SJ-' + parse(c.name).no : String(c.name || '').slice(0, 30)), text: text || '', files: files || [], who: WHO, at: Date.now(), tries: 0, err: '' };
+  OUT.push(it); oput(it); outPaint(); outRun(); return it; }
+function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(function(x){ return x.tries >= 3; });
+  if (!n) { el.hidden = true; } else { el.hidden = false; el.className = bad.length ? 'bad' : ''; el.innerHTML = (bad.length ? '⚠ ' + n + ' message' + (n > 1 ? 's' : '') + ' not sent yet — trying again · tap' : '📤 Sending ' + n + ' message' + (n > 1 ? 's' : '') + '… · পাঠানো হচ্ছে') + '<small>' + esc(OUT.map(function(x){ return x.cname; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' · ')) + (bad.length && bad[0].err ? ' — ' + esc(bad[0].err) : '') + '</small>'; }
+  if (TH.card && !$('card').hidden && !playing()) thDraw(); }
+$('outbar').onclick = function(){ var it = OUT[0]; if (!it) return; outRun(true); var c = D.byId[it.card]; if (c) openCard(c); };
+function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 60000; }); return OUT.concat(SENT.filter(function(x){ return x.card === cid && !(TH.lastPull > x.done + 500); })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + esc(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
+async function outOne(it){
+  if (!it.files.length) return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id });
+  var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
+  if (!it.fids) { try { it.fids = await slackDirect(it.files); oput(it); } catch(e){ it.fids = null; } }      // originals straight to Slack (full quality)
+  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, labels: labels, text: it.text, who: it.who, rid: it.id }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; oput(it); } }
+  if (tot > 18 * 1024 * 1024) return { ok: false, error: 'Slack did not take the upload' };
+  var files = []; for (var i = 0; i < it.files.length; i++) files.push({ name: it.files[i].name, b64: await b64of(it.files[i].blob) });
+  return await call({ op: 'up', card: it.card, files: files, text: it.text, who: it.who, rid: it.id + 'b' });
+}
+async function outRun(now){
+  if (OUTRUN || !OUT.length || !PW) return; OUTRUN = true; clearTimeout(OUTT);
+  try { while (OUT.length) { var it = OUT[0], j = null; try { j = await outOne(it); } catch(e){ j = { ok: false, error: e.message }; }
+      if (j && j.ok) { OUT.shift(); odel(it.id);
+        if (!it.files.length && j.ts) { var real = { ts: j.ts, who: it.who, app: true, text: it.text, files: [] }; THC[it.card] = (THC[it.card] || []).concat([real]); thcSave(); if (TH.card && TH.card.id === it.card && !TH.msgs.some(function(m){ return m.ts === j.ts; })) TH.msgs.push(real); }
+        else { it.done = Date.now(); SENT.push(it); }                 // files: shown as "✓ sent" until the chat brings the real message
+        outPaint(); if (TH.card && TH.card.id === it.card) setTimeout(thPull, 300); continue; }
+      it.tries++; it.err = String((j && j.error) || 'no answer').slice(0, 80); oput(it); outPaint(); break; } }
+  finally { OUTRUN = false; }
+  if (OUT.length) OUTT = setTimeout(outRun, Math.min(30000, 4000 * Math.max(1, OUT[0].tries)));
+}
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) outRun(true); });
+window.addEventListener('online', function(){ outRun(true); });
+window.addEventListener('pagehide', function(){ OUT.forEach(oput); });
 async function thSend(text){
+  var c = TH.card; if (!c || !text.trim()) return;
+  outAdd(c, text, []); TH.none = false;
+}
+async function thSendOld(text){
   var c = TH.card; if (!c || !text.trim()) return;
   var pm = { ts: 'p' + Date.now(), pend: true, who: WHO, app: true, text: text, files: [] }; TH.msgs.push(pm); TH.none = false; thDraw();   // on screen at once
   var j = await call({ op: 'post', card: c.id, text: text, who: WHO });
@@ -638,20 +685,10 @@ function mb(n){ return n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 
 async function sendAll(){
   var c = TH.card; if (!c) return; var text = $('txt').value.trim();
   if (!PEND.length) { if (!text) return; if (LASTSEND.t === text && LASTSEND.c === c.id && Date.now() - LASTSEND.at < 3000) { $('txt').value = ''; return; } LASTSEND = { t: text, c: c.id, at: Date.now() }; $('txt').value = ''; thSend(text); return; }   // a double tap on Send sends once
-  var items = PEND.slice(), tot = items.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = items.map(function(x){ return x.name; });
-  $('send').disabled = true; toast('Sending ' + items.length + ' file' + (items.length > 1 ? 's' : '') + ' · ' + mb(tot) + ' · full quality… · পাঠানো হচ্ছে');
-  var pm = { ts: 'p' + Date.now(), pend: true, who: WHO, app: true, text: (text ? text + '\n' : '') + items.map(function(x){ return x.kind === 'audio' ? '🎤 voice note' : x.kind === 'photo' ? '📷 photo' : x.kind === 'video' ? '🎬 video' : '📎 ' + x.name; }).join(' · ') + ' · ' + mb(tot), files: [] };
-  TH.msgs.push(pm); TH.none = false; thDraw();
-  var j = null;
-  try { var fids = await slackDirect(items, function(i){ if (items.length > 1) toast('Sending ' + (i + 1) + ' / ' + items.length + ' · ' + mb(items[i].blob.size)); });
-    j = await call({ op: 'up', card: c.id, fids: fids, labels: labels, text: text, who: WHO }); } catch(e){ j = { ok: false, error: e.message }; }
-  if (!j.ok && tot <= 18 * 1024 * 1024) {                       // the old way through the relay - still the original files
-    var files = []; for (var i = 0; i < items.length; i++) files.push({ name: items[i].name, b64: await b64of(items[i].blob) });
-    j = await call({ op: 'up', card: c.id, files: files, text: text, who: WHO }); }
-  $('send').disabled = false;
-  if (!j.ok) { toast('✗ Not sent — ' + j.error + (TH.card !== c ? ' (other chat)' : '')); if (TH.card === c) { TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); thDraw(); } return; }
-  if (TH.card === c) { PEND.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); PEND.length = 0; pendDraw(); $('txt').value = ''; TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); setTimeout(thPull, 800); }
-  else toast('✓ Sent · পাঠানো হয়েছে');
+  var files = PEND.map(function(x){ return { name: x.name, kind: x.kind, blob: x.blob }; });
+  PEND.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); PEND.length = 0; pendDraw(); $('txt').value = '';
+  outAdd(c, text, files); TH.none = false;
+  var tot = files.reduce(function(a, x){ return a + x.blob.size; }, 0); toast('📤 Sending ' + files.length + ' file' + (files.length > 1 ? 's' : '') + ' · ' + mb(tot) + ' — you can leave this screen · অন্য কাজ করতে পারেন');
 }
 $('send').onclick = sendAll;
 // 15 Oct 2026 (screenshot 17:10): after typing, the card stayed squeezed to the keyboard height and the card list showed underneath - iPhone does not
@@ -765,12 +802,12 @@ setInterval(function(){ POLLN++; if (!PW || document.hidden) return; var home = 
 setInterval(function(){ if (!document.hidden && $('card').hidden) checkVer(); }, 300000);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { ping(true); checkVer(); if (open) thPull(); } });
 window.addEventListener('pageshow', function(){ if (PW) ping(true); });
-function busyWork(){ return PEND.length || SP.length || $('txt').value.trim() || NET.busy > 1 || REC.r || Array.from(document.querySelectorAll('.sheet')).some(function(x){ return !x.hidden; }); }
+function busyWork(){ return OUT.length || PEND.length || SP.length || $('txt').value.trim() || NET.busy > 1 || REC.r || Array.from(document.querySelectorAll('.sheet')).some(function(x){ return !x.hidden; }); }
 async function checkVer(){ if (busyWork()) return; try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
 
 $('who').textContent = WHO;
-thcLoad();
+thcLoad(); oload(); setInterval(function(){ if (OUT.length && !OUTRUN) outRun(); }, 10000);
 if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } load(false); }
 checkVer();
 window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND };
