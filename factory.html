@@ -162,7 +162,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15g';
+var VER = '2026-10-15h';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -193,13 +193,13 @@ async function hmacHex(key, msg){
 // 15 Oct 2026 (Abbas: "still lagging"): at most 4 relay requests at a time from this phone, and the chat / sending / "anything new?" always go
 // before photos and attachments - before, a queue of cover-photo and chat-photo downloads could hold every connection and the chat waited behind them.
 var NET = { busy: 0, heavy: 0, hi: [], lo: [], log: [] };
-function netPick(q){ for (var i = 0; i < q.length; i++) if (!q[i].h || NET.heavy < 2) return q.splice(i, 1)[0]; return null; }   // big transfers: at most 2 at once, so chat requests always get through
+function netPick(q){ for (var i = 0; i < q.length; i++) if (!q[i].h || q[i].top || NET.heavy < 2) return q.splice(i, 1)[0]; return null; }   // big transfers: at most 2 at once, so chat requests always get through
 function netGo(){ while (NET.busy < 4) { var f = netPick(NET.hi) || netPick(NET.lo); if (!f) break; NET.busy++; if (f.h) NET.heavy++; f(); } }
 var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later)$/;
 async function call(obj, pw, top){
   if (ONCE.test(obj.op) && !obj.rid) obj.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);   // a retry of the same action is answered once, never done twice
-  var heavy = /^(up|attach|sample)$/.test(obj.op) || (obj.op === 'media' && obj.full);
-  var lo = !top && /^(img|media|atts)$/.test(obj.op); await new Promise(function(ok){ ok.h = heavy; obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
+  var heavy = /^(up|attach|sample)$/.test(obj.op) || (obj.op === 'media' && obj.full && !obj.pre);
+  var lo = !top && /^(img|media|atts)$/.test(obj.op); await new Promise(function(ok){ ok.h = heavy; ok.top = !!top; obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
   var t0 = Date.now(), res;
   try { res = await call0(obj, pw); } finally { NET.busy--; if (heavy) NET.heavy--; netGo(); }
   NET.log.unshift({ op: obj.op, ms: Date.now() - t0, ok: !!(res && res.ok), e: res && !res.ok ? String(res.error || '').slice(0, 60) : '', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
@@ -512,14 +512,14 @@ function playing(){ return Array.from(document.querySelectorAll('#thread audio, 
 var MCACHE = null; try { if (window.caches) caches.open('fac-media-1').then(function(c){ MCACHE = c; }); } catch(e){}
 function b64blob(b64, type){ var bin = atob(b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new Blob([u8], { type: type }); }
 var MWAIT = {};
-function getMedia(id, k, top){
+function getMedia(id, k, top, pre){
   if (MEDIA[id]) return Promise.resolve({ url: MEDIA[id] });
-  if (MWAIT[id]) { var w0 = MWAIT[id]; if (top && !w0.top) { w0.top = true; var qi = w0.obj ? NET.lo.indexOf(w0.obj._q) : -1; if (qi >= 0) { NET.lo.splice(qi, 1); NET.hi.unshift(w0.obj._q); netGo(); } } return w0.p; }
+  if (MWAIT[id]) { var w0 = MWAIT[id]; if (top && !w0.top) { w0.top = true; var qi = w0.obj ? NET.lo.indexOf(w0.obj._q) : -1; if (qi >= 0) { NET.lo.splice(qi, 1); w0.obj._q.top = true; NET.hi.unshift(w0.obj._q); netGo(); } } return w0.p; }
   var w = { top: !!top }; MWAIT[id] = w;
   w.p = (async function(){
     var key = 'https://fac.media/' + id + (k === 'img' ? '-t' : '');
     try { if (MCACHE) { var hit = await MCACHE.match(key); if (hit) { var bl = await hit.blob(); return { url: (MEDIA[id] = URL.createObjectURL(bl)) }; } } } catch(e){}
-    w.obj = { op: 'media', file: id, full: k === 'img' ? 0 : 1 }; var j = await call(w.obj, null, w.top);
+    w.obj = { op: 'media', file: id, full: k === 'img' ? 0 : 1, pre: pre && !top ? 1 : 0 }; var j = await call(w.obj, null, w.top);
     delete MWAIT[id];
     if (!j.ok) return { err: j.error, link: j.link };
     var blob = b64blob(j.b64, j.type || (k === 'audio' ? 'audio/mp4' : k === 'video' ? 'video/mp4' : 'image/jpeg'));
@@ -531,8 +531,9 @@ function getMedia(id, k, top){
 var MIO = window.IntersectionObserver ? new IntersectionObserver(function(es){ es.forEach(function(en){ if (en.isIntersecting) { MIO.unobserve(en.target); loadMedia(en.target, false); } }); }, { rootMargin: '300px' }) : null;
 function autoMedia(){
   document.querySelectorAll('#thread .fph[data-k="img"]').forEach(function(e){ if (MIO) MIO.observe(e); else loadMedia(e, false); });
-  var au = Array.from(document.querySelectorAll('#thread .fph[data-k="audio"]')).slice(-3);      // newest voice notes ready before the tap
-  au.forEach(function(e){ getMedia(e.dataset.f, 'audio', false).then(function(r){ if (r.url && e.isConnected && !e.dataset.busy) e.textContent = '▶ voice note · ready · ভয়েস নোট'; }); });
+  var au = Array.from(document.querySelectorAll('#thread .fph[data-k="audio"]')).slice(-3).reverse();   // newest voice note first, one at a time
+  (async function(){ for (var i = 0; i < au.length; i++) { var e = au[i]; if (!e.isConnected || MEDIA[e.dataset.f]) { if (MEDIA[e.dataset.f] && e.isConnected && !e.dataset.busy) e.textContent = '▶ voice note · ready · ভয়েস নোট'; continue; }
+    var r = await getMedia(e.dataset.f, 'audio', false, true); if (r.url && e.isConnected && !e.dataset.busy) e.textContent = '▶ voice note · ready · ভয়েস নোট'; } })();
 }
 async function loadMedia(e, tap){
   var id = e.dataset.f, k = e.dataset.k; if (e.dataset.busy) return; e.dataset.busy = '1';
