@@ -466,7 +466,7 @@ function fac(reqText, P) {
       var ddm = facDm(P, FT); if (!ddm) return out({ ok: false, error: 'no direct chat channel chosen yet' });
       var dms = facDmMsgs(P, FT, ddm, false).filter(function (m) { return !req.since || +m.ts > +req.since; });
       var dlast = dms.reduce(function (a, m) { return +m.ts > +a ? m.ts : a; }, req.since || '0');
-      if (+dlast > 0) facSeen(P, String(req.who || ''), 'dm', dlast); else if (!req.since) facSeen(P, String(req.who || ''), 'dm', String(Date.now() / 1000));
+      if (req.look !== 0) { if (+dlast > 0) facSeen(P, String(req.who || ''), 'dm', dlast); else if (!req.since) facSeen(P, String(req.who || ''), 'dm', String(Date.now() / 1000)); }
       return out({ ok: true, ch: ddm.ch, name: ddm.name, msgs: dms.map(function (m) { return facMsg(P, FT, m, null); }) });
     }
     if (req.op === 'post' && req.card === 'dm') {             // a line into the direct chat
@@ -489,7 +489,7 @@ function fac(reqText, P) {
       if (!rp.ok) return out({ ok: false, error: rp.error === 'ratelimited' ? 'Slack is busy - trying again in a few seconds' : 'Slack said ' + rp.error });
       var ms = (rp.messages || []).filter(function (m) { return !req.since || m.ts !== String(req.since); }).map(function (m) { return facMsg(P, FT, m, th.ts); });
       var lastTs = (rp.messages || []).reduce(function (a, m) { return +m.ts > +a ? m.ts : a; }, req.since || th.ts);
-      facSeen(P, String(req.who || ''), tc, lastTs);                // this person has now seen the thread up to here (shared by all their phones)
+      if (req.look !== 0) facSeen(P, String(req.who || ''), tc, lastTs);   // seen only when the person is really looking (15 Oct 2026: a chat left open on another phone / in the background used to swallow the alert)
       return out({ ok: true, ch: th.ch, ts: th.ts, msgs: ms });
     }
     if (req.op === 'post') {                                  // a text line from the factory phone into the thread, shown as "*Name:* text"
@@ -1215,7 +1215,7 @@ function facDiag() {
   var P = PropertiesService.getScriptProperties(), FT = P.getProperty('SLACK_FACTORY_TOKEN'), c = CacheService.getScriptCache(), L = [];
   var dm = JSON.parse(P.getProperty('FAC_DM') || 'null'); L.push('direct chat: ' + JSON.stringify(dm));
   L.push('slack push seen: ' + (P.getProperty('FAC_EVENTS_ON') ? new Date(+P.getProperty('FAC_EVENTS_ON')).toISOString() : 'NEVER') + ' · gen ' + facGen() + ' · slow-down ' + (c.get('FAC_RL') || 'no'));
-  L.push('notify people: ' + Object.keys(JSON.parse(P.getProperty('FNTFY') || '{}')).join(',') + ' · timers: ' + ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); }).join(','));
+  L.push('notify people: ' + Object.keys(JSON.parse(P.getProperty('FNTFY') || '{}')).join(','));
   ['ABBAS'].forEach(function (w) { var r = JSON.parse(P.getProperty('FSEEN_' + w) || '{}'); L.push('seen ' + w + ': first use ' + r._t0 + ' · dm ' + r.dm + ' · v ' + r._v); });
   if (dm && FT) {
     var h = slackApi(FT, 'conversations.history', { channel: dm.ch, limit: 8 }, true);
@@ -1226,5 +1226,13 @@ function facDiag() {
   try { L.push('unread ABBAS: ' + JSON.stringify(facUnread(P, FT, lc ? JSON.parse(lc).cards : [], 'Abbas', true))); } catch (e) { L.push('unread error: ' + e.message); }
   var cut = slackApi(FT, 'conversations.history', { channel: DOX.CUTTING, limit: 5 }, true); L.push('#cutting ok=' + cut.ok + (cut.ok ? '' : ' err=' + cut.error));
   (cut.messages || []).forEach(function (m) { L.push('  root ' + m.ts + ' replies ' + (m.reply_count || 0) + ' last ' + (m.latest_reply || '-') + ' · ' + String(m.text || '').slice(0, 40).replace(/\n/g, ' ')); });
+  var since = Date.now() / 1000 - 3 * 3600;                     // everything written in the last 3 hours in every channel the bot is in
+  facChans(FT).filter(function (x) { return x.member; }).forEach(function (ch) {
+    var hh = slackApi(FT, 'conversations.history', { channel: ch.id, limit: 30 }, true); if (!hh.ok) { L.push('#' + ch.name + ' err ' + hh.error); return; }
+    (hh.messages || []).forEach(function (m) {
+      if (+m.ts > since) L.push('#' + ch.name + ' NEW top ' + m.ts + ' ' + String(m.text || '').slice(0, 50).replace(/\n/g, ' '));
+      if (m.latest_reply && +m.latest_reply > since) L.push('#' + ch.name + ' NEW reply in thread ' + m.ts + ' at ' + m.latest_reply + ' · card thread? ' + (Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('FTH_') === 0 && P.getProperty(k).indexOf(m.ts) >= 0; })[0] || 'NO') + ' · ' + String(m.text || '').slice(0, 40).replace(/\n/g, ' '));
+    });
+  });
   Logger.log(L.join('\n')); return L.join('\n');
 }
