@@ -383,7 +383,7 @@ function fac(reqText, P) {
         return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity, lb: (c.labels || []).filter(function (l) { return l.name; }).map(function (l) { return { n: l.name, c: l.color || '' }; }) };
       });
       var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: listIds, cards: outc, w: !!wtok, th: {}, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
-      try { bigPut(cache, 'FAC_LIST', JSON.stringify(res), 10); bigPut(cache, 'FAC_LIST_L', JSON.stringify(res), 3600); } catch (e) {}
+      try { bigPut(cache, 'FAC_LIST', JSON.stringify(res), 25); bigPut(cache, 'FAC_LIST_L', JSON.stringify(res), 3600); } catch (e) {}
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
       try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; }
