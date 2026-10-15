@@ -78,6 +78,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 #dm{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--gold,#b8860b);border-radius:16px;padding:11px 14px;margin-bottom:12px;cursor:pointer}#dm[hidden]{display:none}#dm .ic{width:42px;height:42px;border-radius:50%;background:#f3e7cf;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}#dm .t{flex:1;min-width:0}#dm .t b{display:block;font-size:16px;font-weight:800}#dm .t small{color:var(--mute);font-size:12.5px;display:block}#dm .t em{font-style:normal;color:var(--mute);font-size:13px}
 #dms .ch{display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-top:1px solid var(--line);font-size:15px}#dms .ch small{color:var(--mute);font-size:12px}#dms .ch.off{opacity:.55}#dms input{width:100%;margin-bottom:6px}
 #card.dm .hero,#card.dm .btns,#card.dm #bpin{display:none}#card.dm .thr{margin-top:0}
+.msg.nw .bub{box-shadow:0 0 0 2.5px #c0392b}.msg.nw .who:after{content:' · NEW';color:#c0392b;font-weight:800}
 #inbox{background:#fff;border:1.5px solid var(--red);border-radius:16px;padding:10px 12px;margin-bottom:12px}#inbox[hidden]{display:none}
 #inbox h3 button,#later h3 button{float:right;border:0;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800;color:#fff;background:var(--red)}#later h3 button{background:#b8860b}
 #later{background:#fff;border:1.5px solid #b8860b;border-radius:16px;padding:10px 12px;margin-bottom:12px}#later[hidden]{display:none}#later h3{margin:0 0 6px;font-size:14px;color:#8a6508}#later .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:15px}#later .row b{font-weight:800}#later .row small{color:var(--mute);font-size:12px;display:block}
@@ -160,7 +161,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15c';
+var VER = '2026-10-15d';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -442,13 +443,22 @@ $('mvl').onclick = function(e){ var b = e.target.closest('button[data-n]'); if (
 function unread(c){ var t = D.th && D.th[c.id]; return t && t.n ? t.n : 0; }      // what the relay says THIS person has not seen (shared by all their phones)
 function seen(c){ if (D.th && D.th[c.id]) { delete D.th[c.id]; } }
 var TH = { card: null, msgs: [], timer: null, busy: false, none: false }, MEDIA = {};
+// 15 Oct 2026 (Abbas: "the person just messaged me ... I open the app, no notification"): Ibrahim's voice note on SJ-17841 (16:24) was marked
+// "seen" by a chat that was left OPEN - the app in the background / on another screen - so Catch up never showed it. Now a chat counts as
+// seen only when the person is really looking: page on screen for 1.5 s and a touch / key / scroll in the last 60 s. A new line arriving
+// in an open chat is highlighted, with the tone.
+var LOOK = { act: Date.now(), vis: Date.now() };
+['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(function(ev){ document.addEventListener(ev, function(){ LOOK.act = Date.now(); }, { passive: true, capture: true }); });
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) LOOK.vis = Date.now(); });
+window.__LOOK = LOOK;
+function looking(){ return !document.hidden && Date.now() - LOOK.vis > 1500 && Date.now() - LOOK.act < 60000; }
 var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
-function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = THC[c.id] || []; PEND.length = 0; pendDraw(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 4000); }
+function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = THC[c.id] || []; PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (!document.hidden) thPull(); }, 4000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 async function thPull(){
   var c = TH.card; if (!c || (TH.busy && Date.now() - TH.busy < 30000)) return; TH.busy = Date.now();
   var real = TH.msgs.filter(function(m){ return !m.pend; }), last = real.length ? real[real.length - 1].ts : '';
-  var j = await call({ op: 'thread', card: c.id, since: last });
+  var look = looking(), j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0 });
   TH.busy = 0; if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; }
   if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = '<div class="empty" style="padding:14px">⏳ ' + esc(j.error) + '<br>আবার চেষ্টা করা হচ্ছে…</div>'; return; }
   $('tmsg').textContent = '';
@@ -457,7 +467,9 @@ async function thPull(){
   var have = {}; TH.msgs.forEach(function(m){ have[m.ts] = 1; }); var add = (j.msgs || []).filter(function(m){ return !have[m.ts]; });
   if (!add.length && TH.msgs.length) return;
   if (!add.length && !TH.msgs.length) { $('thread').innerHTML = '<div class="empty" style="padding:14px">No messages yet — write the first one.<br>এখনো কোনো মেসেজ নেই</div>'; $('tcount').textContent = ''; return; }
-  var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thDraw(); seen(c); draw();
+  var fresh = last ? add.filter(function(m){ return !m.sys && !isMe(m); }) : []; fresh.forEach(function(m){ m.nw = 1; });
+  var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thDraw(); if (look) seen(c); draw();
+  if (fresh.length) { beep(); toast('💬 New: ' + (fresh[fresh.length - 1].who || '') + ' · নতুন মেসেজ'); }
 }
 function firstName(x){ return String(x || '').trim().split(/[\s·]+/)[0].toUpperCase(); }
 function nrm(x){ return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
@@ -474,7 +486,7 @@ function bubble(m){
     else body += '<div class="fl">📎 ' + esc(f.name) + '</div>';
   });
   var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
-  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + '</div>') + '<div class="bub">' + body + '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span></div></div>';
+  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + '</div>') + '<div class="bub">' + body + '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span></div></div>';
 }
 function thDraw(){ $('thread').innerHTML = TH.msgs.map(bubble).join(''); $('tcount').textContent = TH.msgs.length + ' messages';
   var el = $('cbody'); setTimeout(function(){ el.scrollTop = el.scrollHeight; }, 30); autoMedia(); }
@@ -653,7 +665,7 @@ document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on t
 var POLLN = 0, PINGING = false, LASTTOT = -1;
 async function ping(fresh){ if (!PW || (PINGING && Date.now() - PINGING < 30000) || LOADING || !D.cards) return; PINGING = Date.now();
   var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (!j || !j.ok) return;
-  var th = j.th || {}; if (open) delete th[open.id];                 // the open chat is being read right now
+  var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
   D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; draw(); alertNew(); }
 function totUnread(){ return Object.keys(D.th || {}).reduce(function(a, k){ return a + ((D.th[k] || {}).n || 0); }, 0); }
 function alertNew(){ var t = totUnread(); document.title = (t ? '(' + t + ') ' : '') + 'AL MUTAGADED · Factory';
