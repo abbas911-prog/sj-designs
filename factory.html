@@ -162,7 +162,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15e';
+var VER = '2026-10-15f';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -194,8 +194,8 @@ async function hmacHex(key, msg){
 // before photos and attachments - before, a queue of cover-photo and chat-photo downloads could hold every connection and the chat waited behind them.
 var NET = { busy: 0, hi: [], lo: [], log: [] };
 function netGo(){ while (NET.busy < 4 && (NET.hi.length || NET.lo.length)) { NET.busy++; (NET.hi.length ? NET.hi : NET.lo).shift()(); } }
-async function call(obj, pw){
-  var lo = /^(img|media|atts)$/.test(obj.op); await new Promise(function(ok){ (lo ? NET.lo : NET.hi).push(ok); netGo(); });
+async function call(obj, pw, top){
+  var lo = !top && /^(img|media|atts)$/.test(obj.op); await new Promise(function(ok){ obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
   var t0 = Date.now(), res;
   try { res = await call0(obj, pw); } finally { NET.busy--; netGo(); }
   NET.log.unshift({ op: obj.op, ms: Date.now() - t0, ok: !!(res && res.ok), e: res && !res.ok ? String(res.error || '').slice(0, 60) : '', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
@@ -207,13 +207,13 @@ async function call0(obj, pw){
     if (n) await sleep(2000 * n);
     try {
       // 15 Oct 2026: a request that never comes back (phone locked / app in the background / weak LTE) used to keep "Loading chat…" forever - every try now has a time limit
-      var ac = window.AbortController ? new AbortController() : null, lim = /^(up|sample|attach|media)$/.test(obj.op) ? 120000 : /^(thread|ping|post)$/.test(obj.op) ? 12000 : 25000, tm = ac ? setTimeout(function(){ ac.abort(); }, lim) : null;
+      var ac = window.AbortController ? new AbortController() : null, lim = /^(up|sample|attach)$/.test(obj.op) ? 120000 : obj.op === 'media' ? 45000 : /^(thread|ping|post)$/.test(obj.op) ? 12000 : 25000, tm = ac ? setTimeout(function(){ ac.abort(); }, lim) : null;
       var r = await fetch(RELAY, { method: 'POST', body: JSON.stringify({ job: 'fac', req: req, sig: sig }), cache: 'no-store', credentials: 'omit', signal: ac ? ac.signal : undefined });
       var t = await r.text(), j = null; clearTimeout(tm); try { j = JSON.parse(t); } catch(e){}
       if (j && j.relay === 'sj-memo' && Object.keys(j).length <= 2) { last = 'Google passed the request on without its contents'; continue; }
       if (j) return j;
       last = 'Google sent a web page instead of an answer (' + r.status + ')';
-    } catch(e){ clearTimeout(tm); last = e.name === 'AbortError' ? 'no answer in ' + Math.round(lim / 1000) + ' s' : e.message; if (obj.op === 'ping') break; }
+    } catch(e){ clearTimeout(tm); last = e.name === 'AbortError' ? 'no answer in ' + Math.round(lim / 1000) + ' s' : e.message; if (obj.op === 'ping' || (obj.op === 'media' && n >= 1)) break; }
   }
   return { ok: false, error: last + ' — check the internet and try again' };
 }
@@ -491,16 +491,45 @@ function bubble(m){
 }
 function thDraw(){ $('thread').innerHTML = TH.msgs.map(bubble).join(''); $('tcount').textContent = TH.msgs.length + ' messages';
   var el = $('cbody'); setTimeout(function(){ el.scrollTop = el.scrollHeight; }, 30); autoMedia(); }
-function autoMedia(){ document.querySelectorAll('#thread .fph[data-k="img"]').forEach(function(e){ loadMedia(e); }); }
-async function loadMedia(e){
+// 15 Oct 2026 (Abbas: "been waiting more than one minute opening a voice note, it is still loading"): (1) a voice note / video he TAPS jumps to the
+// front of the queue (before, it waited behind every chat photo and cover download); (2) voice notes are played from a blob URL - iPhone Safari
+// can hang on "loading" with a big data: URL; (3) the newest voice notes of an open chat are fetched in the background, so a tap plays at once;
+// (4) every voice note / photo fetched is kept on the phone (Cache Storage), so it never downloads twice; (5) new recordings are made at 32 kbit/s
+// (a 1-minute note ≈ 240 KB instead of ~1 MB), so sending and opening are 3-4x faster.
+var MCACHE = null; try { if (window.caches) caches.open('fac-media-1').then(function(c){ MCACHE = c; }); } catch(e){}
+function b64blob(b64, type){ var bin = atob(b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new Blob([u8], { type: type }); }
+var MWAIT = {};
+function getMedia(id, k, top){
+  if (MEDIA[id]) return Promise.resolve({ url: MEDIA[id] });
+  if (MWAIT[id]) { var w0 = MWAIT[id]; if (top && !w0.top) { w0.top = true; var qi = w0.obj ? NET.lo.indexOf(w0.obj._q) : -1; if (qi >= 0) { NET.lo.splice(qi, 1); NET.hi.unshift(w0.obj._q); netGo(); } } return w0.p; }
+  var w = { top: !!top }; MWAIT[id] = w;
+  w.p = (async function(){
+    var key = 'https://fac.media/' + id + (k === 'img' ? '-t' : '');
+    try { if (MCACHE) { var hit = await MCACHE.match(key); if (hit) { var bl = await hit.blob(); return { url: (MEDIA[id] = URL.createObjectURL(bl)) }; } } } catch(e){}
+    w.obj = { op: 'media', file: id, full: k === 'img' ? 0 : 1 }; var j = await call(w.obj, null, w.top);
+    delete MWAIT[id];
+    if (!j.ok) return { err: j.error, link: j.link };
+    var blob = b64blob(j.b64, j.type || (k === 'audio' ? 'audio/mp4' : k === 'video' ? 'video/mp4' : 'image/jpeg'));
+    try { if (MCACHE && blob.size < 8 * 1024 * 1024) MCACHE.put(key, new Response(blob, { headers: { 'Content-Type': blob.type } })); } catch(e){}
+    return { url: (MEDIA[id] = URL.createObjectURL(blob)) };
+  })();
+  return w.p;
+}
+var MIO = window.IntersectionObserver ? new IntersectionObserver(function(es){ es.forEach(function(en){ if (en.isIntersecting) { MIO.unobserve(en.target); loadMedia(en.target, false); } }); }, { rootMargin: '300px' }) : null;
+function autoMedia(){
+  document.querySelectorAll('#thread .fph[data-k="img"]').forEach(function(e){ if (MIO) MIO.observe(e); else loadMedia(e, false); });
+  var au = Array.from(document.querySelectorAll('#thread .fph[data-k="audio"]')).slice(-3);      // newest voice notes ready before the tap
+  au.forEach(function(e){ getMedia(e.dataset.f, 'audio', false).then(function(r){ if (r.url && e.isConnected && !e.dataset.busy) e.textContent = '▶ voice note · ready · ভয়েস নোট'; }); });
+}
+async function loadMedia(e, tap){
   var id = e.dataset.f, k = e.dataset.k; if (e.dataset.busy) return; e.dataset.busy = '1';
-  var have = MEDIA[id]; if (!have) { e.textContent = k === 'video' ? '⏳ loading video…' : '…'; var j = await call({ op: 'media', file: id, full: k === 'audio' || k === 'video' ? 1 : 0 });
-    if (!j.ok) { if (j.link) { e.textContent = (j.error === 'file too big' ? 'Video too big for the app — ' : '') + 'open in Slack ↗'; e.dataset.busy = ''; e.onclick = function(ev){ ev.stopPropagation(); window.open(j.link, '_blank'); }; } else { e.textContent = 'could not load'; e.dataset.busy = ''; } return; }
-    if (k === 'video') { var bin = atob(j.b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); have = MEDIA[id] = URL.createObjectURL(new Blob([u8], { type: j.type || 'video/mp4' })); }   // a blob URL, not a data: URL - phones choke on 10 MB data: videos
-    else have = MEDIA[id] = 'data:' + (j.type || (k === 'audio' ? 'audio/mp4' : 'image/jpeg')) + ';base64,' + j.b64; }
-  if (k === 'img') { var im = document.createElement('img'); im.src = have; im.dataset.f = id; e.replaceWith(im); }
-  else if (k === 'video') { var vd = document.createElement('video'); vd.controls = true; vd.playsInline = true; vd.setAttribute('playsinline', ''); vd.src = have; vd.style.cssText = 'max-width:230px;max-height:300px;border-radius:10px;display:block;background:#000'; e.replaceWith(vd); vd.play().catch(function(){}); }
-  else { var au = document.createElement('audio'); au.controls = true; au.src = have; e.replaceWith(au); au.play().catch(function(){}); }
+  if (!MEDIA[id]) e.textContent = k === 'video' ? '⏳ loading video…' : k === 'audio' ? '⏳ loading voice note…' : '…';
+  var r = await getMedia(id, k, tap !== false);
+  if (!r.url) { if (r.link) { e.textContent = (r.err === 'file too big' ? 'Video too big for the app — ' : '') + 'open in Slack ↗'; e.dataset.busy = ''; e.onclick = function(ev){ ev.stopPropagation(); window.open(r.link, '_blank'); }; } else { e.textContent = '↻ could not load — tap to try again'; e.dataset.busy = ''; } return; }
+  if (!e.isConnected) return;
+  if (k === 'img') { var im = document.createElement('img'); im.src = r.url; im.dataset.f = id; e.replaceWith(im); }
+  else if (k === 'video') { var vd = document.createElement('video'); vd.controls = true; vd.playsInline = true; vd.setAttribute('playsinline', ''); vd.src = r.url; vd.style.cssText = 'max-width:230px;max-height:300px;border-radius:10px;display:block;background:#000'; e.replaceWith(vd); vd.play().catch(function(){}); }
+  else { var au = document.createElement('audio'); au.controls = true; au.preload = 'auto'; au.src = r.url; e.replaceWith(au); au.play().catch(function(){}); }
 }
 $('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f); };
 async function openBig(src, fid){ $('viewer').hidden = false; $('vimg').src = src || ''; if (fid) { var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && !$('viewer').hidden && /^image/.test(j.type || 'image')) $('vimg').src = 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64; } }
@@ -588,7 +617,12 @@ async function sendAll(){
   TH.msgs = TH.msgs.filter(function(m){ return m !== pm; }); setTimeout(thPull, 800);
 }
 $('send').onclick = sendAll;
-$('txt').addEventListener('blur', function(){ setTimeout(function(){ vvFit(); window.scrollTo(0, 0); }, 80); });
+// 15 Oct 2026 (screenshot 17:10): after typing, the card stayed squeezed to the keyboard height and the card list showed underneath - iPhone does not
+// always report the keyboard closing. When nothing is being typed any more, the card goes back to full screen, whatever the phone reports.
+function vvReset(){ var a = document.activeElement; if (a && /^(TEXTAREA|INPUT)$/.test(a.tagName)) return; var el = $('card'); el.style.height = ''; el.style.top = ''; window.scrollTo(0, 0); }
+$('txt').addEventListener('blur', function(){ setTimeout(vvReset, 80); setTimeout(vvReset, 400); setTimeout(vvReset, 900); });
+document.addEventListener('focusout', function(){ setTimeout(vvReset, 400); });
+setInterval(function(){ if (!$('card').hidden && $('card').style.height) vvReset(); }, 1500);
 $('txt').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey && !/Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) { e.preventDefault(); sendAll(); } };
 $('bprob').onclick = function(){ $('probs').hidden = false; };
 $('probx').onclick = function(){ $('probs').hidden = true; };
@@ -602,7 +636,7 @@ var REC = { r: null, chunks: [], t0: 0 };
 async function recStart(){ if (REC.r) return; REC.t0 = Date.now();
   try { var st = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch(e){ toast('Allow the microphone · মাইক্রোফোনের অনুমতি দিন'); return; }
   var type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].filter(function(t){ return window.MediaRecorder && MediaRecorder.isTypeSupported(t); })[0] || '';
-  REC.chunks = []; REC.r = new MediaRecorder(st, type ? { mimeType: type } : {}); REC.r.ondataavailable = function(e){ if (e.data.size) REC.chunks.push(e.data); };
+  REC.chunks = []; var ro = { audioBitsPerSecond: 32000 }; if (type) ro.mimeType = type; try { REC.r = new MediaRecorder(st, ro); } catch(e2){ REC.r = new MediaRecorder(st, type ? { mimeType: type } : {}); } REC.r.ondataavailable = function(e){ if (e.data.size) REC.chunks.push(e.data); };
   REC.r.onstop = function(){ st.getTracks().forEach(function(x){ x.stop(); }); var sec = Math.round((Date.now() - REC.t0) / 1000), mt = REC.r.mimeType || type || 'audio/mp4', blob = new Blob(REC.chunks, { type: mt }); REC.r = null;
     if (sec < 1 || blob.size < 1000) { toast('Too short · খুব ছোট'); return; }
     pendAdd(blob, 'voice-' + Date.now() + (/mp4/.test(mt) ? '.m4a' : /ogg/.test(mt) ? '.ogg' : '.webm'), 'audio'); };
