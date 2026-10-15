@@ -160,7 +160,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-15b';
+var VER = '2026-10-15c';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -188,7 +188,18 @@ async function hmacHex(key, msg){
   var k = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg)))).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
 }
+// 15 Oct 2026 (Abbas: "still lagging"): at most 4 relay requests at a time from this phone, and the chat / sending / "anything new?" always go
+// before photos and attachments - before, a queue of cover-photo and chat-photo downloads could hold every connection and the chat waited behind them.
+var NET = { busy: 0, hi: [], lo: [], log: [] };
+function netGo(){ while (NET.busy < 4 && (NET.hi.length || NET.lo.length)) { NET.busy++; (NET.hi.length ? NET.hi : NET.lo).shift()(); } }
 async function call(obj, pw){
+  var lo = /^(img|media|atts)$/.test(obj.op); await new Promise(function(ok){ (lo ? NET.lo : NET.hi).push(ok); netGo(); });
+  var t0 = Date.now(), res;
+  try { res = await call0(obj, pw); } finally { NET.busy--; netGo(); }
+  NET.log.unshift({ op: obj.op, ms: Date.now() - t0, ok: !!(res && res.ok), e: res && !res.ok ? String(res.error || '').slice(0, 60) : '', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
+  return res;
+}
+async function call0(obj, pw){
   obj.t = Date.now(); if (!obj.who) obj.who = WHO; var req = JSON.stringify(obj), sig = await hmacHex(pw || PW, req), last = '';
   for (var n = 0; n < 4; n++) {
     if (n) await sleep(2000 * n);
@@ -225,15 +236,18 @@ function photo(c, el){
   ptxt(el, '…');
   // 13 Oct 2026 (Abbas: 'the photos are not loading'): photos come from the site first (facthumbs/<id>.jpg, made every 20 min by the
   // fac-thumbs job, served instantly by GitHub Pages); only a card the job has not seen yet is fetched through the relay
+  if (IMGWANT[c.img] || (IMGFAIL[c.img] && Date.now() - IMGFAIL[c.img] < 600000)) { ptxt(el, IMGFAIL[c.img] ? 'photo?' : '…'); return; }
   var u = 'facthumbs/' + c.img + '.jpg', im = new Image();
   im.onload = function(){ IMG[c.img] = u; document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(' + u + ')'; ptxt(e, ''); }); };
-  im.onerror = function(){ IMGQ.push([c, el]); pump(); };
+  im.onerror = function(){ if (IMGWANT[c.img] || (IMGFAIL[c.img] && Date.now() - IMGFAIL[c.img] < 600000)) return; IMGWANT[c.img] = 1; IMGQ.push([c, el]); pump(); };
   im.src = u;
 }
 function imgSrc(v){ return /^facthumbs\//.test(v) ? v : 'data:image/jpeg;base64,' + v; }
+var IMGWANT = {}, IMGFAIL = {};
 function pump(){
-  while (imgBusy < 3 && IMGQ.length) { var x = IMGQ.shift(); imgBusy++;
+  while (imgBusy < 2 && IMGQ.length) { var x = IMGQ.shift(); imgBusy++;
     (function(c, el){ call({ op: 'img', card: c.id, att: c.img }).then(function(j){ imgBusy--;
+      delete IMGWANT[c.img]; if (!j.ok) IMGFAIL[c.img] = Date.now();
       if (j.ok) { IMG[c.img] = j.b64; if (j.b64.length < 150000) ls(imgKey(c), j.b64); document.querySelectorAll('[data-img="' + c.img + '"]').forEach(function(e){ e.style.backgroundImage = 'url(data:image/jpeg;base64,' + j.b64 + ')'; ptxt(e, ''); }); }
       else ptxt(el, 'photo?');
       pump(); }); })(x[0], x[1]); }
@@ -244,7 +258,7 @@ function pump(){
 // at once; the relay is asked in the background. One request at a time - a poll never starts while the last one is still out.
 var LOADING = false;
 var DMC = { id: 'dm', dm: true, name: 'Direct chat', l: '', pos: -1, f: {}, lb: [] };          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
-function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; $('bell').hidden = !j.tg; }
+function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; bellPaint(); }
 function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Last update · ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · refreshing…'; draw(); return true; } catch(e){ return false; } }
 async function load(fresh){
   if (LOADING && Date.now() - LOADING < 30000) return false; LOADING = Date.now();
@@ -329,6 +343,8 @@ function draw(force){
 $('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; ls('sj_fac_chip', String(cur)); $('q').value = ''; draw(); window.scrollTo(0, 0); var on = document.querySelector('#stages button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' }); };
 $('q').oninput = draw;
 $('list').onclick = function(e){ var r = e.target.closest('.cardrow'); if (r) openCard(D.byId[r.dataset.id]); };
+$('msg').onclick = function(){ var L = NET.log.slice(0, 20); if (!L.length) return; alertBox('Last requests · speed', L.map(function(x){ return (x.at.getHours() + ':' + ('0' + x.at.getMinutes()).slice(-2) + ':' + ('0' + x.at.getSeconds()).slice(-2)) + '  ' + x.op + '  ' + (x.ms / 1000).toFixed(1) + ' s  ' + (x.ok ? '✓' : '✗ ' + x.e); }).join('\n')); };
+function alertBox(t, body){ $('tg').hidden = false; $('tg').querySelector('h3').textContent = t; $('tgbody').innerHTML = '<pre style="white-space:pre-wrap;font-size:12.5px;margin:0">' + esc(body) + '</pre>'; }
 $('rf').onclick = function(){ load(true).then(function(){ ping(true); }); };
 
 // ----- card screen -----
@@ -587,25 +603,36 @@ function recToggle(btn){ if (REC.r) { recStop(); return; } REC.btn = btn === $('
 $('mic').onclick = function(){ recToggle(this); };
 $('mic').oncontextmenu = function(e){ e.preventDefault(); };
 
-// ----- notifications: Telegram buzz when Abbas writes (linked once with a 6-letter code) -----
+// ----- notifications (15 Oct 2026, Abbas: "a work around for a notification for this app"): a web page cannot buzz a locked iPhone, so the
+// relay sends real phone notifications through the free ntfy app. 🔔 → install ntfy → subscribe to this person's secret topic → done.
 function devId(){ var d = ls('sj_fac_dev'); if (!d) { d = Math.random().toString(36).slice(2, 10); ls('sj_fac_dev', d); } return d; }
-var TG = { linked: ls('sj_fac_tg') === '1', timer: null };
-function bellPaint(){ $('bell').classList.toggle('on', TG.linked); }
+var NT = { on: ls('sj_fac_nt') === '1' };
+function bellPaint(){ $('bell').hidden = false; $('bell').classList.toggle('on', NT.on); }
+function ntTopic(){ var t = ls('sj_fac_ntt'); if (!t) { var a = new Uint8Array(12); crypto.getRandomValues(a); t = 'sjfac-' + Array.from(a).map(function(x){ return 'abcdefghjkmnpqrstuvwxyz23456789'.charAt(x % 31); }).join(''); ls('sj_fac_ntt', t); } return t; }
 $('bell').onclick = async function(){
-  $('tg').hidden = false; $('tgbody').innerHTML = 'Checking… · চেক হচ্ছে';
-  var j = await call({ op: 'tglink', dev: devId(), who: WHO, again: !TG.linked ? 0 : 1 });
-  if (!j.ok) { $('tgbody').innerHTML = '<span style="color:var(--red)">' + esc(j.error) + '</span>'; return; }
-  if (j.linked && !j.code) { TG.linked = true; ls('sj_fac_tg', '1'); bellPaint(); $('tgbody').innerHTML = '✅ This phone is linked. When Abbas writes on a card, Telegram buzzes with a link to it.<br>এই ফোন যুক্ত আছে।<br><br><button id="tgre" style="border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font:inherit">Link again · আবার যুক্ত করুন</button>'; $('tgre').onclick = function(){ TG.linked = false; ls('sj_fac_tg', null); $('bell').onclick(); }; return; }
-  var bot = j.bot ? 'https://t.me/' + j.bot : '';
-  $('tgbody').innerHTML = '1. Open Telegram' + (bot ? ' → <a href="' + bot + '" target="_blank" rel="noopener"><b>@' + esc(j.bot) + '</b></a>' : '') + ' and press <b>Start</b>.<br>2. Send this code to the bot:<div style="font-size:34px;font-weight:800;letter-spacing:.12em;text-align:center;margin:10px 0;color:var(--gold)">' + esc(j.code) + '</div>টেলিগ্রাম খুলুন, বটে Start চাপুন এবং এই কোড পাঠান।<div id="tgwait" style="color:var(--mute);margin-top:8px">Waiting for the code… · অপেক্ষা</div>';
-  clearInterval(TG.timer); var tries = 0;
-  TG.timer = setInterval(async function(){ if ($('tg').hidden || ++tries > 40) { clearInterval(TG.timer); return; } var c = await call({ op: 'tgcheck', dev: devId() });
-    if (c.ok && c.linked) { clearInterval(TG.timer); TG.linked = true; ls('sj_fac_tg', '1'); bellPaint(); $('tgbody').innerHTML = '✅ Linked! Telegram will buzz when Abbas writes on a card.<br>যুক্ত হয়েছে! আব্বাস লিখলে টেলিগ্রামে মেসেজ আসবে।'; toast('✓ Notifications on'); } }, 4000);
+  $('tg').hidden = false; $('tg').querySelector('h3').textContent = '🔔 Phone notifications · নোটিফিকেশন'; $('tgbody').innerHTML = 'Checking… · চেক হচ্ছে';
+  var g = await call({ op: 'ntfyget' }); if (!g.ok) { $('tgbody').innerHTML = '<span style="color:var(--red)">' + esc(g.error) + '</span>'; return; }
+  if (g.topic) ls('sj_fac_ntt', g.topic); NT.on = !!g.on; ls('sj_fac_nt', NT.on ? '1' : null); bellPaint();
+  var tp = ntTopic(), btn = 'style="display:block;width:100%;margin-top:8px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:11px;font:inherit;font-weight:700"';
+  $('tgbody').innerHTML = (NT.on ? '<div style="color:#2e7d32;font-weight:800;margin-bottom:6px">✅ On for ' + esc(WHO) + '</div>' : '')
+    + '<b>1.</b> Install <b>ntfy</b> from the App Store (free, no account) · <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">open App Store</a><br>'
+    + '<b>2.</b> In ntfy tap <b>＋</b>, paste this topic, tap <b>Subscribe</b>, allow notifications:'
+    + '<div style="font:700 17px/1.3 ui-monospace,Menlo,monospace;background:#f6efe2;border-radius:10px;padding:10px;margin:8px 0;word-break:break-all;text-align:center">' + esc(tp) + '</div>'
+    + '<button id="ntcopy" ' + btn + '>📋 Copy topic · কপি</button>'
+    + '<b style="display:block;margin-top:10px">3.</b><button id="nton" ' + btn + '>' + (NT.on ? '🔕 Turn off' : '🔔 Turn on for ' + esc(WHO)) + '</button>'
+    + (NT.on ? '<button id="nttest" ' + btn + '>🧪 Send a test</button>' : '')
+    + '<div style="color:var(--mute);font-size:12.5px;margin-top:10px">Each new message on a card or in the Direct chat, written by someone else, arrives as a notification · tap it to open that chat. ' + (g.events ? 'Slack push is on: about 5 s.' : 'Without Slack push: within about a minute.') + '<br>নতুন মেসেজ এলে ফোনে নোটিফিকেশন আসবে।<br>Keep the topic private — anyone with it could read the alerts.</div>';
+  $('ntcopy').onclick = async function(){ try { await navigator.clipboard.writeText(tp); toast('Copied · কপি হয়েছে'); } catch(e){ toast('Hold on the topic to copy'); } };
+  $('nton').onclick = async function(){ this.disabled = true; var j = await call({ op: 'ntfyset', topic: tp, on: NT.on ? 0 : 1 }); this.disabled = false;
+    if (!j.ok) { toast('✗ ' + j.error); return; } NT.on = !!j.on; ls('sj_fac_nt', NT.on ? '1' : null); bellPaint();
+    if (NT.on && j.timer && j.timer !== 'ok' && !j.events) toast('On · the 1-minute timer needs Abbas: run setupFacNotify once in Apps Script'); else toast(NT.on ? '✓ Notifications on · চালু' : 'Off · বন্ধ');
+    $('bell').onclick(); };
+  if ($('nttest')) $('nttest').onclick = async function(){ var j = await call({ op: 'ntfytest' }); toast(j.ok ? '✓ Sent — check the phone' : '✗ ' + (j.error || 'ntfy did not take it')); };
 };
-$('tgx').onclick = function(){ $('tg').hidden = true; clearInterval(TG.timer); };
+$('tgx').onclick = function(){ $('tg').hidden = true; };
 bellPaint();
 // a Telegram link opens the card straight away: factory.html#card=<id>
-function openFromHash(){ var m = (location.hash || '').match(/card=([0-9a-f]{24})/); if (!m) return false; var c = D.byId[m[1]]; if (c) { history.replaceState(null, '', location.pathname + location.search); openCard(c); return true; } return false; }
+function openFromHash(){ var m = (location.hash || '').match(/card=([0-9a-f]{24}|dm)/); if (!m) return false; var c = D.byId[m[1]]; if (c) { history.replaceState(null, '', location.pathname + location.search); openCard(c); return true; } return false; }
 window.addEventListener('hashchange', openFromHash);
 
 // ----- sign in once -----
@@ -643,7 +670,7 @@ async function checkVer(){ try { var t = await (await fetch('factory.html?t=' + 
   if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
 
 $('who').textContent = WHO;
-if (!PW) showLogin(); else { loadCached(); load(false); }
+if (!PW) showLogin(); else { if (loadCached()) openFromHash(); load(false); }
 checkVer();
 window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND };
 })();
