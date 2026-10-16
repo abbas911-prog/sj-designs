@@ -395,9 +395,27 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .svt th{font-size:10.5px;color:var(--mute);text-align:right;padding:7px 5px;border-bottom:1px solid var(--line)}.svt td{padding:7px 5px;border-bottom:1px solid #f0ebe3;text-align:right;white-space:nowrap}
 .svt th:nth-child(-n+2),.svt td:nth-child(-n+2){text-align:left}.svt td:nth-child(2){white-space:normal}.svt tr.op td{background:var(--goldbg);font-weight:700}
 .svt td button{border:0;background:#fbe9e6;color:#b4472a;font-size:13px;font-weight:800;width:28px;height:28px;border-radius:8px;padding:0}
+#ccbtn{border:1.5px solid var(--gold);background:#fff;color:var(--gold);border-radius:12px;height:42px;padding:0 10px;font:inherit;font-size:13px;font-weight:700;white-space:nowrap;flex:none;line-height:1.05}#ccbtn small{display:block;font-size:10px;font-weight:500}
+#cc{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column}#cc[hidden]{display:none}
+#cc .chd{display:flex;align-items:center;gap:10px;padding:12px 14px calc(10px);border-bottom:1px solid var(--line);background:#fff;padding-top:calc(12px + env(safe-area-inset-top))}
+#cc .chd button{border:0;background:none;font:inherit;font-size:16px;color:var(--gold);font-weight:700;padding:4px 2px}#cc .chd b{flex:1;font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#cc .chd b small{display:block;font-size:12px;color:var(--mute);font-weight:500}
+#ccbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 20px;max-width:720px;width:100%;margin:0 auto;box-sizing:border-box}
+#ccq{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;font:inherit;font-size:16px;margin-bottom:10px;background:#fff}
+.ccrow{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin-bottom:8px;cursor:pointer}
+.ccrow .av{width:40px;height:40px;border-radius:50%;background:#f3e7cf;color:#8E6C33;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.ccrow .t{flex:1;min-width:0}.ccrow b{display:block;font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ccrow small{display:block;color:var(--mute);font-size:12.5px}.ccrow .tm{font-size:12px;color:var(--mute);white-space:nowrap}
+.ccm{max-width:84%;margin:0 0 8px;padding:9px 11px;border-radius:14px;background:#fff;border:1px solid var(--line);font-size:15px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word}
+.ccm.me{margin-left:auto;background:#f6ecd8;border-color:#e6d3ac}.ccm .w{display:block;font-size:12px;font-weight:700;color:#8E6C33;margin-bottom:2px}.ccm .d{display:block;font-size:11px;color:var(--mute);margin-top:3px;text-align:right}
+.ccm.memo{max-width:100%;background:#fffaf0;border:1.5px solid var(--gold)}.ccm.pend{opacity:.6}
+.ccf{display:inline-flex;align-items:center;gap:6px;margin:6px 6px 0 0;border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13.5px;font-weight:700;background:#fff;color:var(--ink);cursor:pointer}
+.ccimg{display:block;max-width:230px;max-height:260px;border-radius:10px;margin-top:6px;background:#f1ebe0;min-width:120px;min-height:90px}
+#cccomp{display:flex;gap:8px;align-items:flex-end;padding:8px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff}#cccomp[hidden]{display:none}
+#cctxt{flex:1;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:16px;resize:none;max-height:120px;min-height:44px;box-sizing:border-box}
+#cccomp label,#cccomp button{flex:none;height:44px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:18px;padding:0 12px;display:flex;align-items:center;cursor:pointer}#ccsend{background:var(--gold)!important;color:#fff;border:0!important;font-size:15px!important;font-weight:800}
+#ccpend{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px}#ccpend span{font-size:12.5px;background:#f1ebe0;border-radius:999px;padding:4px 10px}
 </style></head><body>
 <header>
-  <div class="top"><h1 id="ttl">SJ<small>MEMO</small></h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button><button id="mybtn" type="button" hidden title="My shortcuts">★</button></div>
+  <div class="top"><h1 id="ttl">SJ<small>MEMO</small></h1><input id="name" placeholder="Customer name · اسم العميل" autocomplete="off"><button id="catbtn" type="button" hidden>Catalogue</button><button id="mybtn" type="button" hidden title="My shortcuts">★</button><button id="ccbtn" type="button" title="Customer chats">💬<small>Customers</small></button></div>
   <div class="srch"><input id="q" inputmode="numeric" placeholder="Search design · ابحث عن التصميم (e.g. 18634)" autocomplete="off"><span id="cnt"></span><button id="ffbtn" type="button" hidden title="50-50 bills">50·50</button><button id="rfr" type="button" title="Check Trello for new cards now">↻</button></div>
   <div class="tabs" id="tabs"><button type="button" data-t="r" class="on">READY <b id="nr"></b></button><button type="button" data-t="s">SAMPLES <b id="ns"></b></button></div>
   <div id="rfst"></div>
@@ -444,6 +462,8 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 <datalist id="custnames"></datalist>
 <div id="sv" hidden><div class="in"><div class="hd"><b>SMALL VENDORS · موردين صغار</b><button type="button" id="svx">Close</button></div><div id="svbody"></div></div></div>
 <div id="ords" hidden><div class="in"><div class="hd"><b>ORDERS · الطلبات</b><span><button type="button" id="ordre">↻</button><button type="button" id="ordx">Close</button></span></div><div class="otabs"><button type="button" data-o="open" class="on">Open</button><button type="button" data-o="done">Complete</button></div><div id="ordbody"></div></div></div>
+<div id="cc" hidden><div class="chd"><button type="button" id="ccback">‹ Back</button><b id="cct">Customers · العملاء</b><button type="button" id="ccre">↻</button></div><div id="ccbody"></div><div id="ccpend"></div>
+<div id="cccomp" hidden><label title="photo / file">📷<input type="file" id="ccfile" accept="image/*,video/*,audio/*,.pdf" multiple hidden></label><textarea id="cctxt" rows="1" placeholder="Write… · اكتب"></textarea><button type="button" id="ccsend">Send</button></div></div>
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
 <div id="done" hidden><div class="in">
   <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
@@ -712,7 +732,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-13d';
+var VER = '2026-10-17a';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -2817,6 +2837,71 @@ $('cashbody').addEventListener('change', async function(e){
   for (var i = 0; i < fs.length; i++) { var bl = await dorPhoto(fs[i]); CSH.photos.push({ url: URL.createObjectURL(bl), b64: await dorB64(bl) }); }
   cashPh(); cashUpd();
 });
+
+// ===== CUSTOMER CHATS (17 Oct 2026, Abbas: "add the #customers chat directly in there … when I send the list to customers and godown, that
+// PDF goes to #customer and #godown in Slack … I have the godown list but not the customers … I click on the customer, I have each and every
+// customer's list in which I can speak about that specific customer"). 💬 Customers (top right) → every customer (from the memos in Slack
+// #customer + the customer-balance names) → that customer's page: every ORDER MEMO PDF sent for them and ONE chat thread in #customer.
+var CC = { list: null, err: '', cur: '', msgs: [], timer: null, files: [], url: {}, busy: false };
+function ccCall(o, tries){ o.t = Date.now(); return relayJson('cchat', o, tries || 3); }
+function ccWhen(ts){ var d = new Date(+ts * 1000), n = new Date(), h = d.getHours(), m = d.getMinutes(), hm = ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' am' : ' pm'); return d.toDateString() === n.toDateString() ? hm : d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' · ' + hm; }
+$('ccbtn').onclick = function(){ $('cc').hidden = false; ccList(); };
+$('ccback').onclick = function(){ if (CC.cur) ccList(); else { $('cc').hidden = true; clearInterval(CC.timer); } };
+$('ccre').onclick = function(){ if (CC.cur) ccPull(true); else ccLoad(true); };
+async function ccLoad(fresh){ try { var j = await ccCall({ op: 'list', fresh: fresh ? 1 : 0 }); if (!j.ok) throw new Error(j.error); CC.list = j.customers || []; CC.err = ''; } catch(e){ CC.err = e.message; } if (!CC.cur) ccDrawList(); }
+function ccList(){ CC.cur = ''; clearInterval(CC.timer); $('cct').innerHTML = 'Customers · العملاء<small>memos and chats from Slack #customer</small>'; $('cccomp').hidden = true; $('ccpend').innerHTML = ''; ccDrawList(); ccLoad(false); }
+function ccDrawList(){
+  var q = ($('ccq') || {}).value || '', seen = {}, rows = (CC.list || []).slice();
+  rows.forEach(function(r){ seen[r.name.toUpperCase().trim()] = 1; });
+  Array.from($('custnames').options || []).forEach(function(o){ var n = String(o.value || '').trim(); if (n && !seen[n.toUpperCase()]) { seen[n.toUpperCase()] = 1; rows.push({ name: n, last: '0', memos: 0, chat: 0 }); } });
+  var qq = q.trim().toUpperCase(), L = rows.filter(function(r){ return !qq || r.name.toUpperCase().indexOf(qq) >= 0; });
+  var h = '<input id="ccq" placeholder="Search customer · ابحث عن عميل" autocomplete="off" value="' + esc(q) + '">';
+  if (qq && !rows.some(function(r){ return r.name.toUpperCase() === qq; })) h += '<div class="ccrow" data-n="' + esc(q.trim()) + '"><div class="av">＋</div><div class="t"><b>' + esc(q.trim()) + '</b><small>new customer chat · محادثة جديدة</small></div></div>';
+  if (CC.err) h += '<div class="stk bad">' + esc(CC.err) + '</div>';
+  else if (!CC.list) h += '<div class="ffempty">Loading customers… · جارٍ التحميل</div>';
+  h += L.map(function(r){ return '<div class="ccrow" data-n="' + esc(r.name) + '"><div class="av">' + esc(r.name.trim().charAt(0).toUpperCase()) + '</div><div class="t"><b>' + esc(r.name) + '</b><small>' + (r.memos ? r.memos + ' memo' + (r.memos > 1 ? 's' : '') : 'no memo yet') + (r.chat ? ' · ' + r.chat + ' message' + (r.chat > 1 ? 's' : '') : '') + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + '</span></div>'; }).join('');
+  if (CC.list && !L.length && !qq) h += '<div class="ffempty">No customers yet — the order memos sent to #customer appear here.</div>';
+  var had = document.activeElement && document.activeElement.id === 'ccq'; $('ccbody').innerHTML = h;
+  var qi = $('ccq'); qi.oninput = function(){ ccDrawList(); }; if (had) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+}
+$('ccbody').addEventListener('click', function(e){
+  var r = e.target.closest('.ccrow'); if (r && !CC.cur) { ccChat(r.dataset.n); return; }
+  var f = e.target.closest('[data-f]'); if (f) ccOpenFile(f.dataset.f, f.dataset.nm, f);
+});
+function ccChat(name){ CC.cur = name; CC.msgs = []; $('cct').innerHTML = esc(name) + '<small>customer chat · #customer</small>'; $('ccbody').innerHTML = '<div class="ffempty">Loading… · جارٍ التحميل</div>'; $('cccomp').hidden = false; ccPend(); ccPull(false); clearInterval(CC.timer); CC.timer = setInterval(function(){ if (!document.hidden && CC.cur) ccPull(false); }, 8000); }
+async function ccPull(fresh){ var name = CC.cur; if (!name || CC.busy) return; CC.busy = true;
+  try { var j = await ccCall({ op: 'thread', name: name, fresh: fresh ? 1 : 0 }, 2); if (CC.cur !== name) return; if (!j.ok) throw new Error(j.error);
+    var sig = JSON.stringify(j.msgs.map(function(m){ return m.ts; })); if (sig !== CC.sig || fresh) { CC.sig = sig; CC.msgs = j.msgs; ccDraw(); } }
+  catch(e){ if (CC.cur === name && !CC.msgs.length) $('ccbody').innerHTML = '<div class="stk bad">' + esc(e.message) + '</div>'; }
+  finally { CC.busy = false; } }
+function ccDraw(){ var b = $('ccbody'), atEnd = b.scrollHeight - b.scrollTop - b.clientHeight < 80, my = (me() || '').toUpperCase();
+  var h = CC.msgs.length ? '' : '<div class="ffempty">No memo or message for this customer yet. Write the first line below — it starts this customer\'s chat in Slack #customer.</div>';
+  h += CC.msgs.map(function(m){ var mine = !m.memo && my && String(m.who).toUpperCase() === my;
+    var fs = (m.files || []).map(function(f){ return /^image\//.test(f.type) ? '<img class="ccimg" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" alt="">' : '<span class="ccf" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '">' + (/pdf/.test(f.type + f.name) ? '📄 ' : /^audio/.test(f.type) ? '🎤 ' : /^video/.test(f.type) ? '🎬 ' : '📎 ') + esc(f.name.slice(0, 40)) + '</span>'; }).join('');
+    return '<div class="ccm' + (m.memo ? ' memo' : '') + (mine ? ' me' : '') + (m.pend ? ' pend' : '') + '"><span class="w">' + (m.memo ? '📄 ORDER MEMO' : esc(m.who)) + '</span>' + esc(m.text || '') + fs + '<span class="d">' + (m.pend ? '🕓 sending…' : ccWhen(m.ts)) + '</span></div>'; }).join('');
+  b.innerHTML = h; b.querySelectorAll('img.ccimg').forEach(ccThumb); if (atEnd || !CC.drawn) b.scrollTop = b.scrollHeight; CC.drawn = true; }
+async function ccGet(id, thumb){ var k = id + (thumb ? 't' : ''); if (CC.url[k]) return CC.url[k];
+  var j = await ccCall({ op: 'file', id: id, thumb: thumb ? 1 : 0 }, 2); if (!j.ok) throw Object.assign(new Error(j.error), { link: j.link });
+  var bin = atob(j.b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return (CC.url[k] = { u: URL.createObjectURL(new Blob([u8], { type: j.type })), type: j.type, name: j.name }); }
+async function ccThumb(img){ try { var r = await ccGet(img.dataset.f, true); img.src = r.u; } catch(e){ img.alt = 'photo'; } }
+async function ccOpenFile(id, nm, el){ var old = el.textContent; if (el.tagName !== 'IMG') el.textContent = '⏳ opening…';
+  try { var r = await ccGet(id, false); if (el.tagName !== 'IMG') el.textContent = old; var w = window.open(r.u, '_blank'); if (!w) { var a = document.createElement('a'); a.href = r.u; a.download = nm || 'file'; document.body.appendChild(a); a.click(); a.remove(); } }
+  catch(e){ if (el.tagName !== 'IMG') el.textContent = old; if (e.link) window.open(e.link, '_blank'); else alert(e.message); } }
+$('ccfile').onchange = function(){ Array.from(this.files || []).forEach(function(f){ CC.files.push(f); }); this.value = ''; ccPend(); };
+function ccPend(){ $('ccpend').innerHTML = CC.files.map(function(f, i){ return '<span data-i="' + i + '">' + (/^image/.test(f.type) ? '📷 ' : '📎 ') + esc(f.name.slice(0, 22)) + ' ✕</span>'; }).join(''); }
+$('ccpend').onclick = function(e){ var x = e.target.closest('[data-i]'); if (!x) return; CC.files.splice(+x.dataset.i, 1); ccPend(); };
+$('cctxt').addEventListener('input', function(){ this.style.height = 'auto'; this.style.height = Math.min(120, this.scrollHeight) + 'px'; });
+$('ccsend').onclick = async function(){ var name = CC.cur, txt = $('cctxt').value.trim(), files = CC.files.slice(); if (!name || (!txt && !files.length)) return;
+  var who = me() || (isOwner() ? 'Abbas' : 'SJ'), rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), pm = { ts: String(Date.now() / 1000), who: who, text: txt + (files.length ? (txt ? '\n' : '') + files.map(function(f){ return '📎 ' + f.name; }).join(' · ') : ''), pend: true };
+  CC.msgs.push(pm); ccDraw(); $('ccbody').scrollTop = 1e9; $('cctxt').value = ''; $('cctxt').style.height = ''; CC.files = []; ccPend();
+  try { var j;
+    if (files.length) { var fs = []; for (var i = 0; i < files.length; i++) fs.push({ name: files[i].name || 'photo.jpg', b64: await new Promise(function(ok, no){ var r = new FileReader(); r.onload = function(){ ok(String(r.result).split(',')[1] || ''); }; r.onerror = no; r.readAsDataURL(files[i]); }) });
+      j = await ccCall({ op: 'up', name: name, text: txt, who: who, files: fs, rid: rid }, 3); }
+    else j = await ccCall({ op: 'post', name: name, text: txt, who: who, rid: rid }, 3);
+    if (!j.ok) throw new Error(j.error);
+    CC.list = null; await ccPull(true);
+  } catch(e){ CC.msgs = CC.msgs.filter(function(m){ return m !== pm; }); ccDraw(); if (CC.cur === name) { $('cctxt').value = txt; CC.files = files; ccPend(); } alert('Not sent — ' + e.message); } };
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; }, cashRead: cashRead, cashVendor: cashVendor, vendors: CASH_VENDORS };
