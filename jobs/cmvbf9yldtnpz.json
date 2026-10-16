@@ -1,0 +1,13 @@
+{
+ "ok": false,
+ "error": "SJ-66038: 11+16+16+12 = 55 ✗ (card: 63) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.",
+ "errors": [
+  "SJ-66038: 11+16+16+12 = 55 ✗ (card: 63) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again."
+ ],
+ "report": [
+  "SJ-6668 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-51862 COMPLETE  16+12+16+12 = 56 ✓ (card: 56) → 3 complete sets + 8 pcs",
+  "SJ-75308 COMPLETE  12+4+0+0+12 = 28 ✓ (card: 28) → 2 complete sets + 4 pcs"
+ ],
+ "id": "cmvbf9yldtnpz"
+}
