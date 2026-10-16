@@ -84,6 +84,20 @@ var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a'
   ['READY 2', '699b35ceb77292db0289c473'], ['FINISH', '6527c5b41e630c094b619f5e'], ['FINISH SAMPLES', '68b77a221eef6fbb9a305e0e']],
   // every list is shown; the three "done" lists hold hundreds of cards, so only their newest 60 are sent
   LIMIT: { '65a121d2829a36ccacd05593': 60, '6527c5b41e630c094b619f5e': 60, '68b77a221eef6fbb9a305e0e': 60 } };
+// 16 Oct 2026 (Abbas: a return should be "just like a card … exactly like the START list"): two lists on the ALM board, RETURNS and RETURNS
+// BACK, made once by the relay (found by name if they already exist) and shown in the app after FINISH SAMPLES. Ids kept in FRET_LISTS.
+function facRetLists(P, wtok, make) {
+  var have = JSON.parse(P.getProperty('FRET_LISTS') || 'null');
+  var rcc = CacheService.getScriptCache(); if (!have && make && wtok && (!rcc.get('FRET_TRY') || make === 2)) { rcc.put('FRET_TRY', '1', 3600); try {
+    var ls = trApi('get', '/boards/' + FAC.BOARD + '/lists', { fields: 'name,closed', filter: 'open' }, wtok) || [], by = {};
+    ls.forEach(function (l) { by[String(l.name).trim().toUpperCase()] = l.id; });
+    var r1 = by['RETURNS'] || trApi('post', '/lists', { name: 'RETURNS', idBoard: FAC.BOARD, pos: 'bottom' }, wtok).id;
+    var r2 = by['RETURNS BACK'] || trApi('post', '/lists', { name: 'RETURNS BACK', idBoard: FAC.BOARD, pos: 'bottom' }, wtok).id;
+    if (r1 && r2) { have = { ret: r1, back: r2 }; P.setProperty('FRET_LISTS', JSON.stringify(have)); }
+  } catch (e) {} }
+  if (have && !FAC.LISTS.some(function (l) { return l[1] === have.ret; })) { FAC.LISTS.push(['RETURNS', have.ret], ['RETURNS BACK', have.back]); FAC.LIMIT[have.back] = 60; }
+  return have;
+}
 function facCf(tok) {                                         // custom-field names of the ALM board (cached 6 h)
   var c = CacheService.getScriptCache(), h = c.get('FAC_CF'); if (h) return JSON.parse(h);
   var m = {}; (trApi('get', '/boards/' + FAC.BOARD + '/customFields', {}, tok) || []).forEach(function (f) { m[f.id] = f.name; });
@@ -432,6 +446,7 @@ function fac0(reqText, P) {
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
   var rtok = P.getProperty('TRELLO') || P.getProperty('TRELLO_W'), wtok = P.getProperty('TRELLO_W');
   if (!rtok) return out({ ok: false, error: 'the relay has no Trello key' });
+  facRetLists(P, wtok, req.op === 'sample' && req.kind === 'ret' ? 2 : req.op === 'list');
   var ids = FAC.LISTS.map(function (l) { return l[1]; });
   try {
     if (req.op === 'list') {
@@ -708,7 +723,9 @@ function fac0(reqText, P) {
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
       var sname = String(req.name || '').trim().slice(0, 500), sdesc = String(req.desc || '').slice(0, 16000), swho = String(req.who || '').slice(0, 40) || 'factory';
       var sfs = Array.isArray(req.files) ? req.files : []; if (!sname || sfs.length > 10) return out({ ok: false, error: 'bad request' });
-      var scard2 = trApi('post', '/cards', { idList: FAC.LISTS[0][1], name: sname, desc: sdesc, pos: 'top' }, wtok);
+      var SRET = req.kind === 'ret', srl = SRET ? facRetLists(P, wtok, 2) : null; if (SRET && !srl) return out({ ok: false, error: 'could not make the RETURNS list on Trello' });
+      var SCH = SRET ? DOX.CUTTING : FAC.SAMPLES_CH, SLIST = SRET ? srl.ret : FAC.LISTS[0][1], SCHN = SRET ? '#cutting' : '#samples-discuss';
+      var scard2 = trApi('post', '/cards', { idList: SLIST, name: sname, desc: sdesc, pos: 'top' }, wtok);
       // Abbas 13 Oct: the Trello card gets ONLY a cover - the first photo, or a frame of the video (made on the phone) - everything else goes to Slack only
       var satt = 0; if (req.cover && req.cover.b64) { try {
         var cb = Utilities.base64Decode(String(req.cover.b64)), cn = String(req.cover.name || 'cover.jpg').replace(/[^\w.\-]/g, '_').slice(0, 60);
@@ -720,20 +737,21 @@ function fac0(reqText, P) {
         stot += sb.length; if (sb.length > 18 * 1024 * 1024 || stot > 40 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 18 MB each, 40 MB together)' });
         sids.push(slackUp(FT, sn, sb));
       }
-      var stext = '⭐ *SAMPLE* · ' + sname + (sdesc ? '\n' + sdesc : '') + '\n' + scard2.shortUrl + '\n_' + swho + ' · factory app_', sts = '';
+      var stext = (SRET ? '↩️ *RETURN* · pieces given back to the factory' + (sdesc ? '\n' + sdesc : '') + '\n_ফেরত - ঠিক করে ফেরত দিন_' : '⭐ *SAMPLE* · ' + sname + (sdesc ? '\n' + sdesc : '')) + '\n' + scard2.shortUrl + '\n_' + swho + ' · factory app_', sts = '';
       if (sids.length) {
         var sj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + FT }, muteHttpExceptions: true,
-          payload: { files: JSON.stringify(sids.map(function (f) { return { id: f }; })), channel_id: FAC.SAMPLES_CH, initial_comment: stext } }).getContentText());
-        if (!sj.ok) return out({ ok: false, error: 'Slack said ' + sj.error + (sj.error === 'not_in_channel' ? ' (invite the factory bot to #samples-discuss)' : ''), card: scard2.id });
-        try { var sh = (sj.files || [])[0].shares || {}, grp = sh.public || sh.private || {}, arr = grp[FAC.SAMPLES_CH] || []; sts = arr.length ? arr[0].ts : ''; } catch (e) {}
-        if (!sts) { Utilities.sleep(1200); var sh2 = slackApi(FT, 'conversations.history', { channel: FAC.SAMPLES_CH, limit: 20 }, true); var hit2 = (sh2.messages || []).filter(function (m) { return String(m.text || '').indexOf(scard2.shortUrl) >= 0; })[0]; if (hit2) sts = hit2.ts; }
+          payload: { files: JSON.stringify(sids.map(function (f) { return { id: f }; })), channel_id: SCH, initial_comment: stext } }).getContentText());
+        if (!sj.ok) return out({ ok: false, error: 'Slack said ' + sj.error + (sj.error === 'not_in_channel' ? ' (invite the factory bot to ' + SCHN + ')' : ''), card: scard2.id, list: SLIST });
+        try { var sh = (sj.files || [])[0].shares || {}, grp = sh.public || sh.private || {}, arr = grp[SCH] || []; sts = arr.length ? arr[0].ts : ''; } catch (e) {}
+        if (!sts) { Utilities.sleep(1200); var sh2 = slackApi(FT, 'conversations.history', { channel: SCH, limit: 20 }, true); var hit2 = (sh2.messages || []).filter(function (m) { return String(m.text || '').indexOf(scard2.shortUrl) >= 0; })[0]; if (hit2) sts = hit2.ts; }
       } else {
-        var sp = slackApi(FT, 'chat.postMessage', { channel: FAC.SAMPLES_CH, text: stext }); if (!sp.ok) return out({ ok: false, error: 'Slack said ' + sp.error + (sp.error === 'not_in_channel' ? ' (invite the factory bot to #samples-discuss)' : ''), card: scard2.id }); sts = sp.ts;
+        var sp = slackApi(FT, 'chat.postMessage', { channel: SCH, text: stext }); if (!sp.ok) return out({ ok: false, error: 'Slack said ' + sp.error + (sp.error === 'not_in_channel' ? ' (invite the factory bot to ' + SCHN + ')' : ''), card: scard2.id, list: SLIST }); sts = sp.ts;
       }
-      if (sts) P.setProperty('FTH_' + scard2.id, JSON.stringify({ ch: FAC.SAMPLES_CH, ts: sts }));       // that post IS the card's chat from now on
-      try { trApi('post', '/cards/' + scard2.id + '/actions/comments', { text: '⭐ Sample · ' + swho + ' (factory app) · posted in #samples-discuss' }, wtok); } catch (e) {}
+      if (sts) P.setProperty('FTH_' + scard2.id, JSON.stringify({ ch: SCH, ts: sts }));       // that post IS the card's chat from now on
+      try { trApi('post', '/cards/' + scard2.id + '/actions/comments', { text: (SRET ? '↩️ Return · ' : '⭐ Sample · ') + swho + ' (factory app) · posted in ' + SCHN }, wtok); } catch (e) {}
       bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump();
-      return out({ ok: true, id: scard2.id, url: scard2.shortUrl, files: sids.length, att: satt });
+      if (SRET) facNudge(P, 'list:' + scard2.id);
+      return out({ ok: true, id: scard2.id, url: scard2.shortUrl, files: sids.length, att: satt, list: SLIST });
     }
     if (req.op === 'later') {                                 // pin / unpin a card on this person's LATER list (per person, shared by all their phones)
       var lc = req.card === 'dm' ? 'dm' : String(req.card || '').replace(/[^0-9a-f]/g, ''), lwho = String(req.who || '').trim().toUpperCase().slice(0, 40); if (!lc || !lwho) return out({ ok: false, error: 'bad request' });
