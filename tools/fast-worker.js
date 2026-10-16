@@ -25,12 +25,14 @@ async function trello(env, method, path, params) {
 }
 async function cfNames(env) { if (CF && Date.now() - CF_AT < 6 * 3600000) return CF; const m = {}; (await trello(env, 'get', '/boards/' + BOARD + '/customFields') || []).forEach(f => { m[f.id] = f.name; }); CF = m; CF_AT = Date.now(); return m; }
 async function tlist(env, q) {                                  // the cards of the app's lists, shaped exactly like the relay's list
-  const lists = Array.isArray(q.lists) ? q.lists.map(l => String(l[1] || '')).filter(x => /^[0-9a-f]{24}$/.test(x)) : []; if (!lists.length) return { ok: false, error: 'bad request' };
-  const limit = q.limit || {}, [cf, cards0] = await Promise.all([cfNames(env), trello(env, 'get', '/boards/' + BOARD + '/cards', { filter: 'open', limit: '1000', fields: 'name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels', customFieldItems: 'true', attachments: 'cover', attachment_fields: 'id,previews,mimeType' })]);
-  const per = {}; const cards = (cards0 || []).filter(c => lists.indexOf(c.idList) >= 0).sort((a, b) => a.pos - b.pos).filter(c => { const lim = +limit[c.idList]; if (!lim) return true; per[c.idList] = (per[c.idList] || 0) + 1; return per[c.idList] <= lim; });
-  return { ok: true, t: Date.now(), cards: cards.map(c => { const f = {}; (c.customFieldItems || []).forEach(it => { const n = cf[it.idCustomField], v = it.value || {}; const x = v.text != null ? v.text : v.number != null ? v.number : v.date || (v.checked === 'true' ? '✓' : null); if (n && x != null && String(x).trim() !== '') f[n] = String(x); });
-    const a = (c.attachments || [])[0], img = a && a.previews && a.previews.length ? a.id : '';
-    return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img, f, at: c.dateLastActivity, lb: (c.labels || []).filter(l => l.name).map(l => ({ n: l.name, c: l.color || '' })) }; }) };
+  // 17 Oct 2026: one call per list, no attachment details (the cover id is enough) - the whole-board answer was ~4 MB and went over the
+  // free plan's 10 ms CPU, so the worker failed and every phone fell back to the slow relay. The long "done" lists (FINISH, SAMPLE DONE,
+  // FINISH SAMPLES - the ones with a limit) are NOT read here: the phone keeps them from the relay's list (refreshed every 5 min).
+  const limit = q.limit || {}, lists = Array.isArray(q.lists) ? q.lists.map(l => String(l[1] || '')).filter(x => /^[0-9a-f]{24}$/.test(x) && !limit[x]) : []; if (!lists.length) return { ok: false, error: 'bad request' };
+  const [cf, per] = await Promise.all([cfNames(env), Promise.all(lists.map(id => trello(env, 'get', '/lists/' + id + '/cards', { fields: 'name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels', customFieldItems: 'true' })))]);
+  const cards = [].concat.apply([], per).sort((a, b) => a.pos - b.pos);
+  return { ok: true, t: Date.now(), covered: lists, cards: cards.map(c => { const f = {}; (c.customFieldItems || []).forEach(it => { const n = cf[it.idCustomField], v = it.value || {}; const x = v.text != null ? v.text : v.number != null ? v.number : v.date || (v.checked === 'true' ? '✓' : null); if (n && x != null && String(x).trim() !== '') f[n] = String(x); });
+    return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: c.idAttachmentCover || '', f, at: c.dateLastActivity, lb: (c.labels || []).filter(l => l.name).map(l => ({ n: l.name, c: l.color || '' })) }; }) };
 }
 async function tatts(env, q) {
   const id = String(q.card || '').replace(/[^0-9a-f]/g, ''); if (!id) return { ok: false, error: 'bad request' };
