@@ -504,13 +504,14 @@ function fac0(reqText, P) {
       var ck = 'FAC_IMG_' + aid + (req.big ? '_B' : ''), c2 = CacheService.getScriptCache(), have = c2.get(ck); if (have) return out({ ok: true, b64: have });
       var at = trApi('get', '/cards/' + cid + '/attachments/' + aid, { fields: 'previews,url,mimeType,bytes' }, rtok), pvs = (at.previews || []).slice().sort(function (x, y) { return x.width - y.width; });
       var pv = req.big ? pvs.slice(-1)[0] : (pvs.filter(function (p) { return p.width >= 300; })[0] || pvs.slice(-1)[0]);
-      if (!pv) return out({ ok: false, error: 'not a picture' });
+      if (!pv && /^image\//.test(at.mimeType || '') && (at.bytes || 0) <= 1800000 && at.url) pv = { url: at.url, width: 0 };   // 16 Oct: a brand-new photo whose Trello previews are not made yet - the original, if small
+      if (!pv) return out({ ok: false, error: /^image\//.test(at.mimeType || '') ? 'photo preview not ready yet' : 'not a picture' });
       // big = the sharpest we can get: Trello's largest preview, or the ORIGINAL file when the preview is small and the original is a photo under 8 MB (Abbas 13 Oct: "very blurry")
       var u = (req.big && pv.width < 1600 && /^image\//.test(at.mimeType || '') && (at.bytes || 0) <= 8 * 1024 * 1024 && at.url) ? at.url : pv.url;
       var r = UrlFetchApp.fetch(u, { muteHttpExceptions: true, headers: { Authorization: 'OAuth oauth_consumer_key="' + TKEY + '", oauth_token="' + rtok + '"' } });
       if (r.getResponseCode() !== 200) return out({ ok: false, error: 'photo: Trello said ' + r.getResponseCode() });
       var b64 = Utilities.base64Encode(r.getBlob().getBytes());
-      if (b64.length > (req.big ? 12000000 : 900000)) return out({ ok: false, error: 'photo too big' });
+      if (b64.length > (req.big ? 12000000 : 2600000)) return out({ ok: false, error: 'photo too big' });
       if (b64.length < 99000) c2.put(ck, b64, 21600);
       return out({ ok: true, b64: b64, type: at.mimeType || 'image/jpeg' });
     }
