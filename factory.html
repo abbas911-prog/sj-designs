@@ -181,7 +181,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 
 <script>
 (function(){
-var VER = '2026-10-17a';
+var VER = '2026-10-17b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -298,7 +298,7 @@ async function load(fresh){
   // (~0.3 s); the relay's slower list (new-message counts, Later, direct chat, settings) is fetched in the background every 5 min
   var j = null;
   if (fastTr() && D.lists && D.lists.length) { var fj = await fast({ op: 'tlist', lists: D.lists, limit: D.limit || {} });
-    if (fj && fj.ok) j = { ok: true, t: fj.t, lists: D.lists, show: D.show, limit: D.limit, cards: fj.cards, w: D.w, th: D.th, later: D.later, dm: D.dm, live: LIVE.topic, fast: FAST.url, via: 'fast' };
+    if (fj && fj.ok) j = { ok: true, t: fj.t, lists: D.lists, show: D.show, limit: D.limit, cards: fj.cards.concat((D.cards || []).filter(function(c){ return (fj.covered || []).indexOf(c.l) < 0; })), w: D.w, th: D.th, later: D.later, dm: D.dm, live: LIVE.topic, fast: FAST.url, via: 'fast' };
     else if (fj && fj.notrello) FAST.notr = Date.now() + 600000; }
   if (j && (fresh || Date.now() - (FAST.relAt || 0) > 300000)) { FAST.relAt = Date.now(); call({ op: 'list', fresh: !!fresh }).then(function(rj){ if (rj && rj.ok && !LOADING) { D.th = rj.th || D.th; D.later = rj.later || D.later; if (rj.dm !== undefined) D.dm = rj.dm; if (rj.limit) D.limit = rj.limit; if (rj.lists) D.lists = rj.lists; if (rj.show) D.show = rj.show; D.w = rj.w; if (rj.refs) refsSet(rj.refs, true); if (rj.fast !== undefined) fastSet(rj.fast); if (rj.live) liveStart(rj.live); draw(); } }); }
   if (!j) { j = await call({ op: 'list', fresh: !!fresh }); if (j && j.ok) FAST.relAt = Date.now(); }
@@ -523,10 +523,11 @@ async function fast(obj, force){
   if (file && !obj.top) { while (FAST.fb >= 3) await sleep(150); } if (file) FAST.fb++;
   try {
     var r = await fetch(FAST.url + (obj.op === 'file' ? '/f' : '/'), { method: 'POST', body: JSON.stringify(obj), cache: 'no-store', credentials: 'omit', signal: ac.signal });
+    if (!file && !r.ok && !/json/.test(r.headers.get('Content-Type') || '')) throw new Error('worker ' + r.status);
     if (file) { if (r.ok) { var bl = await r.blob(); j = { ok: true, blob: bl }; } else { try { j = await r.json(); } catch(e){ j = { ok: false, error: 'worker ' + r.status }; } } }
     else j = await r.json();
     if (j && j.auth) FAST.down = Date.now() + 600000; if (j && j.notrello) FAST.notr = Date.now() + 600000;              // the password changed: the relay is used until the next sign-in
-  } catch(e){ j = null; FAST.down = Date.now() + 20000; FAST.fail = { quick: e.name !== 'AbortError' && Date.now() - t0 < 3000 }; }
+  } catch(e){ j = null; if (/^t/.test(obj.op)) FAST.notr = Date.now() + 120000; else FAST.down = Date.now() + 20000; FAST.fail = { quick: e.name !== 'AbortError' && Date.now() - t0 < 3000 }; }   // a Trello hiccup never takes the chats off the fast lane
   finally { clearTimeout(tm); if (file) FAST.fb--; }
   NET.log.unshift({ op: '🚀' + obj.op, ms: Date.now() - t0, ok: !!(j && j.ok), e: j && !j.ok ? String(j.error || '').slice(0, 60) : j ? '' : 'no answer', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
   return j;
