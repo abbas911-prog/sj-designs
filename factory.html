@@ -112,6 +112,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 14px;border-radius:12px;font-size:14px;z-index:50;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center}.toast.show{opacity:1}
 #rets{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #6d4c41;border-radius:16px;padding:10px 14px;margin-bottom:12px;cursor:pointer}#rets[hidden]{display:none}
 #rets .ic{width:42px;height:42px;border-radius:50%;background:#efe5df;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}#rets .t{flex:1;min-width:0}#rets b{display:block;font-size:15px}#rets small{display:block;color:var(--mute);font-size:13px}
+#rets .rnew{border:0;border-radius:999px;background:#4e342e;color:#fff;font-weight:800;font-size:13px;padding:8px 12px;flex:none}#rets .newb{flex:none}
 #rets .rgo{font-size:13px;font-weight:800;color:#6d4c41}#rets.warn{border-color:#e0a100;background:#fffaf0}#rets.late{border-color:var(--red);background:#fff5f5}#rets.late small{color:var(--red);font-weight:700}#rets.none{border-style:dashed;border-color:var(--line);padding:7px 14px}#rets.none .ic{width:30px;height:30px;font-size:15px}
 .btns .bret{grid-column:1/-1;background:#efe5df;border:1.5px solid #c8b2a6;color:#4e342e}
 #cret{margin:0 0 10px}#cret[hidden]{display:none}#cret div{background:#fff7f0;border:1.5px solid #e0a100;border-radius:12px;padding:9px 12px;margin-bottom:6px;font-size:14px;cursor:pointer}#cret b{font-weight:800}
@@ -152,7 +153,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
     </div><input type="file" id="tfile" accept="image/*" multiple hidden>
     <div class="btns" style="margin-top:0"><button class="btrello" id="battach">📷 Add photo<small>ট্রেলোতে ছবি যোগ করুন</small></button><button class="btrello" id="bedit">✏️ Edit card<small>বিবরণ বদলান</small></button></div>
     <div class="btns" style="margin-top:0"><button class="btrello" id="bcopy">⧉ Copy card<small>কার্ড কপি করুন</small></button><button class="bprob" id="bprob">🚩 Problem<small>সমস্যা জানান</small></button></div>
-    <div class="btns" style="margin-top:0"><button class="bret" id="bret">↩️ Return pieces to factory<small>কারখানায় পিস ফেরত</small></button></div><div id="cret" hidden></div>
+
     <div class="thr"><h3><span id="thh" style="float:none;font-weight:700">CARD CHAT · কার্ড চ্যাট</span> <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
   <div class="compw"><div class="pend" id="pend"></div><div class="chint">🎤 tap to record, tap again to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo &nbsp;·&nbsp; 📎 files</div><div class="comp"><button class="mic" id="mic" title="tap to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Write or paste… · লিখুন"></textarea><button id="send">Send</button></div></div>
@@ -175,18 +176,11 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 <div class="sheet" id="dms" hidden><div class="in"><h3 id="dmh">💬 Direct chat · which Slack channel? · কোন চ্যানেল</h3><button class="go" id="dmnewb" style="margin:0 0 8px">👤 New direct chat with a person · নতুন সরাসরি চ্যাট</button><input id="dmq" placeholder="Search · খুঁজুন" autocomplete="off"><div id="dml" style="max-height:46vh;overflow:auto"><div class="empty">Loading…</div></div><div id="dmnote" style="font-size:12px;color:var(--mute);margin-top:6px">A private group shows here only when the bot is inside it — in Slack type <b>/invite @SJ Orders</b> in that group, or make a new chat above.</div><button class="x" id="dmx">Cancel</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
-<div class="sheet" id="rt" hidden><div class="in"><h3>↩️ Returns · ফেরত পিস</h3><div class="rtabs"><button data-t="open" class="on">At the factory · কারখানায়</button><button data-t="done">Back / closed · ফেরত এসেছে</button></div><button class="go" id="rtnew">＋ New return · নতুন ফেরত</button><div id="rtl"></div><button class="x" id="rtx">Close · বন্ধ</button></div></div>
-<div class="sheet" id="rn" hidden><div class="in"><h3>↩️ New return · নতুন ফেরত</h3><input id="rnno" placeholder="Design number, e.g. 58429 · ডিজাইন নম্বর" inputmode="numeric" autocomplete="off"><select id="rncard"></select>
-<input id="rnpcs" type="number" min="1" inputmode="numeric" placeholder="How many pieces? · কত পিস?"><input id="rncol" placeholder="Colour / size (optional) · রং / সাইজ" autocomplete="off">
-<div class="whys" id="rnwhy"></div><textarea id="rnnote" placeholder="What must be fixed? · কী ঠিক করতে হবে?" style="min-height:80px"></textarea>
-<div class="pend" id="rnpend"></div><label class="rnph">📷 Add photos / video of the fault · ছবি যোগ করুন<input type="file" id="rnfiles" accept="image/*,video/*" multiple hidden></label>
-<button class="go" id="rngo">↩️ Save return · সেভ করুন</button><button class="x" id="rnx">Cancel</button></div></div>
-<div class="sheet" id="rs" hidden><div class="in"><h3 id="rsh"></h3><div id="rsinfo" style="font-size:14px;color:var(--mute);margin-bottom:8px"></div><input id="rsn" type="number" min="1" inputmode="numeric" placeholder="Pieces · পিস"><input id="rsnote" placeholder="Note (optional) · নোট" autocomplete="off"><button class="go" id="rsgo">Save · সেভ</button><button class="x" id="rsx">Cancel</button></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
-var VER = '2026-10-16b';
+var VER = '2026-10-16c';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -200,11 +194,12 @@ var CHIPS = [['SAMPLES', ['SAMPLES'], 'স্যাম্পল'], ['SAMPLE DONE
   ['START', ['START'], 'শুরু'], ['CUTTING', ['CUTTING'], 'কাটিং'], ['IN LINE', ['IN LINE'], 'লাইন'],
   ['READY FOR HAND WORK', ['READY FOR HAND WORK'], 'হ্যান্ড ওয়ার্কের জন্য রেডি'], ['IN HAND WORK', ['IN HAND WORK'], 'হ্যান্ড ওয়ার্কে'],
   ['CAME FROM HAND WORK', ['CAME FROM HAND WORK'], 'হ্যান্ড ওয়ার্ক থেকে এসেছে'], ['IN LINE (2)', ['IN LINE (2)'], 'লাইন (2)'],
-  ['IRON / CHECK', ['IRON/CHECKING'], 'ইস্ত্রি · চেকিং'], ['READY', ['READY'], 'রেডি'], ['READY 2', ['READY 2'], 'রেডি 2'], ['FINISH', ['FINISH'], 'শেষ'], ['FINISH SAMPLES', ['FINISH SAMPLES'], 'স্যাম্পল শেষ']];
+  ['IRON / CHECK', ['IRON/CHECKING'], 'ইস্ত্রি · চেকিং'], ['READY', ['READY'], 'রেডি'], ['READY 2', ['READY 2'], 'রেডি 2'], ['FINISH', ['FINISH'], 'শেষ'], ['FINISH SAMPLES', ['FINISH SAMPLES'], 'স্যাম্পল শেষ'],
+  ['RETURNS', ['RETURNS'], 'ফেরত'], ['RETURNS BACK', ['RETURNS BACK'], 'ফেরত এসেছে']];
 var NEXT = { 'SAMPLES': 'SAMPLE DONE', 'START': 'CUTTING', 'CUTTING': 'IN LINE', 'IN LINE': 'IRON/CHECKING', 'READY FOR HAND WORK': 'IN HAND WORK', 'IN HAND WORK': 'CAME FROM HAND WORK',
-  'CAME FROM HAND WORK': 'IN LINE (2)', 'IN LINE (2)': 'IRON/CHECKING', 'IRON/CHECKING': 'READY', 'READY': 'FINISH', 'READY 2': 'FINISH', 'SAMPLE DONE': 'FINISH SAMPLES' };
+  'CAME FROM HAND WORK': 'IN LINE (2)', 'IN LINE (2)': 'IRON/CHECKING', 'IRON/CHECKING': 'READY', 'READY': 'FINISH', 'READY 2': 'FINISH', 'SAMPLE DONE': 'FINISH SAMPLES', 'RETURNS': 'RETURNS BACK' };
 var UR = { 'SAMPLES': 'স্যাম্পল', 'SAMPLE DONE': 'স্যাম্পল হয়ে গেছে', 'START': 'শুরু', 'CUTTING': 'কাটিং', 'IN LINE': 'লাইন', 'READY FOR HAND WORK': 'হ্যান্ড ওয়ার্কের জন্য রেডি', 'IN HAND WORK': 'হ্যান্ড ওয়ার্কে', 'CAME FROM HAND WORK': 'হ্যান্ড ওয়ার্ক থেকে এসেছে',
-  'IN LINE (2)': 'লাইন (2)', 'IRON/CHECKING': 'ইস্ত্রি · চেকিং', 'READY': 'রেডি', 'READY 2': 'রেডি 2', 'FINISH': 'শেষ', 'FINISH SAMPLES': 'স্যাম্পল শেষ' };
+  'IN LINE (2)': 'লাইন (2)', 'IRON/CHECKING': 'ইস্ত্রি · চেকিং', 'READY': 'রেডি', 'READY 2': 'রেডি 2', 'FINISH': 'শেষ', 'FINISH SAMPLES': 'স্যাম্পল শেষ', 'RETURNS': 'ফেরত', 'RETURNS BACK': 'ফেরত এসেছে' };
 var D = { lists: [], cards: [], byId: {}, w: true, later: {} }, cur = +(ls('sj_fac_chip') || 2), open = null;
 function lname(id){ var l = D.lists.filter(function(x){ return x[1] === id; })[0]; return l ? l[0] : '?'; }
 function lid(name){ var l = D.lists.filter(function(x){ return x[0] === name; })[0]; return l ? l[1] : null; }
@@ -219,7 +214,7 @@ async function hmacHex(key, msg){
 var NET = { busy: 0, heavy: 0, hi: [], lo: [], log: [] };
 function netPick(q){ for (var i = 0; i < q.length; i++) if (!q[i].h || q[i].top || NET.heavy < 2) return q.splice(i, 1)[0]; return null; }   // big transfers: at most 2 at once, so chat requests always get through
 function netGo(){ while (NET.busy < 4) { var f = netPick(NET.hi) || netPick(NET.lo); if (!f) break; NET.busy++; if (f.h) NET.heavy++; f(); } }
-var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset)$/;
+var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later)$/;
 async function call(obj, pw, top){
   if (ONCE.test(obj.op) && !obj.rid) obj.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);   // a retry of the same action is answered once, never done twice
   var heavy = /^(up|attach|sample)$/.test(obj.op) || (obj.op === 'media' && obj.full && !obj.pre);
@@ -291,7 +286,7 @@ function pump(){
 // at once; the relay is asked in the background. One request at a time - a poll never starts while the last one is still out.
 var LOADING = false;
 var DMC = { id: 'dm', dm: true, name: 'Direct chat', l: '', pos: -1, f: {}, lb: [] };          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
-function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; if (j.ret) D.ret = j.ret; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; bellPaint(); }
+function applyList(j){ D.lists = j.lists; D.show = j.show || []; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; bellPaint(); }
 function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); if (j.live && PW) liveStart(j.live); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards'; draw(); return true; } catch(e){ return false; } }
 async function load(fresh){
   if (LOADING && Date.now() - LOADING < 30000) return false; LOADING = Date.now();
@@ -337,12 +332,12 @@ function inbox(){
   var us = (unread(DMC) ? [DMC] : []).concat(D.cards.filter(function(c){ return unread(c); })), el = $('inbox'), tot = us.reduce(function(a, c){ return a + unread(c); }, 0);
   try { if (navigator.setAppBadge) { tot ? navigator.setAppBadge(tot) : navigator.clearAppBadge(); } } catch(e){}
   if (!us.length) { el.hidden = true; return; }
-  el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '<button id="bcatch">⚡ Catch up</button></h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small>' + ((D.th[c.id] || {}).tx ? '<em class="itx">' + esc(D.th[c.id].tx) + '</em>' : '') + '</div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
+  el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '<button id="bcatch">⚡ Catch up</button></h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small>' + ((D.th[c.id] || {}).tx ? '<em class="itx">' + esc(D.th[c.id].tx) + '</em>' : '') + '</div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
 }
 // ---- 13 Oct 2026 (Abbas): "like Slack's Catch up" - read but cannot do it now -> 📌 LATER, per person, stays on the home screen until unpinned ----
 function laterBox(){ var el = $('later'), ids = Object.keys(D.later || {}), cs = ids.map(function(id){ return D.byId[id]; }).filter(Boolean).sort(function(a, b){ return +D.later[b.id] - +D.later[a.id]; });
   if (!cs.length) { el.hidden = true; return; }
-  el.hidden = false; el.innerHTML = '<h3>📌 Later · পরে করব · ' + cs.length + '</h3>' + cs.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small></div><span class="pinb">📌</span></div>'; }).join(''); }
+  el.hidden = false; el.innerHTML = '<h3>📌 Later · পরে করব · ' + cs.length + '</h3>' + cs.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small></div><span class="pinb">📌</span></div>'; }).join(''); }
 $('later').onclick = function(e){ var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
 async function setLater(c, on){ if (!c) return; if (on) D.later[c.id] = String(Date.now()); else delete D.later[c.id]; pinPaint(); draw();
   var j = await call({ op: 'later', card: c.id, on: on ? 1 : 0 }); if (!j.ok) { toast('✗ ' + j.error); return; } D.later = j.later || D.later; pinPaint(); draw(); toast(on ? '📌 Kept for later · পরে করার জন্য রাখা হলো' : '✓ Removed from Later · সরানো হলো'); }
@@ -368,7 +363,7 @@ function draw(force){
   cs.sort(function(a, b){ return a.pos - b.pos; });
   $('list').innerHTML = cs.length ? cs.map(function(c){ var p = parse(c.name);
     var u = unread(c);
-    return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : (D.later || {})[c.id] ? '<span class="pinb">📌 LATER</span>' : '') + '</div>'; }).join('')
+    return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + (p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + (q || CHIPS[cur][1].length > 1 ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : (D.later || {})[c.id] ? '<span class="pinb">📌 LATER</span>' : '') + '</div>'; }).join('')
     : '<div class="empty">' + (q ? 'No card with ' + esc(q) : 'No cards here · এখানে কোনো কার্ড নেই') + '</div>';
   document.querySelectorAll('#list .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); });
   inbox(); laterBox(); retBox();
@@ -390,13 +385,13 @@ function cardShow(on){ if (on) { SCY = window.scrollY || 0; document.body.classL
 // iPhone: when the keyboard opens the visible area shrinks and Safari scrolls the page; the card follows the visible area and snaps back when the keyboard closes
 function vvFit(){ var vv = window.visualViewport, el = $('card'); if (!vv || el.hidden) return; var full = Math.abs(vv.height - window.innerHeight) < 2 && vv.offsetTop < 2; el.style.height = full ? '' : vv.height + 'px'; el.style.top = full ? '' : vv.offsetTop + 'px'; if (full) window.scrollTo(0, 0); }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', vvFit); window.visualViewport.addEventListener('scroll', vvFit); }
-function openCard(c){ open = c; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); cretPaint(); if (!RT.list) retLoad(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
+function openCard(c){ open = c; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
 function paintCard(){
   var c = open; $('card').classList.toggle('dm', !!c.dm);
   if (c.dm) { $('cnm').innerHTML = '💬 Direct chat<small>সরাসরি কথা · Abbas ↔ factory</small>'; $('cstage').textContent = '#' + ((D.dm || {}).name || ''); $('cstage').onclick = function(){ dmPick(); }; $('cstage').style.cursor = 'pointer'; $('tcount').textContent = ''; $('thh').textContent = 'DIRECT CHAT · সরাসরি কথা'; return; }
   $('cstage').onclick = null; $('cstage').style.cursor = ''; $('thh').textContent = 'CARD CHAT · কার্ড চ্যাট';
   var p = parse(c.name), ln = lname(c.l), nx = NEXT[ln];
-  $('cnm').innerHTML = (p.no ? 'SJ-' + esc(p.no) : 'Card') + '<small>' + [p.pcs && p.pcs + ' pcs', p.col && p.col + ' colours', p.size].filter(Boolean).map(esc).join(' · ') + '</small>';
+  $('cnm').innerHTML = (p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '<small>' + [p.pcs && p.pcs + ' pcs', p.col && p.col + ' colours', p.size].filter(Boolean).map(esc).join(' · ') + '</small>';
   $('cstage').textContent = ln;
   var big = $('cimg'); big.setAttribute('data-img', c.img || ''); big.style.backgroundImage = ''; photo(c, big);
   $('cttl').innerHTML = esc(c.name) + labels(c);
@@ -610,81 +605,22 @@ async function loadMedia(e, tap){
 $('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f); };
 async function openBig(src, fid){ $('viewer').hidden = false; $('vimg').src = src || ''; if (fid) { var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && !$('viewer').hidden && /^image/.test(j.type || 'image')) $('vimg').src = 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64; } }
 
-// ===== RETURNS (16 Oct 2026, Abbas: "some pieces get returned to the factory … once the alteration or errors are done I get it back — I need a
-// tracking system in this app"). One record per return: design, pieces given, reason, photos; the factory marks pieces FIXED, the office marks
-// them RECEIVED BACK (part by part). Each step also drops a line into that card's chat, so the other side gets the usual new-message alert.
-var RT = { list: null, tab: 'open', why: '', files: [], cur: null, act: '' };
-var WHYS = [['Alteration', 'অল্টারেশন'], ['Stitching fault', 'সেলাই ভুল'], ['Size wrong', 'সাইজ ভুল'], ['Stain / damage', 'দাগ / ক্ষতি'], ['Missing work', 'কাজ বাকি'], ['Other', 'অন্য']];
-function rdays(t){ return Math.max(0, Math.floor((Date.now() - t) / 86400000)); }
-function rage(t){ var d = rdays(t); return d ? d + ' day' + (d > 1 ? 's' : '') : 'today'; }
-function retSum(){ var L = RT.list; if (!L) return D.ret || null; var o = L.filter(function(r){ return !r.done && r.st !== 'cancel'; }), pcs = 0, old = 0; o.forEach(function(r){ pcs += r.pcs - r.back; if (!old || r.at < old) old = r.at; }); return { n: o.length, pcs: pcs, old: old }; }
-function retBox(){ var el = $('rets'), s = D.ret; if (!PW || !D.cards || !D.cards.length) { el.hidden = true; return; } el.hidden = false;
-  if (!s || !s.n) { el.className = 'none'; el.innerHTML = '<div class="ic">↩️</div><div class="t"><b style="font-size:14px">Returns · ফেরত</b><small>Nothing at the factory · কিছু নেই</small></div><span class="rgo">Open ›</span>'; return; }
-  var d = s.old ? rdays(s.old) : 0; el.className = d >= 7 ? 'late' : d >= 3 ? 'warn' : '';
-  el.innerHTML = '<div class="ic">↩️</div><div class="t"><b>Returns at the factory · কারখানায় ফেরত</b><small>' + s.n + ' return' + (s.n > 1 ? 's' : '') + ' · <b style="display:inline;font-size:13px">' + s.pcs + ' pcs</b> still out · oldest ' + rage(s.old) + '</small></div><span class="rgo">Open ›</span>'; }
-$('rets').onclick = function(){ retOpen(); };
-async function retLoad(){ var j = await call({ op: 'retlist' }); if (j.ok) { RT.list = j.rets || []; D.ret = retSum(); retBox(); retDraw(); cretPaint(); } else if (!RT.list) $('rtl').innerHTML = '<div class="empty">' + esc(j.error) + '</div>'; }
-function retOpen(tab){ RT.tab = tab || 'open'; $('rt').hidden = false; retTabs(); if (!RT.list) $('rtl').innerHTML = '<div class="empty">Loading… · লোড হচ্ছে</div>'; else retDraw(); retLoad(); }
-function retTabs(){ document.querySelectorAll('#rt .rtabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t === RT.tab); }); }
-document.querySelector('#rt .rtabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; RT.tab = b.dataset.t; retTabs(); retDraw(); };
-$('rtx').onclick = function(){ $('rt').hidden = true; };
-function rname(r){ return 'R' + r.id + ' · ' + (r.no || 'no design no.'); }
-function retRow(r){ var left = r.pcs - r.back, d = rdays(r.at), open0 = !r.done && r.st !== 'cancel', cls = open0 ? (d >= 7 ? ' late' : d >= 3 ? ' warn' : '') : '';
-  var st = r.st === 'cancel' ? '<span class="st cancel">Cancelled</span>' : r.st === 'back' ? '<span class="st back">✅ All back</span>' : r.fixed ? '<span class="st fixed">🧵 ' + r.fixed + ' fixed · ready</span>' : '<span class="st out">At factory · ' + rage(r.at) + '</span>';
-  var ev = (r.ev || []).map(function(e){ var t = new Date(e[0]); return '<div>' + t.getDate() + '/' + (t.getMonth() + 1) + ' ' + ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) + ' · ' + esc(e[1]) + ' · ' + ({ out: '↩️ gave ' + e[3] + ' pcs to the factory', fixed: '🧵 ' + e[3] + ' pcs fixed', back: '📥 ' + e[3] + ' pcs received back', note: '📝 ' + esc(e[4] || ''), cancel: '✖️ cancelled' }[e[2]] || e[2]) + '</div>'; }).join('');
-  return '<div class="rr' + cls + '" data-id="' + r.id + '"><div class="rh"><b>' + esc(rname(r)) + '</b>' + st + '</div>'
-    + '<div class="rm"><b>' + r.pcs + ' pcs</b> given · <b>' + r.back + '</b> back' + (open0 ? ' · <b style="color:var(--red)">' + left + ' still out</b>' : '') + (r.why ? ' · ' + esc(r.why) : '') + (r.col ? ' · ' + esc(r.col) : '') + '</div>'
-    + (r.note ? '<div class="rn">' + esc(r.note) + '</div>' : '') + '<div class="rbar"><i style="width:' + Math.round(100 * r.back / r.pcs) + '%"></i></div>'
-    + '<div class="rbtns">' + (open0 ? '<button data-a="fixed">🧵 Fixed · ঠিক হয়েছে</button><button data-a="back" class="b1">📥 Received back · ফেরত পেয়েছি</button>' : '') + '<button data-a="chat">💬 Chat</button>' + (open0 ? '<button data-a="note">📝</button><button data-a="cancel">✖</button>' : '') + '</div>'
-    + '<details><summary>History · ইতিহাস (' + (r.ev || []).length + ')</summary>' + ev + '</details></div>'; }
-function retDraw(){ if ($('rt').hidden || !RT.list) return; var L = RT.list.filter(function(r){ return RT.tab === 'open' ? !r.done && r.st !== 'cancel' : r.done || r.st === 'cancel'; });
-  if (RT.tab === 'open') L.sort(function(a, b){ return a.at - b.at; });
-  $('rtl').innerHTML = L.length ? L.map(retRow).join('') : '<div class="empty">' + (RT.tab === 'open' ? 'Nothing at the factory · কারখানায় কিছু নেই' : 'Nothing closed in the last 45 days') + '</div>'; }
-$('rtl').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; var rr = e.target.closest('.rr'), r = (RT.list || []).filter(function(x){ return String(x.id) === rr.dataset.id; })[0]; if (!r) return;
-  var a = b.dataset.a;
-  if (a === 'chat') { var c = r.card && D.byId[r.card] ? D.byId[r.card] : DMC; if (c === DMC && !D.dm) { toast('No chat for this return'); return; } $('rt').hidden = true; openCard(c); return; }
-  if (a === 'cancel') { if (!confirm('Cancel ' + rname(r) + '? · বাতিল করবেন?')) return; retStep(r, 'cancel', 0, ''); return; }
-  RT.cur = r; RT.act = a; var left = r.pcs - r.back;
-  $('rsh').textContent = a === 'fixed' ? '🧵 Pieces fixed · কত পিস ঠিক হয়েছে?' : a === 'back' ? '📥 Pieces received back · কত পিস ফেরত পেয়েছেন?' : '📝 Note · নোট';
-  $('rsinfo').textContent = rname(r) + ' · ' + r.pcs + ' given · ' + r.back + ' back · ' + left + ' still out';
-  $('rsn').hidden = a === 'note'; $('rsn').value = a === 'note' ? '' : String(left); $('rsnote').value = ''; $('rsnote').placeholder = a === 'note' ? 'Write the note · নোট লিখুন' : 'Note (optional) · নোট'; $('rs').hidden = false; };
-$('rsx').onclick = function(){ $('rs').hidden = true; };
-$('rsgo').onclick = function(){ var r = RT.cur, n = Math.floor(+$('rsn').value || 0), left = r.pcs - r.back;
-  if (RT.act !== 'note' && !(n >= 1 && n <= left)) { toast('Pieces: 1 to ' + left); return; } if (RT.act === 'note' && !$('rsnote').value.trim()) { toast('Write the note'); return; }
-  $('rs').hidden = true; retStep(r, RT.act, n, $('rsnote').value.trim()); };
-async function retStep(r, st, n, note){ toast('Saving… · সেভ হচ্ছে'); var j = await call({ op: 'retset', id: r.id, st: st, n: n, note: note });
-  if (!j.ok) { toast('✗ ' + j.error); return; } RT.list = j.rets || RT.list; D.ret = retSum(); retBox(); retDraw(); cretPaint();
-  toast(st === 'back' ? (j.ret.st === 'back' ? '✅ All ' + j.ret.pcs + ' pcs back · সব ফেরত এসেছে' : '📥 ' + n + ' pcs back · ' + (j.ret.pcs - j.ret.back) + ' still out') : st === 'fixed' ? '🧵 Saved · the office is told' : '✓ Saved'); }
-// new return
-function rnCards(){ var q = $('rnno').value.replace(/\D/g, ''), sel = $('rncard'), keep = sel.value, ms = q.length >= 3 ? D.cards.filter(function(c){ return parse(c.name).no === q || parse(c.name).no.replace(/-.*/, '') === q; }) : [];
-  if (q.length >= 3 && !ms.length) ms = D.cards.filter(function(c){ return parse(c.name).no.indexOf(q) === 0; }).slice(0, 6);
-  sel.innerHTML = ms.map(function(c){ return '<option value="' + c.id + '">SJ-' + esc(parse(c.name).no) + ' · ' + esc(lname(c.l)) + ' · ' + esc(c.name.slice(0, 40)) + '</option>'; }).join('') + '<option value="">' + (q ? 'No card — the line goes in the Direct chat' : 'Type the design number above') + '</option>';
-  if (keep && ms.some(function(c){ return c.id === keep; })) sel.value = keep; }
-$('rnno').oninput = rnCards;
-$('rnwhy').innerHTML = WHYS.map(function(w){ return '<button data-w="' + w[0] + '">' + w[0] + ' · ' + w[1] + '</button>'; }).join('');
-$('rnwhy').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; RT.why = RT.why === b.dataset.w ? '' : b.dataset.w; document.querySelectorAll('#rnwhy button').forEach(function(x){ x.classList.toggle('on', x.dataset.w === RT.why); }); };
-function retNew(c){ RT.why = ''; RT.files = []; rnPend(); document.querySelectorAll('#rnwhy button').forEach(function(x){ x.classList.remove('on'); });
-  $('rnno').value = c && !c.dm ? parse(c.name).no : ''; $('rnpcs').value = ''; $('rncol').value = ''; $('rnnote').value = ''; rnCards(); if (c && !c.dm) $('rncard').value = c.id;
-  $('rn').hidden = false; setTimeout(function(){ ($('rnno').value ? $('rnpcs') : $('rnno')).focus(); }, 150); }
-$('rtnew').onclick = function(){ retNew(null); };
-$('bret').onclick = function(){ if (open) retNew(open); };
-$('rnx').onclick = function(){ $('rn').hidden = true; };
-$('rnfiles').onchange = function(){ Array.from(this.files || []).forEach(function(f){ RT.files.push({ name: f.name || 'photo.jpg', kind: /^video\//.test(f.type) ? 'video' : /^image\//.test(f.type) ? 'photo' : 'file', blob: f }); }); this.value = ''; rnPend(); };
-function rnPend(){ $('rnpend').innerHTML = RT.files.map(function(f, i){ if (f.kind === 'photo' && !f.url) f.url = URL.createObjectURL(f.blob); return '<div class="pi" data-i="' + i + '"' + (f.kind === 'photo' ? ' style="background-image:url(' + f.url + ')"' : '') + '>' + (f.kind === 'photo' ? '' : '🎬') + '<small>' + mb(f.blob.size) + '</small><b>✕</b></div>'; }).join(''); }
-$('rnpend').onclick = function(e){ var x = e.target.closest('[data-i]'); if (!x) return; var f = RT.files.splice(+x.dataset.i, 1)[0]; if (f && f.url) URL.revokeObjectURL(f.url); rnPend(); };
-$('rngo').onclick = async function(){ var no = $('rnno').value.replace(/\D/g, ''), pcs = Math.floor(+$('rnpcs').value || 0), cid = $('rncard').value, c = cid ? D.byId[cid] : null;
-  if (!no && !cid) { toast('Type the design number · ডিজাইন নম্বর'); $('rnno').focus(); return; } if (!(pcs >= 1)) { toast('How many pieces? · কত পিস?'); $('rnpcs').focus(); return; }
-  if (!RT.why && !$('rnnote').value.trim()) { toast('Choose the reason or write what to fix · কারণ লিখুন'); return; }
-  var b = this; b.disabled = true; b.textContent = 'Saving… · সেভ হচ্ছে';
-  var j = await call({ op: 'retnew', card: cid, no: c ? 'SJ-' + parse(c.name).no : 'SJ-' + no, title: c ? c.name : '', pcs: pcs, why: RT.why, col: $('rncol').value.trim(), note: $('rnnote').value.trim() });
-  b.disabled = false; b.textContent = '↩️ Save return · সেভ করুন';
-  if (!j.ok) { toast('✗ ' + j.error + ' — nothing lost, try Save again'); return; }
-  if (RT.files.length) { var dest = c || (D.dm ? DMC : null); if (dest) outAdd(dest, '↩️ R' + j.ret.id + ' · photos of the fault · ত্রুটির ছবি', RT.files.map(function(f){ return { name: f.name, kind: f.kind, blob: f.blob }; })); }
-  RT.files = []; $('rn').hidden = true; RT.list = j.rets || RT.list; D.ret = retSum(); retBox(); cretPaint(); if (!$('rt').hidden) { RT.tab = 'open'; retTabs(); retDraw(); }
-  toast('↩️ R' + j.ret.id + ' saved · ' + pcs + ' pcs at the factory' + (j.chat !== 'ok' ? ' (' + j.chat + ')' : '')); };
-function cretPaint(){ var el = $('cret'); if (!open || open.dm || !RT.list) { el.hidden = true; return; } var L = RT.list.filter(function(r){ return r.card === open.id && !r.done && r.st !== 'cancel'; });
-  el.hidden = !L.length; el.innerHTML = L.map(function(r){ return '<div data-id="' + r.id + '">↩️ <b>R' + r.id + '</b> · ' + (r.pcs - r.back) + ' of ' + r.pcs + ' pcs still at the factory · ' + rage(r.at) + (r.fixed ? ' · 🧵 ' + r.fixed + ' fixed' : '') + ' ›</div>'; }).join(''); }
-$('cret').onclick = function(){ retOpen('open'); };
+// ===== RETURNS (16 Oct 2026). First version (a form with design number, pieces, reasons) - Abbas: "I want it more simple … no need to write a
+// design number … paste as many photos or videos … it should appear just like a card … open it, below it a chat … exactly like the START list."
+// So a return IS a card: Trello list RETURNS on the ALM board (made by the relay), cover = first photo, every photo / video in full quality
+// opens its chat (#cutting thread) - the chat, Catch up, Later and Done all work like any card. Done → RETURNS BACK = the pieces came back.
+function isRet(c){ var n = c && lname(c.l); return n === 'RETURNS' || n === 'RETURNS BACK'; }
+function retBox(){ var el = $('rets'); if (!PW || !D.cards || !D.cards.length || !lid('RETURNS')) { el.hidden = true; return; }
+  var cs = D.cards.filter(function(c){ return lname(c.l) === 'RETURNS'; }), u = cs.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0);
+  el.hidden = false; el.className = cs.length ? '' : 'none';
+  el.innerHTML = '<div class="ic">↩️</div><div class="t"><b>Returns · ফেরত</b><small>' + (cs.length ? cs.length + ' at the factory · কারখানায়' : 'Nothing at the factory · কিছু নেই') + '</small></div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : '') + '<button class="rnew" id="rnewb">＋ New return</button>'; }
+$('rets').onclick = function(e){ if (e.target.closest('#rnewb')) { retNew(); return; } var i = CHIPS.map(function(c){ return c[0]; }).indexOf('RETURNS'); if (i < 0) return; cur = i; ls('sj_fac_chip', String(cur)); $('q').value = ''; draw(); var on = document.querySelector('#stages button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' }); };
+var NSMODE = 'sample';
+function nsMode(m){ NSMODE = m; var r = m === 'ret';
+  $('ns').querySelector('h3').textContent = r ? '↩️ New return · নতুন ফেরত' : '⭐ New sample · নতুন স্যাম্পল';
+  $('nsname').hidden = r; $('nsdesc').placeholder = r ? 'What must be fixed? (optional) · কী ঠিক করতে হবে?' : 'What to make · কী বানাতে হবে (optional)';
+  $('nsgo').textContent = r ? '↩️ Make the return card · ফেরত কার্ড তৈরি করুন' : '⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন'; }
+function retNew(){ if (!needW()) return; nsMode('ret'); $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('ns').hidden = false; }
 // ===== OUTBOX (15 Oct 2026, Abbas: "when I press Send and I'm in a hurry, it says sending, I go back, do something else, come back and the
 // message is nowhere to be found"). A message (text and/or files) is saved ON THE PHONE the moment Send is pressed (IndexedDB) and sent by a
 // background sender that does not care which screen is open, keeps trying (also after the app was closed / the phone locked) and uses one
@@ -760,7 +696,7 @@ async function pendAdd(file, name, kind){
 var SP = [];
 function spDraw(){ $('nspend').innerHTML = SP.map(function(x, i){ return '<div class="pi"' + (x.url ? ' style="background-image:url(' + x.url + ')"' : '') + '>' + (x.url ? '' : x.kind === 'audio' ? '🎤' : x.kind === 'video' ? '🎬' : '📎') + '<small>' + esc(x.label) + '</small><b data-i="' + i + '">✕</b></div>'; }).join(''); }
 $('nspend').onclick = function(e){ var b = e.target.closest('b[data-i]'); if (!b) return; var x = SP.splice(+b.dataset.i, 1)[0]; if (x && x.url) URL.revokeObjectURL(x.url); spDraw(); };
-$('bstar').onclick = function(){ if (!needW()) return; $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('ns').hidden = false; $('nsname').focus(); };
+$('bstar').onclick = function(){ if (!needW()) return; nsMode('sample'); $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('ns').hidden = false; $('nsname').focus(); };
 $('nsx').onclick = function(){ if (REC.r) recStop(); $('ns').hidden = true; };
 // 13 Oct 2026 (Abbas): paste a photo / video / file into the sample - Ctrl-V / long-press Paste in a box, or the 📋 button (reads the clipboard)
 function pasteItems(items){ var n = 0; Array.from(items || []).forEach(function(it){ var f = it.kind === 'file' ? it.getAsFile() : null; if (f) { n++; pendAdd(f, f.name || ((/^image\//.test(f.type) ? 'pasted-' : 'file-') + Date.now() + (f.type === 'image/png' ? '.png' : /^image\//.test(f.type) ? '.jpg' : '')), kindOf(f)); } }); return n; }
@@ -774,7 +710,10 @@ $('nspaste').onclick = async function(){
 $('nscam').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name || ('photo-' + Date.now() + '.jpg'), kindOf(f)); }); this.value = ''; };
 $('nsfiles').onchange = function(){ Array.from(this.files).forEach(function(f){ pendAdd(f, f.name, kindOf(f)); }); this.value = ''; };
 $('nsmic').onclick = function(){ recToggle(this); }; $('nsmic').oncontextmenu = function(e){ e.preventDefault(); };
-$('nsgo').onclick = async function(){ var nm = $('nsname').value.trim(); if (!nm) { toast('Give the sample a name · নাম লিখুন'); return; }
+$('nsgo').onclick = async function(){ var RET = NSMODE === 'ret', nm = $('nsname').value.trim();
+  if (RET) { if (!SP.length && !$('nsdesc').value.trim()) { toast('Add photos / videos of the pieces · ছবি যোগ করুন'); return; }
+    var dn = new Date(), first = $('nsdesc').value.trim().split('\n')[0].slice(0, 60); nm = '↩️ RETURN · ' + dn.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dn.getMonth()] + (first ? ' · ' + first : ''); }
+  else if (!nm) { toast('Give the sample a name · নাম লিখুন'); return; }
   var tot = SP.reduce(function(a, x){ return a + x.blob.size; }, 0);
   var btn = this; btn.disabled = true; btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
   try {
@@ -788,12 +727,13 @@ $('nsgo').onclick = async function(){ var nm = $('nsname').value.trim(); if (!nm
     try { if (SP.length) fids = await slackDirect(SP, function(i){ btn.textContent = '⏳ ' + (i + 1) + ' / ' + SP.length + ' · ' + mb(SP[i].blob.size) + '…'; }); }
     catch (e) { if (tot > 18 * 1024 * 1024) throw new Error('Slack refused the upload (' + e.message + ')'); fids = []; for (var i = 0; i < SP.length; i++) files.push({ name: SP[i].name, type: SP[i].blob.type || '', b64: await b64of(SP[i].blob) }); }
     btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
-    var j = await call({ op: 'sample', name: nm, desc: $('nsdesc').value, files: files, fids: fids, cover: cover });
-    if (!j.ok) { toast('✗ ' + j.error); if (j.card) { $('ns').hidden = true; await gotoNew(j.card, lid('SAMPLES')); } return; }
+    var j = await call({ op: 'sample', kind: RET ? 'ret' : '', name: nm, desc: $('nsdesc').value, files: files, fids: fids, cover: cover });
+    if (!j.ok) { toast('✗ ' + j.error); if (j.card) { $('ns').hidden = true; if (RET) await load(true); await gotoNew(j.card, j.list || lid(RET ? 'RETURNS' : 'SAMPLES')); } return; }
     SP.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); SP.length = 0; spDraw(); $('ns').hidden = true;
-    toast('⭐ Sample card made · posted in #samples-discuss'); await gotoNew(j.id, lid('SAMPLES'));
+    if (RET && !lid('RETURNS')) await load(true);
+    toast(RET ? '↩️ Return card made · the factory sees it now' : '⭐ Sample card made · posted in #samples-discuss'); await gotoNew(j.id, j.list || lid(RET ? 'RETURNS' : 'SAMPLES'));
   } catch (e) { toast('✗ ' + e.message); }
-  finally { btn.disabled = false; btn.textContent = '⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন'; } };
+  finally { btn.disabled = false; nsMode(NSMODE); } };
 function videoFrame(blob){ return new Promise(function(ok){ try { var v = document.createElement('video'), done = false, url = URL.createObjectURL(blob);
     function fin(res){ if (done) return; done = true; try { URL.revokeObjectURL(url); } catch(e){} ok(res); }
     var tm = setTimeout(function(){ fin(null); }, 8000);
@@ -915,7 +855,7 @@ var PAGAIN = false;
 async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now() - PINGING < 30000) { PAGAIN = true; return; } PINGING = Date.now(); PAGAIN = false;
   var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
-  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); if (j.ret) { var rc = !D.ret || D.ret.n !== j.ret.n || D.ret.pcs !== j.ret.pcs; D.ret = j.ret; if (rc && RT.list) retLoad(); } draw(); alertNew(); liveMark(); prefetch(); }
+  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); draw(); alertNew(); liveMark(); prefetch(); }
 // 15 Oct 2026 (Abbas: "you see how long it is taking refreshing? I run a business - when a message comes I want it as instant as possible, without
 // any long loading of the chats"): (a) the "anything new?" check no longer waits behind the card-list refresh; (b) the status line shows the
 // time of the last check ("● Live 16:46:05"); (c) the newest message text is shown right on the home screen; (d) the chats with new messages
@@ -941,7 +881,6 @@ function liveStart(topic, force){ if (!topic || !window.EventSource) return; if 
   es.onerror = function(){ LIVE.ok = false; };
   es.onmessage = function(e){ var d = null; try { d = JSON.parse(e.data); } catch(x){} if (!d || d.event !== 'message') return; LIVE.ok = true; liveNudge(String(d.message || '').replace(/^c=/, '')); }; }
 function liveNudge(c){ LIVE.t = Date.now();
-  if (/^ret:/.test(c)) { if (RT.list) retLoad(); clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(false); }, 250); return; }
   if (/^list:/.test(c)) { setTimeout(function(){ load(false); }, 400); c = c.slice(5); }
   if (open && (open.id === c || !c)) { TH.force = true; thPull(); }
   clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(false); }, 250); }
