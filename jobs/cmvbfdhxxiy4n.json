@@ -1,0 +1,38 @@
+{
+ "ok": true,
+ "page": "sj-1017.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sj-1017.html?v=1",
+ "cover": "og-sj-1017.jpg",
+ "name": "",
+ "country": "",
+ "designs": [
+  "6668",
+  "66038",
+  "51862",
+  "75308",
+  "91074"
+ ],
+ "report": [
+  "SJ-6668 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-66038 COMPLETE  11+16+16+12 = 55 ✓ (card: 55) → 3 complete sets + 7 pcs",
+  "SJ-51862 COMPLETE  16+12+16+12 = 56 ✓ (card: 56) → 3 complete sets + 8 pcs",
+  "SJ-75308 COMPLETE  12+4+0+0+12 = 28 ✓ (card: 28) → 2 complete sets + 4 pcs",
+  "SJ-91074 SETS  4+4+4+4+4+4 = 24 ✓ (card: 24) → 6 colours"
+ ],
+ "flags": [
+  "SJ-6668 has 24 READY cards — used the newest: Sj 6668 (40)  5 colors.                                     (8/8/8/8/8)",
+  "SJ-6668: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-75308 has 3 READY cards — used the newest: Sj = **(75308_B)** (28) pcs colour = (3),,(12/4/0/0/12)",
+  "SJ-75308: 2 sold-out colours cut out of the photo and the rest renumbered — check the photo.",
+  "SJ-91074: no JAMĀL photo for every colour group — shop photo used."
+ ],
+ "videos": [
+  "51862",
+  "66038",
+  "6668",
+  "75308",
+  "91074"
+ ],
+ "bytes": 1544896,
+ "id": "cmvbfdhxxiy4n"
+}
