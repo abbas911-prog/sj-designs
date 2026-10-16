@@ -12,6 +12,57 @@ const OKKEYS = new Map();        // proven phone keys -> expiry (per worker inst
 const ONCE = new Map();          // once-only ids of posts -> answer (a retry never posts twice)
 const HOT = new Map();           // the same chat asked by several phones within 1.5 s -> one Slack call
 let USERS = null, USERS_AT = 0;
+// ---- TRELLO (17 Oct 2026, Abbas: "still very laggy .. why can't you make it as smooth as real apps like Slack, Trello"): the card list, a card's
+// attachments, cover / attachment photos and Done / Move also go phone -> worker -> Trello (~0.3 s) instead of through the Google relay (1-15 s).
+// Needs a second secret, TRELLO_TOKEN (read + write token made with the app key below). Without it the phones keep using the relay.
+const TKEY = '83fea3748717dd1e3fe28a15f2371759', BOARD = '6527c52485d9627f63157296';
+let CF = null, CF_AT = 0;
+async function trello(env, method, path, params) {
+  const q = new URLSearchParams(params || {}); q.set('key', TKEY); q.set('token', env.TRELLO_TOKEN);
+  const r = await fetch('https://api.trello.com/1' + path + '?' + q, { method: method.toUpperCase() });
+  if (!r.ok) throw new Error('Trello said ' + r.status + ' ' + (await r.text()).slice(0, 80));
+  return r.json();
+}
+async function cfNames(env) { if (CF && Date.now() - CF_AT < 6 * 3600000) return CF; const m = {}; (await trello(env, 'get', '/boards/' + BOARD + '/customFields') || []).forEach(f => { m[f.id] = f.name; }); CF = m; CF_AT = Date.now(); return m; }
+async function tlist(env, q) {                                  // the cards of the app's lists, shaped exactly like the relay's list
+  const lists = Array.isArray(q.lists) ? q.lists.map(l => String(l[1] || '')).filter(x => /^[0-9a-f]{24}$/.test(x)) : []; if (!lists.length) return { ok: false, error: 'bad request' };
+  const limit = q.limit || {}, [cf, cards0] = await Promise.all([cfNames(env), trello(env, 'get', '/boards/' + BOARD + '/cards', { filter: 'open', limit: '1000', fields: 'name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels', customFieldItems: 'true', attachments: 'cover', attachment_fields: 'id,previews,mimeType' })]);
+  const per = {}; const cards = (cards0 || []).filter(c => lists.indexOf(c.idList) >= 0).sort((a, b) => a.pos - b.pos).filter(c => { const lim = +limit[c.idList]; if (!lim) return true; per[c.idList] = (per[c.idList] || 0) + 1; return per[c.idList] <= lim; });
+  return { ok: true, t: Date.now(), cards: cards.map(c => { const f = {}; (c.customFieldItems || []).forEach(it => { const n = cf[it.idCustomField], v = it.value || {}; const x = v.text != null ? v.text : v.number != null ? v.number : v.date || (v.checked === 'true' ? '✓' : null); if (n && x != null && String(x).trim() !== '') f[n] = String(x); });
+    const a = (c.attachments || [])[0], img = a && a.previews && a.previews.length ? a.id : '';
+    return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img, f, at: c.dateLastActivity, lb: (c.labels || []).filter(l => l.name).map(l => ({ n: l.name, c: l.color || '' })) }; }) };
+}
+async function tatts(env, q) {
+  const id = String(q.card || '').replace(/[^0-9a-f]/g, ''); if (!id) return { ok: false, error: 'bad request' };
+  const [cd, al] = await Promise.all([trello(env, 'get', '/cards/' + id, { fields: 'idAttachmentCover,desc' }), trello(env, 'get', '/cards/' + id + '/attachments', { fields: 'id,name,mimeType,previews,url,bytes,date' })]);
+  return { ok: true, cover: cd.idAttachmentCover || '', desc: String(cd.desc || ''), atts: (al || []).map(a => ({ id: a.id, name: a.name, type: a.mimeType || '', img: !!(a.previews && a.previews.length), url: a.url, bytes: a.bytes || 0, date: a.date })) };
+}
+async function timg(env, q) {                                   // a card photo: Trello's 600-1000 px preview, or (big) the sharpest there is
+  const id = String(q.card || '').replace(/[^0-9a-f]/g, ''), att = String(q.att || '').replace(/[^0-9a-f]/g, ''); if (!id || !att) return json({ ok: false, error: 'bad request' }, 400);
+  const at = await trello(env, 'get', '/cards/' + id + '/attachments/' + att, { fields: 'previews,url,mimeType,bytes' }), pvs = (at.previews || []).slice().sort((x, y) => x.width - y.width);
+  let u = q.big ? (pvs.length ? pvs[pvs.length - 1].url : '') : ((pvs.filter(p => p.width >= 600)[0] || pvs[pvs.length - 1] || {}).url || '');
+  if ((q.big && (!pvs.length || pvs[pvs.length - 1].width < 1600) || !u) && /^image\//.test(at.mimeType || '') && (at.bytes || 0) <= 15 * 1024 * 1024 && at.url) u = at.url;
+  if (!u) return json({ ok: false, error: 'not a picture' }, 404);
+  const r = await fetch(u, { headers: { Authorization: 'OAuth oauth_consumer_key="' + TKEY + '", oauth_token="' + env.TRELLO_TOKEN + '"' } });
+  if (!r.ok) return json({ ok: false, error: 'Trello photo ' + r.status }, 502);
+  return new Response(r.body, { headers: { ...CORS, 'Content-Type': r.headers.get('Content-Type') || 'image/jpeg', 'Cache-Control': 'private, max-age=86400' } });
+}
+async function tmove(env, q, ctx) {                             // Done -> next stage / Move to: the real Trello card moves to the top of the new list
+  const rid = String(q.rid || '').replace(/[^\w-]/g, '').slice(0, 40); if (rid && ONCE.has(rid)) return ONCE.get(rid);
+  const id = String(q.card || '').replace(/[^0-9a-f]/g, ''), to = String(q.to || ''), lists = Array.isArray(q.lists) ? q.lists : [], who = String(q.who || '').slice(0, 40) || 'factory';
+  const tl = lists.filter(l => l[1] === to)[0]; if (!id || !tl) return { ok: false, error: 'bad request' };
+  const now = await trello(env, 'get', '/cards/' + id, { fields: 'idList,idBoard' }); if (now.idBoard !== BOARD) return { ok: false, error: 'not an ALM card' };
+  if (q.from && now.idList !== q.from) { const nm = lists.filter(l => l[1] === now.idList)[0]; return { ok: false, moved: true, error: 'This card was already moved to ' + (nm ? nm[0] : 'another list') + ' - press ↻ to refresh' }; }
+  if (now.idList !== to) {
+    await trello(env, 'put', '/cards/' + id, { idList: to, pos: 'top' });
+    ctx.waitUntil(trello(env, 'post', '/cards/' + id + '/actions/comments', { text: '→ ' + tl[0] + ' · ' + who + ' (factory app)' }).catch(() => {}));
+    const ref = Array.isArray(q.ref) ? q.ref : null;
+    if (ref && /^[CG][A-Z0-9]{5,}$/.test(ref[0]) && /^\d+\.\d+$/.test(ref[1]) && env.SLACK_TOKEN) ctx.waitUntil(slack(env, 'chat.postMessage', { channel: ref[0], thread_ts: ref[1], text: '→ *' + tl[0] + '* · ' + who }).catch(() => {}));
+  }
+  const topic = String(q.topic || '').replace(/[^\w-]/g, '').slice(0, 64);
+  if (topic) ctx.waitUntil(fetch('https://ntfy.sh/' + topic, { method: 'POST', body: 'c=list:' + id, headers: { Cache: 'no', Firebase: 'no' } }).catch(() => {}));
+  const res = { ok: true }; if (rid) ONCE.set(rid, res); return res;
+}
 
 function json(o, st) { return new Response(JSON.stringify(o), { status: st || 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...CORS } }); }
 
@@ -121,17 +172,22 @@ export default {
   async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const url = new URL(req.url);
-    if (req.method === 'GET' && url.pathname === '/') return json({ ok: true, sj: 'fast', slack: !!env.SLACK_TOKEN });
+    if (req.method === 'GET' && url.pathname === '/') return json({ ok: true, sj: 'fast', slack: !!env.SLACK_TOKEN, trello: !!env.TRELLO_TOKEN });
     let q = {};
     if (req.method === 'GET' && url.pathname === '/f') q = Object.fromEntries(url.searchParams);
     else { try { q = JSON.parse(await req.text()); } catch (e) { return json({ ok: false, error: 'bad request' }, 400); } }
     if (!(await proven(q.k))) return json({ ok: false, error: 'not allowed - sign in again', auth: true }, 403);
     try {
       if (url.pathname === '/f' || q.op === 'file') return await file(env, q, req);
+      if (/^(tlist|tatts|timg|tmove)$/.test(q.op || '') && !env.TRELLO_TOKEN) return json({ ok: false, error: 'the worker has no TRELLO_TOKEN secret', notrello: true });
+      if (q.op === 'timg') return await timg(env, q);
+      if (q.op === 'tlist') return json(await tlist(env, q));
+      if (q.op === 'tatts') return json(await tatts(env, q));
+      if (q.op === 'tmove') return json(await tmove(env, q, ctx));
       if (q.op === 'thread') return json(await thread(env, q));
       if (q.op === 'dm') return json(await dm(env, q));
       if (q.op === 'post') return json(await post(env, q, ctx));
-      if (q.op === 'hello') return json({ ok: true, sj: 'fast', slack: !!env.SLACK_TOKEN });
+      if (q.op === 'hello') return json({ ok: true, sj: 'fast', slack: !!env.SLACK_TOKEN, trello: !!env.TRELLO_TOKEN });
       return json({ ok: false, error: 'unknown op' }, 400);
     } catch (e) { return json({ ok: false, error: String(e && e.message || e).slice(0, 200) }, 500); }
   }

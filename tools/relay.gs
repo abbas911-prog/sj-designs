@@ -451,7 +451,7 @@ function fac0(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); hv.limit = FAC.LIMIT; return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -471,7 +471,7 @@ function fac0(reqText, P) {
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
       try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; }
-      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P);
+      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT;
       return out(res);
     }
     if (req.op === 'ping') {                                  // 15 Oct 2026: the cheap "anything new?" every 4 s - no Trello call; the cards come from the cached list
@@ -480,7 +480,7 @@ function fac0(reqText, P) {
       var pth = {}; try { pth = facUnread(P, FTp, pcards, whp, !!req.fresh); } catch (e) {}
       var pdm = null; try { pdm = facDm(P, FTp); } catch (e) {}
       var prs = null; try { prs = facRetSum(P); } catch (e) {}
-      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '' });
+      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P) });
     }
     if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
       var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });
