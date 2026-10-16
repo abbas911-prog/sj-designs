@@ -48,7 +48,7 @@ function doPost(e) {
       var fpw = P.getProperty('FACTORY_PASSWORD'), sg = String(b.sig), okf = [fpw, pw].some(function (k) { return k && hex(Utilities.computeHmacSha256Signature(b.req, k, Utilities.Charset.UTF_8)) === sg; });
       return okf ? fac(b.req, P) : out({ ok: false, error: 'wrong password' });
     }
-    if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'slackpdf2' || b.job === 'dorder' || b.job === 'cash' ? 25000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
+    if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'slackpdf2' || b.job === 'dorder' || b.job === 'cash' || b.job === 'cchat' ? 25000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
     if (b.job === 'live') return live(b.req, P);
     if (b.job === 'orders') return orders(b.req, P);
@@ -58,6 +58,7 @@ function doPost(e) {
     if (b.job === 'dorder') return dorder(b.req, P);
     if (b.job === 'cust') return cust(b.req, P);
     if (b.job === 'cash') return cashPost(b.req, P);
+    if (b.job === 'cchat') return cchat(b.req, P);
     var wf = JOBS[b.job];
     if (!wf) return out({ ok: false, error: 'bad request' });
     if (!gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
@@ -1025,6 +1026,98 @@ function doClearField(cardId, fid, tok) {
   var tries = [{ value: '' }, { value: {} }, { idValue: '', value: '' }];
   for (var i = 0; i < tries.length; i++) { try { trApi('put', '/cards/' + cardId + '/customField/' + fid + '/item', {}, tok, tries[i]); return true; } catch (e) {} }
   return false;
+}
+// ---- CUSTOMER CHATS in the order memo (17 Oct 2026, Abbas: "add the #customers chat directly in there … I have the godown list in the
+// app but I don't have the customers … I click on the customer, I have each and every customer's list in which I can speak about that
+// specific customer's details"). Everything lives in Slack #customer (SJTC workspace, the SJ Memo bot): every "*ORDER MEMO* — NAME" post
+// the memo sends belongs to that customer, and each customer gets ONE chat thread under a "👤 *CUSTOMER* · NAME" message, made on the first
+// line written. Needs on the SJ Memo Slack app: channels:history (groups:history if #customer is private), files:read, users:read.
+var CC_CH = MEMO_PDF_CHANNELS[1];
+function ccName(t) { var s = String(t || ''), m = s.match(/^\*ORDER MEMO\*[^\n]*?[—-]\s*([^\n]+)/) || s.match(/^👤\s*\*CUSTOMER\*\s*·\s*([^\n]+)/); if (!m) return ''; var n = m[1].replace(/[*_]/g, '').trim(); return /^no name$/i.test(n) ? '' : n.slice(0, 60); }
+function ccKey(n) { return String(n || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
+function ccErr(e) { return 'Slack said ' + e + (e === 'missing_scope' ? ' — the SJ Memo Slack app needs channels:history (or groups:history), files:read and users:read: api.slack.com/apps → SJ Memo → OAuth & Permissions → Bot Token Scopes → add → Reinstall' : e === 'not_in_channel' ? ' — invite @SJ Memo to #customer' : ''); }
+function ccHist(tok, fresh) {                                   // newest 400 messages of #customer, kept 20 s for every phone
+  var c = CacheService.getScriptCache(), h = fresh ? null : bigGet(c, 'CC_HIST'); if (h) return JSON.parse(h);
+  var all = [], cur = '';
+  for (var i = 0; i < 2; i++) { var j = slackApi(tok, 'conversations.history', { channel: CC_CH, limit: 200, cursor: cur }, true); if (!j.ok) throw new Error(ccErr(j.error));
+    (j.messages || []).forEach(function (m) { all.push({ ts: m.ts, text: String(m.text || '').slice(0, 1500), user: m.user || '', bot: !!m.bot_id, rc: m.reply_count || 0, lr: m.latest_reply || '', files: (m.files || []).map(function (f) { return { id: f.id, name: f.name || '', type: f.mimetype || '', size: f.size || 0 }; }) }); });
+    cur = (j.response_metadata || {}).next_cursor || ''; if (!cur) break; }
+  try { bigPut(c, 'CC_HIST', JSON.stringify(all), 20); } catch (e) {}
+  return all;
+}
+function ccWho(tok, m) {                                        // "*Abbas:* text" (written in the app) or a person in Slack
+  var t = String(m.text || ''), mm = t.match(/^\*([^*]{1,40}):\*\s?([\s\S]*)$/); if (m.bot && mm) return { who: mm[1], text: mm[2], app: true };
+  if (m.bot) return { who: 'SJ Memo', text: t, app: false };
+  var c = CacheService.getScriptCache(), k = 'CC_U_' + m.user, n = c.get(k);
+  if (!n && m.user) { var u = slackApi(tok, 'users.info', { user: m.user }, true); n = u.ok ? String((u.user.profile || {}).real_name || u.user.real_name || u.user.name || '').split(' ')[0] : 'Slack'; c.put(k, n, 21600); }
+  return { who: n || 'Slack', text: t, app: false };
+}
+function ccDiag() {                                            // read-only check, run from the editor: which scopes the SJ Memo bot has and whether it can read #customer
+  var tok = PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN'), L = [];
+  var r = UrlFetchApp.fetch('https://slack.com/api/conversations.history?channel=' + CC_CH + '&limit=3', { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true }), h = r.getHeaders(), j = JSON.parse(r.getContentText());
+  L.push('scopes: ' + (h['x-oauth-scopes'] || h['X-OAuth-Scopes'] || '?')); L.push('#customer history ok=' + j.ok + (j.ok ? ' · ' + (j.messages || []).length + ' msgs' : ' err=' + j.error + ' needed=' + (j.needed || '')));
+  (j.messages || []).forEach(function (m) { L.push('  ' + String(m.text || '').slice(0, 60).replace(/\n/g, ' ') + ((m.files || []).length ? ' [+' + m.files.length + ' file]' : '')); });
+  Logger.log(L.join('\n')); return L.join('\n');
+}
+function cchat(reqText, P) {
+  var req = JSON.parse(reqText);
+  if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return out({ ok: false, error: 'the relay has no SLACK_BOT_TOKEN yet' });
+  var cR = CacheService.getScriptCache(), rid = String(req.rid || '').replace(/[^\w-]/g, '').slice(0, 40);
+  if (rid) { var prev = cR.get('CCR_' + rid); if (prev) return ContentService.createTextOutput(prev).setMimeType(ContentService.MimeType.JSON); }
+  try {
+    if (req.op === 'list') {
+      var by = {};
+      ccHist(tok, !!req.fresh).forEach(function (m) { var n = ccName(m.text); if (!n) return; var k = ccKey(n), e = by[k] || (by[k] = { name: n, last: '0', memos: 0, chat: 0, root: '' });
+        if (/^\*ORDER MEMO\*/.test(m.text)) e.memos++; else { e.root = m.ts; e.chat += m.rc; }
+        var l = m.lr && +m.lr > +m.ts ? m.lr : m.ts; if (+l > +e.last) e.last = l; });
+      return out({ ok: true, customers: Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return +b.last - +a.last; }) });
+    }
+    if (req.op === 'thread') {
+      var key = ccKey(req.name); if (!key) return out({ ok: false, error: 'no customer name' });
+      var mine = ccHist(tok, !!req.fresh).filter(function (m) { return ccKey(ccName(m.text)) === key; }), msgs = [];
+      mine.forEach(function (m) {
+        var memo = /^\*ORDER MEMO\*/.test(m.text);
+        if (memo) msgs.push({ ts: m.ts, who: 'Order memo', memo: true, text: m.text.replace(/^\*ORDER MEMO\*[^\n]*\n?/, ''), files: m.files });
+        if (m.rc) { var rp = slackApi(tok, 'conversations.replies', { channel: CC_CH, ts: m.ts, limit: 200 }, true); if (!rp.ok) throw new Error(ccErr(rp.error));
+          (rp.messages || []).forEach(function (x) { if (x.ts === m.ts) return; var w = ccWho(tok, { text: x.text, user: x.user, bot: !!x.bot_id });
+            msgs.push({ ts: x.ts, who: w.who, app: w.app, text: w.text, files: (x.files || []).map(function (f) { return { id: f.id, name: f.name || '', type: f.mimetype || '', size: f.size || 0 }; }) }); }); }
+      });
+      msgs.sort(function (a, b) { return +a.ts - +b.ts; });
+      var root = (mine.filter(function (m) { return /^👤/.test(m.text); })[0] || {}).ts || '';
+      return out({ ok: true, name: req.name, root: root, msgs: msgs });
+    }
+    if (req.op === 'post' || req.op === 'up') {
+      var nm = String(req.name || '').replace(/[*_\n]/g, ' ').trim().slice(0, 60), k2 = ccKey(nm), who = String(req.who || '').replace(/[*\n]/g, '').slice(0, 40) || 'SJ', txt = String(req.text || '').slice(0, 3000);
+      if (!k2) return out({ ok: false, error: 'no customer name' });
+      var lock = LockService.getScriptLock(); lock.waitLock(15000); var rootTs = '';
+      try { rootTs = (ccHist(tok, true).filter(function (m) { return /^👤/.test(m.text) && ccKey(ccName(m.text)) === k2; }).sort(function (a, b) { return +a.ts - +b.ts; })[0] || {}).ts || '';
+        if (!rootTs) { var r0 = slackApi(tok, 'chat.postMessage', { channel: CC_CH, text: '👤 *CUSTOMER* · ' + nm + '\n_customer chat · SJ memo app_' }); if (!r0.ok) return out({ ok: false, error: ccErr(r0.error) }); rootTs = r0.ts; bigDrop(cR, 'CC_HIST'); }
+      } finally { lock.releaseLock(); }
+      var res;
+      if (req.op === 'post') { if (!txt.trim()) return out({ ok: false, error: 'empty' }); var pj = slackApi(tok, 'chat.postMessage', { channel: CC_CH, thread_ts: rootTs, text: '*' + who + ':* ' + txt }); if (!pj.ok) return out({ ok: false, error: ccErr(pj.error) }); res = { ok: true, ts: pj.ts, root: rootTs }; }
+      else {
+        var fs = Array.isArray(req.files) ? req.files.slice(0, 10) : [], ids = [], tot = 0;
+        for (var i = 0; i < fs.length; i++) { var b = Utilities.base64Decode(String(fs[i].b64 || '')); tot += b.length; if (b.length > 18000000 || tot > 40000000) return out({ ok: false, error: 'files too big (18 MB each, 40 MB together)' }); ids.push(slackUp(tok, String(fs[i].name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80), b)); }
+        if (!ids.length) return out({ ok: false, error: 'no file' });
+        var cj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+          payload: { files: JSON.stringify(ids.map(function (f) { return { id: f }; })), channel_id: CC_CH, thread_ts: rootTs, initial_comment: '*' + who + ':* ' + (txt || '📎') } }).getContentText());
+        if (!cj.ok) return out({ ok: false, error: ccErr(cj.error) }); res = { ok: true, root: rootTs, files: ids.length };
+      }
+      bigDrop(cR, 'CC_HIST');
+      var rt = JSON.stringify(res); if (rid) cR.put('CCR_' + rid, rt, 21600); return ContentService.createTextOutput(rt).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (req.op === 'file') {                                    // a photo / PDF / voice note of the chat, for the phone (original bytes)
+      var fid = String(req.id || '').replace(/[^A-Z0-9]/g, ''), fi = slackApi(tok, 'files.info', { file: fid }, true); if (!fi.ok) return out({ ok: false, error: ccErr(fi.error) });
+      var f = fi.file || {}, u = req.thumb ? (f.thumb_720 || f.thumb_480 || f.url_private) : (f.url_private_download || f.url_private); if (!u) return out({ ok: false, error: 'no file link' });
+      if (!req.thumb && (f.size || 0) > 14000000) return out({ ok: false, error: 'file too big for the app', link: f.permalink || '' });
+      var r = UrlFetchApp.fetch(u, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });
+      var fbl = r.getResponseCode() === 200 ? r.getBlob() : null;
+      if (!fbl || /text\/html/.test(String(fbl.getContentType() || ''))) return out({ ok: false, error: 'Slack refused the file (the SJ Memo app needs files:read)', link: f.permalink || '' });
+      return out({ ok: true, b64: Utilities.base64Encode(fbl.getBytes()), type: f.mimetype || 'application/octet-stream', name: f.name || fid });
+    }
+    return out({ ok: false, error: 'the relay does not know "' + req.op + '" yet - Abbas must deploy the new version' });
+  } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 300) }); }
 }
 function slackUp(tok, name, bytes) {
   var a = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
