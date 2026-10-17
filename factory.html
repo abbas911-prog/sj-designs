@@ -142,7 +142,7 @@ body.co .toast{bottom:90px}
   <section data-t="returns" hidden><div id="rets" hidden></div><div class="seg" id="rseg"><button data-r="RETURNS" class="on">At the factory · কারখানায়</button><button data-r="RETURNS BACK">Came back · ফেরত এসেছে</button></div><div id="retlist"></div></section>
   <section data-t="more" hidden>
     <div class="mecard"><div class="mono">AM</div><h1><span id="who"></span><small>Factory · কারখানা</small></h1></div>
-    <div class="mlist"><button class="rf" id="bell" hidden><i>🔔</i><span>Notifications<small>নোটিফিকেশন</small></span></button><button class="rf" id="rf"><i>↻</i><span>Refresh the cards<small>আবার লোড করুন</small></span></button><button class="m" id="bspeed"><i>🚀</i><span>Speed · Fast lane<small>গতি</small></span></button><button class="m" id="bdmset"><i>💬</i><span>Direct chat channel<small>সরাসরি চ্যাটের চ্যানেল</small></span></button></div>
+    <div class="mlist"><button class="rf" id="bell" hidden><i>🔔</i><span>Notifications<small>নোটিফিকেশন</small></span></button><button class="rf" id="rf"><i>↻</i><span>Refresh the cards<small>আবার লোড করুন</small></span></button><button class="m" id="bspeed"><i>🚀</i><span>Speed · Fast lane<small>গতি</small></span></button><button class="m" id="bslk"><i>⚡</i><span>Instant Slack messages<small>স্ল্যাক মেসেজ সাথে সাথে</small></span></button><button class="m" id="bdmset"><i>💬</i><span>Direct chat channel<small>সরাসরি চ্যাটের চ্যানেল</small></span></button></div>
     <div class="mlist"><button class="rf" id="badd"><i>＋</i><span>New card<small>নতুন কার্ড</small></span></button><button class="rf" id="bstar"><i>⭐</i><span>New sample<small>নতুন স্যাম্পল</small></span></button><button class="m" id="bretm"><i>↩️</i><span>New return<small>নতুন ফেরত</small></span></button></div>
     <div class="mlist"><button class="m" id="bout"><i>👤</i><span>Sign in as someone else<small>অন্য নামে ঢুকুন</small></span></button></div>
     <div style="text-align:center;color:var(--mute);font-size:12px;margin-top:10px" id="verline"></div>
@@ -186,7 +186,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-17e';
+var VER = '2026-10-17f';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -397,6 +397,10 @@ $('psample').onclick = function(){ $('plus').hidden = true; $('bstar').click(); 
 $('pret').onclick = function(){ $('plus').hidden = true; retNew(); };
 $('bretm').onclick = function(){ retNew(); };
 $('bspeed').onclick = function(){ $('msg').onclick(); };
+$('bslk').onclick = async function(){ if (!FAST.url || !LIVE.topic) { alert('Open the app once with the fast lane on, then try again.'); return; }
+  var u = FAST.url.replace(/\/+$/, '') + '/slack?t=' + LIVE.topic; try { await navigator.clipboard.writeText(u); } catch(e){}
+  var seen = LIVE.slk || +ls('sj_fac_slk') || 0;
+  prompt((seen ? '✅ Slack is pushing messages (last ' + new Date(seen).toLocaleTimeString() + ').\n\n' : '') + 'Slack app "SJ Orders" → Event Subscriptions → On → Request URL = this link (copied) → Subscribe to bot events: message.channels + message.groups → Save. Keep it private.', u); };
 $('bdmset').onclick = function(){ dmPick(); };
 $('bout').onclick = function(){ if (!confirm('Sign in as someone else? · অন্য নামে ঢুকবেন?')) return; ls('sj_fac_pw', null); ls('sj_fac_who', null); location.reload(); };
 $('bmore').onclick = function(){ if (!open) return; $('cmh').textContent = cardTitle(open).replace(/<[^>]+>/g, '') + ' · ' + lname(open.l); $('cmenu').hidden = false; };
@@ -936,7 +940,7 @@ async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now
 // any long loading of the chats"): (a) the "anything new?" check no longer waits behind the card-list refresh; (b) the status line shows the
 // time of the last check ("● Live 16:46:05"); (c) the newest message text is shown right on the home screen; (d) the chats with new messages
 // are fetched in the background, so opening one shows the message at once; (e) every chat seen on this phone is kept on the phone.
-function liveMark(){ var n = new Date(); if (!D.w) return; $('msg').className = 'ok live'; $('msg').textContent = (LIVE.ok ? '⚡ Live ' : '● Live ') + [n.getHours(), n.getMinutes(), n.getSeconds()].map(function(x){ return ('0' + x).slice(-2); }).join(':') + (FAST.url ? (fastOn() ? ' · 🚀 fast' : ' · relay') : ''); }
+function liveMark(){ var n = new Date(); if (!D.w) return; $('msg').className = 'ok live'; $('msg').textContent = (LIVE.ok ? '⚡ Live ' : '● Live ') + (Date.now() - (LIVE.slk || +ls('sj_fac_slk') || 0) < 6 * 3600000 ? 'S ' : '') + [n.getHours(), n.getMinutes(), n.getSeconds()].map(function(x){ return ('0' + x).slice(-2); }).join(':') + (FAST.url ? (fastOn() ? ' · 🚀 fast' : ' · relay') : ''); }
 var PREF = {};
 async function prefetch(){ var ids = Object.keys(D.th || {}).filter(function(id){ var u = D.th[id]; if (!u || !u.n || (open && open.id === id)) return false; var have = THC[id] || []; var top = have.length ? have[have.length - 1].ts : ''; return !(top && +top >= +u.last) && !(PREF[id] && Date.now() - PREF[id] < 8000); }).slice(0, 3);
   for (var i = 0; i < ids.length; i++) { var id = ids[i]; PREF[id] = Date.now(); var have = THC[id] || [], last = have.length ? have[have.length - 1].ts : '';
@@ -957,9 +961,29 @@ function liveStart(topic, force){ if (!topic || !window.EventSource) return; if 
   es.onerror = function(){ LIVE.ok = false; };
   es.onmessage = function(e){ var d = null; try { d = JSON.parse(e.data); } catch(x){} if (!d || d.event !== 'message') return; LIVE.ok = true; liveNudge(String(d.message || '').replace(/^c=/, '')); }; }
 function liveNudge(c){ LIVE.t = Date.now();
+  if (/^s:/.test(c)) { liveSlack(c.slice(2)); return; }
   if (/^list:/.test(c)) { setTimeout(function(){ load(false); }, 400); c = c.slice(5); }
   if (open && (open.id === c || !c)) { TH.force = true; thPull(); }
   clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(false); }, 250); }
+// 17 Oct 2026 (Abbas: "a message came through on Slack, and in the app it came after 25-30 seconds. Why?"): a message written IN SLACK never rang
+// the doorbell - only the app's own sends did - so the app found it on its 16-s safety check through the slow Google relay (+10 s cache).
+// Now Slack itself tells the fast-lane worker the moment a message is written (Slack Event Subscriptions -> worker /slack -> doorbell
+// "s:<channel>:<thread>"); the app maps that to the card, pulls the chat through the fast lane (~0.2 s) and rings at once.
+function liveSlack(s){ var p = s.split(':'), ch = p[0] || '', ts = p[1] || ''; LIVE.slk = Date.now(); try { ls('sj_fac_slk', String(LIVE.slk)); } catch(e){}
+  var cid = D.dm && D.dm.ch === ch ? 'dm' : Object.keys(FAST.refs || {}).filter(function(k){ var r = FAST.refs[k]; return r && r[0] === ch && r[1] === ts; })[0];
+  if (open && cid && (open.id === cid || (cid === 'dm' && open.dm))) { TH.force = true; thPull(); }
+  else if (cid) liveFetch(cid);
+  clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(true); }, 1200); liveMark(); }
+async function liveFetch(cid){ if (!fastOn()) return; var rf = cid === 'dm' ? (D.dm ? [D.dm.ch] : null) : FAST.refs[cid]; if (!rf) return;
+  var have = THC[cid] || [], last = have.length ? have[have.length - 1].ts : '';
+  var j = await fast(cid === 'dm' ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (!j || !j.ok || !j.msgs) return;
+  var hv = {}; have.forEach(function(m){ hv[m.ts] = 1; }); var add = j.msgs.filter(function(m){ return /^\d+\.\d+$/.test(m.ts) && !hv[m.ts]; }); if (!add.length) return;
+  if (open && (open.id === cid || (cid === 'dm' && open.dm))) return;
+  THC[cid] = have.concat(add); var news = add.filter(function(m){ return !m.sys && !isMe(m) && +m.ts > Date.now() / 1000 - 180; });
+  if (news.length) { var u = (D.th = D.th || {})[cid] || {}, nl = news[news.length - 1];
+    if (!(+u.last >= +nl.ts)) { var t = String(nl.text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(); if (!t && (nl.files || []).length) t = nl.files.map(function(f){ return f.audio ? '🎤 voice note' : f.img ? '📷 photo' : f.video ? '🎬 video' : '📎 ' + f.name; }).join(' · ');
+      D.th[cid] = { n: (u.n || 0) + news.length, last: nl.ts, tx: (nl.who ? nl.who + ': ' : '') + t.slice(0, 160) }; draw(); alertNew(); } }
+  thcSave(); }
 function totUnread(){ return Object.keys(D.th || {}).reduce(function(a, k){ return a + ((D.th[k] || {}).n || 0); }, 0); }
 function alertNew(){ var t = totUnread(); document.title = (t ? '(' + t + ') ' : '') + 'AL MUTAGADED · Factory';
   if (LASTTOT >= 0 && t > LASTTOT) beep(); LASTTOT = t; }
