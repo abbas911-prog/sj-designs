@@ -47,6 +47,7 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 #outbar{background:#fff8e6;border:1.5px solid #e0a800;border-radius:14px;padding:10px 12px;margin-bottom:10px;font-size:14.5px;font-weight:700;color:#7a5a00}#outbar.bad{background:#fdecef;border-color:var(--red);color:var(--red)}#outbar small{display:block;font-weight:500;color:var(--mute);font-size:12.5px}
 .catch{display:flex;width:100%;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:13px;background:var(--red);color:#fff;font-weight:800;font-size:15px;margin-bottom:10px;box-shadow:0 6px 16px rgba(192,36,63,.25)}
 .crow,#dm{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--r);padding:10px 12px 10px 10px;margin-bottom:8px;box-shadow:var(--sh);cursor:pointer;content-visibility:auto;contain-intrinsic-size:76px}.crow:active,#dm:active{background:#fbf8f2}
+.crow.pin{background:#fffaf0;box-shadow:inset 0 0 0 1.5px #ecd9ad,var(--sh)}
 .crow .ph,#dm .ic{width:54px;height:54px;border-radius:50%;flex:none}#dm .ic{background:#f3e7cf;display:flex;align-items:center;justify-content:center;font-size:24px}
 .crow .t,#dm .t{flex:1;min-width:0}.crow b,#dm b{display:block;font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.crow small,#dm small,#dm em{display:block;color:var(--mute);font-size:12px;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crow em{display:block;font-style:normal;font-size:13.5px;color:#3b2f1e;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.crow.u em{font-weight:700}
@@ -76,6 +77,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .atts .a{flex:none;width:68px;height:68px;border-radius:12px;background:#f1ebe0 center/cover no-repeat;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;position:relative}
 .atts .a.cv{border-color:var(--gold)}.atts .a small{position:absolute;bottom:0;left:0;right:0;font-size:9px;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:0 0 10px 10px}
 .atts .n{flex:none;align-self:center;font-size:12px;color:var(--mute);padding-right:4px}
+#vx{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:31;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.95);color:#111;font-size:22px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.4)}
 #viewer{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:30;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:center;justify-content:center;touch-action:pinch-zoom}#viewer img{max-width:100%;max-height:100%;object-fit:contain}#viewer button{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:20px}
 .hero .ttl{padding:10px 12px 0;font-size:13.5px;color:var(--mute)}
 .hero .info{padding:10px 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:14px;word-break:break-word}
@@ -184,7 +186,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-17c';
+var VER = '2026-10-17d';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -348,7 +350,8 @@ function inbox(){
   el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '<button id="bcatch">⚡ Catch up</button></h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small>' + ((D.th[c.id] || {}).tx ? '<em class="itx">' + esc(D.th[c.id].tx) + '</em>' : '') + '</div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
 }
 // ---- 13 Oct 2026 (Abbas): "like Slack's Catch up" - read but cannot do it now -> 📌 LATER, per person, stays on the home screen until unpinned ----
-function laterBox(){ var el = $('later'), ids = Object.keys(D.later || {}), cs = ids.map(function(id){ return D.byId[id]; }).filter(Boolean).sort(function(a, b){ return +D.later[b.id] - +D.later[a.id]; });
+function laterBox(){ $('later').hidden = true; return;   // 17 Oct: pinned chats are now on top of Chats
+  var el = $('later'), ids = Object.keys(D.later || {}), cs = ids.map(function(id){ return D.byId[id]; }).filter(Boolean).sort(function(a, b){ return +D.later[b.id] - +D.later[a.id]; });
   if (!cs.length) { el.hidden = true; return; }
   el.hidden = false; el.innerHTML = '<h3>📌 Later · পরে করব · ' + cs.length + '</h3>' + cs.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small></div><span class="pinb">📌</span></div>'; }).join(''); }
 $('later').onclick = function(e){ var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
@@ -407,12 +410,13 @@ function chatsDraw(){ if (TAB !== 'chats' || !D.cards) return;
   var items = [];
   D.cards.forEach(function(c){ var t = D.th[c.id], h = THC[c.id]; var last = Math.max(t && t.last ? +t.last : 0, +((D.act || {})[c.id] || 0)), tx = t && t.tx || '';
     if (h && h.length) { var lm = h[h.length - 1]; if (+lm.ts > last) { last = +lm.ts; tx = lineOf(lm); } else if (!tx) tx = lineOf(lm); }
-    if (!last && !(D.later || {})[c.id]) return; items.push({ c: c, last: last, tx: tx, u: unread(c) }); });
-  items.sort(function(a, b){ return (b.u ? 1 : 0) - (a.u ? 1 : 0) || b.last - a.last; }); items = items.slice(0, 60);
-  var tot = totUnread(), sig = tot + '|' + items.map(function(x){ return x.c.id + x.last + x.u + x.tx; }).join(',');
+    var pin = (D.later || {})[c.id]; if (!last && !pin) return; items.push({ c: c, last: last, tx: tx, u: unread(c), pin: !!pin }); });
+  // 17 Oct 2026 (Abbas: "pinned chats have to be on top"): 📌 pinned first, then unread, then newest
+  items.sort(function(a, b){ return (b.pin ? 1 : 0) - (a.pin ? 1 : 0) || (b.u ? 1 : 0) - (a.u ? 1 : 0) || b.last - a.last; }); var np = items.filter(function(x){ return x.pin; }).length; items = items.slice(0, Math.max(60, np));
+  var tot = totUnread(), sig = tot + '|' + items.map(function(x){ return x.c.id + x.last + x.u + x.tx + (x.pin ? 'P' : ''); }).join(',');
   if (sig === CHATSIG) return; CHATSIG = sig;
   var h = tot ? '<button class="catch" id="bcatch2">⚡ Catch up · ' + tot + ' new · নতুন মেসেজ</button>' : '';
-  h += items.length ? items.map(function(x){ var c = x.c; return '<div class="crow' + (x.u ? ' u' : '') + '" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><b>' + cardTitle(c) + '</b><small>' + esc(lname(c.l)) + '</small>' + (x.tx ? '<em>' + esc(x.tx) + '</em>' : '') + '</div><div class="r"><time>' + when(x.last) + '</time>' + (x.u ? '<span class="newb">' + x.u + '</span>' : (D.later || {})[c.id] ? '<span class="pinb">📌</span>' : '') + '</div></div>'; }).join('')
+  h += items.length ? items.map(function(x, i){ var c = x.c; return (np && i === 0 ? '<div class="sect">📌 PINNED · পিন করা</div>' : '') + (np && i === np ? '<div class="sect">ALL CHATS · সব চ্যাট</div>' : '') + '<div class="crow' + (x.u ? ' u' : '') + (x.pin ? ' pin' : '') + '" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><b>' + cardTitle(c) + '</b><small>' + esc(lname(c.l)) + '</small>' + (x.tx ? '<em>' + esc(x.tx) + '</em>' : '') + '</div><div class="r"><time>' + when(x.last) + '</time>' + (x.u ? '<span class="newb">' + x.u + '</span>' : '') + (x.pin ? '<span class="pinb">📌</span>' : '') + '</div></div>'; }).join('')
     : '<div class="empty">No card chats yet · কোনো চ্যাট নেই</div>';
   $('chats').innerHTML = h; document.querySelectorAll('#chats .crow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); }); }
 $('chats').onclick = function(e){ if (e.target.closest('#bcatch2')) { catchUp(); return; } var r = e.target.closest('.crow'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
@@ -441,7 +445,7 @@ function cardShow(on){ if (on) { SCY = window.scrollY || 0; document.body.classL
 // iPhone: when the keyboard opens the visible area shrinks and Safari scrolls the page; the card follows the visible area and snaps back when the keyboard closes
 function vvFit(){ var vv = window.visualViewport, el = $('card'); if (!vv || el.hidden) return; var full = Math.abs(vv.height - window.innerHeight) < 2 && vv.offsetTop < 2; el.style.height = full ? '' : vv.height + 'px'; el.style.top = full ? '' : vv.offsetTop + 'px'; if (full) window.scrollTo(0, 0); }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', vvFit); window.visualViewport.addEventListener('scroll', vvFit); }
-function openCard(c){ open = c; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
+function openCard(c){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } open = c; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
 function paintCard(){
   var c = open; $('card').classList.toggle('dm', !!c.dm);
   if (c.dm) { $('cnm').innerHTML = '💬 Direct chat<small>সরাসরি কথা · Abbas ↔ factory</small>'; $('cstage').textContent = '#' + ((D.dm || {}).name || ''); $('cstage').onclick = function(){ dmPick(); }; $('cstage').style.cursor = 'pointer'; $('tcount').textContent = ''; $('thh').textContent = 'DIRECT CHAT · সরাসরি কথা'; return; }
@@ -466,16 +470,24 @@ function attsDraw(c){
   as.filter(function(a){ return a.img; }).forEach(function(a){ photo({ id: c.id, img: a.id }, el.querySelector('[data-a="' + a.id + '"]')); });
 }
 $('catts').onclick = async function(e){ var a = e.target.closest('.a'); if (!a) return;
-  if (a.dataset.img) { $('viewer').hidden = false; $('vimg').src = IMG[a.dataset.img] ? imgSrc(IMG[a.dataset.img]) : ''; bigPhoto(open.id, a.dataset.img); }
+  if (a.dataset.img) { var vn = viewOpen(IMG[a.dataset.img] ? imgSrc(IMG[a.dataset.img]) : ''); bigPhoto(open.id, a.dataset.img, vn); }
   else window.open(a.dataset.url, '_blank'); };
-$('vx').onclick = function(){ $('viewer').hidden = true; $('vimg').src = ''; };
-$('cimg').onclick = function(){ if (open && open.img) { $('viewer').hidden = false; $('vimg').src = IMG[open.img] ? imgSrc(IMG[open.img]) : ''; bigPhoto(open.id, open.img); } };
-async function bigPhoto(cid, att){ var fj = fastTr() ? await fast({ op: 'timg', card: cid, att: att, big: 1, top: 1 }) : null;
-  if (fj && fj.ok && fj.blob && fj.blob.size) { if (!$('viewer').hidden) $('vimg').src = URL.createObjectURL(fj.blob); return; }
-  var j = await call({ op: 'img', card: cid, att: att, big: 1 }); if (j.ok && !$('viewer').hidden) $('vimg').src = 'data:image/jpeg;base64,' + j.b64; }
-function closeCard(){ if (REC.r) recStop(); try { if (open && TH.opened && LOOK.act > TH.opened) { var rl = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }); call({ op: 'thread', card: open.id, since: rl.length ? rl[rl.length - 1].ts : '', look: 1 }); } } catch(e){} $('card').hidden = true; cardShow(false); $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; CHATSIG = ''; draw(); }
+// 17 Oct 2026 (Abbas: "if I use it a little fast it gets stuck … whatever chat I open, it comes back to the same photo, then I have to close
+// the app"): the photo viewer had no visible close button and stayed open across cards, and a slow full-size photo arriving late could
+// replace the next one. Now: a big ✕, a tap anywhere closes it, Back closes it, every card open/close closes it, and late photos are dropped.
+var VIEW = { n: 0, st: false };
+function viewOpen(src){ VIEW.n++; $('viewer').hidden = false; $('vimg').src = src || ''; if (!VIEW.st) { VIEW.st = true; try { history.pushState({ view: 1 }, ''); } catch(e){} } return VIEW.n; }
+function viewClose(fromPop){ if ($('viewer').hidden) return false; VIEW.n++; $('viewer').hidden = true; $('vimg').removeAttribute('src'); if (VIEW.st) { VIEW.st = false; if (!fromPop) { VIEW.skip = true; try { history.back(); } catch(e){ VIEW.skip = false; } } } return true; }
+function viewSet(n, src){ if (n === VIEW.n && !$('viewer').hidden) $('vimg').src = src; }
+$('vx').onclick = function(e){ e.stopPropagation(); viewClose(); };
+$('viewer').onclick = function(){ viewClose(); };
+$('cimg').onclick = function(){ if (open && open.img) { var vn = viewOpen(IMG[open.img] ? imgSrc(IMG[open.img]) : ''); bigPhoto(open.id, open.img, vn); } };
+async function bigPhoto(cid, att, vn){ var fj = fastTr() ? await fast({ op: 'timg', card: cid, att: att, big: 1, top: 1 }) : null;
+  if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size) { viewSet(vn, URL.createObjectURL(fj.blob)); return; }
+  var j = await call({ op: 'img', card: cid, att: att, big: 1 }); if (j.ok) viewSet(vn, 'data:image/jpeg;base64,' + j.b64); }
+function closeCard(){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } if (REC.r) recStop(); try { if (open && TH.opened && LOOK.act > TH.opened) { var rl = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }); call({ op: 'thread', card: open.id, since: rl.length ? rl[rl.length - 1].ts : '', look: 1 }); } } catch(e){} $('card').hidden = true; cardShow(false); $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; CHATSIG = ''; draw(); }
 $('back').onclick = function(){ history.back(); };
-window.addEventListener('popstate', function(){ if (!$('card').hidden) closeCard(); });
+window.addEventListener('popstate', function(){ if (VIEW.skip) { VIEW.skip = false; return; } if (VIEW.st) { viewClose(true); return; } if (!$('card').hidden) closeCard(); });
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
 // ---- 13 Oct 2026 (Abbas): edit the card's description/title, copy the card, add a new card ----
 function listSel(sel, def){ sel.innerHTML = D.lists.map(function(l){ return '<option value="' + esc(l[1]) + '"' + (l[1] === def ? ' selected' : '') + '>' + esc(l[0]) + ' · ' + (UR[l[0]] || '') + '</option>'; }).join(''); }
@@ -667,7 +679,7 @@ async function loadMedia(e, tap){
   else { var au = document.createElement('audio'); au.controls = true; au.preload = 'auto'; au.src = r.url; e.replaceWith(au); au.play().catch(function(){}); }
 }
 $('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f); };
-async function openBig(src, fid){ $('viewer').hidden = false; $('vimg').src = src || ''; if (fid) { var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && !$('viewer').hidden && /^image/.test(j.type || 'image')) $('vimg').src = 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64; } }
+async function openBig(src, fid){ var vn = viewOpen(src); if (!fid) return; var fj = fastOn() ? await fast({ op: 'file', id: fid, top: 1 }) : null; if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size && /^image/.test(fj.blob.type || 'image')) { viewSet(vn, URL.createObjectURL(fj.blob)); return; } var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && /^image/.test(j.type || 'image')) viewSet(vn, 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64); }
 
 // ===== RETURNS (16 Oct 2026). First version (a form with design number, pieces, reasons) - Abbas: "I want it more simple … no need to write a
 // design number … paste as many photos or videos … it should appear just like a card … open it, below it a chat … exactly like the START list."
