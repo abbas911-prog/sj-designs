@@ -186,7 +186,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-17f';
+var VER = '2026-10-17g';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -579,7 +579,11 @@ async function fastKey(){ if (FAST.k || !PW) return FAST.k; var d = await crypto
 function fastOn(){ return !!FAST.url && Date.now() > FAST.down; }
 function fastTr(){ return fastOn() && !(FAST.notr > Date.now()); }
 function fastSet(u){ u = u || ''; if (u === FAST.url) return; FAST.url = u; FAST.down = 0; ls('sj_fac_fast', u || null); liveMark(); }
-function refsSet(r, merge){ if (!r) return; FAST.refs = merge ? Object.assign(FAST.refs, r) : r; try { ls('sj_fac_refs', JSON.stringify(FAST.refs)); } catch(e){} }
+// 17 Oct 2026: a card's chat can move (#cutting -> #usmancutting for Usman hand-work cards) - then the chat kept on the phone is from the old
+// thread: drop it and load the new thread from the start.
+function refsSet(r, merge){ if (!r) return; var moved = Object.keys(r).filter(function(id){ var o = FAST.refs[id], n = r[id]; return o && n && (o[0] !== n[0] || o[1] !== n[1]); });
+  if (moved.length) { moved.forEach(function(id){ delete THC[id]; if (TH.card && TH.card.id === id) { TH.msgs = []; TH.force = true; setTimeout(thPull, 50); } }); thcSave(); }
+  FAST.refs = merge ? Object.assign(FAST.refs, r) : r; try { ls('sj_fac_refs', JSON.stringify(FAST.refs)); } catch(e){} }
 async function fast(obj, force){
   if (!FAST.url || (!force && Date.now() < FAST.down)) return null; await fastKey(); obj.k = FAST.k;
   var file = obj.op === 'file' || obj.op === 'timg', t0 = Date.now(), lim = file ? 120000 : obj.op === 'post' ? 15000 : 8000, ac = new AbortController(), tm = setTimeout(function(){ ac.abort(); }, lim), j = null;
