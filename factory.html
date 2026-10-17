@@ -87,7 +87,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .thr{background:#eee6da;border-radius:var(--r);padding:10px;margin-bottom:8px}
 .thr h3{margin:0 0 8px;font-size:12px;color:var(--mute);letter-spacing:.07em;font-weight:800}.thr h3 span{float:right;font-weight:500;letter-spacing:0}
 .msg{display:flex;flex-direction:column;margin:5px 0;max-width:84%;align-items:flex-start}.msg.me{align-self:flex-end;align-items:flex-end;margin-left:auto}
-.msg .who{font-size:11.5px;color:#7a5a2a;margin:0 8px 2px;font-weight:700}.msg.me .who{text-align:right}.msg .who .wt{font-weight:500;color:#8a7f70;margin-left:6px}
+.msg .who{font-size:11.5px;color:#7a5a2a;margin:0 8px 3px;font-weight:700}.who .nm{display:inline-block;color:#fff;font-size:13px;font-weight:800;padding:2px 9px;border-radius:999px;letter-spacing:.2px}.who .sl{font-size:10.5px;font-weight:600;color:#8a7f70;margin-left:5px}.wn{font-weight:800}.msg.me .who{text-align:right}.msg .who .wt{font-weight:500;color:#8a7f70;margin-left:6px}
 .msg .bub{background:#fff;border-radius:14px 14px 14px 4px;padding:8px 10px 5px;font-size:15px;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 1px rgba(0,0,0,.06);position:relative;min-width:70px}
 .msg.me .bub{background:#dcf3c8;border-radius:14px 14px 4px 14px}.msg .tm{display:block;text-align:right;font-size:10px;color:#8a7f70;margin-top:3px}
 .msg.sys{align-self:center;max-width:100%;align-items:center}.msg.sys .bub{background:#e1dbd0;color:#5a5047;font-size:12px;padding:3px 10px;box-shadow:none;border-radius:999px}.msg.sys .tm{display:none}
@@ -186,7 +186,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-17h';
+var VER = '2026-10-17i';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -347,7 +347,7 @@ function inbox(){
   var us = (unread(DMC) ? [DMC] : []).concat(D.cards.filter(function(c){ return unread(c); })), el = $('inbox'), tot = us.reduce(function(a, c){ return a + unread(c); }, 0);
   try { if (navigator.setAppBadge) { tot ? navigator.setAppBadge(tot) : navigator.clearAppBadge(); } } catch(e){}
   if (!us.length) { el.hidden = true; return; }
-  el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '<button id="bcatch">⚡ Catch up</button></h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small>' + ((D.th[c.id] || {}).tx ? '<em class="itx">' + esc(emo(D.th[c.id].tx)) + '</em>' : '') + '</div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
+  el.hidden = false; el.innerHTML = '<h3>💬 New messages · নতুন মেসেজ · ' + tot + '<button id="bcatch">⚡ Catch up</button></h3>' + us.map(function(c){ var p = parse(c.name); return '<div class="row" data-id="' + c.id + '"><div><b>' + (c.dm ? '💬 Direct chat' : p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '</b><small>' + esc(c.dm ? '#' + ((D.dm || {}).name || '') : lname(c.l)) + '</small>' + ((D.th[c.id] || {}).tx ? '<em class="itx">' + whoLine(D.th[c.id].tx) + '</em>' : '') + '</div><span class="newb">NEW ' + unread(c) + '</span></div>'; }).join('');
 }
 // ---- 13 Oct 2026 (Abbas): "like Slack's Catch up" - read but cannot do it now -> 📌 LATER, per person, stays on the home screen until unpinned ----
 function laterBox(){ $('later').hidden = true; return;   // 17 Oct: pinned chats are now on top of Chats
@@ -411,6 +411,12 @@ function when(ts){ var d = new Date(+ts * 1000), n = new Date(); if (isNaN(d)) r
 // 17 Oct 2026: Slack sends emoji as :names: (":microphone: voice note") - shown as the emoji
 var EMO = { microphone: '🎤', leftwards_arrow_with_hook: '↩️', arrow_right_hook: '↪️', camera: '📷', camera_with_flash: '📸', movie_camera: '🎥', clapper: '🎬', video_camera: '📹', white_check_mark: '✅', heavy_check_mark: '✔️', ballot_box_with_check: '☑️', x: '❌', star: '⭐', thread: '🧵', pushpin: '📌', round_pushpin: '📍', warning: '⚠️', triangular_flag_on_post: '🚩', paperclip: '📎', page_facing_up: '📄', frame_with_picture: '🖼️', arrow_right: '➡️', arrow_left: '⬅️', heavy_plus_sign: '➕', '+1': '👍', thumbsup: '👍', '-1': '👎', ok_hand: '👌', pray: '🙏', fire: '🔥', heart: '❤️', sparkles: '✨', tada: '🎉', bell: '🔔', speech_balloon: '💬', scissors: '✂️', package: '📦', truck: '🚚', hourglass: '⌛', hourglass_flowing_sand: '⏳', alarm_clock: '⏰', red_circle: '🔴', large_green_circle: '🟢', large_yellow_circle: '🟡', eyes: '👀', smile: '😄', slightly_smiling_face: '🙂', joy: '😂', grinning: '😀', wave: '👋', raised_hands: '🙌', clap: '👏', muscle: '💪', 100: '💯', moneybag: '💰', dress: '👗', repeat: '🔁', arrows_counterclockwise: '🔄', memo: '📝', bulb: '💡', heavy_minus_sign: '➖', no_entry: '⛔', question: '❓', exclamation: '❗', telephone_receiver: '📞', calendar: '📅', ok: '🆗', new: '🆕', rocket: '🚀', zap: '⚡' };
 function emo(s){ return String(s == null ? '' : s).replace(/:([a-z0-9_+\-]+)(?:::skin-tone-\d)?:/g, function(a, k){ return EMO[k] || a; }); }
+// 17 Oct 2026 (Abbas: "a different colour for each name - from far away I can't tell Abbas from Ibrahim"): every person has their own strong
+// colour - the name is a coloured label above the message, the bubble has a stripe in the same colour, and the chat list shows the name in it.
+var PCOL = ['#0e8a5a', '#c4561a', '#8e3bbf', '#c2185b', '#00838f', '#7a6200', '#5d4037', '#3949ab', '#ad1457', '#2e7d32'];
+function pcol(n){ var ws = String(n || '').toLowerCase().split(/[\s·._-]+/).map(nrm).filter(function(w){ return w && !/^(md|mohd|mohammad|mohammed|muhammad|mohammod)$/.test(w); }), k = (ws[0] || nrm(n)).slice(0, 5); if (!k) return '#8a7f70'; /* "Md ibrahimmiah" (Slack) and "Ibrahim" (app) = one colour */ var fx = { abbas: '#1565c0', ibrah: '#c2185b', usman: '#c4561a', ali: '#8e3bbf', moham: '#0e8a5a', ullah: '#0e8a5a', sj: '#7a6200' }; if (fx[k]) return fx[k];
+  var h = 0; for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0; return PCOL[h % PCOL.length]; }
+function whoLine(tx){ var t = emo(tx || ''), m = t.match(/^([^:]{1,32}): ([\s\S]*)$/); return m ? '<span class="wn" style="color:' + pcol(m[1]) + '">' + esc(m[1]) + ':</span> ' + esc(m[2]) : esc(t); }
 function lineOf(m){ if (!m) return ''; var t = String(m.text || '').replace(/\s+/g, ' ').trim(); var f = (m.files || []).length ? (m.files.some(function(x){ return x.audio; }) ? '🎤 voice note' : m.files.some(function(x){ return x.video; }) ? '🎬 video' : '📷 photo') : ''; return (m.sys ? '' : (m.who ? m.who + ': ' : '')) + (t || f); }
 var CHATSIG = '';
 function chatsDraw(){ if (TAB !== 'chats' || !D.cards) return;
@@ -429,7 +435,7 @@ function chatsDraw(){ if (TAB !== 'chats' || !D.cards) return;
   var tot = totUnread(), sig = tot + '|' + items.map(function(x){ return x.c.id + x.last + x.u + x.tx + (x.pin ? 'P' : ''); }).join(',');
   if (sig === CHATSIG) return; CHATSIG = sig;
   var h = tot ? '<button class="catch" id="bcatch2">⚡ Catch up · ' + tot + ' new · নতুন মেসেজ</button>' : '';
-  h += items.length ? items.map(function(x, i){ var c = x.c; return (np && i === 0 ? '<div class="sect">📌 PINNED · পিন করা</div>' : '') + (np && i === np ? '<div class="sect">ALL CHATS · সব চ্যাট</div>' : '') + '<div class="crow' + (x.u ? ' u' : '') + (x.pin ? ' pin' : '') + '" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><b>' + cardTitle(c) + '</b><small>' + esc(lname(c.l)) + '</small>' + (x.tx ? '<em>' + esc(emo(x.tx)) + '</em>' : x.ld ? '<em class="ld">…</em>' : '') + '</div><div class="r"><time>' + when(x.last) + '</time>' + (x.u ? '<span class="newb">' + x.u + '</span>' : '') + (x.pin ? '<span class="pinb">📌</span>' : '') + '</div></div>'; }).join('')
+  h += items.length ? items.map(function(x, i){ var c = x.c; return (np && i === 0 ? '<div class="sect">📌 PINNED · পিন করা</div>' : '') + (np && i === np ? '<div class="sect">ALL CHATS · সব চ্যাট</div>' : '') + '<div class="crow' + (x.u ? ' u' : '') + (x.pin ? ' pin' : '') + '" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><b>' + cardTitle(c) + '</b><small>' + esc(lname(c.l)) + '</small>' + (x.tx ? '<em>' + whoLine(x.tx) + '</em>' : x.ld ? '<em class="ld">…</em>' : '') + '</div><div class="r"><time>' + when(x.last) + '</time>' + (x.u ? '<span class="newb">' + x.u + '</span>' : '') + (x.pin ? '<span class="pinb">📌</span>' : '') + '</div></div>'; }).join('')
     : '<div class="empty">No card chats yet · কোনো চ্যাট নেই</div>';
   $('chats').innerHTML = h; document.querySelectorAll('#chats .crow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); }); }
 $('chats').onclick = function(e){ if (e.target.closest('#bcatch2')) { catchUp(); return; } var r = e.target.closest('.crow'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
@@ -645,7 +651,7 @@ function bubble(m){
     else body += '<div class="fl">📎 ' + esc(f.name) + '</div>';
   });
   var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
-  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + (m.pend ? '' : '<span class="wt">' + dd + ' · ' + hh + '</span>') + '</div>') + '<div class="bub">' + body + (m.pend || m.sys ? '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span>' : '') + '</div></div>';   // 17 Oct 2026 (Abbas): date and time ABOVE the message, with the name
+  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who"><span class="nm" style="background:' + pcol(m.who) + '">' + esc(m.who || '?') + '</span>' + (m.app ? '' : '<span class="sl">Slack</span>') + (m.pend ? '' : '<span class="wt">' + dd + ' · ' + hh + '</span>') + '</div>') + '<div class="bub"' + (m.sys ? '' : ' style="border-' + (me ? 'right' : 'left') + ':4px solid ' + pcol(m.who) + '"') + '>' + body + (m.pend || m.sys ? '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span>' : '') + '</div></div>';   // 17 Oct 2026 (Abbas): date and time ABOVE the message, with the name
 }
 function thDedupe(){ var seenTs = {}; TH.msgs = TH.msgs.filter(function(m){ if (m.pend) return true; if (seenTs[m.ts]) return false; seenTs[m.ts] = 1; return true; }); }
 function thDraw(){ thDedupe(); $('thread').innerHTML = TH.msgs.filter(function(m){ return !m.pend; }).map(bubble).join('') + (TH.card ? outBubbles(TH.card.id) : ''); $('tcount').textContent = TH.msgs.length + ' messages';
