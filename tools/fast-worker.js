@@ -68,6 +68,19 @@ async function tmove(env, q, ctx) {                             // Done -> next 
 
 function json(o, st) { return new Response(JSON.stringify(o), { status: st || 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...CORS } }); }
 
+// 17 Oct 2026 (Abbas: "a message came through on Slack, and in the app it came after 25-30 seconds"): Slack Event Subscriptions point HERE
+// (Request URL = <worker>/slack?t=<the app's private doorbell topic>). Slack is answered at once; the doorbell gets only "s:<channel>:<thread>"
+// (no message text). Nothing in the event is trusted - a fake one can only make the phones re-read a chat.
+async function slackEvent(req, url, ctx) {
+  let b = {}; try { b = JSON.parse(await req.text()); } catch (e) { return new Response('ok'); }
+  if (b.type === 'url_verification') return new Response(String(b.challenge || ''), { headers: { 'Content-Type': 'text/plain' } });
+  const t = String(url.searchParams.get('t') || '').replace(/[^\w-]/g, '').slice(0, 64), ev = b.event || {};
+  if (t && b.type === 'event_callback' && ev.type === 'message' && !req.headers.get('x-slack-retry-num')) {
+    const ch = String(ev.channel || '').replace(/[^A-Z0-9]/g, ''), ts = String(ev.thread_ts || (ev.message && ev.message.thread_ts) || (ev.previous_message && ev.previous_message.thread_ts) || ev.ts || '').replace(/[^\d.]/g, '');
+    ctx.waitUntil(fetch('https://ntfy.sh/' + t, { method: 'POST', body: 's:' + ch + ':' + ts, headers: { Cache: 'no', Firebase: 'no' } }).catch(() => {}));
+  }
+  return new Response('ok');
+}
 async function slack(env, method, args, get) {
   const tok = env.SLACK_TOKEN; if (!tok) return { ok: false, error: 'the worker has no SLACK_TOKEN secret' };
   let r;
@@ -175,6 +188,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const url = new URL(req.url);
     if (req.method === 'GET' && url.pathname === '/') return json({ ok: true, sj: 'fast', slack: !!env.SLACK_TOKEN, trello: !!env.TRELLO_TOKEN });
+    if (req.method === 'POST' && url.pathname === '/slack') return slackEvent(req, url, ctx);
     let q = {};
     if (req.method === 'GET' && url.pathname === '/f') q = Object.fromEntries(url.searchParams);
     else { try { q = JSON.parse(await req.text()); } catch (e) { return json({ ok: false, error: 'bad request' }, 400); } }
