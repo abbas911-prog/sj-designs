@@ -62,7 +62,32 @@ def role(a):
     return 'cover' if n.startswith('file_') or 'chatgpt' in n else 'lineup'
 
 # ---------- cutting a sold-out (0) dress out of the photo (Rule Three; same edge finder as the sj-1003 run) ----------
-def find_bounds(im, n, band=(0.45, 0.80), search=0.30):
+def dress_runs(im, band=(0.30, 0.85)):
+    """Columns where a dress stands: pixels in the middle band that differ from the wall colour (median of the top strip)."""
+    W, H = im.size
+    sm = im.convert('RGB').resize((800, max(1, int(800 * H / W))))
+    a = np.asarray(sm, dtype=np.float32); h, w = a.shape[:2]
+    bg = np.median(a[:max(2, int(h * 0.06))].reshape(-1, 3), axis=0)
+    px = a[int(h * band[0]):int(h * band[1])]
+    dist = np.linalg.norm(px - bg, axis=2)
+    score = (dist > 30).mean(axis=0)
+    score = np.convolve(score, np.ones(7) / 7, 'same')
+    on = score > max(0.15, float(score.max()) * 0.3)
+    runs, i = [], 0
+    while i < w:
+        if on[i]:
+            j = i
+            while j < w and on[j]: j += 1
+            runs.append([i, j]); i = j
+        else: i += 1
+    merged = []
+    for r in runs:
+        if merged and r[0] - merged[-1][1] < w * 0.02: merged[-1][1] = r[1]
+        else: merged.append(r)
+    merged = [r for r in merged if r[1] - r[0] >= w * 0.05]
+    return merged, w
+
+def find_bounds_grad(im, n, band=(0.45, 0.80), search=0.30):
     W, H = im.size
     a = np.asarray(im.resize((800, max(1, int(800 * H / W)))), dtype=np.float32)
     h, w = a.shape[0], a.shape[1]
@@ -73,6 +98,19 @@ def find_bounds(im, n, band=(0.45, 0.80), search=0.30):
         g = span * i; lo, hi = int(g - span * search), int(g + span * search)
         out.append((lo + int(np.argmax(d[lo:hi]))) * W / w)
     return [0.0] + out + [float(W)]
+
+def find_bounds(im, n):
+    """17 Oct 2026 (sj-1017c, SJ-92045 came out with columns 0.33/0.22/0.33/0.12 and a half dress). Where to cut a lineup photo into its n dresses. 1) the wall-gap finder when it sees exactly n dresses; 2) the old gradient finder
+    when its columns are sane (each 0.6-1.5x the average); 3) equal spans. Returns (bounds, how)."""
+    W = im.size[0]
+    runs, w = dress_runs(im)
+    if len(runs) == n:
+        cuts = [0.0] + [((runs[i][1] + runs[i + 1][0]) / 2) * W / w for i in range(n - 1)] + [float(W)]
+        return cuts
+    b = find_bounds_grad(im, n)
+    widths = [b[i + 1] - b[i] for i in range(n)]; avg = W / n
+    if all(0.6 * avg <= x <= 1.5 * avg for x in widths): return b
+    return [W * i / n for i in range(n + 1)]
 
 def keep_columns(im, pcs):
     """pcs = pieces per dress left->right. Returns (image with the 0 dresses removed, kept pcs, column fractions)."""
@@ -104,15 +142,23 @@ def build(req):
     sub = re.sub(r'\s+', ' ', str(req.get('country', ''))).strip().upper()[:40]
     items, seen = [], set()
     for it in req.get('items', []):
-        no = re.sub(r'\D', '', str(it.get('no', '')))
-        if no and no not in seen: seen.add(no); items.append((no, 'C' if str(it.get('mode', 'S')).upper().startswith('C') else 'S'))
+        # 17 Oct 2026 (Abbas: "6668 and 6668-1 ... it only gives me one design"): a suffix after the number names a different card
+        mm = re.match(r'\s*(?:SJ|SH)?\s*[-=:]*\s*(\d{3,6})\s*(?:-\s*([A-Za-z0-9]{1,3}))?', str(it.get('no', '')), re.I)
+        if not mm: continue
+        no = mm.group(1) + ('-' + mm.group(2).upper() if mm.group(2) else '')
+        if no not in seen: seen.add(no); items.append((no, 'C' if str(it.get('mode', 'S')).upper().startswith('C') else 'S'))
     if not items: return {'ok': False, 'error': 'No design numbers.'}
     cards = ready_cards()
     errors, report, flags = [], [], []
     MODE, TOT, COLS, PCSS, PHOTOS, VIDS, ORDER = {}, {}, {}, {}, {}, {}, []
     for no, mode in items:
-        mine = [c for c in cards if parse(c['name'])['no'] == no]
-        if not mine: errors.append('SJ-%s is not in READY on Trello.' % no); continue
+        base, suf = (no.split('-', 1) + [''])[:2]
+        cands = [c for c in cards if parse(c['name'])['no'] == base]
+        if suf: mine = [c for c in cands if re.search(r'\b%s\s*-\s*%s\b' % (base, re.escape(suf)), c['name'], re.I)]
+        else:
+            plain = [c for c in cands if not re.search(r'\b%s\s*-\s*[A-Za-z0-9]{1,3}\b' % base, c['name'])]
+            mine = plain or cands
+        if not mine: errors.append('SJ-%s is not in READY on Trello.' % no + (' (cards with this number: %s)' % ', '.join(c['name'][:30] for c in cands[:3]) if cands else '')); continue
         mine.sort(key=lambda c: c['id'], reverse=True)            # "the last one added in trello" = newest card id
         card = mine[0]
         if len(mine) > 1: flags.append('SJ-%s has %d READY cards — used the newest: %s' % (no, len(mine), card['name']))
@@ -314,7 +360,7 @@ def ar_count(n):
 def og_cover(src, stem, customer, sub, en=None, ar=None, brand='SJ TRADING'):
     import html as H
     ph = []
-    for m in re.finditer(r'<article class="design" data-no="(\d+)"', src):
+    for m in re.finditer(r'<article class="design" data-no="([^"]+)"', src):
         i = src.index('<img src="', m.end()) + 10; ph.append(src[i:src.index('"', i)])
     n = len(ph); k = n if n <= 5 else (6 if n <= 6 else 10)
     cols = k if k <= 5 else (3 if k == 6 else 5); rows = 1 if k <= 5 else 2

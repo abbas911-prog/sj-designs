@@ -442,9 +442,9 @@
   function openFromLink(){
     var m = /[#&]o=([^&]+)/.exec(location.hash); if (!m) return;
     m[1].split(',').forEach(function(p){
-      var a = p.split('-'); if (a.length !== 3) return;
-      var k = a[0] + ':' + a[1], v = a[2] === 'F' ? 'F' : +a[2];
-      var b = document.getElementById('b-' + a[0] + '-' + a[1] + '-' + v); if (!b) return;
+      var a = p.split('-'); if (a.length < 3) return;                          // 17 Oct 2026: a design key may carry a suffix (6668-1)
+      var vv = a.pop(), cc = a.pop(), no = a.join('-'), k = no + ':' + cc, v = vv === 'F' ? 'F' : +vv;
+      var b = document.getElementById('b-' + no + '-' + cc + '-' + v); if (!b) return;
       state[k] = v; b.setAttribute('aria-pressed', 'true');
     });
     refresh();
