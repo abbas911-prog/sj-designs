@@ -411,7 +411,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 .ccimg{display:block;max-width:230px;max-height:260px;border-radius:10px;margin-top:6px;background:#f1ebe0;min-width:120px;min-height:90px}
 #cccomp{display:flex;gap:8px;align-items:flex-end;padding:8px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff}#cccomp[hidden]{display:none}
 #cctxt{flex:1;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:16px;resize:none;max-height:120px;min-height:44px;box-sizing:border-box}
-#cccomp label,#cccomp button{flex:none;height:44px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:18px;padding:0 12px;display:flex;align-items:center;cursor:pointer}#ccsend{background:var(--gold)!important;color:#fff;border:0!important;font-size:15px!important;font-weight:800}
+#cccomp label,#cccomp button{flex:none;height:44px;min-width:40px;justify-content:center;border-radius:12px;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:18px;padding:0 8px;display:flex;align-items:center;cursor:pointer}#cccomp{gap:6px!important;padding-left:8px!important;padding-right:8px!important}#ccmic.rec{background:#c0243f!important;color:#fff;border-color:#c0243f;font-size:14px;font-weight:800;min-width:64px}.ccav{display:block;margin-top:6px;max-width:240px}video.ccav{max-height:300px;border-radius:10px;background:#000}#ccsend{background:var(--gold)!important;color:#fff;border:0!important;font-size:15px!important;font-weight:800}
 #ccpend{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px}#ccpend span{font-size:12.5px;background:#f1ebe0;border-radius:999px;padding:4px 10px}
 </style></head><body>
 <header>
@@ -463,7 +463,7 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 <div id="sv" hidden><div class="in"><div class="hd"><b>SMALL VENDORS · موردين صغار</b><button type="button" id="svx">Close</button></div><div id="svbody"></div></div></div>
 <div id="ords" hidden><div class="in"><div class="hd"><b>ORDERS · الطلبات</b><span><button type="button" id="ordre">↻</button><button type="button" id="ordx">Close</button></span></div><div class="otabs"><button type="button" data-o="open" class="on">Open</button><button type="button" data-o="done">Complete</button></div><div id="ordbody"></div></div></div>
 <div id="cc" hidden><div class="chd"><button type="button" id="ccback">‹ Back</button><b id="cct">Customers · العملاء</b><button type="button" id="ccre">↻</button></div><div id="ccbody"></div><div id="ccpend"></div>
-<div id="cccomp" hidden><label title="photo / file">📷<input type="file" id="ccfile" accept="image/*,video/*,audio/*,.pdf" multiple hidden></label><textarea id="cctxt" rows="1" placeholder="Write… · اكتب"></textarea><button type="button" id="ccsend">Send</button></div></div>
+<div id="cccomp" hidden><button type="button" id="ccmic" title="voice note">🎤</button><label title="photo / video">📷<input type="file" id="cccam" accept="image/*,video/*" capture="environment" hidden></label><label title="files, photos, videos">📎<input type="file" id="ccfile" accept="image/*,video/*,audio/*,.pdf" multiple hidden></label><button type="button" id="ccpaste" title="paste">📋</button><textarea id="cctxt" rows="1" placeholder="Write… · اكتب"></textarea><button type="button" id="ccsend">Send</button></div></div>
 <div id="bar"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
 <div id="done" hidden><div class="in">
   <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
@@ -732,7 +732,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-17a';
+var VER = '2026-10-17b';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -2877,19 +2877,42 @@ async function ccPull(fresh){ var name = CC.cur; if (!name || CC.busy) return; C
 function ccDraw(){ var b = $('ccbody'), atEnd = b.scrollHeight - b.scrollTop - b.clientHeight < 80, my = (me() || '').toUpperCase();
   var h = CC.msgs.length ? '' : '<div class="ffempty">No memo or message for this customer yet. Write the first line below — it starts this customer\'s chat in Slack #customer.</div>';
   h += CC.msgs.map(function(m){ var mine = !m.memo && my && String(m.who).toUpperCase() === my;
-    var fs = (m.files || []).map(function(f){ return /^image\//.test(f.type) ? '<img class="ccimg" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" alt="">' : '<span class="ccf" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '">' + (/pdf/.test(f.type + f.name) ? '📄 ' : /^audio/.test(f.type) ? '🎤 ' : /^video/.test(f.type) ? '🎬 ' : '📎 ') + esc(f.name.slice(0, 40)) + '</span>'; }).join('');
-    return '<div class="ccm' + (m.memo ? ' memo' : '') + (mine ? ' me' : '') + (m.pend ? ' pend' : '') + '"><span class="w">' + (m.memo ? '📄 ORDER MEMO' : esc(m.who)) + '</span>' + esc(m.text || '') + fs + '<span class="d">' + (m.pend ? '🕓 sending…' : ccWhen(m.ts)) + '</span></div>'; }).join('');
-  b.innerHTML = h; b.querySelectorAll('img.ccimg').forEach(ccThumb); if (atEnd || !CC.drawn) b.scrollTop = b.scrollHeight; CC.drawn = true; }
+    var fs = (m.files || []).map(function(f){ return /^image\//.test(f.type) ? '<img class="ccimg" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" alt="">' : '<span class="ccf" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" data-t="' + esc(f.type) + '">' + (/pdf/.test(f.type + f.name) ? '📄 ' + esc(f.name.slice(0, 40)) : /^audio/.test(f.type) || /^voice-/i.test(f.name) ? '▶ voice note · tap to play' : /^video/.test(f.type) ? '🎬 video · tap to play' : '📎 ' + esc(f.name.slice(0, 40))) + '</span>'; }).join('');
+    return '<div class="ccm' + (m.memo ? ' memo' : '') + (mine ? ' me' : '') + (m.pend ? ' pend' : '') + '"><span class="w">' + (m.memo ? '📄 ORDER MEMO' : esc(m.who)) + '</span>' + esc(fs && /^\s*📎\s*$/.test(m.text || '') ? '' : m.text || '') + fs + '<span class="d">' + (m.pend ? '🕓 sending…' : ccWhen(m.ts)) + '</span></div>'; }).join('');
+  b.innerHTML = h; b.querySelectorAll('img.ccimg').forEach(ccThumb); b.querySelectorAll('.ccf').forEach(function(c){ var r = CC.url[c.dataset.f]; if (r && /^(audio|video)\//.test(r.type)) ccPlayer(c, r, c.dataset.nm, false); }); if (atEnd || !CC.drawn) b.scrollTop = b.scrollHeight; CC.drawn = true; }
 async function ccGet(id, thumb){ var k = id + (thumb ? 't' : ''); if (CC.url[k]) return CC.url[k];
   var j = await ccCall({ op: 'file', id: id, thumb: thumb ? 1 : 0 }, 2); if (!j.ok) throw Object.assign(new Error(j.error), { link: j.link });
   var bin = atob(j.b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
   return (CC.url[k] = { u: URL.createObjectURL(new Blob([u8], { type: j.type })), type: j.type, name: j.name }); }
 async function ccThumb(img){ try { var r = await ccGet(img.dataset.f, true); img.src = r.u; } catch(e){ img.alt = 'photo'; } }
+function ccPlayer(el, r, nm, go){ var av = document.createElement(/^video/.test(r.type) && !/^voice-/i.test(nm || '') ? 'video' : 'audio'); av.className = 'ccav'; av.controls = true; av.setAttribute('playsinline', ''); av.preload = 'metadata'; av.src = r.u; el.replaceWith(av); if (go) { var pp = av.play(); if (pp && pp.catch) pp.catch(function(){}); } }
 async function ccOpenFile(id, nm, el){ var old = el.textContent; if (el.tagName !== 'IMG') el.textContent = '⏳ opening…';
-  try { var r = await ccGet(id, false); if (el.tagName !== 'IMG') el.textContent = old; var w = window.open(r.u, '_blank'); if (!w) { var a = document.createElement('a'); a.href = r.u; a.download = nm || 'file'; document.body.appendChild(a); a.click(); a.remove(); } }
+  try { var r = await ccGet(id, false);
+    if (el.tagName !== 'IMG' && /^(audio|video)\//.test(r.type)) { ccPlayer(el, r, nm, true); return; }
+    if (el.tagName !== 'IMG') el.textContent = old; var w = window.open(r.u, '_blank'); if (!w) { var a = document.createElement('a'); a.href = r.u; a.download = nm || 'file'; document.body.appendChild(a); a.click(); a.remove(); } }
   catch(e){ if (el.tagName !== 'IMG') el.textContent = old; if (e.link) window.open(e.link, '_blank'); else alert(e.message); } }
-$('ccfile').onchange = function(){ Array.from(this.files || []).forEach(function(f){ CC.files.push(f); }); this.value = ''; ccPend(); };
-function ccPend(){ $('ccpend').innerHTML = CC.files.map(function(f, i){ return '<span data-i="' + i + '">' + (/^image/.test(f.type) ? '📷 ' : '📎 ') + esc(f.name.slice(0, 22)) + ' ✕</span>'; }).join(''); }
+$('ccfile').onchange = function(){ ccAdd(this.files); this.value = ''; };
+$('cccam').onchange = function(){ ccAdd(this.files); this.value = ''; };
+// 17 Oct 2026 (Abbas): "in the customer chat there is no option of speaking on the mic — give me mic, copy and paste, video and photo"
+function ccAdd(list){ var big = 0; Array.from(list || []).forEach(function(f){ if (f.size > 18 * 1024 * 1024) { big++; return; } CC.files.push(f); }); ccPend(); if (big) alert(big + ' file' + (big > 1 ? 's are' : ' is') + ' over 18 MB — too big to send from here · الملف كبير جدًا'); }
+$('cctxt').addEventListener('paste', function(e){ var it = (e.clipboardData || {}).items || [], fs = []; Array.from(it).forEach(function(x){ var f = x.kind === 'file' ? x.getAsFile() : null; if (f) fs.push(f.name && f.name !== 'image.png' ? f : new File([f], 'pasted-' + Date.now() + (/png/.test(f.type) ? '.png' : /^image/.test(f.type) ? '.jpg' : /^video/.test(f.type) ? '.mp4' : ''), { type: f.type })); }); if (fs.length) { e.preventDefault(); ccAdd(fs); } });
+$('ccpaste').onclick = async function(){ try { if (!navigator.clipboard || !navigator.clipboard.read) throw 0; var its = await navigator.clipboard.read(), fs = [];
+    for (var i = 0; i < its.length; i++) { var ty = its[i].types.filter(function(t){ return /^(image|video|audio)\//.test(t); })[0]; if (ty) { var bl = await its[i].getType(ty); fs.push(new File([bl], 'pasted-' + Date.now() + (/png/.test(ty) ? '.png' : /^image/.test(ty) ? '.jpg' : /^video/.test(ty) ? '.mp4' : '.m4a'), { type: ty })); } else if (its[i].types.indexOf('text/plain') >= 0) { var tx = await (await its[i].getType('text/plain')).text(); $('cctxt').value += tx; } }
+    if (fs.length) ccAdd(fs); else if (!$('cctxt').value) alert('Nothing to paste — copy a photo or text first · انسخ صورة أولاً'); }
+  catch(e){ $('cctxt').focus(); alert('Long-press the message box and choose Paste · اضغط مطولاً على خانة الكتابة ثم لصق'); } };
+var CCR = { r: null, t0: 0, tick: null };
+$('ccmic').onclick = async function(){ var b = this;
+  if (CCR.r) { CCR.r.stop(); return; }
+  try { var stream = await navigator.mediaDevices.getUserMedia({ audio: true }), chunks = [], mt = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm'].filter(function(t){ return window.MediaRecorder && MediaRecorder.isTypeSupported(t); })[0];
+    var r = CCR.r = new MediaRecorder(stream, mt ? { mimeType: mt, audioBitsPerSecond: 32000 } : undefined); CCR.t0 = Date.now(); b.classList.add('rec');
+    CCR.tick = setInterval(function(){ var s = Math.round((Date.now() - CCR.t0) / 1000); b.textContent = '■ ' + Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }, 250); b.textContent = '■ 0:00';
+    r.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
+    r.onstop = function(){ clearInterval(CCR.tick); stream.getTracks().forEach(function(t){ t.stop(); }); CCR.r = null; b.classList.remove('rec'); b.textContent = '🎤';
+      var ty = (r.mimeType || mt || 'audio/mp4').split(';')[0], bl = new Blob(chunks, { type: ty }); if (bl.size < 500) return;
+      ccAdd([new File([bl], 'voice-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + (/webm/.test(ty) ? '.webm' : '.m4a'), { type: ty })]); };
+    r.start(); }
+  catch(e){ CCR.r = null; b.classList.remove('rec'); b.textContent = '🎤'; alert('The microphone is blocked — allow it for this site in the phone settings · اسمح للميكروفون'); } };
+function ccPend(){ $('ccpend').innerHTML = CC.files.map(function(f, i){ return '<span data-i="' + i + '">' + (/^image/.test(f.type) ? '📷 ' : /^video/.test(f.type) ? '🎬 ' : /^audio/.test(f.type) ? '🎤 voice note ' : '📎 ') + (/^audio/.test(f.type) ? '' : esc(f.name.slice(0, 22))) + ' ✕</span>'; }).join(''); $('ccsend').textContent = CC.files.length ? 'Send ' + CC.files.length : 'Send'; }
 $('ccpend').onclick = function(e){ var x = e.target.closest('[data-i]'); if (!x) return; CC.files.splice(+x.dataset.i, 1); ccPend(); };
 $('cctxt').addEventListener('input', function(){ this.style.height = 'auto'; this.style.height = Math.min(120, this.scrollHeight) + 'px'; });
 $('ccsend').onclick = async function(){ var name = CC.cur, txt = $('cctxt').value.trim(), files = CC.files.slice(); if (!name || (!txt && !files.length)) return;
