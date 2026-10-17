@@ -113,6 +113,7 @@ function facThread(P, FT, card, rtok, make) {                 // the #cutting me
   var key = 'FTH_' + card, have = P.getProperty(key); if (have) return JSON.parse(have);
   var c = trApi('get', '/cards/' + card, { fields: 'name,shortUrl,shortLink,idList' }, rtok);
   var CH = FAC.SAMPLE_LISTS.indexOf(c.idList) >= 0 ? FAC.SAMPLES_CH : DOX.CUTTING;        // sample cards live in #samples-discuss
+  if (CH === DOX.CUTTING) { var uh = facUsmanOf(P, FT, [{ id: card, url: c.shortUrl }], false); if (uh[card]) return uh[card]; }   // 17 Oct 2026: Usman hand-work cards chat in #usmancutting
   var hist = slackApi(FT, 'conversations.history', { channel: CH, limit: 200 }, true);
   if (hist.ok) {
     var hit = (hist.messages || []).filter(function (m) { return String(m.text || '').indexOf(c.shortLink) >= 0 || String(m.text || '').indexOf(c.shortUrl) >= 0; }).sort(function (a, b) { return +a.ts - +b.ts; })[0];
@@ -219,6 +220,9 @@ function facRets(P, withDone) {                                 // every return:
     if (r.done && r.done < cut) { P.deleteProperty(k); return; } if (!withDone && r.done) return; outr.push(r); });
   return outr.sort(function (a, b) { return b.id - a.id; });
 }
+function facAct(P, FT, cards) {                                // card id -> ts of the last line in its chat (for the app's Chats tab); from the cached thread index
+  if (!FT) return {}; var th = facThreads(P, FT, cards, false), r = {}; Object.keys(th).forEach(function (k) { r[k] = th[k].last; }); return r;
+}
 function facRefs(P) {                                           // card id -> [channel, thread ts] of its chat, for the FAST LANE (the phone reads Slack through the worker)
   var all = P.getProperties(), r = {}; Object.keys(all).forEach(function (k) { if (k.indexOf('FTH_') !== 0) return; try { var v = JSON.parse(all[k]); if (v && v.ch && v.ts) r[k.slice(4)] = [v.ch, v.ts]; } catch (e) {} }); return r;
 }
@@ -242,14 +246,28 @@ function facHist(P, FT, CH, fresh) {                            // newest 400 to
   var all = ms.concat(older); try { c.put(k, JSON.stringify(all), facTtl(P)); c.put('FAC_H_' + CH + '_L', JSON.stringify(all), 3600); } catch (e) {}
   return all;
 }
+// 17 Oct 2026 (Abbas: "whichever card has USMAN hand work involved - give me the chat not for #cutting under that card, but #usmancutting"):
+// a card whose Trello link was posted in #usmancutting (the hand-work order goes to #cutting AND #usmancutting) chats in its #usmancutting
+// thread - reading, sending, unread, moves, live. A card that was first linked to its #cutting thread is switched over once (oldest post wins).
+function facUsmanOf(P, FT, cards, fresh) {
+  var byLink = {}, out = {}; cards.forEach(function (c) { if (c.url) byLink[String(c.url).split('/').pop()] = c.id; });
+  var h = []; try { h = facHist(P, FT, DOX.USMANCUT, fresh); } catch (e) { return out; }
+  var all = h.length ? P.getProperties() : {};
+  h.slice().sort(function (a, b) { return +a.t - +b.t; }).forEach(function (m) { var id = m.l && byLink[m.l]; if (!id || out[id]) return;
+    var cur = all['FTH_' + id], t = { ch: DOX.USMANCUT, ts: m.t }; out[id] = t;
+    if (!cur || JSON.parse(cur).ch !== DOX.USMANCUT) P.setProperty('FTH_' + id, JSON.stringify(t)); });
+  return out;
+}
 function facThreads(P, FT, cards, fresh) {                    // for every card with a chat: {n replies, last: newest reply ts}
   var cache = CacheService.getScriptCache(), g = facGen(), hit = fresh ? null : cache.get('FAC_TH_' + g); if (hit) return JSON.parse(hit);
+  facUsmanOf(P, FT, cards, fresh);
   var all = P.getProperties(), byTs = {}, byLink = {}, outm = {};
   cards.forEach(function (c) { var v = all['FTH_' + c.id]; if (v) byTs[JSON.parse(v).ts] = c.id; else if (c.url) byLink[c.url.split('/').pop()] = c.id; });
-  [DOX.CUTTING, FAC.SAMPLES_CH].forEach(function (CH) {                                   // #cutting for production cards, #samples-discuss for sample cards
-    facHist(P, FT, CH, fresh).forEach(function (m) {
+  [DOX.CUTTING, FAC.SAMPLES_CH, DOX.USMANCUT].forEach(function (CH) {                     // #cutting for production cards, #samples-discuss for sample cards, #usmancutting for hand-work cards
+    var hh = []; try { hh = facHist(P, FT, CH, fresh); } catch (e) { if (CH !== DOX.USMANCUT) throw e; }
+    hh.forEach(function (m) {
       var id = byTs[m.t];
-      if (!id && m.l && byLink[m.l]) { id = byLink[m.l]; delete byLink[m.l]; P.setProperty('FTH_' + id, JSON.stringify({ ch: CH, ts: m.t })); }   // an order message from before: remembered from now on
+      if (!id && CH !== DOX.USMANCUT && m.l && byLink[m.l]) { id = byLink[m.l]; delete byLink[m.l]; P.setProperty('FTH_' + id, JSON.stringify({ ch: CH, ts: m.t })); }   // an order message from before: remembered from now on
       if (id) outm[id] = { n: m.rc, last: m.lr || m.t };
     });
   });
@@ -452,7 +470,7 @@ function fac0(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); hv.limit = FAC.LIMIT; return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -472,7 +490,7 @@ function fac0(reqText, P) {
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
       try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; }
-      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT;
+      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
       return out(res);
     }
     if (req.op === 'ping') {                                  // 15 Oct 2026: the cheap "anything new?" every 4 s - no Trello call; the cards come from the cached list
