@@ -418,7 +418,10 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 :root{--navh:calc(64px + env(safe-area-inset-bottom));--ink:#1B1915;--mute:#716A5F;--bg:#F4F0E9;--fill:#EBE5DA;--gold:#9E7A3C;--gold2:#C9A867;--goldbg:#FBF6EC;--red:#B4472A;--line:#E4DCD0;--r:18px;--sh:0 1px 2px rgba(40,30,15,.04),0 6px 18px rgba(40,30,15,.06)}
 html,body{background:var(--bg)}
 body{-webkit-tap-highlight-color:transparent}
-#catbtn,#mybtn,#ccbtn,#ordbtn,#bills{display:none!important}
+#catbtn,#ccbtn,#ordbtn,#bills{display:none!important}
+/* 17 Oct 2026 (Abbas): "I want the star at the main page" — the ★ owner button stays in the header */
+#mybtn{width:46px;height:46px;flex:none;border:0;border-radius:14px;background:linear-gradient(150deg,#F3E7CF,#E7D4AE);color:#7E5E27;font-size:22px;font-weight:800;line-height:46px;padding:0;box-shadow:var(--sh)}
+#mybtn[hidden]{display:none}
 header{background:var(--bg);border-bottom:0;padding:calc(8px + env(safe-area-inset-top)) 14px 8px;box-shadow:0 1px 0 var(--line)}
 .top{gap:10px}
 .top h1{width:44px;height:44px;border-radius:14px;background:linear-gradient(150deg,#C2A061,#8C6A30);box-shadow:0 3px 10px rgba(140,106,48,.3);color:#fff;font-size:15px;letter-spacing:.06em;line-height:1}
@@ -840,7 +843,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-17d';
+var VER = '2026-10-17e';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
