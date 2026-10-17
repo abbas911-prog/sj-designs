@@ -499,7 +499,8 @@ function fac0(reqText, P) {
       var pth = {}; try { pth = facUnread(P, FTp, pcards, whp, !!req.fresh); } catch (e) {}
       var pdm = null; try { pdm = facDm(P, FTp); } catch (e) {}
       var prs = null; try { prs = facRetSum(P); } catch (e) {}
-      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P) });
+      var pact; try { pact = facAct(P, FTp, pcards); } catch (e) {}   // 17 Oct 2026: last-line time per chat on every ping, so the Chats tab never shows an older line
+      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
     }
     if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
       var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });
