@@ -59,7 +59,7 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 #rets .rnew{border:0;border-radius:999px;background:#4e342e;color:#fff;font-weight:800;font-size:13px;padding:9px 13px;flex:none}#rets .newb{flex:none}#rets.none{opacity:.9}
 .seg{display:flex;background:#ece4d6;border-radius:12px;padding:3px;margin-bottom:12px}.seg button{flex:1;border:0;background:none;border-radius:10px;padding:8px;font-size:13.5px;font-weight:700;color:var(--mute)}.seg button.on{background:#fff;color:var(--ink);box-shadow:var(--sh)}
 /* ---- more tab ---- */
-.me{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--r);padding:14px;box-shadow:var(--sh);margin-bottom:12px}.mono{width:46px;height:46px;border-radius:14px;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;letter-spacing:.04em;flex:none}.me h1{font-size:17px;margin:0;flex:1;min-width:0}.me h1 small{display:block;font-weight:500;font-size:12.5px;color:var(--mute)}
+.mecard{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--r);padding:14px;box-shadow:var(--sh);margin-bottom:12px}.mono{width:46px;height:46px;border-radius:14px;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;letter-spacing:.04em;flex:none}.mecard h1{font-size:17px;margin:0;flex:1;min-width:0}.mecard h1 small{display:block;font-weight:500;font-size:12.5px;color:var(--mute)}
 .mlist{background:#fff;border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:12px}.mlist .rf,.mlist button.m{display:flex;width:100%;align-items:center;gap:12px;border:0;border-top:1px solid var(--line);background:#fff;padding:13px 14px;font-size:15.5px;font-weight:700;color:var(--ink);text-align:left;border-radius:0}.mlist>:first-child{border-top:0}.mlist .rf i,.mlist button.m i{font-style:normal;width:30px;text-align:center;font-size:19px}.mlist small{display:block;font-weight:500;font-size:12px;color:var(--mute)}.mlist .rf:after,.mlist button.m:after{content:'›';margin-left:auto;color:var(--mute);font-size:20px}
 .rf.on i{color:var(--green)}.rf.spin i{display:inline-block;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 /* ---- card screen ---- */
@@ -87,7 +87,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .thr{background:#eee6da;border-radius:var(--r);padding:10px;margin-bottom:8px}
 .thr h3{margin:0 0 8px;font-size:12px;color:var(--mute);letter-spacing:.07em;font-weight:800}.thr h3 span{float:right;font-weight:500;letter-spacing:0}
 .msg{display:flex;flex-direction:column;margin:5px 0;max-width:84%;align-items:flex-start}.msg.me{align-self:flex-end;align-items:flex-end;margin-left:auto}
-.msg .who{font-size:11px;color:#7a5a2a;margin:0 8px 1px;font-weight:700}.msg.me .who{display:none}
+.msg .who{font-size:11.5px;color:#7a5a2a;margin:0 8px 2px;font-weight:700}.msg.me .who{text-align:right}.msg .who .wt{font-weight:500;color:#8a7f70;margin-left:6px}
 .msg .bub{background:#fff;border-radius:14px 14px 14px 4px;padding:8px 10px 5px;font-size:15px;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 1px rgba(0,0,0,.06);position:relative;min-width:70px}
 .msg.me .bub{background:#dcf3c8;border-radius:14px 14px 4px 14px}.msg .tm{display:block;text-align:right;font-size:10px;color:#8a7f70;margin-top:3px}
 .msg.sys{align-self:center;max-width:100%;align-items:center}.msg.sys .bub{background:#e1dbd0;color:#5a5047;font-size:12px;padding:3px 10px;box-shadow:none;border-radius:999px}.msg.sys .tm{display:none}
@@ -141,7 +141,7 @@ body.co .toast{bottom:90px}
   <section data-t="chats" hidden><div id="outbar" hidden></div><div id="dm" hidden></div><div id="chats"></div><div id="inbox" hidden></div><div id="later" hidden></div></section>
   <section data-t="returns" hidden><div id="rets" hidden></div><div class="seg" id="rseg"><button data-r="RETURNS" class="on">At the factory · কারখানায়</button><button data-r="RETURNS BACK">Came back · ফেরত এসেছে</button></div><div id="retlist"></div></section>
   <section data-t="more" hidden>
-    <div class="me"><div class="mono">AM</div><h1><span id="who"></span><small>Factory · কারখানা</small></h1></div>
+    <div class="mecard"><div class="mono">AM</div><h1><span id="who"></span><small>Factory · কারখানা</small></h1></div>
     <div class="mlist"><button class="rf" id="bell" hidden><i>🔔</i><span>Notifications<small>নোটিফিকেশন</small></span></button><button class="rf" id="rf"><i>↻</i><span>Refresh the cards<small>আবার লোড করুন</small></span></button><button class="m" id="bspeed"><i>🚀</i><span>Speed · Fast lane<small>গতি</small></span></button><button class="m" id="bdmset"><i>💬</i><span>Direct chat channel<small>সরাসরি চ্যাটের চ্যানেল</small></span></button></div>
     <div class="mlist"><button class="rf" id="badd"><i>＋</i><span>New card<small>নতুন কার্ড</small></span></button><button class="rf" id="bstar"><i>⭐</i><span>New sample<small>নতুন স্যাম্পল</small></span></button><button class="m" id="bretm"><i>↩️</i><span>New return<small>নতুন ফেরত</small></span></button></div>
     <div class="mlist"><button class="m" id="bout"><i>👤</i><span>Sign in as someone else<small>অন্য নামে ঢুকুন</small></span></button></div>
@@ -186,7 +186,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-17d';
+var VER = '2026-10-17e';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -628,7 +628,7 @@ function bubble(m){
     else body += '<div class="fl">📎 ' + esc(f.name) + '</div>';
   });
   var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
-  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + '</div>') + '<div class="bub">' + body + '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span></div></div>';
+  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who">' + esc(m.who || '') + (m.app ? '' : ' · Slack') + (m.pend ? '' : '<span class="wt">' + dd + ' · ' + hh + '</span>') + '</div>') + '<div class="bub">' + body + (m.pend || m.sys ? '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span>' : '') + '</div></div>';   // 17 Oct 2026 (Abbas): date and time ABOVE the message, with the name
 }
 function thDedupe(){ var seenTs = {}; TH.msgs = TH.msgs.filter(function(m){ if (m.pend) return true; if (seenTs[m.ts]) return false; seenTs[m.ts] = 1; return true; }); }
 function thDraw(){ thDedupe(); $('thread').innerHTML = TH.msgs.filter(function(m){ return !m.pend; }).map(bubble).join('') + (TH.card ? outBubbles(TH.card.id) : ''); $('tcount').textContent = TH.msgs.length + ' messages';
