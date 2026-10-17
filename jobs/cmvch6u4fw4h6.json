@@ -1,0 +1,53 @@
+{
+ "ok": true,
+ "page": "sj-1017b.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sj-1017b.html?v=1",
+ "cover": "og-sj-1017b.jpg",
+ "name": "",
+ "country": "",
+ "designs": [
+  "21074",
+  "31849",
+  "12748",
+  "92045",
+  "46209",
+  "85974",
+  "71352",
+  "38156",
+  "82254",
+  "6668"
+ ],
+ "report": [
+  "SJ-21074 SETS  6+8+6+5+6+9 = 40 ✓ (card: 40) → 6 colours",
+  "SJ-31849 SETS  4+8+8+8+8+8 = 44 ✓ (card: 44) → 6 colours",
+  "SJ-12748 SETS  12+8+8+8+8 = 44 ✓ (card: 44) → 5 colours",
+  "SJ-92045 SETS  4+4+4+0+4+0+0+4+4 = 24 ✓ (card: 24) → 6 colours",
+  "SJ-46209 SETS  16+16+14+16 = 62 ✓ (card: 62) → 4 colours",
+  "SJ-85974 SETS  4+8+8+4+8+4 = 36 ✓ (card: 36) → 6 colours",
+  "SJ-71352 SETS  12+12+12+12+12 = 60 ✓ (card: 60) → 5 colours",
+  "SJ-38156 SETS  8+8+8+8+8+8 = 48 ✓ (card: 48) → 6 colours",
+  "SJ-82254 SETS  10+9+10+9+10+14+14+12 = 88 ✓ (card: 88) → 8 colours",
+  "SJ-6668 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets"
+ ],
+ "flags": [
+  "SJ-31849 has 2 READY cards — used the newest: SJ = **31849** (44,)(6) ,,,,(4/8/8/8/8/8)",
+  "SJ-31849: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-92045: 3 sold-out colours cut out of the photo and the rest renumbered — check the photo.",
+  "SJ-6668 has 24 READY cards — used the newest: Sj 6668 (40)  5 colors.                                     (8/8/8/8/8)",
+  "SJ-6668: no JAMĀL photo for every colour group — shop photo used."
+ ],
+ "videos": [
+  "12748",
+  "21074",
+  "31849",
+  "38156",
+  "46209",
+  "6668",
+  "71352",
+  "82254",
+  "85974",
+  "92045"
+ ],
+ "bytes": 3148253,
+ "id": "cmvch6u4fw4h6"
+}
