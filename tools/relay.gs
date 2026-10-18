@@ -211,6 +211,7 @@ function facNudge(P, card) { try { UrlFetchApp.fetch('https://ntfy.sh/' + facLiv
 function facCardOf(P, ev) {                                     // which card (or 'dm' / '') a Slack message belongs to
   var ch = String(ev.channel || ''), ts = String(ev.thread_ts || ev.ts || ''); if (!ch) return '';
   var dm = JSON.parse(P.getProperty('FAC_DM') || 'null'); if (dm && dm.ch === ch) return 'dm';
+  var lr = JSON.parse(P.getProperty('FAC_LAIS') || 'null'); if (lr && lr.ch === ch) return 'lais';
   var all = P.getProperties(), hit = ''; Object.keys(all).some(function (k) { if (k.indexOf('FTH_') === 0 && all[k].indexOf('"' + ts + '"') >= 0) { hit = k.slice(4); return true; } return false; });
   return hit;
 }
@@ -282,7 +283,7 @@ function facFit(rec, keep) {                                  // trim {key: ts} 
 function facSeen(P, who, card, ts) {                           // FSEEN_<who> = { _t0: first use, <cardId>: last ts seen } - shared by every phone that person signs in on
   who = String(who || '').trim(); if (!who || !card) return;
   var k = 'FSEEN_' + who.toUpperCase().slice(0, 40), rec = JSON.parse(P.getProperty(k) || '{}'); if (!rec._t0) rec._t0 = String(Date.now() / 1000);
-  if (!(+rec[card] >= +ts)) { rec[card] = String(ts); rec._v = (rec._v || 0) + 1; if (+rec._t0 < Date.now() / 1000 - 30 * 86400) rec._t0 = String(Date.now() / 1000 - 30 * 86400); facFit(rec, ['_t0', '_v', 'dm']); try { P.setProperty(k, JSON.stringify(rec)); } catch (e) { return; } CacheService.getScriptCache().remove('FAC_UN_' + who.toUpperCase().slice(0, 20)); }
+  if (!(+rec[card] >= +ts)) { rec[card] = String(ts); rec._v = (rec._v || 0) + 1; if (+rec._t0 < Date.now() / 1000 - 30 * 86400) rec._t0 = String(Date.now() / 1000 - 30 * 86400); facFit(rec, ['_t0', '_v', 'dm', 'lais']); try { P.setProperty(k, JSON.stringify(rec)); } catch (e) { return; } CacheService.getScriptCache().remove('FAC_UN_' + who.toUpperCase().slice(0, 20)); }
 }
 // the board list is often > 100 KB (Google's cap per cache value) - so it is cached in 90 KB pieces (13 Oct 2026: 'the app is very laggy' - an uncached list meant a full Trello read on every poll of every phone)
 function bigPut(cache, key, js, ttl) { var o = {}, n = 0; for (var i = 0; i < js.length; i += 90000) o[key + '_' + (n++)] = js.slice(i, i + 90000); o[key + '_N'] = String(n); cache.putAll(o, ttl); }
@@ -301,6 +302,34 @@ function facDm(P, FT) {                                         // {ch, name} of
   if (!pick) return null;
   var d = { ch: pick.id, name: pick.name }; P.setProperty('FAC_DM', JSON.stringify(d)); return d;
 }
+// 18 Oct 2026 (Abbas): "add #laisfactory in this app as well .. only me and the people in #laisfactory can see the chats in the app".
+// A second channel chat like the Direct chat (key 'lais'). Who may see it: Abbas, and anyone whose sign-in first name matches a member of
+// #laisfactory in Slack (real name / display name / handle, Md-type prefixes skipped). Members cached 10 min.
+function facLais(P, FT) {
+  var have = P.getProperty('FAC_LAIS'); if (have) return JSON.parse(have);
+  if (!FT) return null;
+  var pick = facChans(FT).filter(function (c) { return /^lais.?factory/i.test(c.name); }).sort(function (a, b) { return (b.member ? 1 : 0) - (a.member ? 1 : 0); })[0];
+  if (!pick) return null;
+  if (!pick.member) { var jn = slackApi(FT, 'conversations.join', { channel: pick.id }); if (!jn.ok) return null; CacheService.getScriptCache().remove('FAC_CHANS'); }
+  var d = { ch: pick.id, name: pick.name }; P.setProperty('FAC_LAIS', JSON.stringify(d)); return d;
+}
+function isRoom(k) { return k === 'dm' || k === 'lais'; }
+function facRoom(P, FT, k) { return k === 'dm' ? facDm(P, FT) : k === 'lais' ? facLais(P, FT) : null; }
+function facWho1(who) { return String(who || '').toLowerCase().split(/[\s._-]+/).map(nrmName).filter(function (w) { return w && !/^(md|mohd|mohammad|mohammed|muhammad|mohammod)$/.test(w); })[0] || ''; }
+function facLaisOk(P, FT, who) {
+  var w = facWho1(who); if (w.length < 2) return false; if (/^abbas/.test(w)) return true;
+  var L = facLais(P, FT); if (!L) return false;
+  var c = CacheService.getScriptCache(), h = c.get('FAC_LAISM_' + L.ch), names;
+  if (h) names = JSON.parse(h); else {
+    var mj = slackApi(FT, 'conversations.members', { channel: L.ch, limit: 200 }, true); if (!mj.ok) return false;
+    var us = facUsers(FT); names = [];
+    (mj.members || []).forEach(function (id) { var u = us.filter(function (x) { return x.id === id; })[0]; if (!u) return;
+      [u.name, u.handle, u.dn].forEach(function (n) { String(n || '').toLowerCase().split(/[\s._-]+/).forEach(function (pt) { pt = nrmName(pt); if (pt.length >= 3 && !/^(md|mohd|mohammad|mohammed|muhammad|mohammod)$/.test(pt)) names.push(pt); }); }); });
+    try { c.put('FAC_LAISM_' + L.ch, JSON.stringify(names), 600); } catch (e) {}
+  }
+  return names.some(function (n) { return n === w || (w.length >= 3 && (n.indexOf(w) === 0 || w.indexOf(n) === 0)); });
+}
+function facLaisFor(P, FT, who) { try { return FT && facLaisOk(P, FT, who) ? facLais(P, FT) : null; } catch (e) { return null; } }
 function facChans(FT) {                                        // every open channel the bot can see (needs channels:read + groups:read, which it has); cached 2 min
   var c = CacheService.getScriptCache(), h = c.get('FAC_CHANS'); if (h) return JSON.parse(h);
   var outc = [], cur = '';
@@ -411,12 +440,17 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
       (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if (mm.sys || mine(mm)) return; n++; lastOther = m.ts; tx = facLine(mm); });
       var r = { n: n, last: lastOther, tx: tx }; try { cache.put(rk, JSON.stringify(r), 21600); } catch (e) {} if (n) outm[cid] = r;
     });
-  } else Object.keys(lastGood).forEach(function (x) { if (x !== 'dm') outm[x] = lastGood[x]; });
+  } else Object.keys(lastGood).forEach(function (x) { if (x !== 'dm' && x !== 'lais') outm[x] = lastGood[x]; });
   try { var dm = facDm(P, FT); if (dm) {                      // the direct chat counts too (Abbas 14 Oct: "include those chats notifications in catchup")
     var seenD = Math.max(+(rec.dm || 0), +rec._t0), nd = 0, lastD = '', txD = '';
     facDmMsgs(P, FT, dm, fresh).forEach(function (m) { if (+m.ts <= seenD) return; var md = facMsg(P, FT, m, null); if (md.sys || mine(md)) return; nd++; lastD = m.ts; txD = facLine(md); });
     if (nd) outm.dm = { n: nd, last: lastD, tx: txD };
   } } catch (e) { if (lastGood.dm) outm.dm = lastGood.dm; }
+  try { var lsr = facLaisFor(P, FT, who); if (lsr) {           // #laisfactory counts too - only for the people who may see it
+    var seenL = Math.max(+(rec.lais || 0), +rec._t0), nl = 0, lastL = '', txL = '';
+    facDmMsgs(P, FT, lsr, fresh).forEach(function (m) { if (+m.ts <= seenL) return; var ml = facMsg(P, FT, m, null); if (ml.sys || mine(ml)) return; nl++; lastL = m.ts; txL = facLine(ml); });
+    if (nl) outm.lais = { n: nl, last: lastL, tx: txL };
+  } } catch (e) { if (lastGood.lais) outm.lais = lastGood.lais; }
   try { cache.put(ck + '_' + g + '_' + (rec._v || 0), JSON.stringify(outm), facTtl(P)); cache.put(ck + '_L', JSON.stringify(outm), 3600); } catch (e) {}
   return outm;
 }
@@ -527,7 +561,7 @@ function fac0(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -546,7 +580,7 @@ function fac0(reqText, P) {
       try { bigPut(cache, 'FAC_LIST', JSON.stringify(res), 25); bigPut(cache, 'FAC_LIST_L', JSON.stringify(res), 3600); } catch (e) {}
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
-      try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; }
+      try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; } res.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0);
       res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
       return out(res);
     }
@@ -558,7 +592,7 @@ function fac0(reqText, P) {
       var pdm = null; try { pdm = facDm(P, FTp); } catch (e) {}
       var prs = null; try { prs = facRetSum(P); } catch (e) {}
       var pact; try { pact = facAct(P, FTp, pcards); } catch (e) {}   // 17 Oct 2026: last-line time per chat on every ping, so the Chats tab never shows an older line
-      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
+      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, lais: facLaisFor(P, FTp, whp), gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
     }
     if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
       var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });
@@ -596,7 +630,7 @@ function fac0(reqText, P) {
     // ---- STEP 2 (12 Oct 2026): the card chat = the card's Slack #cutting thread, both ways ----
     var FT = P.getProperty('SLACK_FACTORY_TOKEN');
     if (req.op === 'seen') {                                  // 16 Oct 2026: the phone read a chat through the FAST LANE - remember it as seen (no Slack call)
-      var sc = req.card === 'dm' ? 'dm' : String(req.card || '').replace(/[^0-9a-f]/g, ''), sts = String(req.ts || '');
+      var sc = isRoom(req.card) ? req.card : String(req.card || '').replace(/[^0-9a-f]/g, ''), sts = String(req.ts || '');
       if (!sc || !/^\d+\.\d+$/.test(sts)) return out({ ok: false, error: 'bad request' });
       facSeen(P, String(req.who || ''), sc, sts); return out({ ok: true });
     }
@@ -678,22 +712,24 @@ function fac0(reqText, P) {
       try { slackApi(FT, 'chat.postMessage', { channel: dch, text: '→ *DIRECT CHAT* · ' + dwho + ' linked this channel to the factory app' }); } catch (e) {}
       return out({ ok: true, dm: dnew });
     }
-    if (req.op === 'thread' && req.card === 'dm') {           // the direct chat: the channel's messages (oldest first), only those after req.since when given
+    if (req.op === 'thread' && isRoom(req.card)) {           // the direct chat (or #laisfactory): the channel's messages (oldest first), only those after req.since when given
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
-      var ddm = facDm(P, FT); if (!ddm) return out({ ok: false, error: 'no direct chat channel chosen yet' });
+      if (req.card === 'lais' && !facLaisOk(P, FT, req.who)) return out({ ok: false, error: 'only Abbas and the people in #laisfactory can see this chat', noaccess: true });
+      var ddm = facRoom(P, FT, req.card); if (!ddm) return out({ ok: false, error: req.card === 'lais' ? 'no #laisfactory channel the factory bot can see' : 'no direct chat channel chosen yet' });
       if (req.since && !/^\d+\.\d+$/.test(String(req.since))) req.since = '';
       var dms = facDmMsgs(P, FT, ddm, false).filter(function (m) { return !req.since || +m.ts > +req.since; });
       var dlast = dms.reduce(function (a, m) { return +m.ts > +a ? m.ts : a; }, req.since || '0');
-      if (req.look !== 0) { if (+dlast > 0) facSeen(P, String(req.who || ''), 'dm', dlast); else if (!req.since) facSeen(P, String(req.who || ''), 'dm', String(Date.now() / 1000)); }
+      if (req.look !== 0) { if (+dlast > 0) facSeen(P, String(req.who || ''), req.card, dlast); else if (!req.since) facSeen(P, String(req.who || ''), req.card, String(Date.now() / 1000)); }
       return out({ ok: true, ch: ddm.ch, name: ddm.name, msgs: dms.map(function (m) { return facMsg(P, FT, m, null); }) });
     }
-    if (req.op === 'post' && req.card === 'dm') {             // a line into the direct chat
+    if (req.op === 'post' && isRoom(req.card)) {             // a line into the direct chat (or #laisfactory)
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
-      var pdm = facDm(P, FT), ptx2 = String(req.text || '').slice(0, 3000), pwho2 = String(req.who || '').slice(0, 40) || 'factory';
+      if (req.card === 'lais' && !facLaisOk(P, FT, req.who)) return out({ ok: false, error: 'only Abbas and the people in #laisfactory can write here', noaccess: true });
+      var pdm = facRoom(P, FT, req.card), ptx2 = String(req.text || '').slice(0, 3000), pwho2 = String(req.who || '').slice(0, 40) || 'factory';
       if (!pdm) return out({ ok: false, error: 'no direct chat channel chosen yet' }); if (!ptx2.trim()) return out({ ok: false, error: 'bad request' });
       var pj2 = slackApi(FT, 'chat.postMessage', { channel: pdm.ch, text: '*' + pwho2 + ':* ' + ptx2 });
       if (!pj2.ok) return out({ ok: false, error: 'Slack said ' + pj2.error + (pj2.error === 'not_in_channel' ? ' (invite the factory bot to #' + pdm.name + ')' : '') });
-      try { facSeen(P, pwho2, 'dm', pj2.ts); } catch (e) {} facBump(); facNudge(P, 'dm');
+      try { facSeen(P, pwho2, req.card, pj2.ts); } catch (e) {} facBump(); facNudge(P, req.card);
       return out({ ok: true, ts: pj2.ts });
     }
     if (req.op === 'thread') {                                // the thread of one card: root + replies (only those after req.since when given)
@@ -731,9 +767,10 @@ function fac0(reqText, P) {
     }
     if (req.op === 'up') {                                    // photos / voice notes / files from the factory phone -> ONE message in the thread (Abbas 13 Oct: "like Slack ... all as one message")
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
-      var udm = req.card === 'dm' ? facDm(P, FT) : null, uc = udm ? 'dm' : String(req.card || '').replace(/[^0-9a-f]/g, ''), uwho = String(req.who || '').slice(0, 40) || 'factory';
+      if (req.card === 'lais' && !facLaisOk(P, FT, req.who)) return out({ ok: false, error: 'only Abbas and the people in #laisfactory can write here', noaccess: true });
+      var udm = isRoom(req.card) ? facRoom(P, FT, req.card) : null, uc = udm ? req.card : String(req.card || '').replace(/[^0-9a-f]/g, ''), uwho = String(req.who || '').slice(0, 40) || 'factory';
       var ufs = Array.isArray(req.files) ? req.files : (req.b64 ? [{ name: req.name, b64: req.b64 }] : []), pre = Array.isArray(req.fids) ? req.fids.map(function (x) { return String(x).replace(/[^A-Z0-9]/g, ''); }).filter(String).slice(0, 10) : [];
-      if (req.card === 'dm' && !udm) return out({ ok: false, error: 'no direct chat channel chosen yet' });
+      if (isRoom(req.card) && !udm) return out({ ok: false, error: 'no direct chat channel chosen yet' });
       if (!uc || (!ufs.length && !pre.length) || ufs.length + pre.length > 10) return out({ ok: false, error: 'bad request' });
       if (pre.length && Array.isArray(req.sizes)) {           // the phone uploaded straight to Slack: make sure every byte arrived before the message is posted
         for (var vi = 0; vi < pre.length; vi++) { var vf = slackApi(FT, 'files.info', { file: pre[vi] }, true), vs = vf.ok ? +((vf.file || {}).size || 0) : -1, want = +req.sizes[vi] || 0;
@@ -835,7 +872,7 @@ function fac0(reqText, P) {
       return out({ ok: true, id: scard2.id, url: scard2.shortUrl, files: sids.length, att: satt, list: SLIST });
     }
     if (req.op === 'later') {                                 // pin / unpin a card on this person's LATER list (per person, shared by all their phones)
-      var lc = req.card === 'dm' ? 'dm' : String(req.card || '').replace(/[^0-9a-f]/g, ''), lwho = String(req.who || '').trim().toUpperCase().slice(0, 40); if (!lc || !lwho) return out({ ok: false, error: 'bad request' });
+      var lc = isRoom(req.card) ? req.card : String(req.card || '').replace(/[^0-9a-f]/g, ''), lwho = String(req.who || '').trim().toUpperCase().slice(0, 40); if (!lc || !lwho) return out({ ok: false, error: 'bad request' });
       var lk = 'FLATER_' + lwho, lrec = JSON.parse(P.getProperty(lk) || '{}');
       if (req.on) lrec[lc] = String(Date.now()); else delete lrec[lc];
       var lks = Object.keys(lrec); if (lks.length > 200) lks.sort(function (a, b) { return +lrec[a] - +lrec[b]; }).slice(0, lks.length - 200).forEach(function (k) { delete lrec[k]; });
