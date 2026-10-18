@@ -263,11 +263,12 @@ function facThreads(P, FT, cards, fresh) {                    // for every card 
   facUsmanOf(P, FT, cards, fresh);
   var all = P.getProperties(), byTs = {}, byLink = {}, outm = {};
   cards.forEach(function (c) { var v = all['FTH_' + c.id]; if (v) byTs[JSON.parse(v).ts] = c.id; else if (c.url) byLink[c.url.split('/').pop()] = c.id; });
-  [DOX.CUTTING, FAC.SAMPLES_CH, DOX.USMANCUT].forEach(function (CH) {                     // #cutting for production cards, #samples-discuss for sample cards, #usmancutting for hand-work cards
-    var hh = []; try { hh = facHist(P, FT, CH, fresh); } catch (e) { if (CH !== DOX.USMANCUT) throw e; }
+  var usp = P.getProperty('FAC_USMP'), chs = [DOX.CUTTING, FAC.SAMPLES_CH, DOX.USMANCUT]; if (usp) try { chs.push(JSON.parse(usp).ch); } catch (e) {}
+  chs.forEach(function (CH) {                     // #cutting for production cards, #samples-discuss for sample cards, #usmancutting for hand-work cards
+    var hh = []; try { hh = facHist(P, FT, CH, fresh); } catch (e) { if (CH === DOX.CUTTING || CH === FAC.SAMPLES_CH) throw e; }
     hh.forEach(function (m) {
       var id = byTs[m.t];
-      if (!id && CH !== DOX.USMANCUT && m.l && byLink[m.l]) { id = byLink[m.l]; delete byLink[m.l]; P.setProperty('FTH_' + id, JSON.stringify({ ch: CH, ts: m.t })); }   // an order message from before: remembered from now on
+      if (!id && (CH === DOX.CUTTING || CH === FAC.SAMPLES_CH) && m.l && byLink[m.l]) { id = byLink[m.l]; delete byLink[m.l]; P.setProperty('FTH_' + id, JSON.stringify({ ch: CH, ts: m.t })); }   // an order message from before: remembered from now on
       if (id) outm[id] = { n: m.rc, last: m.lr || m.t };
     });
   });
@@ -312,6 +313,17 @@ function facChans(FT) {                                        // every open cha
   outc.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
   try { c.put('FAC_CHANS', JSON.stringify(outc), 120); } catch (e) {}
   return outc;
+}
+// 18 Oct 2026 (Abbas): "if it's a new card for samples that I'm making [with the USMAN tick], it has to go to #usman sample" - the factory
+// workspace's Usman-samples channel, found by name (usman + sample), remembered in FAC_USMP. The bot joins it if it is public; a private one
+// must have @SJ Orders invited first (a bot cannot see private channels it is not in).
+function facUsmSampleCh(P, FT) {
+  var have = P.getProperty('FAC_USMP'); if (have) return JSON.parse(have);
+  var hits = facChans(FT).filter(function (c) { var n = nrmName(c.name); return n.indexOf('usman') >= 0 && n.indexOf('sample') >= 0 && n.indexOf('done') < 0; })
+    .sort(function (a, b) { return (b.member ? 1 : 0) - (a.member ? 1 : 0) || a.name.length - b.name.length; });
+  var pick = hits[0]; if (!pick) return null;
+  if (!pick.member) { var jn = slackApi(FT, 'conversations.join', { channel: pick.id }); if (!jn.ok) throw new Error('the factory bot is not in #' + pick.name + ' - open it in Slack and type /invite @SJ Orders'); }
+  var r = { ch: pick.id, name: pick.name }; P.setProperty('FAC_USMP', JSON.stringify(r)); return r;
 }
 function nrmName(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
 function facUsers(FT) {                                        // the people of the workspace (no bots, no deleted), for "new direct chat with..."; cached 10 min
@@ -745,8 +757,9 @@ function fac0(reqText, P) {
       var sname = String(req.name || '').trim().slice(0, 500), sdesc = String(req.desc || '').slice(0, 16000), swho = String(req.who || '').slice(0, 40) || 'factory';
       var sfs = Array.isArray(req.files) ? req.files : []; if (!sname || sfs.length > 10) return out({ ok: false, error: 'bad request' });
       var SRET = req.kind === 'ret', srl = SRET ? facRetLists(P, wtok, 2) : null; if (SRET && !srl) return out({ ok: false, error: 'could not make the RETURNS list on Trello' });
-      var SUSM = !SRET && !!req.usman;   // 18 Oct 2026 (Abbas): tick "USMAN hand work" -> the sample's chat is made in #usmancutting, not #samples-discuss / #cutting
-      var SCH = SRET ? DOX.CUTTING : SUSM ? DOX.USMANCUT : FAC.SAMPLES_CH, SLIST = SRET ? srl.ret : FAC.LISTS[0][1], SCHN = SRET ? '#cutting' : SUSM ? '#usmancutting' : '#samples-discuss';
+      var SUSM = !SRET && !!req.usman, SUP = null;   // 18 Oct 2026 (Abbas): tick "USMAN hand work" on a NEW SAMPLE -> its chat is made in the #usman sample channel, not #samples-discuss
+      if (SUSM) { try { SUP = facUsmSampleCh(P, FT); } catch (e) { return out({ ok: false, error: e.message }); } if (!SUP) return out({ ok: false, error: 'no Usman samples channel found in Slack - make one (e.g. #usman-samples) and /invite @SJ Orders into it' }); }
+      var SCH = SRET ? DOX.CUTTING : SUSM ? SUP.ch : FAC.SAMPLES_CH, SLIST = SRET ? srl.ret : FAC.LISTS[0][1], SCHN = SRET ? '#cutting' : SUSM ? '#' + SUP.name : '#samples-discuss';
       var scard2 = trApi('post', '/cards', { idList: SLIST, name: sname, desc: sdesc, pos: 'top' }, wtok);
       // Abbas 13 Oct: the Trello card gets ONLY a cover - the first photo, or a frame of the video (made on the phone) - everything else goes to Slack only
       var satt = 0; if (req.cover && req.cover.b64) { try {
