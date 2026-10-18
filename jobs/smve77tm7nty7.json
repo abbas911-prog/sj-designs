@@ -1,0 +1,88 @@
+{
+ "id": "smve77tm7nty7",
+ "op": "sell",
+ "ref": "INV-0015",
+ "ok": false,
+ "cards": [
+  {
+   "card": "6a7c4444cb1c73eb3f00b495",
+   "no": "7284",
+   "before": "Sj= **(7284)** (64) pcs colour= (4) ,,, (16/16/16/16)",
+   "after": "Sj= **(7284)** (48) pcs colour= (4) ,,, (12/12/12/12)",
+   "left": 48,
+   "lines": [
+    "colour 1: 16 → 12 (−4)",
+    "colour 2: 16 → 12 (−4)",
+    "colour 3: 16 → 12 (−4)",
+    "colour 4: 16 → 12 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69d56fb884f2269281af852f",
+   "no": "21074",
+   "before": "Sj = **21074** (40)pcs  (6) colors.                           (6/8/6/5/6/9)",
+   "after": "Sj = **21074** (20)pcs  (6) colors.                           (0/8/6/1/0/5)",
+   "left": 20,
+   "lines": [
+    "colour 1: 6 → 0 (−6)",
+    "colour 4: 5 → 1 (−4)",
+    "colour 5: 6 → 0 (−6)",
+    "colour 6: 9 → 5 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69b460e13c5dd6573cc72b82",
+   "no": "31849",
+   "before": "SJ = **31849** (44,)(6) ,,,,(4/8/8/8/8/8)",
+   "after": "SJ = **31849** (36,)(6) ,,,,(0/8/8/8/4/8)",
+   "left": 36,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 5: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69f9fd666dd0c50e4ac837a3",
+   "no": "31892",
+   "before": "Sj 31892. (48pcs)6 colors.                       (8/8/8/8/8/8)",
+   "after": "Sj 31892. (44pcs)6 colors.                       (8/4/8/8/8/8)",
+   "left": 44,
+   "lines": [
+    "colour 2: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6aaa44da42d4418641287e59",
+   "no": "33418",
+   "before": "Sj = **(33418)** (28) pcs ,,, color (4/4/8/8/4)",
+   "after": "Sj = **(33418)** (20) pcs ,,, color (4/4/4/8/0)",
+   "left": 20,
+   "lines": [
+    "colour 3: 8 → 4 (−4)",
+    "colour 5: 4 → 0 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "68629f91f3a73243158be354",
+   "no": "54333",
+   "err": "card title does not add up (4+4+4+4+4+4+4 = 28, card says ?) — not changed"
+  },
+  {
+   "card": "6aad4c00a2a1b3dad8c57e0b",
+   "no": "58273",
+   "before": "Sj = **(58273)** (48) pcs ... color = (4) ...(12/12/12/12)",
+   "after": "Sj = **(58273)** (44) pcs ... color = (4) ...(8/12/12/12)",
+   "left": 44,
+   "lines": [
+    "colour 1: 12 → 8 (−4)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
