@@ -174,7 +174,7 @@ body.co .toast{bottom:90px}
 
 <div class="sheet" id="ed" hidden><div class="in"><h3>✏️ Edit card · কার্ড বদলান</h3><input id="edname" placeholder="Title · শিরোনাম"><textarea id="eddesc" placeholder="Description · বিবরণ"></textarea><button class="go" id="edgo">Save · সেভ</button><button class="x" id="edx">Cancel</button></div></div>
 <div class="sheet" id="cp" hidden><div class="in"><h3>⧉ Copy this card · কার্ড কপি</h3><input id="cpname" placeholder="Title of the new card · নতুন শিরোনাম"><select id="cpto"></select><label class="ck"><input type="checkbox" id="cpkeep" checked> Keep photos, labels and details · ছবি ও বিবরণ রাখুন</label><button class="go" id="cpgo">Make the copy · কপি তৈরি করুন</button><button class="x" id="cpx">Cancel</button></div></div>
-<div class="sheet" id="ns" hidden><div class="in"><h3>⭐ New sample · নতুন স্যাম্পল</h3><input id="nsname" placeholder="Sample name, e.g. SJ-58429 SAMPLE · নাম"><textarea id="nsdesc" placeholder="What to make · কী বানাতে হবে (optional)"></textarea><label class="usm" id="nsusml"><input type="checkbox" id="nsusm"><span>🧵 <b>USMAN hand work</b> — chat in #usmancutting</span><small>উসমান হ্যান্ড ওয়ার্ক — চ্যাট #usmancutting-এ</small></label>
+<div class="sheet" id="ns" hidden><div class="in"><h3>⭐ New sample · নতুন স্যাম্পল</h3><input id="nsname" placeholder="Sample name, e.g. SJ-58429 SAMPLE · নাম"><textarea id="nsdesc" placeholder="What to make · কী বানাতে হবে (optional)"></textarea><label class="usm" id="nsusml"><input type="checkbox" id="nsusm"><span>🧵 <b>USMAN hand work</b> — chat in #usman sample</span><small>উসমান হ্যান্ড ওয়ার্ক — চ্যাট উসমান স্যাম্পল চ্যানেলে</small></label>
 <div class="pend" id="nspend"></div><div class="tools"><button class="mic" id="nsmic" title="tap to record">🎤</button><label title="photo">📷<input type="file" id="nscam" accept="image/*,video/*" capture="environment" hidden></label><button id="nspaste" title="paste">📋</button><label title="files">📎<input type="file" id="nsfiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div><div class="hint">🎤 record &nbsp;·&nbsp; 📷 photo / video &nbsp;·&nbsp; 📋 paste · পেস্ট &nbsp;·&nbsp; 📎 files<br>or paste straight into the boxes · বক্সে পেস্ট করলেও হবে</div>
 <button class="go" id="nsgo">⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন</button><button class="x" id="nsx">Cancel</button></div></div>
 <div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><label class="usm" id="ncusml"><input type="checkbox" id="ncusm"><span>🧵 <b>USMAN hand work</b> — chat in #usmancutting</span><small>উসমান হ্যান্ড ওয়ার্ক — চ্যাট #usmancutting-এ</small></label><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
@@ -187,7 +187,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-18a';
+var VER = '2026-10-18b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
