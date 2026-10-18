@@ -325,6 +325,51 @@ function facUsmSampleCh(P, FT) {
   if (!pick.member) { var jn = slackApi(FT, 'conversations.join', { channel: pick.id }); if (!jn.ok) throw new Error('the factory bot is not in #' + pick.name + ' - open it in Slack and type /invite @SJ Orders'); }
   var r = { ch: pick.id, name: pick.name }; P.setProperty('FAC_USMP', JSON.stringify(r)); return r;
 }
+// 18 Oct 2026 (Abbas): "whenever I add a new cutting, the card goes to #samplesneed (the sample they need in the godown, so they don't make a
+// mistake) - when that picture is posted in #samplesneed, make a card out of it and label it SAMPLE, on the board where the returns sit".
+// Every new post with a picture (or "... SAMPLE" text) in #samplesneed (SJTC, read with the SJ Memo bot) becomes a card at the top of
+// RETURNS on the ALM board, label SAMPLE, the picture(s) attached (first = cover). Checked at most once a minute, on the factory app's ping.
+// First run only notes "now" (no flood of old posts). SNEED_LAST = ts of the last post handled.
+function facSampleLabel(P, wtok) {
+  var have = P.getProperty('FSAMPLE_LBL'); if (have) return have;
+  var ls = trApi('get', '/boards/' + FAC.BOARD + '/labels', { fields: 'name,color', limit: 1000 }, wtok) || [];
+  var hit = ls.filter(function (l) { return String(l.name || '').trim().toUpperCase() === 'SAMPLE'; })[0];
+  var id = hit ? hit.id : trApi('post', '/labels', { name: 'SAMPLE', color: 'purple', idBoard: FAC.BOARD }, wtok).id;
+  if (id) P.setProperty('FSAMPLE_LBL', id); return id;
+}
+function snDate(d, full) { var u = new Date(+d + 4 * 3600000), M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][u.getUTCMonth()]; return u.getUTCDate() + ' ' + M + (full ? ' ' + u.getUTCFullYear() + ' ' + ('0' + u.getUTCHours()).slice(-2) + ':' + ('0' + u.getUTCMinutes()).slice(-2) : ''); }   // Dubai time
+function facSampleNeed(P, wtok) {
+  var ST = P.getProperty('SLACK_BOT_TOKEN'); if (!ST || !wtok) return;
+  var c = CacheService.getScriptCache(); if (c.get('SNEED_AT')) return; c.put('SNEED_AT', '1', 60);
+  var lock = LockService.getScriptLock(); if (!lock.tryLock(200)) return;
+  try {
+    var last = P.getProperty('SNEED_LAST');
+    if (!last) { P.setProperty('SNEED_LAST', String(Date.now() / 1000)); return; }
+    var h = slackApi(ST, 'conversations.history', { channel: DOX.SAMPLESNEED, oldest: last, limit: 30 }, true);
+    if (!h.ok) { c.put('SNEED_ERR', String(h.error), 21600); return; }
+    var ms = (h.messages || []).filter(function (m) { return +m.ts > +last && (!m.thread_ts || m.thread_ts === m.ts) && !/^channel_/.test(m.subtype || ''); }).sort(function (a, b) { return +a.ts - +b.ts; });
+    if (!ms.length) return;
+    var rl = facRetLists(P, wtok, 1); if (!rl) return;
+    var lab = ''; try { lab = facSampleLabel(P, wtok); } catch (e) {}
+    for (var i = 0; i < ms.length; i++) {
+      var m = ms[i], imgs = (m.files || []).filter(function (f) { return /^image\//.test(f.mimetype || ''); }), txt = String(m.text || '').replace(/[*_~`]/g, '').replace(/<[^>|]*\|([^>]*)>/g, '$1').replace(/<[^>]*>/g, '').trim();
+      if (!imgs.length && !/sample/i.test(txt)) { P.setProperty('SNEED_LAST', m.ts); continue; }
+      var tk = 'SNEED_TRY_' + m.ts, tries = +(c.get(tk) || 0); if (tries >= 3) { P.setProperty('SNEED_LAST', m.ts); continue; } c.put(tk, String(tries + 1), 21600);
+      var no = (txt.match(/S[JH]\s*[-=:]?\s*\**\(?\s*(\d{3,6}(?:-[A-Z0-9]{1,3})?)/i) || [])[1], d = new Date(+m.ts * 1000);
+      var name = no ? 'SJ-' + no + ' SAMPLE' : (txt.split('\n')[0].slice(0, 80) || 'SAMPLE · ' + snDate(d, false));
+      var card = trApi('post', '/cards', { idList: rl.ret, name: name, pos: 'top', idLabels: lab, desc: (txt ? txt + '\n\n' : '') + '_From #samplesneed · ' + snDate(d, true) + '_' }, wtok);
+      for (var k = 0; k < imgs.length && k < 6; k++) { try {
+        var fr = UrlFetchApp.fetch(imgs[k].url_private_download || imgs[k].url_private, { headers: { Authorization: 'Bearer ' + ST }, muteHttpExceptions: true });
+        if (fr.getResponseCode() !== 200) continue; var bl = fr.getBlob(); if (/text\/html/.test(String(bl.getContentType() || '')) || bl.getBytes().length > 10 * 1024 * 1024) continue;
+        var fn = String(imgs[k].name || 'sample.jpg').replace(/[^\w.\-]/g, '_').slice(0, 60);
+        UrlFetchApp.fetch('https://api.trello.com/1/cards/' + card.id + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true, payload: { file: bl.setName ? bl.setName(fn) : bl, name: fn, setCover: k === 0 ? 'true' : 'false' } });
+      } catch (e) {} }
+      try { trApi('post', '/cards/' + card.id + '/actions/comments', { text: '📌 SAMPLE NEEDED · from #samplesneed (made by the factory app relay)' }, wtok); } catch (e) {}
+      P.setProperty('SNEED_LAST', m.ts); c.remove(tk);
+      bigDrop(c, 'FAC_LIST'); try { facNudge(P, 'list:' + card.id); } catch (e) {}
+    }
+  } catch (e) { c.put('SNEED_ERR', String(e.message || e).slice(0, 200), 21600); } finally { lock.releaseLock(); }
+}
 function nrmName(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
 function facUsers(FT) {                                        // the people of the workspace (no bots, no deleted), for "new direct chat with..."; cached 10 min
   var c = CacheService.getScriptCache(), h = c.get('FAC_USERS'); if (h) return JSON.parse(h);
@@ -506,6 +551,7 @@ function fac0(reqText, P) {
       return out(res);
     }
     if (req.op === 'ping') {                                  // 15 Oct 2026: the cheap "anything new?" every 4 s - no Trello call; the cards come from the cached list
+      try { facSampleNeed(P, wtok); } catch (e) {}           // 18 Oct 2026: #samplesneed pictures -> SAMPLE cards on RETURNS (at most once a minute)
       var FTp = P.getProperty('SLACK_FACTORY_TOKEN'), whp = String(req.who || '').slice(0, 40), lc0 = bigGet(CacheService.getScriptCache(), 'FAC_LIST') || bigGet(CacheService.getScriptCache(), 'FAC_LIST_L');
       var pcards = lc0 ? JSON.parse(lc0).cards : Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('FTH_') === 0; }).map(function (k) { return { id: k.slice(4) }; });
       var pth = {}; try { pth = facUnread(P, FTp, pcards, whp, !!req.fresh); } catch (e) {}
@@ -1489,6 +1535,14 @@ function setupTimer() {
   kick();
 }
 // 15 Oct 2026: read-only check run from the editor (▶ Run facDiag) - prints what the factory app's "new messages" logic sees. No keys or tokens are printed.
+function snDiag() {                                            // read-only check from the editor: #samplesneed access + the Usman channels the factory bot sees (no keys printed)
+  var P = PropertiesService.getScriptProperties(), ST = P.getProperty('SLACK_BOT_TOKEN'), FT = P.getProperty('SLACK_FACTORY_TOKEN'), c = CacheService.getScriptCache(), L = [];
+  L.push('SNEED_LAST ' + P.getProperty('SNEED_LAST') + ' · err ' + c.get('SNEED_ERR') + ' · label ' + P.getProperty('FSAMPLE_LBL') + ' · returns ' + P.getProperty('FRET_LISTS') + ' · usman-sample ' + P.getProperty('FAC_USMP'));
+  var h = slackApi(ST, 'conversations.history', { channel: DOX.SAMPLESNEED, limit: 6 }, true); L.push('#samplesneed ok=' + h.ok + (h.ok ? '' : ' err=' + h.error));
+  (h.messages || []).forEach(function (m) { L.push('  ' + m.ts + ' files ' + (m.files || []).map(function (f) { return f.mimetype; }).join(',') + ' · ' + String(m.text || '').slice(0, 50).replace(/\n/g, ' ')); });
+  try { facChans(FT).filter(function (x) { return /usman|sample/i.test(x.name); }).forEach(function (x) { L.push('factory channel #' + x.name + ' ' + x.id + (x.member ? ' (bot in)' : ' (bot NOT in)') + (x.priv ? ' private' : '')); }); } catch (e) { L.push('channels err ' + e.message); }
+  Logger.log(L.join('\n'));
+}
 function facDiag() {
   var P = PropertiesService.getScriptProperties(), FT = P.getProperty('SLACK_FACTORY_TOKEN'), c = CacheService.getScriptCache(), L = [];
   var dm = JSON.parse(P.getProperty('FAC_DM') || 'null'); L.push('direct chat: ' + JSON.stringify(dm));
