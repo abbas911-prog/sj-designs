@@ -187,7 +187,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-18b';
+var VER = '2026-10-18c';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -297,6 +297,15 @@ var LOADING = false;
 var DMC = { id: 'dm', dm: true, name: 'Direct chat', l: '', pos: -1, f: {}, lb: [] };          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
 function applyList(j){ D.lists = j.lists; D.show = j.show || []; if (j.limit) D.limit = j.limit; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; bellPaint(); }
 function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); if (j.live && PW) liveStart(j.live); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards'; draw(); return true; } catch(e){ return false; } }
+// 18 Oct 2026 (Abbas: "when it's done it has to be in Came back, but it's not there — it's deleted. Why?"): the fast lane does not read the
+// long done-lists (RETURNS BACK, FINISH, SAMPLE DONE, FINISH SAMPLES — Cloudflare's CPU limit); the phone kept them from the relay's list, but the
+// 5-minute background relay list only refreshed the counts, never those cards — so a card moved there (Done) was in Trello but not in the app.
+// Now every relay list replaces the cards of those lists, and a "list changed" ring fetches the relay list on the next refresh.
+function relCards(rj){ var lim = rj.limit || D.limit || {}; if (!rj.cards || !D.cards) return; var keep = D.cards.filter(function(c){ return !lim[c.l]; }), have = {};
+  keep.forEach(function(c){ have[c.id] = 1; });
+  D.cards = keep.concat(rj.cards.filter(function(c){ return lim[c.l] && !have[c.id]; })); D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; });
+  if (open && D.byId[open.id] && open !== D.byId[open.id]) { var oc = open; open = D.byId[open.id]; ['_atts', '_cover', 'desc'].forEach(function(k){ if (oc[k] !== undefined) open[k] = oc[k]; }); if (TH.card && TH.card.id === open.id) TH.card = open; }
+  RETSIG = ''; try { var sv = JSON.parse(ls('sj_fac_list') || 'null'); if (sv) { sv.cards = D.cards; ls('sj_fac_list', JSON.stringify(sv)); } } catch(e){} }
 async function load(fresh){
   if (LOADING && Date.now() - LOADING < 30000) return false; LOADING = Date.now();
   $('rf').classList.add('spin');
@@ -306,7 +315,7 @@ async function load(fresh){
   if (fastTr() && D.lists && D.lists.length) { var fj = await fast({ op: 'tlist', lists: D.lists, limit: D.limit || {} });
     if (fj && fj.ok) j = { ok: true, t: fj.t, lists: D.lists, show: D.show, limit: D.limit, cards: fj.cards.concat((D.cards || []).filter(function(c){ return (fj.covered || []).indexOf(c.l) < 0; })), w: D.w, th: D.th, later: D.later, dm: D.dm, live: LIVE.topic, fast: FAST.url, via: 'fast' };
     else if (fj && fj.notrello) FAST.notr = Date.now() + 600000; }
-  if (j && (fresh || Date.now() - (FAST.relAt || 0) > 300000)) { FAST.relAt = Date.now(); call({ op: 'list', fresh: !!fresh }).then(function(rj){ if (rj && rj.ok && !LOADING) { D.th = rj.th || D.th; D.later = rj.later || D.later; if (rj.dm !== undefined) D.dm = rj.dm; if (rj.limit) D.limit = rj.limit; if (rj.lists) D.lists = rj.lists; if (rj.show) D.show = rj.show; D.w = rj.w; if (rj.refs) refsSet(rj.refs, true); if (rj.act) D.act = rj.act; if (rj.fast !== undefined) fastSet(rj.fast); if (rj.live) liveStart(rj.live); CHATSIG = ''; draw(); } }); }
+  if (j && (fresh || Date.now() - (FAST.relAt || 0) > 90000)) { FAST.relAt = Date.now(); call({ op: 'list', fresh: !!fresh }).then(function(rj){ if (rj && rj.ok && !LOADING) { relCards(rj); D.th = rj.th || D.th; D.later = rj.later || D.later; if (rj.dm !== undefined) D.dm = rj.dm; if (rj.limit) D.limit = rj.limit; if (rj.lists) D.lists = rj.lists; if (rj.show) D.show = rj.show; D.w = rj.w; if (rj.refs) refsSet(rj.refs, true); if (rj.act) D.act = rj.act; if (rj.fast !== undefined) fastSet(rj.fast); if (rj.live) liveStart(rj.live); CHATSIG = ''; draw(); } }); }
   if (!j) { j = await call({ op: 'list', fresh: !!fresh }); if (j && j.ok) FAST.relAt = Date.now(); }
   $('rf').classList.remove('spin'); LOADING = 0;
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
@@ -441,7 +450,7 @@ function chatsDraw(){ if (TAB !== 'chats' || !D.cards) return;
   $('chats').innerHTML = h; document.querySelectorAll('#chats .crow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); }); }
 $('chats').onclick = function(e){ if (e.target.closest('#bcatch2')) { catchUp(); return; } var r = e.target.closest('.crow'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
 var RSEG = 'RETURNS';
-$('rseg').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; RSEG = b.dataset.r; document.querySelectorAll('#rseg button').forEach(function(x){ x.classList.toggle('on', x.dataset.r === RSEG); }); retDraw(true); };
+$('rseg').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; RSEG = b.dataset.r; document.querySelectorAll('#rseg button').forEach(function(x){ x.classList.toggle('on', x.dataset.r === RSEG); }); retDraw(true); if (RSEG === 'RETURNS BACK') { FAST.relAt = 0; load(false); } };
 var RETSIG = '';
 function retDraw(force){ if (TAB !== 'returns' || !D.cards) return; var cs = D.cards.filter(function(c){ return lname(c.l) === RSEG; }).sort(function(a, b){ return a.pos - b.pos; });
   var sig = RSEG + cs.map(function(c){ return c.id + c.name + c.img + unread(c); }).join(','); if (!force && sig === RETSIG) return; RETSIG = sig;
@@ -982,7 +991,7 @@ function liveStart(topic, force){ if (!topic || !window.EventSource) return; if 
   es.onmessage = function(e){ var d = null; try { d = JSON.parse(e.data); } catch(x){} if (!d || d.event !== 'message') return; LIVE.ok = true; liveNudge(String(d.message || '').replace(/^c=/, '')); }; }
 function liveNudge(c){ LIVE.t = Date.now();
   if (/^s:/.test(c)) { liveSlack(c.slice(2)); return; }
-  if (/^list:/.test(c)) { setTimeout(function(){ load(false); }, 400); c = c.slice(5); }
+  if (/^list:/.test(c)) { FAST.relAt = 0; setTimeout(function(){ load(false); }, 400); c = c.slice(5); }
   if (open && (open.id === c || !c)) { TH.force = true; thPull(); }
   clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(false); }, 250); }
 // 17 Oct 2026 (Abbas: "a message came through on Slack, and in the app it came after 25-30 seconds. Why?"): a message written IN SLACK never rang
