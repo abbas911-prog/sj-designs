@@ -116,6 +116,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .sheet h3{margin:0 0 10px;font-size:15px}.sheet button{display:block;width:100%;border:0;background:#f7f3ec;border-radius:14px;padding:14px;font-size:16px;font-weight:700;text-align:left;margin-bottom:8px}
 .sheet button.here{opacity:.45}.sheet button.x{background:none;color:var(--mute);text-align:center;font-weight:600}.sheet button.go{background:var(--gold);color:#fff;text-align:center}
 .sheet input,.sheet textarea,.sheet select{display:block;width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:12px;padding:11px 12px;font-size:16px;margin-bottom:8px;background:#fff;font-family:inherit}.sheet textarea{min-height:130px;resize:vertical}.sheet label.ck{display:flex;align-items:center;gap:8px;font-size:15px;margin:4px 0 10px}.sheet label.ck input{width:20px;height:20px;margin:0}
+.sheet .usm{display:grid;grid-template-columns:28px 1fr;align-items:center;column-gap:8px;margin:2px 0 10px;padding:10px 12px;border:1.5px solid #e6c9a8;border-radius:12px;background:#fff7ee;font-size:14.5px;color:#6b3f12;cursor:pointer}.sheet .usm[hidden]{display:none}.sheet .usm input{display:block;width:24px;height:24px;margin:0;padding:0;box-shadow:none;accent-color:#c4561a;grid-row:span 2}.sheet .usm small{font-size:12px;color:#8a6a4a}.sheet .usm:has(input:checked){background:#ffe9d2;border-color:#c4561a}
 #dms .ch{display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-top:1px solid var(--line);font-size:15px}#dms .ch small{color:var(--mute);font-size:12px}#dms .ch.off{opacity:.55}#dms input{width:100%;margin-bottom:6px}
 #ns .in{background:#fffaf0}#ns h3{color:#8a6508;font-size:17px}#ns .pend{padding:0 0 8px;background:transparent}#ns .tools{display:flex;gap:8px;margin:0 0 10px}#ns .tools button,#ns .tools label{display:flex;align-items:center;justify-content:center;flex:1;height:46px;margin:0;font-size:20px;text-align:center;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer}#ns .tools .mic{background:#5a4a8a;color:#fff;box-shadow:none}#ns .tools .mic.rec{background:var(--red);animation:pulse 1s infinite}#ns .hint{font-size:11.5px;color:var(--mute);text-align:center;margin-bottom:10px}
 #login{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -173,10 +174,10 @@ body.co .toast{bottom:90px}
 
 <div class="sheet" id="ed" hidden><div class="in"><h3>✏️ Edit card · কার্ড বদলান</h3><input id="edname" placeholder="Title · শিরোনাম"><textarea id="eddesc" placeholder="Description · বিবরণ"></textarea><button class="go" id="edgo">Save · সেভ</button><button class="x" id="edx">Cancel</button></div></div>
 <div class="sheet" id="cp" hidden><div class="in"><h3>⧉ Copy this card · কার্ড কপি</h3><input id="cpname" placeholder="Title of the new card · নতুন শিরোনাম"><select id="cpto"></select><label class="ck"><input type="checkbox" id="cpkeep" checked> Keep photos, labels and details · ছবি ও বিবরণ রাখুন</label><button class="go" id="cpgo">Make the copy · কপি তৈরি করুন</button><button class="x" id="cpx">Cancel</button></div></div>
-<div class="sheet" id="ns" hidden><div class="in"><h3>⭐ New sample · নতুন স্যাম্পল</h3><input id="nsname" placeholder="Sample name, e.g. SJ-58429 SAMPLE · নাম"><textarea id="nsdesc" placeholder="What to make · কী বানাতে হবে (optional)"></textarea>
+<div class="sheet" id="ns" hidden><div class="in"><h3>⭐ New sample · নতুন স্যাম্পল</h3><input id="nsname" placeholder="Sample name, e.g. SJ-58429 SAMPLE · নাম"><textarea id="nsdesc" placeholder="What to make · কী বানাতে হবে (optional)"></textarea><label class="usm" id="nsusml"><input type="checkbox" id="nsusm"><span>🧵 <b>USMAN hand work</b> — chat in #usmancutting</span><small>উসমান হ্যান্ড ওয়ার্ক — চ্যাট #usmancutting-এ</small></label>
 <div class="pend" id="nspend"></div><div class="tools"><button class="mic" id="nsmic" title="tap to record">🎤</button><label title="photo">📷<input type="file" id="nscam" accept="image/*,video/*" capture="environment" hidden></label><button id="nspaste" title="paste">📋</button><label title="files">📎<input type="file" id="nsfiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div><div class="hint">🎤 record &nbsp;·&nbsp; 📷 photo / video &nbsp;·&nbsp; 📋 paste · পেস্ট &nbsp;·&nbsp; 📎 files<br>or paste straight into the boxes · বক্সে পেস্ট করলেও হবে</div>
 <button class="go" id="nsgo">⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন</button><button class="x" id="nsx">Cancel</button></div></div>
-<div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
+<div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><label class="usm" id="ncusml"><input type="checkbox" id="ncusm"><span>🧵 <b>USMAN hand work</b> — chat in #usmancutting</span><small>উসমান হ্যান্ড ওয়ার্ক — চ্যাট #usmancutting-এ</small></label><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
 <div class="sheet" id="dms" hidden><div class="in"><h3 id="dmh">💬 Direct chat · which Slack channel? · কোন চ্যানেল</h3><button class="go" id="dmnewb" style="margin:0 0 8px">👤 New direct chat with a person · নতুন সরাসরি চ্যাট</button><input id="dmq" placeholder="Search · খুঁজুন" autocomplete="off"><div id="dml" style="max-height:46vh;overflow:auto"><div class="empty">Loading…</div></div><div id="dmnote" style="font-size:12px;color:var(--mute);margin-top:6px">A private group shows here only when the bot is inside it — in Slack type <b>/invite @SJ Orders</b> in that group, or make a new chat above.</div><button class="x" id="dmx">Cancel</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
@@ -186,7 +187,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-17i';
+var VER = '2026-10-18a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -522,10 +523,10 @@ $('cpx').onclick = function(){ $('cp').hidden = true; };
 $('cpgo').onclick = async function(){ var c = open; if (!c) return; var nm = $('cpname').value.trim(); if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
   this.disabled = true; this.textContent = '⏳ Copying… · কপি হচ্ছে'; try { var j = await call({ op: 'copy', card: c.id, name: nm, to: $('cpto').value, keep: $('cpkeep').checked ? 'attachments,labels,customFields,checklists,stickers' : 'labels,customFields' });
     if (!j.ok) { toast('✗ ' + j.error); return; } $('cp').hidden = true; toast('✓ Card copied · কপি হয়েছে'); await gotoNew(j.id, $('cpto').value); } finally { this.disabled = false; this.textContent = 'Make the copy · কপি তৈরি করুন'; } };
-$('badd').onclick = function(){ if (!needW()) return; $('ncname').value = ''; $('ncdesc').value = ''; listSel($('ncto'), lid(CHIPS[cur][1][0])); $('nc').hidden = false; $('ncname').focus(); };
+$('badd').onclick = function(){ if (!needW()) return; $('ncname').value = ''; $('ncdesc').value = ''; $('ncusm').checked = false; listSel($('ncto'), lid(CHIPS[cur][1][0])); $('nc').hidden = false; $('ncname').focus(); };
 $('ncx').onclick = function(){ $('nc').hidden = true; };
 $('ncgo').onclick = async function(){ var nm = $('ncname').value.trim(); if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
-  this.disabled = true; this.textContent = '⏳ Adding… · যোগ হচ্ছে'; try { var j = await call({ op: 'add', name: nm, desc: $('ncdesc').value, to: $('ncto').value });
+  this.disabled = true; this.textContent = '⏳ Adding… · যোগ হচ্ছে'; try { var j = await call({ op: 'add', name: nm, desc: $('ncdesc').value, to: $('ncto').value, usman: $('ncusm').checked ? 1 : 0 });
     if (!j.ok) { toast('✗ ' + j.error); return; } $('nc').hidden = true; toast('✓ Card added · কার্ড যোগ হয়েছে'); await gotoNew(j.id, $('ncto').value); } finally { this.disabled = false; this.textContent = 'Add card · কার্ড যোগ করুন'; } };
 async function gotoNew(id, listId){ if (!$('card').hidden) { $('card').hidden = true; cardShow(false); thStop(); open = null; }
   var i = CHIPS.findIndex(function(ch){ return ch[1].some(function(n){ return lid(n) === listId; }); });
@@ -717,7 +718,7 @@ $('rets').onclick = function(e){ if (e.target.closest('#rnewb')) retNew(); };
 var NSMODE = 'sample';
 function nsMode(m){ NSMODE = m; var r = m === 'ret';
   $('ns').querySelector('h3').textContent = r ? '↩️ New return · নতুন ফেরত' : '⭐ New sample · নতুন স্যাম্পল';
-  $('nsname').hidden = r; $('nsdesc').placeholder = r ? 'What must be fixed? (optional) · কী ঠিক করতে হবে?' : 'What to make · কী বানাতে হবে (optional)';
+  $('nsname').hidden = r; $('nsusml').hidden = r; $('nsusm').checked = false; $('nsdesc').placeholder = r ? 'What must be fixed? (optional) · কী ঠিক করতে হবে?' : 'What to make · কী বানাতে হবে (optional)';
   $('nsgo').textContent = r ? '↩️ Make the return card · ফেরত কার্ড তৈরি করুন' : '⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন'; }
 function retNew(){ if (!needW()) return; nsMode('ret'); $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('ns').hidden = false; }
 // ===== OUTBOX (15 Oct 2026, Abbas: "when I press Send and I'm in a hurry, it says sending, I go back, do something else, come back and the
@@ -826,7 +827,7 @@ $('nsgo').onclick = async function(){ var RET = NSMODE === 'ret', nm = $('nsname
     try { if (SP.length) fids = await slackDirect(SP, function(i){ btn.textContent = '⏳ ' + (i + 1) + ' / ' + SP.length + ' · ' + mb(SP[i].blob.size) + '…'; }); }
     catch (e) { if (tot > 18 * 1024 * 1024) throw new Error('Slack refused the upload (' + e.message + ')'); fids = []; for (var i = 0; i < SP.length; i++) files.push({ name: SP[i].name, type: SP[i].blob.type || '', b64: await b64of(SP[i].blob) }); }
     btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
-    var j = await call({ op: 'sample', kind: RET ? 'ret' : '', name: nm, desc: $('nsdesc').value, files: files, fids: fids, cover: cover });
+    var j = await call({ op: 'sample', kind: RET ? 'ret' : '', usman: !RET && $('nsusm').checked ? 1 : 0, name: nm, desc: $('nsdesc').value, files: files, fids: fids, cover: cover });
     if (!j.ok) { toast('✗ ' + j.error); if (j.card) { $('ns').hidden = true; if (RET) await load(true); await gotoNew(j.card, j.list || lid(RET ? 'RETURNS' : 'SAMPLES')); } return; }
     SP.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); SP.length = 0; spDraw(); $('ns').hidden = true;
     if (RET && !lid('RETURNS')) await load(true);
