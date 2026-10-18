@@ -894,6 +894,20 @@ function fac0(reqText, P) {
       bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facNudge(P, 'list:' + card);
       return out({ ok: true });
     }
+    if (req.op === 'archive') {                               // 18 Oct 2026 (Abbas): "when the card is in CAME BACK, give me an option after that to delete it" - only RETURNS BACK cards;
+      if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });   // archived in Trello (it can be restored from Trello's Archive), never erased
+      var acard = String(req.card || '').replace(/[^0-9a-f]/g, ''), awho = String(req.who || '').slice(0, 40) || 'factory', arl = facRetLists(P, wtok, false);
+      if (!acard || !arl) return out({ ok: false, error: 'bad request' });
+      var anow = trApi('get', '/cards/' + acard, { fields: 'idList,name,idBoard,closed' }, wtok);
+      if (anow.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
+      if (anow.closed) return out({ ok: true, already: true });
+      if (anow.idList !== arl.back) return out({ ok: false, error: 'Only a card in CAME BACK (RETURNS BACK) can be deleted' });
+      try { trApi('post', '/cards/' + acard + '/actions/comments', { text: '🗑 Deleted (archived) · ' + awho + ' (factory app)' }, wtok); } catch (e) {}
+      trApi('put', '/cards/' + acard, { closed: true }, wtok);
+      try { var ath = P.getProperty('FTH_' + acard); if (ath && FT) { ath = JSON.parse(ath); slackApi(FT, 'chat.postMessage', { channel: ath.ch, thread_ts: ath.ts, text: '→ *DELETED* · ' + awho }); } } catch (e) {}
+      bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facNudge(P, 'list:' + acard);
+      return out({ ok: true });
+    }
     return out({ ok: false, error: 'the relay does not know "' + String(req.op) + '" yet - Abbas must deploy the new version (Deploy → Manage deployments → ✏️ → New version)' });
   } catch (e) { return out({ ok: false, error: String(e.message || e).replace(/(token|key)=[^&\s"']+/gi, '$1=…').slice(0, 200) }); }
 }
