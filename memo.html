@@ -843,7 +843,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-17e';
+var VER = '2026-10-18a';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -2542,7 +2542,7 @@ function dorDraw(){
 function dorFindShow(){
   var el = $('dorfind'); if (DOR.mode === 'out') { el.innerHTML = 'A new <b>US-#####</b> card goes on USMAN HAND WORK → ORDER, with the person\'s label, COST and SALE. Slack: #emaan only.'; return; }
   var us = DOR.usman ? ' + USMAN HAND WORK · ORDER' : '';
-  if (DOR.fresh) { el.innerHTML = '<b>/N</b> — a fresh SJ number is made when you send. New card on ALM START' + (DOR.usman ? ' and on USMAN HAND WORK · ORDER' : '') + ' with RATE + HISAAB, your design photo as the cover.'; return; }
+  if (DOR.fresh) { var fs = DOR.src; el.innerHTML = '<b>/N</b> — a fresh SJ number is made when you send. ' + (fs && fs.id ? '✓ Copies <a href="' + esc(fs.url) + '" target="_blank" rel="noopener">' + esc(fs.name) + '</a> (custom fields + design picture) under the NEW number → ALM · START' + us : fs === 'wait' ? 'Looking for the ALM card of SJ-' + esc(dorV('dorno')) + '…' : dorV('dorno') ? 'No ALM card for SJ-' + esc(dorV('dorno')) + ' — a plain new card on ALM START' + us + ', your photo as the cover.' : 'New card on ALM START' + us + ' with RATE + HISAAB, your design photo as the cover.'); return; }
   var s = DOR.src, kw = DOR.w && DOR.w.write === false ? '<br><span class="miss">⚠ The relay\'s Trello key (' + esc(DOR.w.key) + ') can only READ — Send will stop. Add TRELLO_W (a read + write token) in the relay\'s Script properties.</span>' : '';
   if (!dorV('dorno')) el.innerHTML = 'Type the design number — the newest ALM card for it is copied (custom fields + design picture).';
   else if (s === 'wait') el.innerHTML = 'Looking for the ALM card…';
@@ -2552,7 +2552,7 @@ function dorFindShow(){
   else el.innerHTML = '<span class="miss">No ALM card found for SJ-' + esc(dorV('dorno')) + '. Tick /N if it is a new fabric, or check the number.</span>';
 }
 function dorFind(){
-  clearTimeout(DOR.findT); var no = dorV('dorno').replace(/^SJ-?/i, ''); DOR.src = no ? 'wait' : null; dorFindShow(); if (!no || DOR.fresh) return;
+  clearTimeout(DOR.findT); var no = dorV('dorno').replace(/^SJ-?/i, ''); DOR.src = no ? 'wait' : null; dorFindShow(); if (!no) return;   // 18 Oct 2026: with /N the typed card is still looked up - it is copied under the new number
   DOR.findT = setTimeout(async function(){ try { var j = await dorCall({ op: 'find', no: no }); if (dorV('dorno').replace(/^SJ-?/i, '') !== no) return; DOR.src = j.card; DOR.w = j.w || null; }
     catch(e){ DOR.src = { err: 'Could not check Trello: ' + e.message }; } dorFindShow(); }, 700);
 }
@@ -2620,6 +2620,7 @@ async function dorSend(){
   if (DOR.busy) return;
   var m = DOR.mode, fresh = m !== 'out' && DOR.fresh, no = dorV('dorno').replace(/^SJ-?/i, '');
   if (m !== 'out' && !fresh && !no) { alert('Type the design number, or tick /N for a new fabric'); return; }
+  if (m !== 'out' && fresh && no && DOR.src === 'wait') { alert('Still looking for the ALM card of SJ-' + no + ' — try again in a second'); return; }
   if (m !== 'out' && !fresh && (!DOR.src || DOR.src === 'wait' || DOR.src.err)) { alert(DOR.src === 'wait' ? 'Still looking for the ALM card — try again in a second' : 'No ALM card to copy for SJ-' + no + '. Tick /N if it is a new fabric.'); return; }
   if (m === 'out' && !dorV('dorperson')) { alert('Type the person\'s name (e.g. ALI)'); return; }
   if (DOR.rec) { alert('Stop the voice recording first'); return; }
@@ -2642,22 +2643,24 @@ async function dorSend(){
     var shownNo = m === 'out' ? run.no : 'SJ-' + run.no;
     var name = $('dorname').value.trim().replace(/US-\(new number\)|SJ-\(new number\)/, shownNo) || dorName().replace(/US-\(new number\)|SJ-\(new number\)/, shownNo);
     lines = ['Number: <b>' + esc(shownNo) + '</b>']; lines.push('Trello card…'); show();
-    var j = await dorCall({ op: 'card', oid: run.oid, mode: m, usman: m !== 'out' && DOR.usman, fresh: fresh, no: run.no, src: DOR.src && DOR.src.id, name: name, rate: $('dorrate').checked, hisaab: $('dorhis').checked,
+    var j = await dorCall({ op: 'card', oid: run.oid, mode: m, usman: m !== 'out' && DOR.usman, fresh: fresh, no: run.no, base: no, src: DOR.src && DOR.src.id, name: name, rate: $('dorrate').checked, hisaab: $('dorhis').checked,
       customer: dorV('dorcust'), person: dorV('dorperson'), cost: dorV('dorcost'), sale: dorV('dorsale') });
     run.card = j.card; lines[lines.length - 1] = '✓ Trello card: <a href="' + esc(j.card.url) + '" target="_blank" rel="noopener">' + esc(j.card.name) + '</a>' + (j.ucard ? '<br>✓ USMAN HAND WORK card: <a href="' + esc(j.ucard.url) + '" target="_blank" rel="noopener">' + esc(j.ucard.name) + '</a>' : ''); (j.notes || []).forEach(function(n){ lines.push('<span class="miss">' + esc(n) + '</span>'); }); show();
-    var order = DOR.media.map(function(x, i){ return { x: x, i: i }; }).sort(function(a, b){ var r = function(o){ return o.x.design ? 0 : o.x.kind === 'photo' ? 1 : o.x.kind === 'voice' ? 2 : 3; }; return r(a) - r(b) || a.i - b.i; });
+    var skipped = [], order = DOR.media.map(function(x, i){ return { x: x, i: i }; }).sort(function(a, b){ var r = function(o){ return o.x.design ? 0 : o.x.kind === 'photo' ? 1 : o.x.kind === 'voice' ? 2 : 3; }; return r(a) - r(b) || a.i - b.i; });
     for (var q = 0; q < order.length; q++){
       var x = order[q].x; if (x.sent) continue; var blob = x.blob, mime = x.mime, fname = x.name;
       if (x.kind === 'video' && blob.size > DOR_MAX) { x.st = 'making smaller…'; dorMedia();
         blob = await dorShrink(blob, DOR_MAX, function(p){ show('Making video ' + (q + 1) + ' smaller: ' + p + '% — keep this screen open'); }, x.vel, DOR.ac); mime = blob.type; fname = fname.replace(/\.\w+$/, '') + '.' + dorExt(mime, 'mp4'); }
       show('Sending ' + (x.kind === 'photo' ? 'photo' : x.kind === 'voice' ? 'voice note' : 'video') + ' ' + (q + 1) + ' of ' + order.length + ' (' + (blob.size / 1048576).toFixed(1) + ' MB)…');
-      var fj = await dorCall({ op: 'file', oid: run.oid, i: order[q].i, kind: x.kind, design: !!x.design, name: fname, mime: mime, b64: await dorB64(blob) }, 1);
+      var fj = null, ferr = '';
+      for (var tr = 0; tr < 3 && !fj; tr++) { try { fj = await dorCall({ op: 'file', oid: run.oid, i: order[q].i, kind: x.kind, design: !!x.design, name: fname, mime: mime, b64: await dorB64(blob) }, 1); } catch(e){ ferr = e.message; if (tr < 2) await sleep(2500); } }
+      if (!fj) { x.st = '✗ not sent: ' + ferr.slice(0, 60); skipped.push(fname); dorMedia(); lines.push('<span class="miss">✗ ' + esc(fname) + ' could not be sent (' + esc(ferr.slice(0, 80)) + ') — the order goes on without it</span>'); continue; }   // 18 Oct 2026: one bad file must not stop the whole order
       x.sent = true; x.st = '✓ sent' + (fj.file && fj.file.trello === false || fj.file && fj.file.trelloErr ? ' (Slack only)' : ''); dorMedia();
     }
-    lines.push('✓ ' + order.length + ' file' + (order.length === 1 ? '' : 's') + ' uploaded'); show('Posting to the factory Slack…');
+    lines.push('✓ ' + (order.length - skipped.length) + ' of ' + order.length + ' file' + (order.length === 1 ? '' : 's') + ' uploaded'); show('Posting to the factory Slack…');
     var sep = '//////////////////////', txt = [sep, '', j.card.name];
     if (m !== 'out') { if ($('dorrate').checked) txt.push('RATE'); if ($('dorhis').checked) txt.push('HISAAB'); }
-    dorV('dornotes').split('\n').forEach(function(l){ if (l.trim()) txt.push(l.trim()); }); txt.push(j.card.url); if (j.ucard) txt.push('USMAN: ' + j.ucard.url);
+    dorV('dornotes').split('\n').forEach(function(l){ if (l.trim()) txt.push(l.trim()); }); if (skipped.length) txt.push('(' + skipped.length + ' file' + (skipped.length > 1 ? 's' : '') + ' could not be uploaded: ' + skipped.join(', ') + ')'); txt.push(j.card.url); if (j.ucard) txt.push('USMAN: ' + j.ucard.url);
     var sj = await dorCall({ op: 'send', oid: run.oid, text: txt.join('\n'), sample: shownNo + ' SAMPLE' });
     lines.push('✓ Posted to ' + (m === 'out' ? '#emaan' : j.ucard ? '#cutting + #usmancutting' : '#cutting') + (m === 'out' ? '' : ' and #samplesneed'));
     show('<b class="okc">Done ✓</b>');
