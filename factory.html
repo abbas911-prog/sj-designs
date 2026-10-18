@@ -187,7 +187,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-18e';
+var VER = '2026-10-18f';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -647,7 +647,7 @@ async function thPull(){
   var c = TH.card; if (!c) return; if (TH.busy && Date.now() - TH.busy < 30000) { TH.again = true; return; } TH.busy = Date.now(); TH.again = false;
   var real = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }), last = real.length ? real[real.length - 1].ts : '';
   TH.n = (TH.n || 0) + 1; var look = looking(), frc = TH.n % 4 === 0 || TH.force; TH.force = false; var j = null;
-  if (fastOn()) { var rf = c.dm ? (roomCh(c) ? [roomCh(c).ch] : null) : FAST.refs[c.id];
+  if (fastOn()) { var rf = c.id === 'lais' ? null : c.dm ? (roomCh(c) ? [roomCh(c).ch] : null) : FAST.refs[c.id];   // #laisfactory is in the SJTC workspace - the relay only
     if (rf) { j = await fast(c.dm ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (j && !j.ok) j = null; if (j && look) fastSeen(c, j.msgs, last); } }
   if (!j) { j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0, force: frc ? 1 : 0 }); if (j && j.ok && j.ch && j.ts && !c.dm) { var rr = {}; rr[c.id] = [j.ch, j.ts]; refsSet(rr, true); } }
   TH.busy = 0; if (TH.again) { TH.again = false; setTimeout(thPull, 30); } if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; } if (j && j.ok) TH.lastPull = Date.now();
@@ -765,13 +765,13 @@ function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(func
 $('outbar').onclick = function(){ var it = OUT[0]; if (!it) return; outRun(true); var c = D.byId[it.card]; if (c) openCard(c); };
 function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 600000 && !((TH.lastMine || 0) * 1000 > x.done - 15000); }); return OUT.concat(SENT.filter(function(x){ return x.card === cid; })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + esc(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
 async function outOne(it){
-  if (!it.files.length) { var rf = (it.card === 'dm' || it.card === 'lais') ? (roomCh({ id: it.card }) ? [roomCh({ id: it.card }).ch, ''] : null) : FAST.refs[it.card];
+  if (!it.files.length) { var rf = it.card === 'lais' ? null : it.card === 'dm' ? (D.dm ? [D.dm.ch, ''] : null) : FAST.refs[it.card];
     if (FAST.url && rf && (fastOn() || it.fastTried) && !(it.fastTried && it.tries >= 6)) { it.fastTried = true;
       var fj = await fast({ op: 'post', ch: rf[0], ts: rf[1] || '', text: it.text, who: it.who, rid: it.id, card: it.card, topic: LIVE.topic }, true);
       if (fj && fj.ok) return fj; if (!fj && !(FAST.fail || {}).quick) return { ok: false, error: 'no answer from the fast lane - trying again' }; }   // no answer after a wait: maybe sent - only the fast lane (once-only id) is asked again; refused at once (offline worker): the relay sends it
     return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id }); }
   var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
-  if (!it.fids) { try { it.fids = await slackDirect(it.files); oput(it); } catch(e){ it.fids = null; } }      // originals straight to Slack (full quality)
+  if (!it.fids) { try { it.fids = await slackDirect(it.files, null, it.card); oput(it); } catch(e){ it.fids = null; } }      // originals straight to Slack (full quality)
   if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.dtry = (it.dtry || 0) + 1) }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; oput(it); } }
   if (tot > 18 * 1024 * 1024) return { ok: false, error: 'Slack did not take the upload' };
   var files = []; for (var i = 0; i < it.files.length; i++) files.push({ name: it.files[i].name, b64: await b64of(it.files[i].blob) });
@@ -877,8 +877,8 @@ document.getElementById('card').addEventListener('dragover', function(e){ e.prev
 // quality, straight from the phone (the relay only asks Slack for an upload address and then posts the message) - no size limit from the
 // relay, no base64 detour, much faster. If Slack refuses the direct way, files up to 18 MB still go the old way through the relay, unchanged.
 function b64of(blob){ return new Promise(function(ok){ var r = new FileReader(); r.onload = function(){ ok(r.result.split(',')[1]); }; r.readAsDataURL(blob); }); }
-async function slackDirect(items, onStep){
-  var j = await call({ op: 'upurl', files: items.map(function(x){ return { name: x.name, size: x.blob.size }; }) });
+async function slackDirect(items, onStep, card){
+  var j = await call({ op: 'upurl', card: card || '', files: items.map(function(x){ return { name: x.name, size: x.blob.size }; }) });
   if (!j.ok) throw new Error(j.error || 'no upload address');
   for (var i = 0; i < items.length; i++) { if (onStep) onStep(i);
     var fd = new FormData(); fd.append('filename', items[i].blob, items[i].name);
@@ -1020,7 +1020,7 @@ function liveSlack(s){ var p = s.split(':'), ch = p[0] || '', ts = p[1] || ''; L
   if (open && cid && (open.id === cid || (cid === 'dm' && open.dm))) { TH.force = true; thPull(); }
   else if (cid) liveFetch(cid);
   clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(true); }, 1200); liveMark(); }
-async function liveFetch(cid){ if (!fastOn()) return; var room = cid === 'dm' || cid === 'lais', rf = room ? (roomCh({ id: cid }) ? [roomCh({ id: cid }).ch] : null) : FAST.refs[cid]; if (!rf) return;
+async function liveFetch(cid){ if (!fastOn() || cid === 'lais') return; var room = cid === 'dm' || cid === 'lais', rf = room ? (roomCh({ id: cid }) ? [roomCh({ id: cid }).ch] : null) : FAST.refs[cid]; if (!rf) return;
   var have = THC[cid] || [], last = have.length ? have[have.length - 1].ts : '';
   var j = await fast(room ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (!j || !j.ok || !j.msgs) return;
   var hv = {}; have.forEach(function(m){ hv[m.ts] = 1; }); var add = j.msgs.filter(function(m){ return /^\d+\.\d+$/.test(m.ts) && !hv[m.ts]; }); if (!add.length) return;
