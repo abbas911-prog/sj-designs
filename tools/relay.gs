@@ -48,7 +48,7 @@ function doPost(e) {
       var fpw = P.getProperty('FACTORY_PASSWORD'), sg = String(b.sig), okf = [fpw, pw].some(function (k) { return k && hex(Utilities.computeHmacSha256Signature(b.req, k, Utilities.Charset.UTF_8)) === sg; });
       return okf ? fac(b.req, P) : out({ ok: false, error: 'wrong password' });
     }
-    if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'slackpdf2' || b.job === 'dorder' || b.job === 'cash' || b.job === 'cchat' ? 25000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
+    if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'slackpdf2' || b.job === 'dorder' || b.job === 'cash' || b.job === 'cchat' ? 25000000 : b.job === 'timo' ? 2000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
     if (b.job === 'live') return live(b.req, P);
     if (b.job === 'orders') return orders(b.req, P);
@@ -59,6 +59,7 @@ function doPost(e) {
     if (b.job === 'cust') return cust(b.req, P);
     if (b.job === 'cash') return cashPost(b.req, P);
     if (b.job === 'cchat') return cchat(b.req, P);
+    if (b.job === 'timo') return timo(b.req, P);         // 19 Oct 2026: Timo planner (owner phones) - one saved copy, synced between his phone and iPad
     var wf = JOBS[b.job];
     if (!wf) return out({ ok: false, error: 'bad request' });
     if (!gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
@@ -1619,4 +1620,33 @@ function facDiag() {
     });
   });
   Logger.log(L.join('\n')); return L.join('\n');
+}
+
+// ===== TIMO (19 Oct 2026) =====
+// Abbas's own day planner (timo.html, opened from the SJ Stock app's More menu on owner phones). The whole planner is one JSON copy kept in a
+// TIMO tab of the customer-balances spreadsheet (chunks of 45k with a 'J' in front so a cell never turns into a formula). Signed with the shop
+// password like every memo job, plus the owner key-check, so staff phones can never read or change it. Newest copy wins: a put older than the
+// stored one is refused with the stored copy, and the phone switches to it.
+function timo(req, P) {
+  var o = JSON.parse(req);
+  if (!ownerOk(P, o.chk)) return out({ ok: false, error: 'owner only' });
+  var ss = custBook(P), T = ss.getSheetByName('TIMO');
+  if (!T) { T = ss.insertSheet('TIMO'); T.appendRow(['UPDATED', 'AT', 'DEVICE', 'DATA1', 'DATA2', 'DATA3', 'DATA4', 'DATA5', 'DATA6', 'DATA7', 'DATA8']); T.getRange('A:Z').setNumberFormat('@'); T.setFrozenRows(1); }
+  var read = function () { if (T.getLastRow() < 2) return { at: 0, data: '' }; var r = T.getRange(2, 1, 1, 11).getValues()[0];
+    return { at: +r[1] || 0, data: r.slice(3).map(function (c) { return String(c || '').replace(/^J/, ''); }).join('') }; };
+  if (o.op === 'get') { var g = read(); return out({ ok: true, at: g.at, data: g.data }); }
+  if (o.op === 'put') {
+    var data = String(o.data || ''), at = +o.at || 0;
+    if (!data || data.length > 8 * 45000) return out({ ok: false, error: 'too big' });
+    try { JSON.parse(data); } catch (x) { return out({ ok: false, error: 'bad data' }); }
+    var lk = LockService.getScriptLock(); lk.waitLock(20000);
+    try {
+      var cur = read(); if (cur.at > at && !o.force) return out({ ok: false, stale: true, at: cur.at, data: cur.data });
+      var row = [Utilities.formatDate(new Date(), 'Asia/Dubai', 'yyyy-MM-dd HH:mm:ss'), String(at), String(o.dev || '')];
+      for (var i = 0; i < 8; i++) { var part = data.slice(i * 45000, (i + 1) * 45000); row.push(part ? 'J' + part : ''); }
+      T.getRange(2, 1, 1, 11).setValues([row]);
+    } finally { lk.releaseLock(); }
+    return out({ ok: true, at: at });
+  }
+  return out({ ok: false, error: 'bad op' });
 }
