@@ -419,6 +419,11 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 html,body{background:var(--bg)}
 body{-webkit-tap-highlight-color:transparent}
 #catbtn,#ccbtn,#ordbtn,#bills{display:none!important}
+.bstop{display:flex;align-items:center;gap:10px;margin:2px 0 8px}.bstop button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:14px}#bsv{font-size:12px;color:#888}#bsv.bad{color:#b4232c}
+.bsh{display:flex;justify-content:space-between;align-items:center;margin:4px 0 6px;font-size:16px}.bsh button{border:0;background:#eee;border-radius:999px;width:34px;height:34px;font-size:16px}
+.bsrow{display:flex;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--line);background:#fff;border-radius:10px;margin:4px 0}.bsrow .t{flex:1;min-width:0}.bsrow .t small{display:block;color:#666;font-size:12.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bsrow .tm{font-size:11.5px;color:#888;text-align:right;white-space:nowrap}.bsdel{border:0;background:none;font-size:16px;padding:4px}
+.bst{font-size:11px;border-radius:999px;padding:1px 8px;background:#eee;margin-left:4px;vertical-align:middle;font-weight:600}.bst.sent{background:#dfe9ff}.bst.included{background:#d9f2e3}
+.ccrow.ord .av{background:#f3ead6}.ccrow b small.od{font-weight:500;color:#888;font-size:11.5px;margin-left:4px}
 /* 17 Oct 2026 (Abbas): "I want the star at the main page" — the ★ owner button stays in the header */
 #mybtn{width:46px;height:46px;flex:none;border:0;border-radius:14px;background:linear-gradient(150deg,#F3E7CF,#E7D4AE);color:#7E5E27;font-size:22px;font-weight:800;line-height:46px;padding:0;box-shadow:var(--sh)}
 #mybtn[hidden]{display:none}
@@ -594,6 +599,8 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
   <div id="marks"></div>
   </section>
   <section id="p-doc" hidden>
+  <div class="bstop"><button type="button" id="dsaved">🗂 Saved bills · الفواتير المحفوظة</button><span id="bsv"></span></div>
+  <div id="bsaved" hidden></div>
   <div id="bform"></div>
   <div class="btns"><button id="dinc" class="inc" type="button" hidden>Include &amp; share · تأكيد وإرسال<small>takes the pieces off Trello</small></button><button id="dsend" class="gold" type="button">Send PDF · أرسل PDF</button><button id="dcopy" type="button">Copy text · نسخ النص</button><button id="dnew" type="button">New number · رقم جديد</button><button id="dff" type="button" hidden>50-50 check · for me</button></div>
   <div id="stk" class="stk" hidden></div>
@@ -843,7 +850,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-18a';
+var VER = '2026-10-18b';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -1021,7 +1028,7 @@ async function grpSend(which){
   if (!plan.g && !plan.c) return;                   // said no to a repeat
   var oid = ordFromMemo();                          // the memo going out starts / updates its order
   await memoSlack2(oid, plan);
-  if (which === 'c' && /✓/.test($('slk').textContent)) { var L = gdLog(); L[oid + '|c'] = { t: Date.now() }; ls('sj_gdlog', JSON.stringify(L)); }
+  if (which === 'c' && /✓/.test($('slk').textContent)) { var L = gdLog(); L[oid + '|c'] = { t: Date.now() }; ls('sj_gdlog', JSON.stringify(L)); setTimeout(function(){ ccOpenOrder(CC.sent); CC.sent = null; }, 600); }
 }
 $('sendg').onclick = function(){ grpSend('g'); };
 $('sendc').onclick = function(){ grpSend('c'); };
@@ -1270,6 +1277,7 @@ async function preview(){
   var pages = k === 'inv' ? await drawInvoice(d) : drawVoucher(k, d); if (my !== pv) return;
   $('dprev').innerHTML = ''; pages.forEach(function(cv){ var im = document.createElement('img'); im.src = cv.toDataURL('image/jpeg', 0.7); $('dprev').appendChild(im); });
   B.pdf = new File([makePDF(pages)], (d.ref + '-' + (d.name || 'customer')).replace(/[^A-Za-z0-9؀-ۿ-]+/g, '-') + '.pdf', { type: 'application/pdf' });
+  bsSoon();
 }
 function setMode(m){
   B.mode = m; document.querySelectorAll('#mode button').forEach(function(b){ b.classList.toggle('on', b.dataset.m === m); });
@@ -1292,6 +1300,7 @@ $('dsend').onclick = async function(){
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); done = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!done) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   if (k === 'rv') custAfter(k, d);      // a receipt counts once it is sent; an invoice only on Include & share
+  if (d.status !== 'included') d.status = 'sent'; bsSave(true);
 };
 // INCLUDE & SHARE (Abbas, 7 Oct 2026): an invoice can still change (discount, add, less, other colour), so a plain Send PDF never touches stock.
 // Only "Include & share" shares the final invoice AND takes its pieces off Trello.
@@ -1308,13 +1317,70 @@ $('dinc').onclick = async function(){
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   custAfter('inv', d);
+  d.status = 'included'; bsSave(true);
   var szl = lines.slice();
   stkRun('sell');
   if (d.cat !== false && szl.length) szRun(d, szl);
 };
 $('dcopy').onclick = async function(){ var t = docText(B.mode, B[B.mode]); try { await navigator.clipboard.writeText(t); $('dcopy').textContent = 'Copied ✓'; setTimeout(function(){ $('dcopy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', t); } };
-$('dnew').onclick = function(){ var k = B.mode; keepNo(k, B[k].ref); B[k] = freshDoc(k); redraw(); stkShow(); };
+$('dnew').onclick = function(){ var k = B.mode; clearTimeout(BS.t); bsSave(true); keepNo(k, B[k].ref); B[k] = freshDoc(k); redraw(); stkShow(); bsMark(''); };
 $('bills').onclick = function(){ custNames(); custFlush(); $('done').hidden = false; window.scrollTo(0, 0); setMode(Object.keys(state).length ? 'inv' : 'rv'); };
+// ---------- SAVED BILLS (Abbas, 18 Oct 2026: "If I make an invoice, I usually send it to a customer, and then the next day the goods come, we
+// confirm, and maybe there are some payments or changes in the invoice. I want you to keep that invoice in the draft somewhere. So if I had to
+// make some changes in the bill, I would go inside the bill and change whatever I want to change.") ----------
+// Every invoice / receipt / payment voucher is saved by itself (2.5 s after the last change) through the relay into the BILLS tab of the
+// customer-balances sheet, under its number. "Saved bills" lists them; tapping one puts it back into the form - designs, colours, prices,
+// discount, extras, typed lines - so it can be changed and sent again. A design that has since left READY stays on the bill as a typed line.
+// Status: draft -> sent (Send PDF) -> included (Include & share). Nothing is taken off Trello by saving.
+var BS = { t: null, last: {}, list: null, open: false };
+function bsCall(o, tries){ o.t = Date.now(); o.by = me(); o.dev = devId(); return relayJson('bills', o, tries || 2); }
+function bsMark(t, bad){ var el = $('bsv'); if (!el) return; el.textContent = t || ''; el.className = bad ? 'bad' : ''; }
+function bsSnap(k){ var d = B[k]; if (!d || !d.ref || k === 'memo' || k === 'cat') return null;
+  var st = {}, pr = {}, c = null, lines = [];
+  if (k === 'inv') { c = invCalc(d); if (!c.lines.length) return null; Object.keys(state).forEach(function(x){ st[x] = state[x]; }); Object.keys(byDesign()).forEach(function(no){ if (prices[no] > 0) pr[no] = prices[no]; });
+    lines = c.lines.map(function(l){ return { no: l.no, desc: l.desc, sub: l.sub, qty: l.qty, rate: l.rate, amount: l.amount, manual: !!l.manual }; }); }
+  else if (!n2(d.amount) && !(d.name || '').trim()) return null;
+  return { v: 1, k: k, d: d, state: st, prices: pr, dl: dlv(), lines: lines, total: k === 'inv' ? c.total : n2(d.amount), name: (d.name || $('name').value || '').trim(), date: d.date || today() }; }
+function bsSoon(){ clearTimeout(BS.t); BS.t = setTimeout(function(){ bsSave(false); }, 2500); }
+async function bsSave(force){ if (!RELAY || !token) return; var k = B.mode, snap = bsSnap(k); if (!snap) return;
+  var js = JSON.stringify(snap); if (!force && BS.last[snap.d.ref] === js) return; BS.last[snap.d.ref] = js;
+  var stt = snap.d.status || 'draft'; bsMark('saving…');
+  var j = null; try { j = await bsCall({ op: 'put', ref: snap.d.ref, type: k, name: snap.name, status: stt, total: amt(snap.total), date: snap.date, data: js }); if (!j.ok) throw new Error(j.error);
+    if (j.status && j.status !== stt && B[k] && B[k].ref === snap.d.ref) B[k].status = j.status; bsMark('✓ saved ' + hhmm(Date.now()) + ' · ' + (j.status || stt)); }
+  catch(e){ delete BS.last[snap.d.ref];
+    if (j && j.clash && B[k] && B[k].ref === snap.d.ref) { keepNo(k, snap.d.ref); B[k].ref = nextRef(k); redraw(); uiToast(snap.d.ref + ' was already used on another phone — this bill is now ' + B[k].ref); return; }
+    bsMark('not saved: ' + (/bad request|does not know/.test(e.message) ? 'the relay needs its new version' : e.message), true); } }
+function bsWhen(iso){ if (!iso) return ''; var d = new Date(iso); return isNaN(d) ? '' : ccWhen(d.getTime() / 1000); }
+$('dsaved').onclick = function(){ if (BS.open) { bsClose(); return; } bsList(); };
+function bsClose(){ BS.open = false; $('bsaved').hidden = true; $('bform').hidden = false; }
+async function bsList(){ BS.open = true; var el = $('bsaved'); el.hidden = false; el.innerHTML = '<div class="ffempty">Loading saved bills… · جارٍ التحميل</div>'; window.scrollTo(0, 0);
+  try { var j = await bsCall({ op: 'list' }); if (!j.ok) throw new Error(j.error); BS.list = j.bills || []; bsDrawList(); }
+  catch(e){ el.innerHTML = '<div class="bsh"><b>Saved bills</b><button type="button" id="bsx">✕</button></div><div class="stk bad">' + esc(e.message) + (/does not know|bad request/.test(e.message) ? '<br><br><b>What to do:</b> Apps Script → Deploy → Manage deployments → ✏️ → New version → Deploy.' : '') + '</div>'; $('bsx').onclick = bsClose; } }
+function bsDrawList(){ var q = ($('bsq') || {}).value || '', qq = q.toUpperCase().trim(), L = (BS.list || []).filter(function(b){ return !qq || (b.ref + ' ' + (b.name || '')).toUpperCase().indexOf(qq) >= 0; }), own = isOwner();
+  var h = '<div class="bsh"><b>🗂 Saved bills · ' + (BS.list || []).length + '</b><button type="button" id="bsx">✕</button></div><div class="ccsrch"><input id="bsq" placeholder="Search number or customer · ابحث" autocomplete="off" value="' + esc(q) + '"></div>';
+  h += L.length ? L.map(function(b){ var ty = { inv: 'Invoice', rv: 'Receipt', pv: 'Payment' }[b.type] || b.type; return '<div class="bsrow" data-ref="' + esc(b.ref) + '"><div class="t"><b>' + esc(b.ref) + '</b> <span class="bst ' + esc(b.status) + '">' + esc(b.status) + '</span><small>' + esc(b.name || 'no name') + ' · ' + ty + ' · ' + esc(dmy(b.date) || '') + (b.total ? ' · AED ' + esc(b.total) : '') + '</small></div><span class="tm">' + esc(bsWhen(b.updated)) + (b.by ? '<br>' + esc(b.by) : '') + '</span>' + (own ? '<button type="button" class="bsdel" data-del="' + esc(b.ref) + '" title="remove from the list">🗑</button>' : '') + '</div>'; }).join('')
+    : '<div class="ffempty">' + (qq ? 'Nothing matches.' : 'No saved bill yet. Every invoice or voucher you make is saved here by itself — open it later, change it, send it again.') + '</div>';
+  var had = document.activeElement && document.activeElement.id === 'bsq'; $('bsaved').innerHTML = h; $('bform').hidden = true;
+  var qi = $('bsq'); qi.oninput = bsDrawList; if (had) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); } $('bsx').onclick = bsClose; }
+$('bsaved').addEventListener('click', async function(e){
+  var dl = e.target.closest('[data-del]'); if (dl) { var rf = dl.dataset.del; if (!confirm('Remove ' + rf + ' from the saved bills? (the PDF you already sent is not affected)')) return; try { var j = await bsCall({ op: 'del', ref: rf }); if (!j.ok) throw new Error(j.error); BS.list = (BS.list || []).filter(function(b){ return b.ref !== rf; }); bsDrawList(); } catch(x){ alert(x.message); } return; }
+  var r = e.target.closest('.bsrow'); if (r) bsOpen(r.dataset.ref); });
+async function bsOpen(ref){ var el = $('bsaved'); el.innerHTML = '<div class="ffempty">Opening ' + esc(ref) + '…</div>';
+  try { var j = await bsCall({ op: 'get', ref: ref }); if (!j.ok) throw new Error(j.error); var snap = JSON.parse(j.data || '{}'); if (!snap.d) throw new Error('this bill has no data'); snap.d.status = j.status || snap.d.status || 'draft'; bsRestore(snap); }
+  catch(e){ alert('Could not open ' + ref + ' — ' + e.message); bsList(); } }
+function bsRestore(snap){ var k = snap.k;
+  if (k === 'inv') {
+    state = snap.state || {}; Object.keys(snap.prices || {}).forEach(function(no){ prices[no] = snap.prices[no]; });
+    var gone = Object.keys(byDesign()).filter(function(no){ return !byNo(no); });
+    reapply();                                                   // paints the rows; designs no longer in READY are taken off (and told)
+    snap.d.man = snap.d.man || [];
+    (snap.lines || []).forEach(function(l){ if (!l.manual && gone.indexOf(l.no) >= 0 && !snap.d.man.some(function(m){ return m.fz === l.no; })) snap.d.man.push({ d: l.desc + ' · ' + l.sub, q: l.qty, r: l.rate, fz: l.no }); });
+    if (gone.length) setTimeout(function(){ alert(gone.map(function(x){ return 'SJ-' + shown(x); }).join(', ') + ' — no longer in READY (sold or moved). Kept on this bill as typed lines with the same quantity and price, without photo.'); }, 400);
+    refresh();
+  }
+  if (snap.dl) Object.keys(snap.dl).forEach(function(x){ if ($('dl_' + x)) $('dl_' + x).value = snap.dl[x] || ''; });
+  if (snap.name) $('name').value = snap.name;
+  B[k] = snap.d; keepNo(k, snap.d.ref); BS.last[snap.d.ref] = ''; bsClose(); $('done').hidden = false; setMode(k); redraw(); stkShow(); custLook(); bsMark('opened ' + snap.d.ref + ' · ' + (snap.d.status || 'draft')); window.scrollTo(0, 0); }
 
 // ---------- stock off Trello when an invoice is sent · catalogue builder (Abbas, 7 Oct 2026) ----------
 // Both run as GitHub jobs (memo-stock / memo-catalog). The memo cannot hold the GitHub key, so it asks the relay
@@ -2450,7 +2516,7 @@ async function memoSlack2(oid, plan){
   var dlt = ((dv.od || dv.ot) ? '\nDelivery in office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '') + ((dv.cd || dv.ct) ? '\nDelivery to customer / cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : '');
   slkMsg('Sending to ' + [plan.g ? '#godown' : '', plan.c ? '#customer' : ''].filter(Boolean).join(' and ') + '…');
   async function post(to, file, text, fids){ var j = await relayJson('slackpdf2', { t: Date.now(), dev: devId(), to: to, name: file.name, text: text, pdf: await pdfB64(file), fids: fids || [] }, 2);
-    if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version (Deploy → New version)' : (j.error || 'refused')); }
+    if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version (Deploy → New version)' : (j.error || 'refused')); return j; }
   if (plan.g) {
     try {
       var st = gdSel(), gs = byDesign(st), gn = Object.keys(gs), all = Object.keys(byDesign()), off = all.filter(function(no){ return !gs[no]; });
@@ -2466,7 +2532,7 @@ async function memoSlack2(oid, plan){
   if (plan.c) {
     try { var nos = Object.keys(byDesign());
       var t2 = '*ORDER MEMO* — ' + (nm || 'no name') + '\n' + date + ' · ' + nos.length + (nos.length === 1 ? ' design' : ' designs') + ' · ' + nos.reduce(function(a, x){ return a + designPcs(x); }, 0) + ' pcs' + (me() ? ' · sent by ' + me() : '') + '\n' + nos.map(function(x){ return 'SJ-' + shown(x); }).join(' · ') + dlt;
-      await post('customer', pdfFile, t2); done.push('#customer (full memo)'); } catch(e){ bad.push(['c', '#customer: ' + e.message]); }
+      var jc = await post('customer', pdfFile, t2); CC.sent = { name: nm || 'no name', ts: jc.ts || '' }; done.push('#customer (full memo)'); } catch(e){ bad.push(['c', '#customer: ' + e.message]); }
   }
   if (!bad.length) slkMsg('✓ Sent to ' + done.join(' and '), 'ok');
   else { slkMsg((done.length ? '✓ ' + done.join(', ') + ' · ' : '') + 'NOT sent: ' + esc(bad.map(function(b){ return b[1]; }).join(' · ')) + ' <button type="button" id="slkre">Try again</button>', 'bad');
@@ -2960,10 +3026,15 @@ $('cashbody').addEventListener('change', async function(e){
 // app, and notification as well". Per person (the name on this phone): the relay keeps what was seen; a red "New messages" box lists every
 // customer with unread lines, ⚡ Catch up walks through them, the Chats tab carries the count, a live doorbell (ntfy topic, customer key only)
 // pulls a chat the moment something is written, and 🔔 turns on real phone notifications through the free ntfy app.
-var CC = { list: null, err: '', cur: '', msgs: [], timer: null, files: [], url: {}, busy: false, un: {}, tot: 0, live: '', es: null, cu: null, nt: false, touched: 0, lastPoll: 0, ev: false };
+var CC = { list: null, orders: [], root: '', err: '', cur: '', msgs: [], timer: null, files: [], url: {}, busy: false, un: {}, tot: 0, live: '', es: null, cu: null, nt: false, touched: 0, lastPoll: 0, ev: false };
 function ccWho(){ return me() || (isOwner() ? 'Abbas' : 'SJ'); }
 function ccCall(o, tries){ o.t = Date.now(); o.who = ccWho(); return relayJson('cchat', o, tries || 3); }
 function ccK(n){ return String(n || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
+// 18 Oct 2026 (Abbas: "if an order is sent to customer, right away you have to open a chat for that here, for that specific order"): a chat is
+// either ONE ORDER (its #customer post = the thread, key 'O' + ts) or a customer's general chat (key = the name). CC.root holds the order's ts.
+function ccCurK(){ return CC.root ? 'O' + CC.root : ccK(CC.cur); }
+function ccDay(ts){ var d = new Date(+ts * 1000); return d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; }
+function ccIsCur(it){ return CC.cur === it.name && (CC.root || '') === (it.root || ''); }
 function ccWhen(ts){ var d = new Date(+ts * 1000), n = new Date(), h = d.getHours(), m = d.getMinutes(), hm = ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' am' : ' pm'); return d.toDateString() === n.toDateString() ? hm : d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' · ' + hm; }
 function ccLooking(){ return document.visibilityState === 'visible' && !$('cc').hidden && !!CC.cur && Date.now() - CC.touched < 60000; }
 ['touchstart', 'mousedown', 'keydown', 'scroll'].forEach(function(ev){ $('cc').addEventListener(ev, function(){ CC.touched = Date.now(); }, { passive: true, capture: true }); });
@@ -2974,11 +3045,11 @@ $('ccre').onclick = function(){ if (CC.cur) ccPull(true); else { ccLoad(true); }
 var ccAudio = null; function ccBeep(){ try { if (!ccAudio) return; var o = ccAudio.createOscillator(), g = ccAudio.createGain(); o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.0001; o.connect(g); g.connect(ccAudio.destination); var t = ccAudio.currentTime; g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.start(t); o.stop(t + 0.4); } catch(e){} }
 document.addEventListener('touchstart', function(){ try { if (!ccAudio) ccAudio = new (window.AudioContext || window.webkitAudioContext)(); if (ccAudio.state === 'suspended') ccAudio.resume(); } catch(e){} }, { passive: true, once: false });
 document.addEventListener('click', function(){ try { if (!ccAudio) ccAudio = new (window.AudioContext || window.webkitAudioContext)(); if (ccAudio.state === 'suspended') ccAudio.resume(); } catch(e){} }, { passive: true });
-function ccApply(j){ var un = {}, tot = 0; (j.customers || []).forEach(function(c){ if (c.un) { un[ccK(c.name)] = { n: c.un, tx: c.tx || '', name: c.name, last: c.last }; tot += c.un; } });
-  if (CC.cur && un[ccK(CC.cur)] && ccLooking()) { delete un[ccK(CC.cur)]; tot = Object.keys(un).reduce(function(s, k){ return s + un[k].n; }, 0); }
-  var was = CC.tot; CC.un = un; CC.tot = tot; CC.list = j.customers || []; CC.err = ''; CC.nt = !!j.nt; CC.ev = !!j.ev;
+function ccApply(j){ var un = {}, tot = 0; (j.customers || []).concat(j.orders || []).forEach(function(c){ var k = c.k || ccK(c.name); if (c.un) { un[k] = { n: c.un, tx: c.tx || '', name: c.name, last: c.last, root: c.ts || '' }; tot += c.un; } });
+  if (CC.cur && un[ccCurK()] && ccLooking()) { delete un[ccCurK()]; tot = Object.keys(un).reduce(function(s, k){ return s + un[k].n; }, 0); }
+  var was = CC.tot; CC.un = un; CC.tot = tot; CC.list = j.customers || []; if (j.orders) CC.orders = j.orders; CC.err = ''; CC.nt = !!j.nt; CC.ev = !!j.ev;
   if (j.live && j.live !== CC.live) { CC.live = j.live; ccLiveStart(); }
-  ccBadge(); if (tot > was && was >= 0 && CC.lastPoll) { ccBeep(); if (CC.cur && un[ccK(CC.cur)]) {} else uiToast('💬 ' + tot + ' new customer message' + (tot > 1 ? 's' : '')); }
+  ccBadge(); if (tot > was && was >= 0 && CC.lastPoll) { ccBeep(); if (CC.cur && un[ccCurK()]) {} else uiToast('💬 ' + tot + ' new customer message' + (tot > 1 ? 's' : '')); }
   CC.lastPoll = Date.now(); if (!$('cc').hidden && !CC.cur) ccDrawList(); }
 function ccBadge(){ var n = CC.tot; if ($('nvc')) $('nvc').textContent = n ? String(n) : ''; document.title = (n ? '(' + n + ') ' : '') + 'SJ Stock'; try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else if (navigator.clearAppBadge) navigator.clearAppBadge(); } } catch(e){} }
 async function ccPoll(force){ if (!token || !RELAY) return; if (document.hidden && !force) return; if (CC.polling) return; CC.polling = true;
@@ -2990,45 +3061,49 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
 function ccLiveStart(){ if (!CC.live || !window.EventSource) return; try { if (CC.es) CC.es.close(); } catch(e){}
   try { var es = CC.es = new EventSource('https://ntfy.sh/' + CC.live + '/sse');
     es.onmessage = function(ev){ var k = ''; try { var d = JSON.parse(ev.data); if (d.event && d.event !== 'message') return; k = decodeURIComponent(String(d.message || '').replace(/^k=/, '')); } catch(e){ return; }
-      if (CC.cur && (!k || ccK(CC.cur) === k)) ccPull(true); setTimeout(function(){ ccPoll(true); }, 400); };
+      if (CC.cur && (!k || ccCurK() === k)) ccPull(true); setTimeout(function(){ ccPoll(true); }, 400); };
     es.onerror = function(){ try { es.close(); } catch(e){} CC.es = null; setTimeout(function(){ if (!document.hidden && CC.live) ccLiveStart(); }, 15000); };
   } catch(e){ CC.es = null; } }
 // ---- list screen
 async function ccLoad(fresh){ try { var j = await ccCall({ op: 'list', fresh: fresh ? 1 : 0 }); if (!j.ok) throw new Error(j.error); ccApply(j); } catch(e){ CC.err = e.message; } if (!CC.cur) ccDrawList(); }
-function ccList(){ CC.cur = ''; clearInterval(CC.timer); $('cct').innerHTML = 'Customers · العملاء<small>' + (CC.es ? '⚡ live · ' : '') + 'chats and memos · Slack #customer</small>'; $('cccomp').hidden = true; $('ccpend').innerHTML = ''; $('cccu').hidden = true; ccDrawList(); ccLoad(false); }
-function ccRowSub(r){ var u = CC.un[ccK(r.name)]; if (u && u.tx) return esc(u.tx); return (r.memos ? r.memos + ' memo' + (r.memos > 1 ? 's' : '') : 'no memo yet') + (r.chat ? ' · ' + r.chat + ' message' + (r.chat > 1 ? 's' : '') : ''); }
+function ccList(){ CC.cur = ''; CC.root = ''; clearInterval(CC.timer); $('cct').innerHTML = 'Chats · المحادثات<small>' + (CC.es ? '⚡ live · ' : '') + 'one chat per order · Slack #customer</small>'; $('cccomp').hidden = true; $('ccpend').innerHTML = ''; $('cccu').hidden = true; ccDrawList(); ccLoad(false); }
+function ccRowSub(r){ var u = CC.un[r.k || ccK(r.name)]; if (u && u.tx) return esc(u.tx);
+  var n = r.chat ? r.chat + ' message' + (r.chat > 1 ? 's' : '') : '';
+  if (r.ts) return esc(r.head || 'order memo') + (n ? ' · ' + n : ' · no reply yet'); return 'general chat' + (n ? ' · ' + n : ''); }
 function ccDrawList(){
-  var q = ($('ccq') || {}).value || '', seen = {}, rows = (CC.list || []).slice();
-  rows.forEach(function(r){ seen[ccK(r.name)] = 1; });
-  Array.from($('custnames').options || []).forEach(function(o){ var n = String(o.value || '').trim(); if (n && !seen[ccK(n)]) { seen[ccK(n)] = 1; rows.push({ name: n, last: '0', memos: 0, chat: 0 }); } });
-  var qq = ccK(q), L = rows.filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
-  L.sort(function(a, b){ var ua = (CC.un[ccK(a.name)] || {}).n ? 1 : 0, ub = (CC.un[ccK(b.name)] || {}).n ? 1 : 0; return ub - ua || (+b.last || 0) - (+a.last || 0); });
+  var q = ($('ccq') || {}).value || '', qq = ccK(q), seen = {};
+  var ords = (CC.orders || []).slice(), custs = (CC.list || []).filter(function(r){ return r.chat > 0 || (qq && ccK(r.name).indexOf(qq) >= 0); });
+  custs.forEach(function(r){ seen[ccK(r.name)] = 1; });
+  if (qq) Array.from($('custnames').options || []).forEach(function(o){ var n = String(o.value || '').trim(); if (n && !seen[ccK(n)] && ccK(n).indexOf(qq) >= 0) { seen[ccK(n)] = 1; custs.push({ k: ccK(n), name: n, last: '0', memos: 0, chat: 0 }); } });
+  var L = ords.concat(custs).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
+  L.sort(function(a, b){ var ua = (CC.un[a.k || ccK(a.name)] || {}).n ? 1 : 0, ub = (CC.un[b.k || ccK(b.name)] || {}).n ? 1 : 0; return ub - ua || (+b.last || 0) - (+a.last || 0); });
   var h = '<div class="ccsrch"><input id="ccq" placeholder="Search customer · ابحث عن عميل" autocomplete="off" value="' + esc(q) + '"></div>';
   var unk = Object.keys(CC.un);
-  if (unk.length && !qq) { h += '<div class="ccnew"><div class="ccnh"><b>💬 New messages · ' + CC.tot + '</b><button type="button" id="cccatch">⚡ Catch up</button></div>' + unk.map(function(k){ var u = CC.un[k]; return '<div class="ccnr" data-n="' + esc(u.name) + '"><span class="n">' + esc(u.name) + '</span><span class="x">' + esc(u.tx || 'new message') + '</span><i>NEW ' + u.n + '</i></div>'; }).join('') + '</div>'; }
-  if (qq && !rows.some(function(r){ return ccK(r.name) === qq; })) h += '<div class="ccrow" data-n="' + esc(q.trim()) + '"><div class="av">＋</div><div class="t"><b>' + esc(q.trim()) + '</b><small>new customer chat · محادثة جديدة</small></div></div>';
+  if (unk.length && !qq) { h += '<div class="ccnew"><div class="ccnh"><b>💬 New messages · ' + CC.tot + '</b><button type="button" id="cccatch">⚡ Catch up</button></div>' + unk.map(function(k){ var u = CC.un[k]; return '<div class="ccnr" data-n="' + esc(u.name) + '" data-r="' + esc(u.root || '') + '"><span class="n">' + (u.root ? '📄 ' : '') + esc(u.name) + '</span><span class="x">' + esc(u.tx || 'new message') + '</span><i>NEW ' + u.n + '</i></div>'; }).join('') + '</div>'; }
+  if (qq && !custs.some(function(r){ return ccK(r.name) === qq; })) h += '<div class="ccrow" data-n="' + esc(q.trim()) + '" data-r=""><div class="av">＋</div><div class="t"><b>' + esc(q.trim()) + '</b><small>new general chat with this customer · محادثة جديدة</small></div></div>';
   if (CC.err) h += '<div class="stk bad">' + esc(CC.err) + (/missing_scope/.test(CC.err) ? '<br><br><b>What to do:</b> api.slack.com/apps → SJ Memo → OAuth &amp; Permissions → Bot Token Scopes → add <b>channels:history, groups:history, files:read, users:read</b> → Reinstall to Workspace.' : /does not know/.test(CC.err) ? '<br><br><b>What to do:</b> Apps Script → Deploy → Manage deployments → ✏️ → New version → Deploy.' : '') + '</div>';
-  else if (!CC.list) h += '<div class="ffempty">Loading customers… · جارٍ التحميل</div>';
-  h += L.map(function(r){ var u = CC.un[ccK(r.name)]; return '<div class="ccrow' + (u ? ' un' : '') + '" data-n="' + esc(r.name) + '"><div class="av">' + esc(r.name.trim().charAt(0).toUpperCase()) + '</div><div class="t"><b>' + esc(r.name) + '</b><small>' + ccRowSub(r) + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
-  if (CC.list && !L.length && !qq) h += '<div class="ffempty">No customers yet — the order memos sent to #customer appear here.</div>';
+  else if (!CC.list) h += '<div class="ffempty">Loading chats… · جارٍ التحميل</div>';
+  h += L.map(function(r){ var k = r.k || ccK(r.name), u = CC.un[k]; return '<div class="ccrow' + (u ? ' un' : '') + (r.ts ? ' ord' : '') + '" data-n="' + esc(r.name) + '" data-r="' + esc(r.ts || '') + '"><div class="av">' + (r.ts ? '📄' : esc(r.name.trim().charAt(0).toUpperCase())) + '</div><div class="t"><b>' + esc(r.name) + (r.ts ? ' <small class="od">order · ' + ccDay(r.ts) + '</small>' : '') + '</b><small>' + ccRowSub(r) + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
+  if (CC.list && !L.length && !qq) h += '<div class="ffempty">No chats yet — every order memo sent to #customer opens a chat here, one per order.</div>';
   var had = document.activeElement && document.activeElement.id === 'ccq'; $('ccbody').innerHTML = h;
   var qi = $('ccq'); qi.oninput = function(){ ccDrawList(); }; if (had) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
   var cb = $('cccatch'); if (cb) cb.onclick = ccCuStart;
 }
 $('ccbody').addEventListener('click', function(e){
-  var r = e.target.closest('.ccrow,.ccnr'); if (r && !CC.cur) { ccChat(r.dataset.n); return; }
+  var r = e.target.closest('.ccrow,.ccnr'); if (r && !CC.cur) { ccChat(r.dataset.n, r.dataset.r || ''); return; }
   var f = e.target.closest('[data-f]'); if (f) ccOpenFile(f.dataset.f, f.dataset.nm, f);
 });
 // ---- catch up: walk through every customer with new messages, one after another
-function ccCuStart(){ var ks = Object.keys(CC.un); if (!ks.length) return; CC.cu = { names: ks.map(function(k){ return CC.un[k].name; }), i: 0 }; ccCuShow(); }
-function ccCuShow(){ var c = CC.cu; if (!c) return; if (c.i >= c.names.length) { ccCuEnd(); return; } $('cccu').hidden = false; $('cccu').innerHTML = '<span>⚡ Catch up ' + (c.i + 1) + ' / ' + c.names.length + '</span><button type="button" id="ccnext">' + (c.i + 1 < c.names.length ? 'Next ›' : 'Finish ✓') + '</button>'; $('ccnext').onclick = function(){ c.i++; ccCuShow(); }; ccChat(c.names[c.i]); }
+function ccCuStart(){ var ks = Object.keys(CC.un); if (!ks.length) return; CC.cu = { names: ks.map(function(k){ return { name: CC.un[k].name, root: CC.un[k].root || '' }; }), i: 0 }; ccCuShow(); }
+function ccCuShow(){ var c = CC.cu; if (!c) return; if (c.i >= c.names.length) { ccCuEnd(); return; } $('cccu').hidden = false; $('cccu').innerHTML = '<span>⚡ Catch up ' + (c.i + 1) + ' / ' + c.names.length + '</span><button type="button" id="ccnext">' + (c.i + 1 < c.names.length ? 'Next ›' : 'Finish ✓') + '</button>'; $('ccnext').onclick = function(){ c.i++; ccCuShow(); }; ccChat(c.names[c.i].name, c.names[c.i].root); }
 function ccCuEnd(){ CC.cu = null; $('cccu').hidden = true; ccList(); }
 // ---- one customer
-function ccChat(name){ CC.cur = name; CC.msgs = []; CC.sig = ''; CC.drawn = false; CC.touched = Date.now(); $('cct').innerHTML = esc(name) + '<small>customer chat · #customer' + (CC.es ? ' · ⚡ live' : '') + '</small>'; $('ccbody').innerHTML = '<div class="ffempty">Loading… · جارٍ التحميل</div>'; $('cccomp').hidden = false; ccPend(); ccPull(false); clearInterval(CC.timer); CC.timer = setInterval(function(){ if (!document.hidden && CC.cur) ccPull(false); }, CC.es ? 15000 : 6000); }
-async function ccPull(fresh){ var name = CC.cur; if (!name || CC.busy) { if (name && CC.busy) CC.again = true; return; } CC.busy = true; var look = ccLooking();
-  try { var j = await ccCall({ op: 'thread', name: name, fresh: fresh ? 1 : 0, look: look ? 1 : 0 }, 2); if (CC.cur !== name) return; if (!j.ok) throw new Error(j.error);
+function ccChat(name, root){ CC.cur = name; CC.root = root || ''; CC.msgs = []; CC.sig = ''; CC.drawn = false; CC.touched = Date.now(); var oo = CC.root ? (CC.orders || []).filter(function(x){ return x.ts === CC.root; })[0] : null;
+  $('cct').innerHTML = esc(name) + '<small>' + (CC.root ? '📄 order of ' + ccDay(CC.root) + ((oo && oo.head) ? ' · ' + esc(oo.head) : '') : 'general chat · #customer') + (CC.es ? ' · ⚡ live' : '') + '</small>'; $('ccbody').innerHTML = '<div class="ffempty">Loading… · جارٍ التحميل</div>'; $('cccomp').hidden = false; ccPend(); ccPull(false); clearInterval(CC.timer); CC.timer = setInterval(function(){ if (!document.hidden && CC.cur) ccPull(false); }, CC.es ? 15000 : 6000); }
+async function ccPull(fresh){ var name = CC.cur, root = CC.root, ck = ccCurK(); if (!name || CC.busy) { if (name && CC.busy) CC.again = true; return; } CC.busy = true; var look = ccLooking();
+  try { var j = await ccCall({ op: 'thread', name: name, root: root || undefined, fresh: fresh ? 1 : 0, look: look ? 1 : 0 }, 2); if (CC.cur !== name || CC.root !== root) return; if (!j.ok) throw new Error(j.error);
     var sig = JSON.stringify(j.msgs.map(function(m){ return m.ts; })); if (sig !== CC.sig || fresh) { CC.sig = sig; CC.msgs = j.msgs; ccDraw(); }
-    if (look && CC.un[ccK(name)]) { CC.tot -= CC.un[ccK(name)].n; if (CC.tot < 0) CC.tot = 0; delete CC.un[ccK(name)]; ccBadge(); } }
+    if (look && CC.un[ck]) { CC.tot -= CC.un[ck].n; if (CC.tot < 0) CC.tot = 0; delete CC.un[ck]; ccBadge(); } }
   catch(e){ if (CC.cur === name && !CC.msgs.length) $('ccbody').innerHTML = '<div class="stk bad">' + esc(e.message) + (/missing_scope/.test(e.message) ? '<br><br>Until the Slack scopes are added, messages you send still reach #customer, but the chat cannot be read here.' : '') + '</div>'; }
   finally { CC.busy = false; if (CC.again) { CC.again = false; setTimeout(function(){ ccPull(true); }, 300); } } }
 function ccDraw(){ var b = $('ccbody'), atEnd = b.scrollHeight - b.scrollTop - b.clientHeight < 80, my = ccK(ccWho()), lastDay = '';
@@ -3076,21 +3151,21 @@ $('cctxt').addEventListener('input', function(){ this.style.height = 'auto'; thi
 // ---- OUTBOX: Send never waits. The message is kept on this phone and posted in the background; a lost answer is retried with the same
 // once-only id, so it can never post twice. Files are not kept across a reload (too big for localStorage) - only the text lines are.
 var CCO = { q: [], busy: false }; try { CCO.q = JSON.parse(ls('sj_cc_outbox') || '[]'); } catch(e){ CCO.q = []; }
-function ccOSave(){ try { ls('sj_cc_outbox', JSON.stringify(CCO.q.filter(function(x){ return !x.files; }).map(function(x){ return { name: x.name, text: x.text, who: x.who, rid: x.rid, ts: x.ts, tries: 0 }; }))); } catch(e){} }
+function ccOSave(){ try { ls('sj_cc_outbox', JSON.stringify(CCO.q.filter(function(x){ return !x.files; }).map(function(x){ return { name: x.name, root: x.root || '', text: x.text, who: x.who, rid: x.rid, ts: x.ts, tries: 0 }; }))); } catch(e){} }
 async function ccORun(){ if (CCO.busy || !CCO.q.length || !navigator.onLine) return; CCO.busy = true; var it = CCO.q[0];
   try { var j;
     if (it.files) { var fs = []; for (var i = 0; i < it.files.length; i++) fs.push({ name: it.files[i].name || 'photo.jpg', b64: await new Promise(function(ok, no){ var r = new FileReader(); r.onload = function(){ ok(String(r.result).split(',')[1] || ''); }; r.onerror = no; r.readAsDataURL(it.files[i]); }) });
-      j = await ccCall({ op: 'up', name: it.name, text: it.text, who: it.who, files: fs, rid: it.rid }, 2); }
-    else j = await ccCall({ op: 'post', name: it.name, text: it.text, who: it.who, rid: it.rid }, 2);
+      j = await ccCall({ op: 'up', name: it.name, root: it.root || undefined, text: it.text, who: it.who, files: fs, rid: it.rid }, 2); }
+    else j = await ccCall({ op: 'post', name: it.name, root: it.root || undefined, text: it.text, who: it.who, rid: it.rid }, 2);
     if (!j.ok) throw new Error(j.error);
-    CCO.q.shift(); ccOSave(); it.done = true; if (CC.cur === it.name) { CC.msgs.forEach(function(m){ if (m.rid === it.rid) { m.pend = false; m.sent = true; } }); ccDraw(); ccPull(true); } CC.list = null;
+    CCO.q.shift(); ccOSave(); it.done = true; if (ccIsCur(it)) { CC.msgs.forEach(function(m){ if (m.rid === it.rid) { m.pend = false; m.sent = true; } }); ccDraw(); ccPull(true); } CC.list = null;
   } catch(e){ it.tries = (it.tries || 0) + 1; it.err = e.message; var hard = /empty|no customer|too big|wrong password|no file/.test(e.message);
-    if (hard || it.tries >= 6) { CCO.q.shift(); ccOSave(); if (CC.cur === it.name) { CC.msgs = CC.msgs.filter(function(m){ return m.rid !== it.rid; }); ccDraw(); $('cctxt').value = it.text || $('cctxt').value; if (it.files) { CC.files = it.files.slice(); ccPend(); } } alert('Not sent to ' + it.name + ' — ' + e.message); }
-    else if (CC.cur === it.name) { CC.msgs.forEach(function(m){ if (m.rid === it.rid) m.err = e.message; }); ccDraw(); } }
+    if (hard || it.tries >= 6) { CCO.q.shift(); ccOSave(); if (ccIsCur(it)) { CC.msgs = CC.msgs.filter(function(m){ return m.rid !== it.rid; }); ccDraw(); $('cctxt').value = it.text || $('cctxt').value; if (it.files) { CC.files = it.files.slice(); ccPend(); } } alert('Not sent to ' + it.name + ' — ' + e.message); }
+    else if (ccIsCur(it)) { CC.msgs.forEach(function(m){ if (m.rid === it.rid) m.err = e.message; }); ccDraw(); } }
   finally { CCO.busy = false; if (CCO.q.length) setTimeout(ccORun, Math.min(60000, 3000 * (CCO.q[0].tries || 0) + 1500)); } }
 setInterval(ccORun, 10000); window.addEventListener('online', ccORun);
 $('ccsend').onclick = function(){ var name = CC.cur, txt = $('cctxt').value.trim(), files = CC.files.slice(); if (!name || (!txt && !files.length)) return;
-  var who = ccWho(), rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), it = { name: name, text: txt, who: who, rid: rid, ts: String(Date.now() / 1000), files: files.length ? files : null, tries: 0 };
+  var who = ccWho(), rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), it = { name: name, root: CC.root || '', text: txt, who: who, rid: rid, ts: String(Date.now() / 1000), files: files.length ? files : null, tries: 0 };
   CC.msgs.push({ ts: it.ts, who: who, rid: rid, text: txt + (files.length ? (txt ? '\n' : '') + files.map(function(f){ return '📎 ' + f.name; }).join(' · ') : ''), pend: true }); ccDraw(); $('ccbody').scrollTop = 1e9; $('cctxt').value = ''; $('cctxt').style.height = ''; CC.files = []; ccPend();
   CCO.q.push(it); ccOSave(); ccORun(); };
 // ---- 🔔 phone notifications through the free ntfy app (same way as the factory app): a secret topic made on this phone, kept by the relay for this person
@@ -3107,7 +3182,13 @@ function ccBellOpen(){ if (!me()) askMe(); $('cc').hidden = false; var tp = ls('
   $('belltest').onclick = async function(){ $('bellst').textContent = 'Sending…'; try { var j = await ccCall({ op: 'ntfytest' }); $('bellst').textContent = j.ok ? '✓ Test sent — check ntfy.' : 'Not sent: ' + (j.error || 'ntfy did not answer'); } catch(e){ $('bellst').textContent = 'Not sent: ' + e.message; } };
   $('belloff').onclick = async function(){ try { var j = await ccCall({ op: 'ntfyoff' }); CC.nt = false; $('bellst').textContent = j.ok ? 'Off.' : 'Not changed: ' + j.error; } catch(e){ $('bellst').textContent = e.message; } }; }
 // ---- deep link from a notification: memo.html#chat=NAME
-(function(){ var m = location.hash.match(/^#chat=(.*)$/); if (m) { var nm = decodeURIComponent(m[1] || ''); history.replaceState(null, '', location.pathname + location.search); setTimeout(function(){ if (!token) return; $('cc').hidden = false; if (nm) { ccList(); ccChat(nm); } else ccList(); }, 900); } })();
+(function(){ var m = location.hash.match(/^#chat=([^&]*)(?:&o=([\d.]+))?/); if (m) { var nm = decodeURIComponent(m[1] || ''), ro = m[2] || ''; history.replaceState(null, '', location.pathname + location.search); setTimeout(function(){ if (!token) return; $('cc').hidden = false; if (nm || ro) { ccList(); ccChat(nm || 'order', ro); } else ccList(); }, 900); } })();
+// after "Send to CUSTOMER group": the order's chat opens at once (18 Oct 2026)
+function ccOpenOrder(o){ if (!o) return; navCloseAll(); $('cc').hidden = false; CC.touched = Date.now();
+  if (o.ts) { if (!(CC.orders || []).some(function(x){ return x.ts === o.ts; })) CC.orders = [{ k: 'O' + o.ts, ts: o.ts, name: o.name, head: 'just sent', chat: 0, last: o.ts }].concat(CC.orders || []); ccChat(o.name, o.ts); uiToast('💬 This order\'s chat is open — anything you write here goes under the memo in #customer'); }
+  else { ccList(); uiToast('Memo sent — its chat is in the list (tap it)'); }
+  setTimeout(function(){ ccPoll(true); }, 1500); navSync(); }
+window.__sj = { ccOpenOrder: ccOpenOrder, B: function(){ return B; } };   // hooks for the headless test (t_shell.js)
 
 // ===== NAVIGATION SHELL (17 Oct 2026, Abbas: "change the complete UI of the app, make it more smooth and usable"). One bottom bar like Slack /
 // WhatsApp: Stock · Memo · Chats · Orders · More. Every old button still exists (hidden) and is pressed by the bar, so nothing underneath changed.
