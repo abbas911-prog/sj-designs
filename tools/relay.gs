@@ -745,7 +745,8 @@ function fac0(reqText, P) {
       var sname = String(req.name || '').trim().slice(0, 500), sdesc = String(req.desc || '').slice(0, 16000), swho = String(req.who || '').slice(0, 40) || 'factory';
       var sfs = Array.isArray(req.files) ? req.files : []; if (!sname || sfs.length > 10) return out({ ok: false, error: 'bad request' });
       var SRET = req.kind === 'ret', srl = SRET ? facRetLists(P, wtok, 2) : null; if (SRET && !srl) return out({ ok: false, error: 'could not make the RETURNS list on Trello' });
-      var SCH = SRET ? DOX.CUTTING : FAC.SAMPLES_CH, SLIST = SRET ? srl.ret : FAC.LISTS[0][1], SCHN = SRET ? '#cutting' : '#samples-discuss';
+      var SUSM = !SRET && !!req.usman;   // 18 Oct 2026 (Abbas): tick "USMAN hand work" -> the sample's chat is made in #usmancutting, not #samples-discuss / #cutting
+      var SCH = SRET ? DOX.CUTTING : SUSM ? DOX.USMANCUT : FAC.SAMPLES_CH, SLIST = SRET ? srl.ret : FAC.LISTS[0][1], SCHN = SRET ? '#cutting' : SUSM ? '#usmancutting' : '#samples-discuss';
       var scard2 = trApi('post', '/cards', { idList: SLIST, name: sname, desc: sdesc, pos: 'top' }, wtok);
       // Abbas 13 Oct: the Trello card gets ONLY a cover - the first photo, or a frame of the video (made on the phone) - everything else goes to Slack only
       var satt = 0; if (req.cover && req.cover.b64) { try {
@@ -758,7 +759,7 @@ function fac0(reqText, P) {
         stot += sb.length; if (sb.length > 18 * 1024 * 1024 || stot > 40 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 18 MB each, 40 MB together)' });
         sids.push(slackUp(FT, sn, sb));
       }
-      var stext = (SRET ? '↩️ *RETURN* · pieces given back to the factory' + (sdesc ? '\n' + sdesc : '') + '\n_ফেরত - ঠিক করে ফেরত দিন_' : '⭐ *SAMPLE* · ' + sname + (sdesc ? '\n' + sdesc : '')) + '\n' + scard2.shortUrl + '\n_' + swho + ' · factory app_', sts = '';
+      var stext = (SRET ? '↩️ *RETURN* · pieces given back to the factory' + (sdesc ? '\n' + sdesc : '') + '\n_ফেরত - ঠিক করে ফেরত দিন_' : '⭐ *SAMPLE* · ' + sname + (SUSM ? '\n🧵 USMAN hand work' : '') + (sdesc ? '\n' + sdesc : '')) + '\n' + scard2.shortUrl + '\n_' + swho + ' · factory app_', sts = '';
       if (sids.length) {
         var sj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + FT }, muteHttpExceptions: true,
           payload: { files: JSON.stringify(sids.map(function (f) { return { id: f }; })), channel_id: SCH, initial_comment: stext } }).getContentText());
@@ -808,6 +809,9 @@ function fac0(reqText, P) {
       var ncard = trApi('post', '/cards', nbody, wtok);
       var ln2 = FAC.LISTS.filter(function (l) { return l[1] === nto; })[0];
       try { trApi('post', '/cards/' + ncard.id + '/actions/comments', { text: (req.op === 'copy' ? 'Copied from ' + scard.shortUrl : 'Added') + ' · ' + nwho + ' (factory app)' }, wtok); } catch (e) {}
+      if (req.op === 'add' && req.usman && FT) try {   // 18 Oct 2026 (Abbas): ticked "USMAN hand work" -> the card's chat is made in #usmancutting, not #cutting
+        var nup = slackApi(FT, 'chat.postMessage', { channel: DOX.USMANCUT, text: '🧵 ' + nname + '\n🧵 USMAN hand work\n' + ncard.shortUrl + '\n_card chat · factory app_' });
+        if (nup.ok) P.setProperty('FTH_' + ncard.id, JSON.stringify({ ch: DOX.USMANCUT, ts: nup.ts })); } catch (e) {}
       try { if (FT) { var nth = facThread(P, FT, ncard.id, rtok, true); slackApi(FT, 'chat.postMessage', { channel: nth.ch, thread_ts: nth.ts, text: '→ *' + (ln2 ? ln2[0] : 'NEW') + '* · ' + nwho + (req.op === 'copy' ? ' copied this card from ' + scard.shortUrl : ' added this card') }); } } catch (e) {}
       bigDrop(CacheService.getScriptCache(), 'FAC_LIST');
       return out({ ok: true, id: ncard.id, url: ncard.shortUrl });
