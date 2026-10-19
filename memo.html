@@ -419,9 +419,20 @@ header{background:rgba(245,241,234,.92);backdrop-filter:saturate(1.4) blur(10px)
 html,body{background:var(--bg)}
 body{-webkit-tap-highlight-color:transparent}
 #catbtn,#ccbtn,#ordbtn,#bills{display:none!important}
+#drbtn{background:#fff;border:1.5px solid var(--gold);color:var(--gold);border-radius:14px;padding:6px 10px;font:inherit;font-weight:800;font-size:13px;line-height:1.05}#drbtn small{display:block;font-weight:600;font-size:10px;opacity:.8}
+#drs{position:fixed;inset:0;z-index:70;background:rgba(20,18,14,.45);display:flex;align-items:flex-end;justify-content:center}#drs[hidden]{display:none}.drbox{background:var(--bg,#f4f0e9);width:100%;max-width:720px;max-height:86vh;overflow:auto;border-radius:20px 20px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom))}
+.drbox .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.drbox .hd button{border:0;background:#eee;border-radius:999px;padding:7px 12px;font:inherit}.drnow{font-size:14px;margin:6px 0 10px}.drbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}.drbtns button{border-radius:14px;padding:12px;font:inherit;font-weight:800;border:0;background:var(--gold);color:#fff}.drbtns button:disabled{opacity:.4}.drbtns small{display:block;font-weight:500;font-size:11px}
+.otabs2{position:sticky;top:-12px;z-index:3;display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--bg,#f4f0e9);padding:2px 0 8px}.otabs2 button{border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:9px;font:inherit;font-weight:800;font-size:14.5px;text-align:left}.otabs2 button.on{border-color:var(--gold);background:#fbf5ea}.otabs2 small{display:block;font-weight:500;font-size:11px;color:#888}.otabs2 i,.ochats i{font-style:normal;background:#c0392b;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px}
+.opanel{background:#fff;border-radius:14px;padding:8px 10px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.ophd{display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;font:inherit;padding:4px 0;text-align:left}.ophd em{margin-left:auto;font-style:normal;font-size:12px;color:var(--gold);font-weight:700}.opanel .onx{font-size:12.5px}
+.obills{display:grid;grid-template-columns:1.3fr 1fr;gap:8px;margin:8px 0}.obills button{border-radius:12px;padding:10px;font:inherit;font-weight:800;border:1.5px solid var(--line);background:#fff}.obills .gold{background:var(--gold);color:#fff;border-color:var(--gold)}.obills small{display:block;font-weight:500;font-size:11px;opacity:.85}
+.ofull summary{cursor:pointer;font-weight:700;font-size:13.5px;margin:8px 0 4px}.onochat{background:#fff;border-radius:12px;padding:12px;text-align:center;font-size:14px;color:#666}.onochat button{display:block;width:100%;margin-top:8px;border:0;border-radius:12px;padding:11px;background:var(--gold);color:#fff;font:inherit;font-weight:800}
+.ochats{display:block;font-size:12px;color:var(--gold);font-weight:700;margin-top:4px}
 .bstop{display:flex;align-items:center;gap:10px;margin:2px 0 8px}.bstop button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:14px}#bsv{font-size:12px;color:#888}#bsv.bad{color:#b4232c}
 .bsh{display:flex;justify-content:space-between;align-items:center;margin:4px 0 6px;font-size:16px}.bsh button{border:0;background:#eee;border-radius:999px;width:34px;height:34px;font-size:16px}
 .bsrow{display:flex;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--line);background:#fff;border-radius:10px;margin:4px 0}.bsrow .t{flex:1;min-width:0}.bsrow .t small{display:block;color:#666;font-size:12.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bsrow .tm{font-size:11.5px;color:#888;text-align:right;white-space:nowrap}.bsdel{border:0;background:none;font-size:16px;padding:4px}
+.rnfrom{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0}.rnfrom button{border:1.5px solid var(--gold);color:var(--gold);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-weight:700}.rnfrom span{font-size:13px;color:#666}
+#rnlist{margin:6px 0 10px}.rninv{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;margin:4px 0;font:inherit}.rninv small{display:block;color:#666;font-size:12px}
+.rnrow{display:grid;grid-template-columns:1.6fr .8fr .8fr auto;gap:6px;margin:6px 0;align-items:center}.rnrow:has(input[data-f="no"]){grid-template-columns:1fr .7fr .8fr .8fr auto}.rnrow input{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:9px;font:inherit;background:#fff}.rnrow button{border:0;background:#eee;border-radius:999px;width:32px;height:32px}.rnd{font-size:14px}.rnd small{display:block;color:#888;font-size:11.5px}
 .bst{font-size:11px;border-radius:999px;padding:1px 8px;background:#eee;margin-left:4px;vertical-align:middle;font-weight:600}.bst.sent{background:#dfe9ff}.bst.included{background:#d9f2e3}
 .ccrow.ord .av{background:#f3ead6}.ccrow b small.od{font-weight:500;color:#888;font-size:11.5px;margin-left:4px}
 /* 17 Oct 2026 (Abbas): "I want the star at the main page" — the ★ owner button stays in the header */
@@ -585,10 +596,11 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
 <div id="timo" hidden></div><button type="button" id="timoopen" hidden>Timo</button>
 <div id="more" hidden><div class="in"><div class="hd"><b>MORE · المزيد</b><button type="button" id="morex">Close</button></div><div id="morebody"></div></div></div>
 <div id="toast" hidden></div>
-<div id="bar" class="empty"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="ok" type="button" disabled>OK</button></div></div>
+<div id="bar" class="empty"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="drbtn" type="button">Memo<small>drafts</small></button><button id="ok" type="button" disabled>OK</button></div></div>
+<div id="drs" hidden><div class="drbox"><div class="hd"><b>DRAFTS · المسودات</b><button type="button" id="drx">Close</button></div><div id="drbody"></div></div></div>
 <div id="done" hidden><div class="in">
   <button id="back" type="button" style="background:none;border:0;color:var(--gold);font:inherit;font-weight:700;padding:0">← Back · رجوع</button>
-  <div id="mode"><button type="button" data-m="memo" class="on">Memo<small>مذكرة طلب</small></button><button type="button" data-m="inv">Invoice<small>فاتورة</small></button><button type="button" data-m="rv">Receipt<small>سند قبض</small></button><button type="button" data-m="pv">Payment<small>سند صرف</small></button><button type="button" data-m="cat" hidden>Catalogue<small>كتالوج</small></button></div>
+  <div id="mode"><button type="button" data-m="memo" class="on">Memo<small>مذكرة طلب</small></button><button type="button" data-m="inv">Invoice<small>فاتورة</small></button><button type="button" data-m="rv">Receipt<small>سند قبض</small></button><button type="button" data-m="pv">Payment<small>سند صرف</small></button><button type="button" data-m="rn">Return<small>مرتجع</small></button><button type="button" data-m="cat" hidden>Catalogue<small>كتالوج</small></button></div>
   <section id="p-memo">
   <h2 id="dh">Order memo</h2><div class="sub" id="ds"></div>
   <div class="dlv"><div class="dlvh">Delivery time · وقت التسليم<small>Type here — it prints on page 1 of the PDF. Leave empty to write by hand.</small></div>
@@ -844,18 +856,18 @@ function reapply(){
 var WK = 'sj_work', wkT = null;
 function topNo(){ var best = null; document.querySelectorAll('#feed .design').forEach(function(a){ if (a.hidden) return; var r = a.getBoundingClientRect(); if (r.bottom > 60 && !best) best = a.dataset.no; }); return best; }
 function saveWork(){ clearTimeout(wkT); wkT = null; if (!designs.length) return;
-  var w = { t: Date.now(), state: state, prices: prices, loc: LOC, dl: dlv(), name: $('name').value, q: $('q').value, at: topNo(), open: !$('done').hidden && B.mode !== 'memo' && B.mode !== 'cat' ? B.mode : '', inv: B.inv, rv: B.rv, pv: B.pv };
+  var w = { t: Date.now(), state: state, prices: prices, loc: LOC, dl: dlv(), name: $('name').value, q: $('q').value, at: topNo(), open: !$('done').hidden && B.mode !== 'memo' && B.mode !== 'cat' ? B.mode : '', inv: B.inv, rv: B.rv, pv: B.pv, rn: B.rn };
   try { localStorage.setItem(WK, JSON.stringify(w)); } catch(e){} }
 function saveSoon(){ if (!wkT) wkT = setTimeout(saveWork, 400); }
 function loadWork(){ var w; try { w = JSON.parse(localStorage.getItem(WK) || 'null'); } catch(e){} if (!w) return null;
   state = w.state || {}; prices = w.prices || {}; LOC = w.loc || {}; if (w.name) $('name').value = w.name; if (w.q) $('q').value = w.q; if (w.dl) Object.keys(w.dl).forEach(function(k){ if ($('dl_' + k)) $('dl_' + k).value = w.dl[k] || ''; });
-  ['inv', 'rv', 'pv'].forEach(function(k){ if (w[k]) B[k] = w[k]; }); return w; }
+  ['inv', 'rv', 'pv', 'rn'].forEach(function(k){ if (w[k]) B[k] = w[k]; }); return w; }
 ['input', 'change', 'click'].forEach(function(ev){ document.addEventListener(ev, saveSoon); });
 document.addEventListener('visibilitychange', function(){ if (document.hidden) saveWork(); });
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-19a';
+var VER = '2026-10-20a';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER) { saveWork(); location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
@@ -901,7 +913,7 @@ function applySearch(){
 $('tabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; TAB = b.dataset.t;
   document.querySelectorAll('#tabs button').forEach(function(x){ x.classList.toggle('on', x === b); }); applySearch(); window.scrollTo(0, 0); };
 $('q').oninput = applySearch;
-$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; state = {}; prices = {}; LOC = {}; GA.media = []; gaDraw(); B.inv = null; $('name').value = ''; ls('sj_oid', null); ['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).value = ''; }); try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
+$('clr').onclick = function(){ if (!confirm('Clear this memo and start a new one? · مسح الطلب؟')) return; DR.cur = null; ls('sj_draft', null); state = {}; prices = {}; LOC = {}; GA.media = []; gaDraw(); B.inv = null; $('name').value = ''; ls('sj_oid', null); ['od', 'ot', 'cd', 'ct'].forEach(function(k){ $('dl_' + k).value = ''; }); try { localStorage.removeItem(WK); } catch(e){} document.querySelectorAll('.prc').forEach(function(x){ x.value = ''; }); document.querySelectorAll('.row').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); }); refresh(); };
 
 // ---------- memo output ----------
 function orderText(){
@@ -1023,7 +1035,7 @@ function dlChanged(){ clearTimeout(dlT); dlT = setTimeout(function(){ if (!$('do
 document.querySelectorAll('.dlnow').forEach(function(b){ b.onclick = function(){ var d = new Date(), k = b.dataset.dl, h = d.getHours(), m = d.getMinutes();
   $('dl_' + k + 'd').value = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
   $('dl_' + k + 't').value = ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' AM' : ' PM'); dlChanged(); saveSoon(); }; });
-$('back').onclick = function(){ $('done').hidden = true; };
+$('back').onclick = function(){ $('done').hidden = true; if (B.back && (B.mode === 'inv' || B.mode === 'memo')) { var bo = B.back; B.back = null; CC.from = 'orders'; ordChat(bo); } };
 // 12 Oct 2026: GODOWN button -> pick list straight into #godown · CUSTOMER button -> full memo straight into #customer · Share PDF = the phone's share sheet
 async function grpSend(which){
   if (memoP) await memoP; if (!pdfFile) return;
@@ -1033,7 +1045,8 @@ async function grpSend(which){
   if (!plan.g && !plan.c) return;                   // said no to a repeat
   var oid = ordFromMemo();                          // the memo going out starts / updates its order
   await memoSlack2(oid, plan);
-  if (which === 'c' && /✓/.test($('slk').textContent)) { var L = gdLog(); L[oid + '|c'] = { t: Date.now() }; ls('sj_gdlog', JSON.stringify(L)); setTimeout(function(){ ccOpenOrder(CC.sent); CC.sent = null; }, 600); }
+  if (which === 'c' && /✓/.test($('slk').textContent)) { var L = gdLog(); L[oid + '|c'] = { t: Date.now() }; ls('sj_gdlog', JSON.stringify(L)); }
+  if (/✓/.test($('slk').textContent) && oid) { drDone('od'); setTimeout(function(){ ordChat(oid, which); }, 900); }   // 20 Oct 2026: the order's chat (#godown or #customer) opens at once
 }
 $('sendg').onclick = function(){ grpSend('g'); };
 $('sendc').onclick = function(){ grpSend('c'); };
@@ -1067,7 +1080,7 @@ function coGet(){ try { return Object.assign({}, CO_DEF, JSON.parse(localStorage
 function coSet(o){ try { localStorage.setItem('sj_co', JSON.stringify(o)); } catch(e){} }
 function lastNo(k){ try { return parseInt(localStorage.getItem('sj_no_' + k) || '0', 10) || 0; } catch(e){ return 0; } }
 function keepNo(k, ref){ var m = String(ref).match(/(\d+)\s*$/); if (m && +m[1] > lastNo(k)) { try { localStorage.setItem('sj_no_' + k, m[1]); } catch(e){} } }
-var PFX = { inv: 'INV-', rv: 'RV-', pv: 'PV-' };
+var PFX = { inv: 'INV-', rv: 'RV-', pv: 'PV-', rn: 'RET-' };
 function nextRef(k){ return PFX[k] + String(lastNo(k) + 1).padStart(4, '0'); }
 function n2(v){ var x = parseFloat(String(v == null ? '' : v).replace(/[,\s]/g, '')); return isFinite(x) ? x : 0; }
 function r2(x){ return Math.round(x * 100) / 100; }
@@ -1084,10 +1097,11 @@ function inWords(v){ var x = Math.abs(r2(v)), w = Math.floor(x), f = Math.round(
 function today(){ var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function dmy(s){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : s; }
 
-var B = { mode: 'memo', inv: null, rv: null, pv: null, pdf: null, timer: null };
+var B = { mode: 'memo', inv: null, rv: null, pv: null, rn: null, pdf: null, timer: null };
 function freshDoc(k){
   var d = { ref: nextRef(k), date: today(), name: $('name').value.trim(), open: '', note: '' };
   if (k === 'inv') { d.vat = false; d.extras = [{ d: '', a: '' }]; d.disc = ''; d.paid = ''; d.man = []; d.nophoto = false; d.cat = true; }
+  else if (k === 'rn') { d.vat = false; d.inv = ''; d.items = []; }
   else { d.amount = ''; d.modeP = 'Cash'; d.chq = ''; }
   return d;
 }
@@ -1129,6 +1143,13 @@ function invCalc(d){
   return { lines: lines, sub: r2(sub), ex: ex, exSum: exSum, disc: disc, taxable: r2(taxable), vat: vat, total: total, open: open, due: due, paid: paid, bal: r2(due - paid),
     unpriced: Object.keys(byDesign()).filter(function(no){ return !(prices[no] > 0); }) };
 }
+// ----- RETURN BILL (Abbas, 19 Oct 2026: "include return bill in the app, so when it's generated automatically add that specific colour on to Trello
+// as well"). A sales return / credit note RET-0001: design + colour + pieces + rate per line (picked from a saved invoice, or typed). Send PDF is a
+// draft; "Return & share" shares it, takes the amount off the customer's balance and puts those pieces back on the Trello card of that colour.
+function rnItems(d){ return (d.items || []).filter(function(it){ return String(it.no || '').trim() && n2(it.pcs) > 0; }); }
+function rnCalc(d){ var L = rnItems(d).map(function(it){ var q = Math.round(n2(it.pcs)), r = n2(it.rate); return { no: String(it.no).trim().replace(/^SJ-?/i, ''), c: String(it.c || '').trim(), qty: q, rate: r, amount: r2(q * r), card: it.card || '' }; });
+  var sub = r2(L.reduce(function(a, l){ return a + l.amount; }, 0)), vat = d.vat ? r2(sub * 0.05) : 0, total = r2(sub + vat), open = n2(d.open);
+  return { lines: L, sub: sub, vat: vat, total: total, open: open, bal: r2(open - total), pcs: L.reduce(function(a, l){ return a + l.qty; }, 0) }; }
 function vchCalc(d){ var open = n2(d.open), a = Math.abs(n2(d.amount)); return { open: open, amount: a, bal: r2(open - a) }; }
 
 // ----- form -----
@@ -1136,8 +1157,8 @@ function field(lbl, html){ return '<label class="bf"><span>' + lbl + '</span>' +
 function inp(key, val, type, ph){ return '<input data-k="' + key + '" type="' + (type || 'text') + '"' + (type === 'num' ? ' inputmode="decimal"' : '') + ' value="' + String(val == null ? '' : val).replace(/"/g, '&quot;') + '" placeholder="' + (ph || '') + '">'; }
 function drawForm(){
   var k = B.mode, d = B[k] || (B[k] = freshDoc(k)), f = $('bform'), co = coGet(), h = '';
-  var who = k === 'inv' ? 'Bill to · العميل' : (k === 'rv' ? 'Received from · استلمنا من' : 'Paid to · دفعنا إلى');
-  h += '<div class="bgrid">' + field(who, inp('name', d.name)) + field((k === 'inv' ? 'Invoice no.' : 'Voucher no.') + ' · رقم', inp('ref', d.ref)) + field('Date · التاريخ', inp('date', d.date, 'date')) + '</div>';
+  var who = k === 'inv' ? 'Bill to · العميل' : k === 'rn' ? 'Returned by · العميل' : (k === 'rv' ? 'Received from · استلمنا من' : 'Paid to · دفعنا إلى');
+  h += '<div class="bgrid">' + field(who, inp('name', d.name)) + field((k === 'inv' ? 'Invoice no.' : k === 'rn' ? 'Return no.' : 'Voucher no.') + ' · رقم', inp('ref', d.ref)) + field('Date · التاريخ', inp('date', d.date, 'date')) + '</div>';
   if (k !== 'pv') h += '<div class="bcust" id="bcust"></div>';
   if (k === 'inv') {
     var c = invCalc(d);
@@ -1157,6 +1178,17 @@ function drawForm(){
     h += '<div class="bgrid">' + field('Discount (AED) · خصم', inp('disc', d.disc, 'num', '0')) + field('Old balance (AED) · رصيد سابق', inp('open', d.open, 'num', '0')) + field('Received now (AED) · المستلم', inp('paid', d.paid, 'num', '0')) + '</div>';
     h += '<label class="bchk"><input type="checkbox" data-k="vat"' + (d.vat ? ' checked' : '') + '> Add VAT 5% · ضريبة القيمة المضافة ٥٪' + (d.vat && !co.trn ? ' <em>— add your TRN in Company details below</em>' : '') + '</label>';
     h += '<div class="btot" id="btot"></div><p class="bwarn" id="bunp"></p>';
+  } else if (k === 'rn') {
+    h += '<div class="bsec">Returned goods · البضاعة المرتجعة <small>(the pieces go back on the Trello card of that colour on <b>Return &amp; share</b>)</small></div>';
+    h += '<div class="rnfrom"><button type="button" id="rnpick">📄 Pick from a saved invoice · من فاتورة</button>' + (d.inv ? '<span>Against <b>' + esc(d.inv) + '</b></span>' : '') + '</div><div id="rnlist" hidden></div>';
+    h += (d.items || []).map(function(it, i){ var fixed = !!it.card && !!it.c;
+      return '<div class="rnrow">' + (fixed ? '<span class="rnd"><b>SJ-' + esc(it.no) + '</b> · colour ' + esc(it.c) + (it.max ? '<small>sold ' + it.max + '</small>' : '') + '</span>'
+        : '<input data-ri="' + i + '" data-f="no" value="' + esc(it.no || '') + '" placeholder="Design no."><input data-ri="' + i + '" data-f="c" inputmode="numeric" value="' + esc(it.c || '') + '" placeholder="Colour">') +
+        '<input data-ri="' + i + '" data-f="pcs" inputmode="numeric" value="' + esc(it.pcs || '') + '" placeholder="Pcs back"><input data-ri="' + i + '" data-f="rate" inputmode="decimal" value="' + esc(it.rate || '') + '" placeholder="Rate"><button type="button" data-rmi="' + i + '" aria-label="remove">✕</button></div>'; }).join('');
+    h += '<button type="button" class="badd" id="addri">+ Add design by hand</button>';
+    h += '<div class="bgrid">' + field('Old balance (AED) · رصيد سابق', inp('open', d.open, 'num', '0')) + field('Note · ملاحظة', inp('note', d.note, 'text', 'Optional')) + '</div>';
+    h += '<label class="bchk"><input type="checkbox" data-k="vat"' + (d.vat ? ' checked' : '') + '> VAT 5% on the return · ضريبة ٥٪</label>';
+    h += '<div class="btot" id="btot"></div><p class="bwarn" id="bunp"></p>';
   } else {
     var v = vchCalc(d);
     h += '<div class="bgrid">' + field('Opening balance (AED) · الرصيد', inp('open', d.open, 'num', '0')) + field((k === 'rv' ? 'Amount received' : 'Amount paid') + ' (AED) · المبلغ', inp('amount', d.amount, 'num', '0')) + '</div>';
@@ -1175,6 +1207,9 @@ function drawDyn(){   // only the figures change while typing; the boxes being t
     $('blines').innerHTML = c.lines.map(function(l){ return '<div class="bl"><b>' + esc(l.desc) + '</b>' + (l.manual ? ' · <i>typed</i>' : ' · ' + l.sub) + '<span>' + l.qty + ' × ' + (l.rate ? amt(l.rate) : '<i>no price</i>') + ' = ' + (l.rate ? amt(l.amount) : '—') + '</span></div>'; }).join('');
     $('btot').innerHTML = row('Items', c.sub) + c.ex.map(function(e){ return row(e.d || 'Extra', n2(e.a)); }).join('') + (c.disc ? row('Discount', -c.disc) : '') + (d.vat ? row('VAT 5%', c.vat) : '') + row('Invoice total', c.total, 'b') + row('Old balance', c.open) + row('Total due', c.due) + (c.paid ? row('Received', -c.paid) : '') + row('Balance', c.bal, 'big');
     $('bunp').textContent = c.unpriced.length ? 'No price yet: ' + c.unpriced.map(function(x){ return 'SJ-' + shown(x); }).join(', ') : '';
+  } else if (k === 'rn') { var rc = rnCalc(d); $('btot').innerHTML = row('Return (' + rc.pcs + ' pcs)', rc.sub) + (d.vat ? row('VAT 5%', rc.vat) : '') + row('Return total', rc.total, 'b') + row('Old balance', rc.open) + row('Balance after return', rc.bal, 'big');
+    var bad = (d.items || []).filter(function(it){ return n2(it.pcs) > 0 && (!String(it.no || '').trim() || !String(it.c || '').trim()); }).length, over = (d.items || []).filter(function(it){ return it.max && n2(it.pcs) > it.max; }).length;
+    $('bunp').textContent = (bad ? bad + ' line(s) need the design number and colour. ' : '') + (over ? over + ' line(s) return more pieces than were sold on ' + (d.inv || 'the invoice') + '.' : '');
   } else { var v = vchCalc(d); $('btot').innerHTML = row('Opening balance', v.open) + row(k === 'rv' ? 'Received' : 'Paid', -v.amount) + row('Remaining', v.bal, 'big'); }
 }
 function onForm(e){
@@ -1183,6 +1218,7 @@ function onForm(e){
   else if (t.dataset.p) { var v = parseFloat(t.value); if (v > 0) prices[t.dataset.p] = v; else delete prices[t.dataset.p]; refresh(); }
   else if (t.dataset.x != null) { d.extras[+t.dataset.x][t.dataset.f] = t.value; }
   else if (t.dataset.mn != null) { (d.man = d.man || [])[+t.dataset.mn][t.dataset.f] = t.value; }
+  else if (t.dataset.ri != null) { var it0 = d.items[+t.dataset.ri]; it0[t.dataset.f] = t.value; if (t.dataset.f === 'no' || t.dataset.f === 'c') it0.card = ''; }
   else if (t.dataset.k) { d[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value;
     if (k !== 'pv' && t.dataset.k === 'open') { d.openTyped = true; custHint(); }
     if (k !== 'pv' && t.dataset.k === 'name' && (d.name || '').trim().toUpperCase() !== (d.lookName || '')) { d.cust = undefined; d.saved = null; clearTimeout(CU.t); CU.t = setTimeout(custLook, 700); custHint(); } }
@@ -1200,12 +1236,12 @@ function head(g, k, d, co){
   g.fillStyle = '#fff'; g.fillRect(0, 0, W, 10000);
   g.fillStyle = INK; g.font = 'bold 40px Arial'; g.fillText(co.name || ' ', P, P + 34);
   g.font = '24px Arial'; g.fillStyle = MUT; var y = P + 70; if (co.line) { g.fillText(co.line, P, y); y += 32; } if (co.trn) { g.fillText('TRN ' + co.trn, P, y); y += 32; }
-  var title = k === 'inv' ? (d.vat ? 'TAX INVOICE' : 'INVOICE') : (k === 'rv' ? 'RECEIPT VOUCHER' : 'PAYMENT VOUCHER');
-  var ar = k === 'inv' ? (d.vat ? 'فاتورة ضريبية' : 'فاتورة') : (k === 'rv' ? 'سند قبض' : 'سند صرف');
+  var title = k === 'inv' ? (d.vat ? 'TAX INVOICE' : 'INVOICE') : k === 'rn' ? (d.vat ? 'TAX CREDIT NOTE' : 'SALES RETURN') : (k === 'rv' ? 'RECEIPT VOUCHER' : 'PAYMENT VOUCHER');
+  var ar = k === 'inv' ? (d.vat ? 'فاتورة ضريبية' : 'فاتورة') : k === 'rn' ? 'مرتجع مبيعات' : (k === 'rv' ? 'سند قبض' : 'سند صرف');
   g.textAlign = 'right'; g.fillStyle = GOLD; g.font = 'bold 38px Arial'; g.fillText(title, W - P, P + 34); g.font = '26px Arial'; g.fillText(ar, W - P, P + 70);
   g.fillStyle = INK; g.font = '26px Arial'; g.fillText('No. ' + d.ref + '   ·   ' + dmy(d.date), W - P, P + 108); g.textAlign = 'left';
   y = Math.max(y, P + 130) + 10; g.fillStyle = INK; g.fillRect(P, y, W - 2 * P, 3); y += 52;
-  g.fillStyle = MUT; g.font = 'bold 20px Arial'; g.fillText((k === 'inv' ? 'BILL TO' : (k === 'rv' ? 'RECEIVED FROM' : 'PAID TO')), P, y); y += 40;
+  g.fillStyle = MUT; g.font = 'bold 20px Arial'; g.fillText((k === 'inv' ? 'BILL TO' : k === 'rn' ? 'RETURNED BY' : (k === 'rv' ? 'RECEIVED FROM' : 'PAID TO')), P, y); y += 40;
   g.fillStyle = INK; g.font = 'bold 34px Arial'; g.fillText(d.name || ' ', P, y); return y + 40;
 }
 function tline(g, y, k2, v2, opt){ opt = opt || {}; var x0 = W - P - 520; g.font = (opt.bold ? 'bold ' : '') + (opt.size || 26) + 'px Arial'; g.fillStyle = opt.lc || MUT; g.textAlign = 'left'; g.fillText(k2, x0, y); g.textAlign = 'right'; g.fillStyle = opt.color || INK; g.fillText(amt(v2) + ' AED', W - P, y); g.textAlign = 'left'; return y + (opt.gap || 42); }
@@ -1254,6 +1290,22 @@ async function drawInvoice(d){
   pages.forEach(function(p, j){ var q = p.getContext('2d'); q.fillStyle = MUT; q.font = '20px Arial'; q.textAlign = 'right'; q.fillText('Page ' + (j + 1) + ' / ' + pages.length, W - P, H - 24); q.textAlign = 'left'; });
   return pages;
 }
+function drawReturn(d){
+  var co = coGet(), c = rnCalc(d), H = 1754, cv = document.createElement('canvas'); cv.width = W; cv.height = H; var g = cv.getContext('2d');
+  var y = head(g, 'rn', d, co); if (d.inv) { g.fillStyle = MUT; g.font = '24px Arial'; g.fillText('Against invoice ' + d.inv, P, y); y += 36; }
+  y += 10; g.fillStyle = MUT; g.font = 'bold 20px Arial'; g.fillText('ITEM', P, y); g.fillText('COLOUR', P + 420, y); g.textAlign = 'right'; g.fillText('QTY (PCS)', W - P - 420, y); g.fillText('RATE', W - P - 230, y); g.fillText('AMOUNT', W - P, y); g.textAlign = 'left';
+  y += 14; g.fillStyle = INK; g.fillRect(P, y, W - 2 * P, 2); y += 12;
+  c.lines.slice(0, 22).forEach(function(l){ g.fillStyle = INK; g.font = 'bold 28px Arial'; g.fillText('SJ-' + l.no, P, y + 40); g.font = '26px Arial'; g.fillText(l.c ? 'Colour ' + l.c : '—', P + 420, y + 40);
+    g.textAlign = 'right'; g.fillText(String(l.qty), W - P - 420, y + 40); g.fillText(l.rate ? amt(l.rate) : '—', W - P - 230, y + 40); g.font = 'bold 26px Arial'; g.fillText(l.rate ? amt(l.amount) : '—', W - P, y + 40); g.textAlign = 'left';
+    y += 62; g.fillStyle = LINE; g.fillRect(P, y, W - 2 * P, 1); y += 6; });
+  y += 40; y = tline(g, y, 'Returned goods (' + c.pcs + ' pcs)', c.sub); if (d.vat) y = tline(g, y, 'VAT 5%', c.vat);
+  g.fillStyle = INK; g.fillRect(W - P - 520, y - 26, 520, 2); y += 12;
+  y = tline(g, y, 'Return total', c.total, { bold: true, lc: INK, size: 30 }); y = tline(g, y, 'Old balance', c.open); y = tline(g, y, 'Less this return', -c.total);
+  g.fillStyle = GOLD; g.fillRect(W - P - 540, y - 32, 540, 66); g.fillStyle = '#fff'; g.font = 'bold 32px Arial'; g.fillText('BALANCE', W - P - 520, y + 12); g.textAlign = 'right'; g.fillText(amt(c.bal) + ' AED', W - P - 18, y + 12); g.textAlign = 'left'; y += 80;
+  g.fillStyle = MUT; g.font = '22px Arial'; g.fillText('Return total in words: ' + inWords(c.total), P, y); y += 30; if (d.note) { g.fillText('Note: ' + d.note, P, y); y += 30; }
+  signs(g, Math.min(y + 110, H - P - 40), 'RETURNED BY · المرتجع من', 'RECEIVED BY · المستلم');
+  return [cv];
+}
 function drawVoucher(k, d){
   var co = coGet(), v = vchCalc(d), H = 1240, cv = document.createElement('canvas'); cv.width = W; cv.height = H; var g = cv.getContext('2d');
   var y = head(g, k, d, co) + 20;
@@ -1272,6 +1324,9 @@ function docText(k, d){
     c.lines.forEach(function(l){ L.push(l.desc + ' ' + l.sub + ': ' + l.qty + ' x ' + (l.rate ? amt(l.rate) : '-') + ' = ' + (l.rate ? amt(l.amount) : '-')); });
     L.push(''); L.push('Items: ' + amt(c.sub)); c.ex.forEach(function(e){ L.push((e.d || 'Extra') + ': ' + amt(n2(e.a))); }); if (c.disc) L.push('Discount: -' + amt(c.disc)); if (d.vat) L.push('VAT 5%: ' + amt(c.vat));
     L.push('*Invoice total: ' + amt(c.total) + ' AED*', 'Old balance: ' + amt(c.open), 'Total due: ' + amt(c.due)); if (c.paid) L.push('Received: -' + amt(c.paid)); L.push('*Balance: ' + amt(c.bal) + ' AED*');
+  } else if (k === 'rn') { var rc = rnCalc(d); L.push((d.vat ? 'TAX CREDIT NOTE ' : 'SALES RETURN ') + d.ref + '  ' + dmy(d.date), 'Returned by: ' + (d.name || '') + (d.inv ? ' · against ' + d.inv : ''), '');
+    rc.lines.forEach(function(l){ L.push('SJ-' + l.no + ' colour ' + (l.c || '-') + ': ' + l.qty + ' x ' + (l.rate ? amt(l.rate) : '-') + ' = ' + (l.rate ? amt(l.amount) : '-')); });
+    L.push(''); if (d.vat) L.push('VAT 5%: ' + amt(rc.vat)); L.push('*Return total: ' + amt(rc.total) + ' AED*', 'Old balance: ' + amt(rc.open), 'Less this return: -' + amt(rc.total), '*Balance: ' + amt(rc.bal) + ' AED*'); if (d.note) L.push('Note: ' + d.note);
   } else { var v = vchCalc(d); L.push((k === 'rv' ? 'RECEIPT VOUCHER ' : 'PAYMENT VOUCHER ') + d.ref + '  ' + dmy(d.date), (k === 'rv' ? 'Received from: ' : 'Paid to: ') + (d.name || ''), '', '*Amount: ' + amt(v.amount) + ' AED*', inWords(v.amount), 'Mode: ' + d.modeP + (d.chq ? ' No. ' + d.chq : ''));
     if (d.note) L.push('Narration: ' + d.note); L.push('', 'Opening balance: ' + amt(v.open), (k === 'rv' ? 'Received: -' : 'Paid: -') + amt(v.amount), '*Remaining: ' + amt(v.bal) + ' AED*'); }
   return L.join('\n');
@@ -1279,7 +1334,7 @@ function docText(k, d){
 var pv = 0;
 async function preview(){
   var k = B.mode, d = B[k], my = ++pv; if (!d) return;
-  var pages = k === 'inv' ? await drawInvoice(d) : drawVoucher(k, d); if (my !== pv) return;
+  var pages = k === 'inv' ? await drawInvoice(d) : k === 'rn' ? drawReturn(d) : drawVoucher(k, d); if (my !== pv) return;
   $('dprev').innerHTML = ''; pages.forEach(function(cv){ var im = document.createElement('img'); im.src = cv.toDataURL('image/jpeg', 0.7); $('dprev').appendChild(im); });
   B.pdf = new File([makePDF(pages)], (d.ref + '-' + (d.name || 'customer')).replace(/[^A-Za-z0-9؀-ۿ-]+/g, '-') + '.pdf', { type: 'application/pdf' });
   bsSoon();
@@ -1294,6 +1349,10 @@ $('mode').onclick = function(e){ var b = e.target.closest('button'); if (b) setM
 $('bform').addEventListener('input', onForm); $('bform').addEventListener('change', onForm);
 $('bform').addEventListener('click', function(e){ var d = B[B.mode];
   if (e.target.id === 'addex') { d.extras.push({ d: '', a: '' }); redraw(); }
+  if (e.target.id === 'addri') { (d.items = d.items || []).push({ no: '', c: '', pcs: '', rate: '' }); redraw(); var ri = document.querySelectorAll('#bform input[data-ri][data-f="no"]'); if (ri.length) ri[ri.length - 1].focus(); }
+  if (e.target.dataset.rmi != null) { d.items.splice(+e.target.dataset.rmi, 1); redraw(); }
+  if (e.target.id === 'rnpick') rnPick();
+  var rpi = e.target.closest('[data-rninv]'); if (rpi) rnFrom(rpi.dataset.rninv);
   if (e.target.id === 'addman') { (d.man = d.man || []).push({ d: '', q: '', r: '' }); redraw(); var ins = document.querySelectorAll('#bform input[data-mn][data-f="d"]'); if (ins.length) ins[ins.length - 1].focus(); }
   if (e.target.dataset.rmm != null) { d.man.splice(+e.target.dataset.rmm, 1); redraw(); }
   if (e.target.dataset.rm != null) { d.extras.splice(+e.target.dataset.rm, 1); if (!d.extras.length) d.extras.push({ d: '', a: '' }); redraw(); } });
@@ -1304,12 +1363,13 @@ $('dsend').onclick = async function(){
   var f = B.pdf, txt = docText(k, d), done = false;
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); done = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!done) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
-  if (k === 'rv') custAfter(k, d);      // a receipt counts once it is sent; an invoice only on Include & share
+  if (k === 'rv') custAfter(k, d);      // a receipt counts once it is sent; an invoice (and a return) only on Include & share
   if (d.status !== 'included') d.status = 'sent'; bsSave(true);
 };
 // INCLUDE & SHARE (Abbas, 7 Oct 2026): an invoice can still change (discount, add, less, other colour), so a plain Send PDF never touches stock.
 // Only "Include & share" shares the final invoice AND takes its pieces off Trello.
 $('dinc').onclick = async function(){
+  if (B.mode === 'rn') { rnInclude(); return; }
   if (B.mode !== 'inv' || !B.inv) return; var d = B.inv; clearTimeout(B.timer); await preview(); if (!B.pdf) return;
   var lines = stkLines(), pcs = lines.reduce(function(a, l){ return a + l.pcs; }, 0), s = STK[stkKey(d.ref)];
   var hasMan = manLines(d).length > 0;
@@ -1322,7 +1382,7 @@ $('dinc').onclick = async function(){
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   custAfter('inv', d);
-  d.status = 'included'; bsSave(true);
+  d.status = 'included'; bsSave(true); drDone('bd');
   var szl = lines.slice();
   stkRun('sell');
   if (d.cat !== false && szl.length) szRun(d, szl);
@@ -1344,13 +1404,16 @@ function bsSnap(k){ var d = B[k]; if (!d || !d.ref || k === 'memo' || k === 'cat
   var st = {}, pr = {}, c = null, lines = [];
   if (k === 'inv') { c = invCalc(d); if (!c.lines.length) return null; Object.keys(state).forEach(function(x){ st[x] = state[x]; }); Object.keys(byDesign()).forEach(function(no){ if (prices[no] > 0) pr[no] = prices[no]; });
     lines = c.lines.map(function(l){ return { no: l.no, desc: l.desc, sub: l.sub, qty: l.qty, rate: l.rate, amount: l.amount, manual: !!l.manual }; }); }
+  else if (k === 'rn') { c = rnCalc(d); if (!(d.items || []).length) return null; }
   else if (!n2(d.amount) && !(d.name || '').trim()) return null;
-  return { v: 1, k: k, d: d, state: st, prices: pr, dl: dlv(), lines: lines, total: k === 'inv' ? c.total : n2(d.amount), name: (d.name || $('name').value || '').trim(), date: d.date || today() }; }
+  var cols = k === 'inv' ? colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var dz = byNo(l.no); return { no: l.no, base: dz ? dz.base : l.no, card: dz ? dz.id : '', c: l.c, qty: l.qty, rate: l.rate }; }) : [];   // 19 Oct: colour by colour, so a RETURN can be picked from this invoice later
+  return { v: 1, k: k, d: d, state: st, prices: pr, dl: dlv(), lines: lines, cols: cols, total: (k === 'inv' || k === 'rn') ? c.total : n2(d.amount), name: (d.name || $('name').value || '').trim(), date: d.date || today() }; }
 function bsSoon(){ clearTimeout(BS.t); BS.t = setTimeout(function(){ bsSave(false); }, 2500); }
 async function bsSave(force){ if (!RELAY || !token) return; var k = B.mode, snap = bsSnap(k); if (!snap) return;
   var js = JSON.stringify(snap); if (!force && BS.last[snap.d.ref] === js) return; BS.last[snap.d.ref] = js;
   var stt = snap.d.status || 'draft'; bsMark('saving…');
   var j = null; try { j = await bsCall({ op: 'put', ref: snap.d.ref, type: k, name: snap.name, status: stt, total: amt(snap.total), date: snap.date, data: js }); if (!j.ok) throw new Error(j.error);
+    if (k === 'inv' && snap.d.oid && snap.d.linked !== snap.d.ref) { snap.d.linked = snap.d.ref; ordCall({ op: 'link', id: snap.d.oid, bill: snap.d.ref }).catch(function(){ snap.d.linked = ''; }); }   // 20 Oct: the order shows its bill
     if (j.status && j.status !== stt && B[k] && B[k].ref === snap.d.ref) B[k].status = j.status; bsMark('✓ saved ' + hhmm(Date.now()) + ' · ' + (j.status || stt)); }
   catch(e){ delete BS.last[snap.d.ref];
     if (j && j.clash && B[k] && B[k].ref === snap.d.ref) { keepNo(k, snap.d.ref); B[k].ref = nextRef(k); redraw(); uiToast(snap.d.ref + ' was already used on another phone — this bill is now ' + B[k].ref); return; }
@@ -1361,9 +1424,9 @@ function bsClose(){ BS.open = false; $('bsaved').hidden = true; $('bform').hidde
 async function bsList(){ BS.open = true; var el = $('bsaved'); el.hidden = false; el.innerHTML = '<div class="ffempty">Loading saved bills… · جارٍ التحميل</div>'; window.scrollTo(0, 0);
   try { var j = await bsCall({ op: 'list' }); if (!j.ok) throw new Error(j.error); BS.list = j.bills || []; bsDrawList(); }
   catch(e){ el.innerHTML = '<div class="bsh"><b>Saved bills</b><button type="button" id="bsx">✕</button></div><div class="stk bad">' + esc(e.message) + (/does not know|bad request/.test(e.message) ? '<br><br><b>What to do:</b> Apps Script → Deploy → Manage deployments → ✏️ → New version → Deploy.' : '') + '</div>'; $('bsx').onclick = bsClose; } }
-function bsDrawList(){ var q = ($('bsq') || {}).value || '', qq = q.toUpperCase().trim(), L = (BS.list || []).filter(function(b){ return !qq || (b.ref + ' ' + (b.name || '')).toUpperCase().indexOf(qq) >= 0; }), own = isOwner();
+function bsDrawList(){ var q = ($('bsq') || {}).value || '', qq = q.toUpperCase().trim(), L = (BS.list || []).filter(function(b){ return ['od', 'bd', 'or'].indexOf(b.type) < 0; }).filter(function(b){ return !qq || (b.ref + ' ' + (b.name || '')).toUpperCase().indexOf(qq) >= 0; }), own = isOwner();
   var h = '<div class="bsh"><b>🗂 Saved bills · ' + (BS.list || []).length + '</b><button type="button" id="bsx">✕</button></div><div class="ccsrch"><input id="bsq" placeholder="Search number or customer · ابحث" autocomplete="off" value="' + esc(q) + '"></div>';
-  h += L.length ? L.map(function(b){ var ty = { inv: 'Invoice', rv: 'Receipt', pv: 'Payment' }[b.type] || b.type; return '<div class="bsrow" data-ref="' + esc(b.ref) + '"><div class="t"><b>' + esc(b.ref) + '</b> <span class="bst ' + esc(b.status) + '">' + esc(b.status) + '</span><small>' + esc(b.name || 'no name') + ' · ' + ty + ' · ' + esc(dmy(b.date) || '') + (b.total ? ' · AED ' + esc(b.total) : '') + '</small></div><span class="tm">' + esc(bsWhen(b.updated)) + (b.by ? '<br>' + esc(b.by) : '') + '</span>' + (own ? '<button type="button" class="bsdel" data-del="' + esc(b.ref) + '" title="remove from the list">🗑</button>' : '') + '</div>'; }).join('')
+  h += L.length ? L.map(function(b){ var ty = { inv: 'Invoice', rv: 'Receipt', pv: 'Payment', rn: 'Return' }[b.type] || b.type; return '<div class="bsrow" data-ref="' + esc(b.ref) + '"><div class="t"><b>' + esc(b.ref) + '</b> <span class="bst ' + esc(b.status) + '">' + esc(b.status) + '</span><small>' + esc(b.name || 'no name') + ' · ' + ty + ' · ' + esc(dmy(b.date) || '') + (b.total ? ' · AED ' + esc(b.total) : '') + '</small></div><span class="tm">' + esc(bsWhen(b.updated)) + (b.by ? '<br>' + esc(b.by) : '') + '</span>' + (own ? '<button type="button" class="bsdel" data-del="' + esc(b.ref) + '" title="remove from the list">🗑</button>' : '') + '</div>'; }).join('')
     : '<div class="ffempty">' + (qq ? 'Nothing matches.' : 'No saved bill yet. Every invoice or voucher you make is saved here by itself — open it later, change it, send it again.') + '</div>';
   var had = document.activeElement && document.activeElement.id === 'bsq'; $('bsaved').innerHTML = h; $('bform').hidden = true;
   var qi = $('bsq'); qi.oninput = bsDrawList; if (had) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); } $('bsx').onclick = bsClose; }
@@ -1444,7 +1507,9 @@ var STK = {}; try { STK = JSON.parse(ls('sj_stock') || '{}'); } catch(e){}
 function stkSave(){ var ks = Object.keys(STK).sort(function(a, b){ return (STK[b].t || 0) - (STK[a].t || 0); }); ks.slice(40).forEach(function(k){ delete STK[k]; }); ls('sj_stock', JSON.stringify(STK)); }
 function stkKey(ref){ return devId() + '|' + ref; }
 function stkLines(){ return colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var d = byNo(l.no); return { card: d.id, no: d.base, c: l.c, pcs: l.qty }; }); }
-function stkShow(){ szPaint(); var el = $('stk'); $('dinc').hidden = B.mode !== 'inv'; $('dff').hidden = B.mode !== 'inv' || !isBoss(); if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
+function stkShow(){ szPaint(); var el = $('stk'); $('dinc').hidden = B.mode !== 'inv' && B.mode !== 'rn'; $('dinc').innerHTML = B.mode === 'rn' ? 'Return &amp; share · تأكيد المرتجع<small>puts the pieces back on Trello</small>' : 'Include &amp; share · تأكيد وإرسال<small>takes the pieces off Trello</small>'; $('dff').hidden = B.mode !== 'inv' || !isBoss();
+  if (B.mode === 'rn') { rnPaint(); return; }
+  if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
   if (s) { stkPaint(s); return; }
   el.hidden = false; el.className = 'stk';
   el.innerHTML = RELAY ? '<b>Send PDF</b> does not change stock. <b>Include &amp; share</b> sends the final invoice and takes its pieces off Trello. <small>فقط «تأكيد وإرسال» يخصم القطع من تريلو</small>' + (isOwner() ? '<button type="button" data-stk="check">Test — show what would change (Trello not touched)</button>' : '')
@@ -1487,6 +1552,58 @@ function applyCards(cs){ if (!RAW) return; var ch = false;     // show the new n
   cs.forEach(function(c){ if (!c.after) return; RAW.cards.forEach(function(rc, i){ if (rc.id === c.card) { rc.name = c.after; ch = true; } });
     if (/FINISH/.test(c.moved || '')) { RAW.cards = RAW.cards.filter(function(rc){ return rc.id !== c.card; }); ch = true; } });
   if (ch) { designs = mkDesigns(RAW.cards, RAW.roles); render(); } }
+// ----- RETURN BILL: pick the lines from a saved invoice, then Return & share puts those colours back on Trello (stock job op "retbill") -----
+async function rnPick(){ var el = $('rnlist'), d = B.rn; if (!el || !d) return; el.hidden = false; el.innerHTML = '<div class="ffempty">Loading saved invoices…</div>';
+  try { var j = await bsCall({ op: 'list' }); if (!j.ok) throw new Error(j.error); var nm = (d.name || '').trim().toUpperCase();
+    var L = (j.bills || []).filter(function(b){ return b.type === 'inv' && (!nm || String(b.name || '').toUpperCase().indexOf(nm) >= 0 || nm.indexOf(String(b.name || '').toUpperCase()) >= 0); }).slice(0, 40);
+    el.innerHTML = L.length ? L.map(function(b){ return '<button type="button" class="rninv" data-rninv="' + esc(b.ref) + '"><b>' + esc(b.ref) + '</b> <span class="bst ' + esc(b.status) + '">' + esc(b.status) + '</span><small>' + esc(b.name || 'no name') + ' · ' + esc(dmy(b.date) || '') + (b.total ? ' · AED ' + esc(b.total) : '') + '</small></button>'; }).join('')
+      : '<div class="ffempty">No saved invoice' + (nm ? ' for ' + esc(d.name) : '') + '. Type the lines by hand below.</div>'; }
+  catch(e){ el.innerHTML = '<div class="stk bad">' + esc(e.message) + '</div>'; } }
+async function rnFrom(ref){ var d = B.rn, el = $('rnlist'); if (!d) return; el.innerHTML = '<div class="ffempty">Opening ' + esc(ref) + '…</div>';
+  try { var j = await bsCall({ op: 'get', ref: ref }); if (!j.ok) throw new Error(j.error); var sn = JSON.parse(j.data || '{}'), items = [];
+    if (sn.cols && sn.cols.length) items = sn.cols.map(function(x){ return { no: x.base || x.no, card: x.card, c: String(x.c), max: x.qty, rate: x.rate || '', pcs: '' }; });
+    else Object.keys(sn.state || {}).forEach(function(key){ var no = key.split(':')[0], c = +key.split(':')[1], dz = byNo(no), q = dz ? lab(sn.state[key], colPcs(dz, c)).pcs : 0;
+      items.push({ no: dz ? dz.base : no, card: dz ? dz.id : '', c: String(c), max: q || 0, rate: (sn.prices || {})[no] || '', pcs: '' }); });
+    (sn.d && sn.d.man || []).forEach(function(m){ if (String(m.d || '').trim()) items.push({ no: String(m.d).replace(/[^\d-].*$/, ''), c: '', pcs: '', rate: m.r || '', max: n2(m.q) || 0 }); });
+    if (!items.length) throw new Error('that invoice has no lines');
+    d.items = items; d.inv = ref; if (!(d.name || '').trim()) { d.name = j.name || ''; d.cust = undefined; } if (sn.d && sn.d.vat) d.vat = true; redraw(); stkShow(); uiToast('Lines of ' + ref + ' loaded — type how many pieces came back');
+  } catch(e){ el.innerHTML = '<div class="stk bad">Could not open ' + esc(ref) + ' — ' + esc(e.message) + '</div>'; } }
+function rnStk(){ var d = B.rn; return d ? STK[stkKey(d.ref)] : null; }
+function rnPaint(){ var el = $('stk'), d = B.rn; if (!d) { el.hidden = true; return; } var s = rnStk(); el.hidden = false;
+  if (!s) { el.className = 'stk'; el.innerHTML = '<b>Send PDF</b> is only a draft. <b>Return &amp; share</b> shares the return, takes its amount off the customer\'s balance and puts the pieces back on Trello (colour by colour). <small>فقط «تأكيد المرتجع» يرجع القطع إلى تريلو</small>'; return; }
+  var pcs = s.lines.reduce(function(a, l){ return a + l.pcs; }, 0);
+  if (s.st === 'busy') { el.className = 'stk'; el.innerHTML = 'Putting ' + pcs + ' pcs back on Trello for ' + esc(s.ref) + '…<small>جارٍ الإرجاع إلى تريلو · about a minute</small>'; return; }
+  if (s.st === 'bad') { el.className = 'stk bad'; el.innerHTML = 'Trello NOT fully updated for ' + esc(s.ref) + '<small>' + esc(s.err) + '</small>' + cardLines(s.res) + '<button type="button" data-rn="again">Try again · أعد المحاولة</button>'; return; }
+  el.className = 'stk ok'; el.innerHTML = 'Back on Trello ✓ ' + pcs + ' pcs for ' + esc(s.ref) + cardLines(s.res); }
+async function rnInclude(){
+  var d = B.rn; if (!d) return; clearTimeout(B.timer); await preview(); if (!B.pdf) return;
+  var c = rnCalc(d), bad = (d.items || []).filter(function(it){ return n2(it.pcs) > 0 && (!String(it.no || '').trim() || !String(it.c || '').trim()); });
+  if (!c.lines.length) { alert('Type how many pieces came back (Pcs back) on at least one line.'); return; }
+  if (bad.length) { alert('Every line needs the design number and the colour number — the pieces go back on that colour in Trello.'); return; }
+  var s = rnStk(); if (s && (s.st === 'ok' || s.st === 'busy')) { alert(d.ref + ' is already done — its pieces are back on Trello. Make a New number for another return.'); return; }
+  if (!custBefore('rn', d)) return;
+  if (!confirm('Return ' + d.ref + ': share it, take ' + amt(c.total) + ' AED off ' + (d.name || 'the customer') + '\'s balance and put ' + c.pcs + ' pcs back on Trello?')) return;
+  keepNo('rn', d.ref);
+  var f = B.pdf, txt = docText('rn', d), shared = false;
+  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+  d.status = 'included'; bsSave(true);
+  rnCust(d, c);
+  rnStock(d, c);
+}
+async function rnCust(d, c){ var nm = (d.name || '').trim(); if (!nm) return; var base = { name: nm, date: d.date, by: ls('sj_me') || '', open: n2(d.open) }; d.saveErr = ''; d.saved = null;
+  try { var last = null; if (d.adj) last = await custSend(Object.assign({ op: 'post', id: 'adj:' + d.ref + ':' + devId(), type: 'adj', ref: d.ref + ' adjust', adj: d.adj }, base));
+    last = await custSend(Object.assign({ op: 'post', id: 'rn:' + d.ref + ':' + devId(), type: 'adj', ref: d.ref + ' return', adj: -c.total }, base));
+    d.saved = { name: last.name, bal: last.bal }; d.cust = { found: true, name: last.name, bal: Math.round(n2(d.open) * 100) / 100, n: last.n }; d.openTyped = false; }
+  catch(e){ d.saveErr = e.message; } if (B.rn === d && B.mode === 'rn') custHint(); try { saveWork(); } catch(e){} }
+async function rnStock(d, c){ if (!RELAY) return;
+  var lines = c.lines.map(function(l){ return { card: l.card || '', no: l.no, c: +l.c, pcs: l.qty }; }).filter(function(l){ return l.c > 0 && l.pcs > 0; });
+  var k = stkKey(d.ref), id = jobId('r'), s = STK[k] = { st: 'busy', op: 'retbill', ref: d.ref, lines: lines, id: id, who: d.name || '', t: Date.now() }; stkSave(); if (B.mode === 'rn') rnPaint();
+  try { await relay('stock', { id: id, op: 'retbill', ref: d.ref, dev: devId(), who: s.who, lines: lines }); }
+  catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); if (B.mode === 'rn') rnPaint(); return; }
+  var res = await waitJob(id, 'stock', 8);
+  s.res = res; s.st = res.ok ? 'ok' : 'bad'; s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); if (B.mode === 'rn' && B.rn === d) rnPaint(); }
+$('stk').addEventListener('click', function(e){ var b = e.target.closest('button[data-rn]'); if (!b || !B.rn) return; var s = rnStk(); if (s) s.st = 'retry'; rnStock(B.rn, rnCalc(B.rn)); });
 $('stk').addEventListener('click', function(e){ var b = e.target.closest('button[data-stk]'); if (!b) return;
   if (b.dataset.stk === 'return' && !confirm('Put the pieces of ' + B.inv.ref + ' back on Trello?')) return;
   if (b.dataset.stk === 'sell') { var s = STK[stkKey(B.inv.ref)]; if (s) s.st = 'retry'; }
@@ -2249,7 +2366,8 @@ function ordDraw(){
     h += '<div class="ocard' + (dn ? ' done' : '') + '"><button type="button" class="ohd" data-ot="' + esc(o.id) + '"><img class="opv" loading="lazy" alt="" src="' + pvs + '" onerror="this.remove()"><span class="on1"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + '</small></span>' +
       '<span class="on2">' + esc(nos.slice(0, 4).join(' · ')) + (nos.length > 4 ? ' +' + (nos.length - 4) : '') + ' · ' + (o.pcs || 0) + ' pcs</span>' + ordSplit(o) +
       '<span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span>' +
-      '<span class="onx">' + (dn ? '✓ Complete · ' + ordWhen(o.done) : 'Next: ' + esc(ordNext(o))) + '</span></button>';
+      '<span class="onx">' + (dn ? '✓ Complete · ' + ordWhen(o.done) : 'Next: ' + esc(ordNext(o))) + '</span>' +
+      '<span class="ochats">' + (o.gts ? '📦 #godown' + (ordUn(o, 'g') ? ' <i>' + ordUn(o, 'g') + ' new</i>' : '') : '') + (o.cts ? (o.gts ? ' · ' : '') + '👤 #customer' + (ordUn(o, 'c') ? ' <i>' + ordUn(o, 'c') + ' new</i>' : '') : '') + (o.bill ? ' · 🧾 ' + esc(o.bill) : '') + ' › chat</span></button>';
     if (isOpen) {
       h += '<div class="obody"><img class="opvbig" alt="Order photos" src="' + pvs + '" onerror="this.outerHTML=\'<div class=opvno>Order picture not saved yet — it appears a minute after the memo is sent.</div>\'">';
       OSTEPS.forEach(function(s, i){ h += '<div class="ostep"><u>' + (i + 1) + '</u>' + ordRow(o, s[0], s[1], s[2]) + '</div>'; });
@@ -2270,7 +2388,7 @@ $('ordx').onclick = function(){ $('ords').hidden = true; clearInterval(ORD.timer
 $('ordre').onclick = ordLoad;
 document.querySelectorAll('#ords .otabs button').forEach(function(b){ b.onclick = function(){ ORD.tab = b.dataset.o; document.querySelectorAll('#ords .otabs button').forEach(function(x){ x.classList.toggle('on', x === b); }); ordDraw(); }; });
 $('ordbody').addEventListener('click', async function(ev){
-  var t = ev.target.closest('[data-ot]'); if (t) { ORD.open[t.dataset.ot] = !ORD.open[t.dataset.ot]; ordDraw(); return; }
+  var t = ev.target.closest('[data-ot]'); if (t) { CC.from = 'orders'; ordChat(t.dataset.ot); return; }
   var d = ev.target.closest('[data-od]'); if (d) { if (!confirm('Delete this order from the list? (Trello and bills are not touched)')) return; try { await ordCall({ op: 'del', id: d.dataset.od, by: me() }); } catch(e){ ORD.err = e.message; } ordDraw(); return; }
   var c = ev.target.closest('[data-ok]'); if (!c) return;
   var o = (ORD.list || []).filter(function(x){ return x.id === c.dataset.oid; })[0]; if (!o) return;
@@ -2293,6 +2411,8 @@ function ordFromMemo(){
   ordCall({ op: 'add', id: oid, name: $('name').value.trim(), items: items, pcs: items.reduce(function(a, x){ return a + x.pcs; }, 0), dl: dl, s1: allOff, by: me() })
     .then(function(){ if (allOff) return ordCall({ op: 'tick', id: oid, step: 's2', on: true, by: me(), note: 'all in office' }); }).catch(function(e){ ORD.err = e.message; });
   ordKeep(oid, bd).catch(function(){});
+  // 20 Oct 2026: the whole order (colours, pieces, prices, where it is) kept for "Make bill" from the order screen
+  try { var osn = drSnap('or'); bsCall({ op: 'put', ref: 'ORD-' + oid, type: 'or', name: osn.name || 'no name', status: 'draft', total: drWhat(), date: today(), data: JSON.stringify(osn), force: 1 }).catch(function(){}); } catch(e){}
   return oid;
 }
 // 10 Oct 2026 (Abbas): "a small preview of the PDF in the orders ... or the photos that have been ordered".
@@ -2533,14 +2653,14 @@ async function memoSlack2(oid, plan){
         '\nPick: ' + gn.map(function(x){ var r = rowsFor(x, st); return 'SJ-' + shown(x) + (r ? ' (row ' + r + ')' : ''); }).join(' · ') + (off.length ? '\nAlready in office — don\'t pick: ' + off.map(function(x){ return 'SJ-' + shown(x); }).join(' · ') : '') + (plan.chg ? '\nChanges: ' + plan.chg : '') + dlt;
       var fids = GA.media.length ? await gaUpload(function(m){ slkMsg(m); }) : [];
       if (fids.length) text += '\n📎 ' + fids.length + ' attachment' + (fids.length === 1 ? '' : 's') + ' with this order';
-      await post('godown', f, text, fids); done.push('#godown (pick list, ' + gn.length + ' designs' + (fids.length ? ' + ' + fids.length + ' attachment' + (fids.length === 1 ? '' : 's') : '') + ')');
+      var jg = await post('godown', f, text, fids); if (oid && jg.ts) { ORD.gts = jg.ts; ordCall({ op: 'link', id: oid, gts: jg.ts }).catch(function(){}); } done.push('#godown (pick list, ' + gn.length + ' designs' + (fids.length ? ' + ' + fids.length + ' attachment' + (fids.length === 1 ? '' : 's') : '') + ')');
       var L = gdLog(); if (oid) { L[oid] = { t: Date.now(), sig: gdSig() }; ls('sj_gdlog', JSON.stringify(L)); ordCall({ op: 'tick', id: oid, step: 's1', on: true, by: me(), note: 'pick list posted to #godown' }).catch(function(){}); }
     } catch(e){ bad.push(['g', '#godown: ' + e.message]); }
   }
   if (plan.c) {
     try { var nos = Object.keys(byDesign());
       var t2 = '*ORDER MEMO* — ' + (nm || 'no name') + '\n' + date + ' · ' + nos.length + (nos.length === 1 ? ' design' : ' designs') + ' · ' + nos.reduce(function(a, x){ return a + designPcs(x); }, 0) + ' pcs' + (me() ? ' · sent by ' + me() : '') + '\n' + nos.map(function(x){ return 'SJ-' + shown(x); }).join(' · ') + dlt;
-      var jc = await post('customer', pdfFile, t2); CC.sent = { name: nm || 'no name', ts: jc.ts || '' }; done.push('#customer (full memo)'); } catch(e){ bad.push(['c', '#customer: ' + e.message]); }
+      var jc = await post('customer', pdfFile, t2); if (oid && jc.ts) ordCall({ op: 'link', id: oid, cts: jc.ts }).catch(function(){}); done.push('#customer (full memo)'); } catch(e){ bad.push(['c', '#customer: ' + e.message]); }
   }
   if (!bad.length) slkMsg('✓ Sent to ' + done.join(' and '), 'ok');
   else { slkMsg((done.length ? '✓ ' + done.join(', ') + ' · ' : '') + 'NOT sent: ' + esc(bad.map(function(b){ return b[1]; }).join(' · ')) + ' <button type="button" id="slkre">Try again</button>', 'bad');
@@ -3034,34 +3154,36 @@ $('cashbody').addEventListener('change', async function(e){
 // app, and notification as well". Per person (the name on this phone): the relay keeps what was seen; a red "New messages" box lists every
 // customer with unread lines, ⚡ Catch up walks through them, the Chats tab carries the count, a live doorbell (ntfy topic, customer key only)
 // pulls a chat the moment something is written, and 🔔 turns on real phone notifications through the free ntfy app.
-var CC = { list: null, orders: [], root: '', err: '', cur: '', msgs: [], timer: null, files: [], url: {}, busy: false, un: {}, tot: 0, live: '', es: null, cu: null, nt: false, touched: 0, lastPoll: 0, ev: false };
+var CC = { list: null, orders: [], root: '', ch: '', ord: null, ordOpen: true, err: '', cur: '', msgs: [], timer: null, files: [], url: {}, busy: false, un: {}, tot: 0, live: '', es: null, cu: null, nt: false, touched: 0, lastPoll: 0, ev: false };
 function ccWho(){ return me() || (isOwner() ? 'Abbas' : 'SJ'); }
 function ccCall(o, tries){ o.t = Date.now(); o.who = ccWho(); return relayJson('cchat', o, tries || 3); }
 function ccK(n){ return String(n || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
 // 18 Oct 2026 (Abbas: "if an order is sent to customer, right away you have to open a chat for that here, for that specific order"): a chat is
 // either ONE ORDER (its #customer post = the thread, key 'O' + ts) or a customer's general chat (key = the name). CC.root holds the order's ts.
-function ccCurK(){ return CC.root ? 'O' + CC.root : ccK(CC.cur); }
+function ccCurK(){ return CC.ch === 'godown' ? 'G' + CC.root : CC.root ? 'O' + CC.root : ccK(CC.cur); }
 function ccDay(ts){ var d = new Date(+ts * 1000); return d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; }
-function ccIsCur(it){ return CC.cur === it.name && (CC.root || '') === (it.root || ''); }
+function ccIsCur(it){ return CC.cur === it.name && (CC.root || '') === (it.root || '') && (CC.ch || '') === (it.ch || ''); }
 function ccWhen(ts){ var d = new Date(+ts * 1000), n = new Date(), h = d.getHours(), m = d.getMinutes(), hm = ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' am' : ' pm'); return d.toDateString() === n.toDateString() ? hm : d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' · ' + hm; }
 function ccLooking(){ return document.visibilityState === 'visible' && !$('cc').hidden && !!CC.cur && Date.now() - CC.touched < 60000; }
 ['touchstart', 'mousedown', 'keydown', 'scroll'].forEach(function(ev){ $('cc').addEventListener(ev, function(){ CC.touched = Date.now(); }, { passive: true, capture: true }); });
 $('ccbtn').onclick = function(){ if (!me()) askMe(); $('cc').hidden = false; ccList(); CC.touched = Date.now(); ccPoll(true); };
-$('ccback').onclick = function(){ if (CC.cu) { ccCuEnd(); return; } if (CC.cur) ccList(); else { $('cc').hidden = true; clearInterval(CC.timer); } };
+$('ccback').onclick = function(){ if (CC.cu) { ccCuEnd(); return; } if (CC.ord && CC.from === 'orders') { CC.ord = null; CC.cur = ''; $('cc').hidden = true; clearInterval(CC.timer); ordOpen(); return; } if (CC.cur) ccList(); else { $('cc').hidden = true; clearInterval(CC.timer); } };
 $('ccre').onclick = function(){ if (CC.cur) ccPull(true); else { ccLoad(true); } };
 // ---- unread, badge, doorbell
 var ccAudio = null; function ccBeep(){ try { if (!ccAudio) return; var o = ccAudio.createOscillator(), g = ccAudio.createGain(); o.type = 'sine'; o.frequency.value = 880; g.gain.value = 0.0001; o.connect(g); g.connect(ccAudio.destination); var t = ccAudio.currentTime; g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.start(t); o.stop(t + 0.4); } catch(e){} }
 document.addEventListener('touchstart', function(){ try { if (!ccAudio) ccAudio = new (window.AudioContext || window.webkitAudioContext)(); if (ccAudio.state === 'suspended') ccAudio.resume(); } catch(e){} }, { passive: true, once: false });
 document.addEventListener('click', function(){ try { if (!ccAudio) ccAudio = new (window.AudioContext || window.webkitAudioContext)(); if (ccAudio.state === 'suspended') ccAudio.resume(); } catch(e){} }, { passive: true });
 function ccApply(j){ var un = {}, tot = 0; (j.customers || []).concat(j.orders || []).forEach(function(c){ var k = c.k || ccK(c.name); if (c.un) { un[k] = { n: c.un, tx: c.tx || '', name: c.name, last: c.last, root: c.ts || '' }; tot += c.un; } });
+  Object.keys(j.gun || {}).forEach(function(k){ var u = j.gun[k], o = ordByTs(k.slice(1)); un[k] = { n: u.n, tx: u.tx || '', name: o ? (o.name || 'order') : 'order', last: u.last, root: k.slice(1), ch: 'godown', oid: o ? o.id : '' }; tot += u.n; });
+  Object.keys(un).forEach(function(k){ if (k.charAt(0) === 'O') { var o2 = (ORD.list || []).filter(function(x){ return x.cts === k.slice(1); })[0]; if (o2) un[k].oid = o2.id; } });
   if (CC.cur && un[ccCurK()] && ccLooking()) { delete un[ccCurK()]; tot = Object.keys(un).reduce(function(s, k){ return s + un[k].n; }, 0); }
   var was = CC.tot; CC.un = un; CC.tot = tot; CC.list = j.customers || []; if (j.orders) CC.orders = j.orders; CC.err = ''; CC.nt = !!j.nt; CC.ev = !!j.ev;
   if (j.live && j.live !== CC.live) { CC.live = j.live; ccLiveStart(); }
-  ccBadge(); if (tot > was && was >= 0 && CC.lastPoll) { ccBeep(); if (CC.cur && un[ccCurK()]) {} else uiToast('💬 ' + tot + ' new customer message' + (tot > 1 ? 's' : '')); }
-  CC.lastPoll = Date.now(); if (!$('cc').hidden && !CC.cur) ccDrawList(); }
+  ccBadge(); if (tot > was && was >= 0 && CC.lastPoll) { ccBeep(); if (CC.cur && un[ccCurK()]) {} else uiToast('💬 ' + tot + ' new message' + (tot > 1 ? 's' : '')); if (!$('ords').hidden) ordDraw(); }
+  CC.lastPoll = Date.now(); if (!$('cc').hidden && !CC.cur) ccDrawList(); else if (!$('cc').hidden && CC.ord && !CC.busy) { var tb = document.querySelector('.otabs2'); if (tb) ccDraw(); } }
 function ccBadge(){ var n = CC.tot; if ($('nvc')) $('nvc').textContent = n ? String(n) : ''; document.title = (n ? '(' + n + ') ' : '') + 'SJ Stock'; try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else if (navigator.clearAppBadge) navigator.clearAppBadge(); } } catch(e){} }
 async function ccPoll(force){ if (!token || !RELAY) return; if (document.hidden && !force) return; if (CC.polling) return; CC.polling = true;
-  try { var j = await ccCall({ op: $('cc').hidden ? 'ping' : 'list', fresh: force ? 1 : 0 }, 1); if (j.ok) ccApply(j); else if (!$('cc').hidden) { CC.err = j.error; if (!CC.cur) ccDrawList(); } }
+  try { var j = await ccCall({ op: $('cc').hidden ? 'ping' : 'list', fresh: force ? 1 : 0, groots: ordRoots() }, 1); if (j.ok) ccApply(j); else if (!$('cc').hidden) { CC.err = j.error; if (!CC.cur) ccDrawList(); } }
   catch(e){ if (!$('cc').hidden && !CC.list) { CC.err = e.message; if (!CC.cur) ccDrawList(); } }
   finally { CC.polling = false; } }
 setInterval(function(){ if (!document.hidden) ccPoll(false); }, 12000);
@@ -3074,7 +3196,7 @@ function ccLiveStart(){ if (!CC.live || !window.EventSource) return; try { if (C
   } catch(e){ CC.es = null; } }
 // ---- list screen
 async function ccLoad(fresh){ try { var j = await ccCall({ op: 'list', fresh: fresh ? 1 : 0 }); if (!j.ok) throw new Error(j.error); ccApply(j); } catch(e){ CC.err = e.message; } if (!CC.cur) ccDrawList(); }
-function ccList(){ CC.cur = ''; CC.root = ''; clearInterval(CC.timer); $('cct').innerHTML = 'Chats · المحادثات<small>' + (CC.es ? '⚡ live · ' : '') + 'one chat per order · Slack #customer</small>'; $('cccomp').hidden = true; $('ccpend').innerHTML = ''; $('cccu').hidden = true; ccDrawList(); ccLoad(false); }
+function ccList(){ if (!ORD.list) ordLoad().then(function(){ if (!$('cc').hidden && !CC.cur) ccDrawList(); }); CC.cur = ''; CC.root = ''; CC.ch = ''; CC.ord = null; $('cc').classList.remove('isord'); clearInterval(CC.timer); $('cct').innerHTML = 'Chats · المحادثات<small>' + (CC.es ? '⚡ live · ' : '') + 'one chat per order · Slack #customer</small>'; $('cccomp').hidden = true; $('ccpend').innerHTML = ''; $('cccu').hidden = true; ccDrawList(); ccLoad(false); }
 function ccRowSub(r){ var u = CC.un[r.k || ccK(r.name)]; if (u && u.tx) return esc(u.tx);
   var n = r.chat ? r.chat + ' message' + (r.chat > 1 ? 's' : '') : '';
   if (r.ts) return esc(r.head || 'order memo') + (n ? ' · ' + n : ' · no reply yet'); return 'general chat' + (n ? ' · ' + n : ''); }
@@ -3087,39 +3209,45 @@ function ccDrawList(){
   L.sort(function(a, b){ var ua = (CC.un[a.k || ccK(a.name)] || {}).n ? 1 : 0, ub = (CC.un[b.k || ccK(b.name)] || {}).n ? 1 : 0; return ub - ua || (+b.last || 0) - (+a.last || 0); });
   var h = '<div class="ccsrch"><input id="ccq" placeholder="Search customer · ابحث عن عميل" autocomplete="off" value="' + esc(q) + '"></div>';
   var unk = Object.keys(CC.un);
-  if (unk.length && !qq) { h += '<div class="ccnew"><div class="ccnh"><b>💬 New messages · ' + CC.tot + '</b><button type="button" id="cccatch">⚡ Catch up</button></div>' + unk.map(function(k){ var u = CC.un[k]; return '<div class="ccnr" data-n="' + esc(u.name) + '" data-r="' + esc(u.root || '') + '"><span class="n">' + (u.root ? '📄 ' : '') + esc(u.name) + '</span><span class="x">' + esc(u.tx || 'new message') + '</span><i>NEW ' + u.n + '</i></div>'; }).join('') + '</div>'; }
+  if (unk.length && !qq) { h += '<div class="ccnew"><div class="ccnh"><b>💬 New messages · ' + CC.tot + '</b><button type="button" id="cccatch">⚡ Catch up</button></div>' + unk.map(function(k){ var u = CC.un[k]; return '<div class="ccnr" data-k="' + esc(k) + '" data-n="' + esc(u.name) + '" data-r="' + esc(u.root || '') + '"><span class="n">' + (u.ch === 'godown' ? '📦 ' : u.root ? '📄 ' : '') + esc(u.name) + (u.ch === 'godown' ? ' · godown' : '') + '</span><span class="x">' + esc(u.tx || 'new message') + '</span><i>NEW ' + u.n + '</i></div>'; }).join('') + '</div>'; }
   if (qq && !custs.some(function(r){ return ccK(r.name) === qq; })) h += '<div class="ccrow" data-n="' + esc(q.trim()) + '" data-r=""><div class="av">＋</div><div class="t"><b>' + esc(q.trim()) + '</b><small>new general chat with this customer · محادثة جديدة</small></div></div>';
+  var OL = (ORD.list || []).filter(function(o){ return (o.gts || o.cts) && (!qq || ccK(o.name).indexOf(qq) >= 0); }).slice(0, 40);
+  if (OL.length) { h += '<div class="bsec">Orders · الطلبات <small>#godown + #customer chat of each order</small></div>' + OL.map(function(o){ var n = ordUn(o, 'g') + ordUn(o, 'c'), u = (o.gts && CC.un['G' + o.gts]) || (o.cts && CC.un['O' + o.cts]);
+      return '<div class="ccrow ord' + (n ? ' un' : '') + '" data-oid="' + esc(o.id) + '"><div class="av">📦</div><div class="t"><b>' + esc(o.name || 'No name') + ' <small class="od">' + ordWhen(o.created) + '</small></b><small>' + (u && u.tx ? esc(u.tx) : esc((o.items || []).map(function(x){ return 'SJ-' + x.no; }).slice(0, 4).join(' · ')) + ' · ' + (o.pcs || 0) + ' pcs') + '</small></div><span class="tm">' + (ordDone(o) ? '✓' : 'step ' + ordStage(o) + '/4') + (n ? '<i>' + n + '</i>' : '') + '</span></div>'; }).join('') + '<div class="bsec">Other chats · محادثات أخرى</div>'; }
   if (CC.err) h += '<div class="stk bad">' + esc(CC.err) + (/missing_scope/.test(CC.err) ? '<br><br><b>What to do:</b> api.slack.com/apps → SJ Memo → OAuth &amp; Permissions → Bot Token Scopes → add <b>channels:history, groups:history, files:read, users:read</b> → Reinstall to Workspace.' : /does not know/.test(CC.err) ? '<br><br><b>What to do:</b> Apps Script → Deploy → Manage deployments → ✏️ → New version → Deploy.' : '') + '</div>';
   else if (!CC.list) h += '<div class="ffempty">Loading chats… · جارٍ التحميل</div>';
   h += L.map(function(r){ var k = r.k || ccK(r.name), u = CC.un[k]; return '<div class="ccrow' + (u ? ' un' : '') + (r.ts ? ' ord' : '') + '" data-n="' + esc(r.name) + '" data-r="' + esc(r.ts || '') + '"><div class="av">' + (r.ts ? '📄' : esc(r.name.trim().charAt(0).toUpperCase())) + '</div><div class="t"><b>' + esc(r.name) + (r.ts ? ' <small class="od">order · ' + ccDay(r.ts) + '</small>' : '') + '</b><small>' + ccRowSub(r) + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
-  if (CC.list && !L.length && !qq) h += '<div class="ffempty">No chats yet — every order memo sent to #customer opens a chat here, one per order.</div>';
+  if (CC.list && !L.length && !qq && !OL.length) h += '<div class="ffempty">No chats yet — every order memo sent to #customer opens a chat here, one per order.</div>';
   var had = document.activeElement && document.activeElement.id === 'ccq'; $('ccbody').innerHTML = h;
   var qi = $('ccq'); qi.oninput = function(){ ccDrawList(); }; if (had) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
   var cb = $('cccatch'); if (cb) cb.onclick = ccCuStart;
 }
 $('ccbody').addEventListener('click', function(e){
-  var r = e.target.closest('.ccrow,.ccnr'); if (r && !CC.cur) { ccChat(r.dataset.n, r.dataset.r || ''); return; }
+  var r = e.target.closest('.ccrow,.ccnr'); if (r && !CC.cur) { if (r.dataset.oid) { CC.from = 'chats'; ordChat(r.dataset.oid); return; } var uu = CC.un[r.dataset.k || ''] || null; if (uu && uu.oid) { CC.from = 'chats'; ordChat(uu.oid, uu.ch === 'godown' ? 'g' : 'c'); return; } ccChat(r.dataset.n, r.dataset.r || ''); return; }
   var f = e.target.closest('[data-f]'); if (f) ccOpenFile(f.dataset.f, f.dataset.nm, f);
 });
 // ---- catch up: walk through every customer with new messages, one after another
-function ccCuStart(){ var ks = Object.keys(CC.un); if (!ks.length) return; CC.cu = { names: ks.map(function(k){ return { name: CC.un[k].name, root: CC.un[k].root || '' }; }), i: 0 }; ccCuShow(); }
-function ccCuShow(){ var c = CC.cu; if (!c) return; if (c.i >= c.names.length) { ccCuEnd(); return; } $('cccu').hidden = false; $('cccu').innerHTML = '<span>⚡ Catch up ' + (c.i + 1) + ' / ' + c.names.length + '</span><button type="button" id="ccnext">' + (c.i + 1 < c.names.length ? 'Next ›' : 'Finish ✓') + '</button>'; $('ccnext').onclick = function(){ c.i++; ccCuShow(); }; ccChat(c.names[c.i].name, c.names[c.i].root); }
+function ccCuStart(){ var ks = Object.keys(CC.un); if (!ks.length) return; CC.cu = { names: ks.map(function(k){ return { name: CC.un[k].name, root: CC.un[k].root || '', ch: CC.un[k].ch || '', oid: CC.un[k].oid || '' }; }), i: 0 }; ccCuShow(); }
+function ccCuShow(){ var c = CC.cu; if (!c) return; if (c.i >= c.names.length) { ccCuEnd(); return; } $('cccu').hidden = false; $('cccu').innerHTML = '<span>⚡ Catch up ' + (c.i + 1) + ' / ' + c.names.length + '</span><button type="button" id="ccnext">' + (c.i + 1 < c.names.length ? 'Next ›' : 'Finish ✓') + '</button>'; $('ccnext').onclick = function(){ c.i++; ccCuShow(); }; var ci = c.names[c.i]; if (ci.oid) ordChat(ci.oid, ci.ch === 'godown' ? 'g' : 'c', true); else ccChat(ci.name, ci.root); }
 function ccCuEnd(){ CC.cu = null; $('cccu').hidden = true; ccList(); }
 // ---- one customer
-function ccChat(name, root){ CC.cur = name; CC.root = root || ''; CC.msgs = []; CC.sig = ''; CC.drawn = false; CC.touched = Date.now(); var oo = CC.root ? (CC.orders || []).filter(function(x){ return x.ts === CC.root; })[0] : null;
-  $('cct').innerHTML = esc(name) + '<small>' + (CC.root ? '📄 order of ' + ccDay(CC.root) + ((oo && oo.head) ? ' · ' + esc(oo.head) : '') : 'general chat · #customer') + (CC.es ? ' · ⚡ live' : '') + '</small>'; $('ccbody').innerHTML = '<div class="ffempty">Loading… · جارٍ التحميل</div>'; $('cccomp').hidden = false; ccPend(); ccPull(false); clearInterval(CC.timer); CC.timer = setInterval(function(){ if (!document.hidden && CC.cur) ccPull(false); }, CC.es ? 15000 : 6000); }
-async function ccPull(fresh){ var name = CC.cur, root = CC.root, ck = ccCurK(); if (!name || CC.busy) { if (name && CC.busy) CC.again = true; return; } CC.busy = true; var look = ccLooking();
-  try { var j = await ccCall({ op: 'thread', name: name, root: root || undefined, fresh: fresh ? 1 : 0, look: look ? 1 : 0 }, 2); if (CC.cur !== name || CC.root !== root) return; if (!j.ok) throw new Error(j.error);
+function ccChat(name, root, ch){ if (!ch) { CC.ord = null; $('cc').classList.remove('isord'); } CC.ch = ch || ''; CC.cur = name; CC.root = root || ''; CC.msgs = []; CC.sig = ''; CC.drawn = false; CC.touched = Date.now(); var oo = CC.root ? (CC.orders || []).filter(function(x){ return x.ts === CC.root; })[0] : null;
+  $('cct').innerHTML = esc(name) + '<small>' + (CC.ord ? '📦 order of ' + ordWhen(CC.ord.created) + ' · ' + (CC.ch === 'godown' ? '#godown' : '#customer') : CC.root ? '📄 order of ' + ccDay(CC.root) + ((oo && oo.head) ? ' · ' + esc(oo.head) : '') : 'general chat · #customer') + (CC.es ? ' · ⚡ live' : '') + '</small>';
+  $('cccomp').hidden = CC.ord && !CC.root; ccPend(); if (CC.ord) ccDraw(); else $('ccbody').innerHTML = '<div class="ffempty">Loading… · جارٍ التحميل</div>'; if (CC.root || !CC.ord) ccPull(false); clearInterval(CC.timer); CC.timer = setInterval(function(){ if (!document.hidden && CC.cur) ccPull(false); }, CC.es ? 15000 : 6000); }
+async function ccPull(fresh){ var name = CC.cur, root = CC.root, ch = CC.ch, ck = ccCurK(); if (!name || CC.busy) { if (name && CC.busy) CC.again = true; return; } if (CC.ord && !root) return; CC.busy = true; var look = ccLooking();
+  try { var j = await ccCall({ op: 'thread', name: name, root: root || undefined, ch: ch || undefined, fresh: fresh ? 1 : 0, look: look ? 1 : 0 }, 2); if (CC.cur !== name || CC.root !== root || CC.ch !== ch) return; if (!j.ok) throw new Error(j.error);
     var sig = JSON.stringify(j.msgs.map(function(m){ return m.ts; })); if (sig !== CC.sig || fresh) { CC.sig = sig; CC.msgs = j.msgs; ccDraw(); }
     if (look && CC.un[ck]) { CC.tot -= CC.un[ck].n; if (CC.tot < 0) CC.tot = 0; delete CC.un[ck]; ccBadge(); } }
-  catch(e){ if (CC.cur === name && !CC.msgs.length) $('ccbody').innerHTML = '<div class="stk bad">' + esc(e.message) + (/missing_scope/.test(e.message) ? '<br><br>Until the Slack scopes are added, messages you send still reach #customer, but the chat cannot be read here.' : '') + '</div>'; }
+  catch(e){ if (CC.cur === name && !CC.msgs.length) $('ccbody').innerHTML = (CC.ord ? ordPanel(CC.ord) : '') + '<div class="stk bad">' + esc(e.message) + (/missing_scope/.test(e.message) ? '<br><br>Until the Slack scopes are added, messages you send still reach #customer, but the chat cannot be read here.' : '') + '</div>'; }
   finally { CC.busy = false; if (CC.again) { CC.again = false; setTimeout(function(){ ccPull(true); }, 300); } } }
 function ccDraw(){ var b = $('ccbody'), atEnd = b.scrollHeight - b.scrollTop - b.clientHeight < 80, my = ccK(ccWho()), lastDay = '';
-  var h = CC.msgs.length ? '' : '<div class="ffempty">No memo or message for this customer yet. Write the first line below — it starts this customer\'s chat in Slack #customer.</div>';
+  var h = CC.ord ? ordPanel(CC.ord) : '';
+  if (CC.ord && !CC.root) h += '<div class="onochat">' + (CC.ch === 'godown' ? 'This order has no #godown post yet' : 'This order was not sent to #customer yet') + '.<button type="button" class="gold" data-mkroot="' + (CC.ch === 'godown' ? 'g' : 'c') + '">Start the ' + (CC.ch === 'godown' ? '#godown' : '#customer') + ' chat for this order</button></div>';
+  else if (!CC.msgs.length) h += '<div class="ffempty">' + (CC.ord ? 'Loading… · جارٍ التحميل' : 'No memo or message for this customer yet. Write the first line below — it starts this customer\'s chat in Slack #customer.') + '</div>';
   h += CC.msgs.map(function(m){ var mine = !m.memo && my && ccK(m.who) === my, d = new Date(+m.ts * 1000), day = d.toDateString(), dh = '';
     if (day !== lastDay) { lastDay = day; var n = new Date(); dh = '<div class="ccday"><span>' + (day === n.toDateString() ? 'Today' : d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + (d.getFullYear() !== n.getFullYear() ? ' ' + d.getFullYear() : '')) + '</span></div>'; }
     var fs = (m.files || []).map(function(f){ return /^image\//.test(f.type) ? '<img class="ccimg" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" alt="">' : '<span class="ccf" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" data-t="' + esc(f.type) + '">' + (/pdf/.test(f.type + f.name) ? '📄 ' + esc(f.name.slice(0, 40)) : /^audio/.test(f.type) || /^voice-/i.test(f.name) ? '▶ voice note · tap to play' : /^video/.test(f.type) ? '🎬 video · tap to play' : '📎 ' + esc(f.name.slice(0, 40))) + '</span>'; }).join('');
-    return dh + '<div class="ccm' + (m.memo ? ' memo' : '') + (mine ? ' me' : '') + (m.pend ? ' pend' : '') + '"><span class="w">' + (m.memo ? '📄 ORDER MEMO' : esc(m.who)) + ' <em>' + (m.pend ? '🕓 sending…' : ccWhen(m.ts)) + '</em></span>' + esc(fs && /^\s*📎\s*$/.test(m.text || '') ? '' : m.text || '') + fs + '</div>'; }).join('');
+    return dh + '<div class="ccm' + (m.memo ? ' memo' : '') + (mine ? ' me' : '') + (m.pend ? ' pend' : '') + '"><span class="w">' + (m.memo ? (CC.ch === 'godown' ? '📦 GODOWN PICK LIST' : '📄 ORDER MEMO') : esc(m.who)) + ' <em>' + (m.pend ? '🕓 sending…' : ccWhen(m.ts)) + '</em></span>' + esc(fs && /^\s*📎\s*$/.test(m.text || '') ? '' : m.text || '') + fs + '</div>'; }).join('');
   b.innerHTML = h; b.querySelectorAll('img.ccimg').forEach(ccThumb); b.querySelectorAll('.ccf').forEach(function(c){ var r = CC.url[c.dataset.f]; if (r && /^(audio|video)\//.test(r.type)) ccPlayer(c, r, c.dataset.nm, false); }); if (atEnd || !CC.drawn) b.scrollTop = b.scrollHeight; CC.drawn = true; }
 async function ccGet(id, thumb){ var k = id + (thumb ? 't' : ''); if (CC.url[k]) return CC.url[k];
   var j = await ccCall({ op: 'file', id: id, thumb: thumb ? 1 : 0 }, 2); if (!j.ok) throw Object.assign(new Error(j.error), { link: j.link });
@@ -3159,12 +3287,12 @@ $('cctxt').addEventListener('input', function(){ this.style.height = 'auto'; thi
 // ---- OUTBOX: Send never waits. The message is kept on this phone and posted in the background; a lost answer is retried with the same
 // once-only id, so it can never post twice. Files are not kept across a reload (too big for localStorage) - only the text lines are.
 var CCO = { q: [], busy: false }; try { CCO.q = JSON.parse(ls('sj_cc_outbox') || '[]'); } catch(e){ CCO.q = []; }
-function ccOSave(){ try { ls('sj_cc_outbox', JSON.stringify(CCO.q.filter(function(x){ return !x.files; }).map(function(x){ return { name: x.name, root: x.root || '', text: x.text, who: x.who, rid: x.rid, ts: x.ts, tries: 0 }; }))); } catch(e){} }
+function ccOSave(){ try { ls('sj_cc_outbox', JSON.stringify(CCO.q.filter(function(x){ return !x.files; }).map(function(x){ return { name: x.name, root: x.root || '', ch: x.ch || '', text: x.text, who: x.who, rid: x.rid, ts: x.ts, tries: 0 }; }))); } catch(e){} }
 async function ccORun(){ if (CCO.busy || !CCO.q.length || !navigator.onLine) return; CCO.busy = true; var it = CCO.q[0];
   try { var j;
     if (it.files) { var fs = []; for (var i = 0; i < it.files.length; i++) fs.push({ name: it.files[i].name || 'photo.jpg', b64: await new Promise(function(ok, no){ var r = new FileReader(); r.onload = function(){ ok(String(r.result).split(',')[1] || ''); }; r.onerror = no; r.readAsDataURL(it.files[i]); }) });
-      j = await ccCall({ op: 'up', name: it.name, root: it.root || undefined, text: it.text, who: it.who, files: fs, rid: it.rid }, 2); }
-    else j = await ccCall({ op: 'post', name: it.name, root: it.root || undefined, text: it.text, who: it.who, rid: it.rid }, 2);
+      j = await ccCall({ op: 'up', name: it.name, root: it.root || undefined, ch: it.ch || undefined, text: it.text, who: it.who, files: fs, rid: it.rid }, 2); }
+    else j = await ccCall({ op: 'post', name: it.name, root: it.root || undefined, ch: it.ch || undefined, text: it.text, who: it.who, rid: it.rid }, 2);
     if (!j.ok) throw new Error(j.error);
     CCO.q.shift(); ccOSave(); it.done = true; if (ccIsCur(it)) { CC.msgs.forEach(function(m){ if (m.rid === it.rid) { m.pend = false; m.sent = true; } }); ccDraw(); ccPull(true); } CC.list = null;
   } catch(e){ it.tries = (it.tries || 0) + 1; it.err = e.message; var hard = /empty|no customer|too big|wrong password|no file/.test(e.message);
@@ -3172,8 +3300,8 @@ async function ccORun(){ if (CCO.busy || !CCO.q.length || !navigator.onLine) ret
     else if (ccIsCur(it)) { CC.msgs.forEach(function(m){ if (m.rid === it.rid) m.err = e.message; }); ccDraw(); } }
   finally { CCO.busy = false; if (CCO.q.length) setTimeout(ccORun, Math.min(60000, 3000 * (CCO.q[0].tries || 0) + 1500)); } }
 setInterval(ccORun, 10000); window.addEventListener('online', ccORun);
-$('ccsend').onclick = function(){ var name = CC.cur, txt = $('cctxt').value.trim(), files = CC.files.slice(); if (!name || (!txt && !files.length)) return;
-  var who = ccWho(), rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), it = { name: name, root: CC.root || '', text: txt, who: who, rid: rid, ts: String(Date.now() / 1000), files: files.length ? files : null, tries: 0 };
+$('ccsend').onclick = function(){ var name = CC.cur, txt = $('cctxt').value.trim(), files = CC.files.slice(); if (!name || (!txt && !files.length)) return; if (CC.ord && !CC.root) { alert('Start the chat for this order first (button above).'); return; }
+  var who = ccWho(), rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), it = { name: name, root: CC.root || '', ch: CC.ch || '', text: txt, who: who, rid: rid, ts: String(Date.now() / 1000), files: files.length ? files : null, tries: 0 };
   CC.msgs.push({ ts: it.ts, who: who, rid: rid, text: txt + (files.length ? (txt ? '\n' : '') + files.map(function(f){ return '📎 ' + f.name; }).join(' · ') : ''), pend: true }); ccDraw(); $('ccbody').scrollTop = 1e9; $('cctxt').value = ''; $('cctxt').style.height = ''; CC.files = []; ccPend();
   CCO.q.push(it); ccOSave(); ccORun(); };
 // ---- 🔔 phone notifications through the free ntfy app (same way as the factory app): a secret topic made on this phone, kept by the relay for this person
@@ -3190,19 +3318,143 @@ function ccBellOpen(){ if (!me()) askMe(); $('cc').hidden = false; var tp = ls('
   $('belltest').onclick = async function(){ $('bellst').textContent = 'Sending…'; try { var j = await ccCall({ op: 'ntfytest' }); $('bellst').textContent = j.ok ? '✓ Test sent — check ntfy.' : 'Not sent: ' + (j.error || 'ntfy did not answer'); } catch(e){ $('bellst').textContent = 'Not sent: ' + e.message; } };
   $('belloff').onclick = async function(){ try { var j = await ccCall({ op: 'ntfyoff' }); CC.nt = false; $('bellst').textContent = j.ok ? 'Off.' : 'Not changed: ' + j.error; } catch(e){ $('bellst').textContent = e.message; } }; }
 // ---- deep link from a notification: memo.html#chat=NAME
+(function(){ var mo = location.hash.match(/^#ord=([^&]*)(?:&c=([gc]))?/); if (mo) { var oid = decodeURIComponent(mo[1] || ''), w = mo[2] || 'g'; history.replaceState(null, '', location.pathname + location.search); setTimeout(function(){ if (token && oid) ordChat(oid, w); }, 1200); } })();
 (function(){ var m = location.hash.match(/^#chat=([^&]*)(?:&o=([\d.]+))?/); if (m) { var nm = decodeURIComponent(m[1] || ''), ro = m[2] || ''; history.replaceState(null, '', location.pathname + location.search); setTimeout(function(){ if (!token) return; $('cc').hidden = false; if (nm || ro) { ccList(); ccChat(nm || 'order', ro); } else ccList(); }, 900); } })();
 // after "Send to CUSTOMER group": the order's chat opens at once (18 Oct 2026)
+
+// ===== ORDER SCREEN (Abbas, 20 Oct 2026: "when an order is made to send to godown, bring the #godown chat for it directly ... when I open the order
+// and press on it, it should open the chat (don't remove the box and tick option) ... give an option of that order to open there for me to make a
+// bill ... keep the complete order visible as well ... two options of the chats in that order: one #godown, one #customers ... photos, videos,
+// copy/paste and voice notes ... within the order I want to continue making the bill as well, so everything happens there").
+// One screen per order: the order (every design, office and godown, delivery, picture), the 4 steps with their ticks, Make / Continue bill, and
+// two chats — 📦 #godown (thread under its pick-list post) and 👤 #customer (thread under its memo post) — with mic, camera, files and paste.
+function ordByTs(ts){ return (ORD.list || []).filter(function(o){ return o.gts === ts; })[0] || null; }
+function ordRoots(){ return (ORD.list || []).filter(function(o){ return o.gts && !ordDone(o); }).map(function(o){ return o.gts; }).slice(0, 40); }
+function ordUn(o, w){ var u = w === 'g' ? (o.gts ? CC.un['G' + o.gts] : null) : (o.cts ? CC.un['O' + o.cts] : null); return u ? u.n : 0; }
+async function ordChat(oid, which, keepCu){
+  var o = (ORD.list || []).filter(function(x){ return x.id === oid; })[0];
+  if (!o) { await ordLoad(); o = (ORD.list || []).filter(function(x){ return x.id === oid; })[0]; }
+  if (!o) { o = { id: oid, name: $('name').value.trim(), created: Date.now(), items: [], steps: {}, gts: ORD.gts || '' }; }
+  if (!me()) askMe();
+  var w = which === 'c' ? 'c' : which === 'g' ? 'g' : (o.gts ? 'g' : o.cts ? 'c' : 'g');
+  if (!keepCu) { navCloseAll(); CC.from = !$('ords').hidden ? 'orders' : CC.from; }
+  $('ords').hidden = true; $('cc').hidden = false; $('cc').classList.add('isord'); CC.ord = o; CC.touched = Date.now();
+  ccChat(o.name || 'order', w === 'g' ? (o.gts || '') : (o.cts || ''), w === 'g' ? 'godown' : 'customer');
+  setTimeout(function(){ ccPoll(true); }, 1200); navSync(); }
+function ordPanel(o){ var w = CC.ch === 'godown' ? 'g' : 'c', ug = ordUn(o, 'g'), uc = ordUn(o, 'c');
+  var h = '<div class="otabs2"><button type="button" data-och="g" class="' + (w === 'g' ? 'on' : '') + '">📦 #godown' + (ug ? ' <i>' + ug + '</i>' : '') + '<small>' + (o.gts ? 'goods from the godown' : 'no chat yet') + '</small></button><button type="button" data-och="c" class="' + (w === 'c' ? 'on' : '') + '">👤 #customer' + (uc ? ' <i>' + uc + '</i>' : '') + '<small>' + (o.cts ? 'talk about this order' : 'not sent yet') + '</small></button></div>';
+  var stg = ordStage(o), dn = ordDone(o), pvs = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o.id) + '.jpg?v=' + (o.upd || o.created || 0));
+  h += '<div class="opanel"><button type="button" class="ophd" data-ofold="1"><span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span><span class="onx">' + (dn ? '✓ Complete' : 'Next: ' + esc(ordNext(o))) + '</span><em>' + (CC.ordOpen ? '▴ hide' : '▾ order & steps') + '</em></button>';
+  if (CC.ordOpen) {
+    h += '<div class="obills">' + (o.bill ? '<button type="button" class="gold" data-obill="cont">🧾 Continue bill ' + esc(o.bill) + '<small>متابعة الفاتورة</small></button>' : '<button type="button" class="gold" data-obill="new">🧾 Make bill from this order<small>عمل فاتورة</small></button>') + '<button type="button" data-obill="memo">📄 Open as memo<small>edit the order</small></button></div>';
+    OSTEPS.forEach(function(s, i){ h += '<div class="ostep"><u>' + (i + 1) + '</u>' + ordRow(o, s[0], s[1], s[2]) + '</div>'; });
+    h += '<div class="ostep"><u>4</u><div class="o4"><div class="o4h">Sent to customer <small class="ar">أرسل للعميل</small></div>' + OSUB.map(function(s){ return ordRow(o, s[0], s[1], s[2], true); }).join('') + '</div></div>';
+    h += '<details class="ofull"' + (CC.fullOpen ? ' open' : '') + '><summary>Complete order · ' + (o.items || []).length + ' designs · ' + (o.pcs || 0) + ' pcs ' + ordSplit(o) + '</summary><img class="opvbig" alt="" src="' + pvs + '" onerror="this.remove()">' +
+      '<div class="oitems">' + (o.items || []).map(function(x){ return '<div><b>SJ-' + esc(x.no) + '</b> · ' + x.pcs + ' pcs' + (x.c ? ' <small>(' + esc(x.c) + ')</small>' : '') + (x.row ? ' · <b class="orow">ROW ' + esc(String(x.row).toUpperCase()) + '</b>' : '') + (x.loc ? ' <span class="oloc ' + x.loc + '">' + ({ g: 'GODOWN', o: 'IN OFFICE', m: 'MIXED' })[x.loc] + '</span>' : '') + '</div>'; }).join('') +
+      (o.dl ? '<div class="odl">' + esc(o.dl) + '</div>' : '') + '<small>Order made by ' + esc(o.by || 'someone') + ' · ' + ordWhen(o.created) + '</small></div></details>';
+    if (isBoss()) h += '<button type="button" class="odel" data-odel="' + esc(o.id) + '">Delete order</button>';
+  }
+  return h + '</div>'; }
+async function ordTick(c){
+  var o = (ORD.list || []).filter(function(x){ return x.id === c.dataset.oid; })[0] || (CC.ord && CC.ord.id === c.dataset.oid ? CC.ord : null); if (!o) return;
+  var k = c.dataset.ok, was = (o.steps || {})[k], name = askMe();
+  if (was && !confirm('Untick "' + c.querySelector('b').textContent + '"? · إلغاء؟')) return;
+  o.steps = o.steps || {}; o.steps[k] = was ? null : { by: name || 'this phone', t: Date.now() }; ordRedraw();
+  try { await ordCall({ op: 'tick', id: o.id, step: k, on: !was, by: name }); if (CC.ord) CC.ord = (ORD.list || []).filter(function(x){ return x.id === o.id; })[0] || CC.ord; } catch(e){ o.steps[k] = was; ORD.err = e.message; alert(e.message); }
+  ordRedraw(); }
+function ordRedraw(){ if (!$('ords').hidden) ordDraw(); if (!$('cc').hidden && CC.ord) ccDraw(); }
+async function ordBill(o, how){
+  if (how === 'cont' && o.bill) { ls('sj_oid', o.id); navCloseAll(); $('done').hidden = false; await bsOpen(o.bill); if (B.inv) { B.inv.oid = o.id; B.inv.linked = o.bill; } B.back = o.id; return; }
+  var sn = null; try { var j = await bsCall({ op: 'get', ref: 'ORD-' + o.id }); if (j.ok) sn = JSON.parse(j.data || '{}'); } catch(e){}
+  if (!sn) {                                         // an order from before 20 Oct: rebuild the colours from its lines ("C1 8, C2 4")
+    sn = { state: {}, prices: {}, name: o.name || '' };
+    (o.items || []).forEach(function(x){ var d = designs.filter(function(z){ return z.no === x.no || z.base === x.no || shown(z.no) === x.no; })[0]; if (!d) return;
+      var re = /C(\d+)\s+(\d+)/g, m; while ((m = re.exec(x.c || ''))) sn.state[d.no + ':' + m[1]] = { pcs: +m[2], sets: 0, all: false };
+      if (x.c === 'sample') sn.state[d.no + ':1'] = { pcs: 1, sets: 0, all: false }; }); }
+  if (how === 'memo') { if (Object.keys(byDesign()).length && !confirm('Replace what is picked now with this order?')) return; snapApply(sn); ls('sj_oid', o.id); navCloseAll(); $('ok').click(); uiToast('Order opened as memo — change it and send it again'); return; }
+  if (Object.keys(byDesign()).length && !confirm('Replace what is picked now with this order to make its bill?')) return;
+  snapApply(sn); ls('sj_oid', o.id);
+  var gone = (o.items || []).filter(function(x){ return !designs.some(function(z){ return z.no === x.no || z.base === x.no || shown(z.no) === x.no; }); });
+  B.inv = freshDoc('inv'); B.inv.name = sn.name || o.name || ''; B.inv.oid = o.id; B.back = o.id;
+  if (gone.length) B.inv.man = gone.map(function(x){ return { d: 'SJ-' + x.no + (x.c ? ' · ' + x.c : ''), q: String(x.pcs || ''), r: '' }; });
+  custNames(); navCloseAll(); $('done').hidden = false; window.scrollTo(0, 0); setMode('inv');
+  uiToast('🧾 Bill for ' + (o.name || 'this order') + ' — it is saved by itself; Continue bill from the order any time');
+  if (gone.length) setTimeout(function(){ alert(gone.map(function(x){ return 'SJ-' + x.no; }).join(', ') + ' — no longer in READY. Put on the bill as typed lines (add the price).'); }, 500); }
+async function ordMkRoot(w){ var o = CC.ord; if (!o) return;
+  var txt = (w === 'g' ? '*GODOWN PICK LIST*' : '*ORDER MEMO*') + ' — ' + (o.name || 'no name') + '\n' + ordWhen(o.created) + ' · ' + (o.items || []).length + ' designs · ' + (o.pcs || 0) + ' pcs\n' + (o.items || []).map(function(x){ return 'SJ-' + x.no + (x.row ? ' (row ' + x.row + ')' : ''); }).join(' · ') + (o.dl ? '\n' + o.dl : '');
+  try { var j = await ccCall({ op: 'mkroot', ch: w === 'g' ? 'godown' : 'customer', text: txt, rid: 'mk' + o.id + w }, 2); if (!j.ok) throw new Error(j.error);
+    var lk = { op: 'link', id: o.id }; lk[w === 'g' ? 'gts' : 'cts'] = j.ts; await ordCall(lk); o[w === 'g' ? 'gts' : 'cts'] = j.ts; ordChat(o.id, w, true); }
+  catch(e){ alert('Could not start the chat: ' + (/does not know|bad request/.test(e.message) ? 'the relay needs its new version' : e.message)); } }
+$('ccbody').addEventListener('click', function(e){
+  var t = e.target.closest('[data-och]'); if (t && CC.ord) { ordChat(CC.ord.id, t.dataset.och, true); return; }
+  var f = e.target.closest('[data-ofold]'); if (f) { CC.ordOpen = !CC.ordOpen; ccDraw(); return; }
+  var k = e.target.closest('[data-ok]'); if (k && CC.ord) { ordTick(k); return; }
+  var bl = e.target.closest('[data-obill]'); if (bl && CC.ord) { ordBill(CC.ord, bl.dataset.obill); return; }
+  var dl = e.target.closest('[data-odel]'); if (dl && CC.ord) { if (!confirm('Delete this order from the list? (Trello, bills and Slack are not touched)')) return; ordCall({ op: 'del', id: CC.ord.id, by: me() }).then(function(){ CC.ord = null; ccList(); }).catch(function(x){ alert(x.message); }); return; }
+  var mk = e.target.closest('[data-mkroot]'); if (mk) { mk.disabled = true; mk.textContent = 'Starting…'; ordMkRoot(mk.dataset.mkroot); return; }
+  var sm = e.target.closest('details.ofull summary'); if (sm) CC.fullOpen = !sm.parentNode.open; });
+
 function ccOpenOrder(o){ if (!o) return; navCloseAll(); $('cc').hidden = false; CC.touched = Date.now();
   if (o.ts) { if (!(CC.orders || []).some(function(x){ return x.ts === o.ts; })) CC.orders = [{ k: 'O' + o.ts, ts: o.ts, name: o.name, head: 'just sent', chat: 0, last: o.ts }].concat(CC.orders || []); ccChat(o.name, o.ts); uiToast('💬 This order\'s chat is open — anything you write here goes under the memo in #customer'); }
   else { ccList(); uiToast('Memo sent — its chat is in the list (tap it)'); }
   setTimeout(function(){ ccPoll(true); }, 1500); navSync(); }
 window.__sj = { ccOpenOrder: ccOpenOrder, B: function(){ return B; } };   // hooks for the headless test (t_shell.js)
 
+
+// ===== DRAFTS (Abbas, 20 Oct 2026: "when I am in the process of making a bill or order memo, give a small option beside OK that says MEMO, with two
+// options to save in drafts — one for bill, the other for order; later I can go back to it, edit it and do the process"). A draft = what is picked
+// (designs, colours, pieces, prices, where it is, delivery, customer name) kept in the cloud (Saved-bills store, type od = order / bd = bill), so any
+// phone can open it. Opening an ORDER draft brings it back on the Stock list and opens the memo; a BILL draft opens the invoice. When that order goes
+// to a group, or that bill is Included, the draft is removed by itself. Saving again while a draft is open updates the same draft.
+var DR = { cur: null, list: null };
+try { DR.cur = JSON.parse(ls('sj_draft') || 'null'); } catch(e){ DR.cur = null; }
+function drSnap(type){ var st = {}; Object.keys(state).forEach(function(k){ st[k] = state[k]; }); var pr = {}; Object.keys(byDesign()).forEach(function(no){ if (prices[no] > 0) pr[no] = prices[no]; });
+  return { v: 1, k: type, state: st, prices: pr, loc: LOC, dl: dlv(), name: $('name').value.trim(), q: $('q').value, inv: type === 'bd' ? B.inv : null }; }
+function drWhat(){ var bd = byDesign(), nos = Object.keys(bd); return nos.length + (nos.length === 1 ? ' design · ' : ' designs · ') + nos.reduce(function(a, no){ return a + designPcs(no); }, 0) + ' pcs'; }
+async function drSave(type){ var nos = Object.keys(byDesign()); if (!nos.length) { alert('Pick some colours first · اختر الألوان أولاً'); return; }
+  var same = DR.cur && DR.cur.type === type, ref = same ? DR.cur.ref : (type === 'od' ? 'OD-' : 'BD-') + Date.now().toString(36).toUpperCase();
+  var sn = drSnap(type), el = $('drst'); if (el) el.textContent = 'Saving…';
+  try { var j = await bsCall({ op: 'put', ref: ref, type: type, name: sn.name || 'no name', status: 'draft', total: drWhat(), date: today(), data: JSON.stringify(sn), force: 1 }); if (!j.ok) throw new Error(j.error);
+    DR.cur = { ref: ref, type: type, t: Date.now() }; ls('sj_draft', JSON.stringify(DR.cur)); uiToast('📝 Saved as ' + (type === 'od' ? 'ORDER' : 'BILL') + ' draft ' + ref); drList(); }
+  catch(e){ if (el) el.textContent = 'Not saved: ' + (/bad request|does not know/.test(e.message) ? 'the relay needs its new version' : e.message); } }
+async function drList(){ var el = $('drbody'); if (!el) return; drDraw();
+  try { var j = await bsCall({ op: 'list' }); if (!j.ok) throw new Error(j.error); DR.list = (j.bills || []).filter(function(b){ return b.type === 'od' || b.type === 'bd'; }); DR.err = ''; } catch(e){ DR.err = e.message; } drDraw(); }
+function drDraw(){ var el = $('drbody'); if (!el) return; var has = Object.keys(byDesign()).length, h = '';
+  h += '<p class="drnow">' + (has ? 'Now picked: <b>' + esc(drWhat()) + '</b>' + ($('name').value.trim() ? ' · ' + esc($('name').value.trim()) : '') : 'Nothing picked right now — open a draft below.') + (DR.cur ? '<br><small>Open draft: <b>' + esc(DR.cur.ref) + '</b> — saving again updates it.</small>' : '') + '</p>';
+  h += '<div class="drbtns"><button type="button" class="gold" data-drs="od"' + (has ? '' : ' disabled') + '>📦 Save as ORDER draft<small>حفظ كمسودة طلب</small></button><button type="button" class="gold" data-drs="bd"' + (has ? '' : ' disabled') + '>🧾 Save as BILL draft<small>حفظ كمسودة فاتورة</small></button></div><div id="drst" class="sub"></div>';
+  h += '<div class="bsec">Saved drafts · المسودات المحفوظة</div>';
+  if (DR.err) h += '<div class="stk bad">' + esc(DR.err) + (/bad request|does not know/.test(DR.err) ? '<br>The relay needs its new version (Deploy → New version).' : '') + '</div>';
+  else if (!DR.list) h += '<div class="ffempty">Loading…</div>';
+  else if (!DR.list.length) h += '<div class="ffempty">No drafts yet.</div>';
+  else h += DR.list.map(function(b){ return '<div class="bsrow" data-dro="' + esc(b.ref) + '"><div class="t"><b>' + (b.type === 'od' ? '📦 ORDER' : '🧾 BILL') + ' · ' + esc(b.name || 'no name') + '</b><small>' + esc(b.total || '') + ' · ' + esc(b.ref) + '</small></div><span class="tm">' + esc(bsWhen(b.updated)) + (b.by ? '<br>' + esc(b.by) : '') + '</span><button type="button" class="bsdel" data-drd="' + esc(b.ref) + '" title="delete draft">🗑</button></div>'; }).join('');
+  el.innerHTML = h; }
+$('drbtn').onclick = function(){ navCloseAll(); $('drs').hidden = false; drList(); };
+$('drx').onclick = function(){ $('drs').hidden = true; };
+$('drs').addEventListener('click', async function(e){ if (e.target === $('drs')) { $('drs').hidden = true; return; }
+  var sv = e.target.closest('[data-drs]'); if (sv) { drSave(sv.dataset.drs); return; }
+  var dd = e.target.closest('[data-drd]'); if (dd) { if (!confirm('Delete this draft? · حذف المسودة؟')) return; try { await bsCall({ op: 'del', ref: dd.dataset.drd }); } catch(x){} if (DR.cur && DR.cur.ref === dd.dataset.drd) { DR.cur = null; ls('sj_draft', null); } drList(); return; }
+  var op = e.target.closest('[data-dro]'); if (op) drOpen(op.dataset.dro); });
+// put a saved selection (draft / order) back: colours, pieces, prices, where it is, delivery, name
+function snapApply(sn){
+  state = {}; Object.keys(sn.state || {}).forEach(function(k){ state[k] = sn.state[k]; }); Object.keys(sn.prices || {}).forEach(function(no){ prices[no] = sn.prices[no]; });
+  LOC = sn.loc || {}; if (sn.name != null) $('name').value = sn.name; if (sn.dl) Object.keys(sn.dl).forEach(function(x){ if ($('dl_' + x)) $('dl_' + x).value = sn.dl[x] || ''; });
+  document.querySelectorAll('#feed .row[data-k]').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); if (d && !state[r.dataset.k]) paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); });
+  reapply(); refresh(); try { saveWork(); } catch(e){} }
+async function drOpen(ref){ var el = $('drst'); if (el) el.textContent = 'Opening ' + ref + '…';
+  if (Object.keys(byDesign()).length && !(DR.cur && DR.cur.ref === ref) && !confirm('Replace what is picked now with this draft? (save it as a draft first if you need it)')) { if (el) el.textContent = ''; return; }
+  try { var j = await bsCall({ op: 'get', ref: ref }); if (!j.ok) throw new Error(j.error); var sn = JSON.parse(j.data || '{}');
+    snapApply(sn); DR.cur = { ref: ref, type: sn.k, t: Date.now() }; ls('sj_draft', JSON.stringify(DR.cur)); ls('sj_oid', null); $('drs').hidden = true;
+    if (sn.k === 'bd') { B.inv = sn.inv && sn.inv.ref ? sn.inv : freshDoc('inv'); if (!B.inv.name) B.inv.name = sn.name || ''; custNames(); $('done').hidden = false; window.scrollTo(0, 0); setMode('inv'); }
+    else { $('ok').click(); }
+    uiToast('📝 Draft ' + ref + ' opened — change anything, then carry on'); }
+  catch(e){ if (el) el.textContent = 'Could not open: ' + e.message; } }
+function drDone(type){ if (!DR.cur || DR.cur.type !== type) return; var ref = DR.cur.ref; DR.cur = null; ls('sj_draft', null); bsCall({ op: 'del', ref: ref }).catch(function(){}); }
+
 // ===== NAVIGATION SHELL (17 Oct 2026, Abbas: "change the complete UI of the app, make it more smooth and usable"). One bottom bar like Slack /
 // WhatsApp: Stock · Memo · Chats · Orders · More. Every old button still exists (hidden) and is pressed by the bar, so nothing underneath changed.
 function uiToast(msg){ var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(uiToast.t); uiToast.t = setTimeout(function(){ t.hidden = true; }, 2600); }
 function navMemo(nd, nc){ if ($('nvm')) $('nvm').textContent = nd ? String(nd) : ''; $('bar').classList.toggle('empty', !nc); }
-function navCloseAll(){ ['done', 'cc', 'ords', 'more', 'mysheet', 'ff', 'dor', 'cash', 'cb', 'sv'].forEach(function(id){ var e = $(id); if (e && !e.hidden) e.hidden = true; }); clearInterval(CC.timer); if (CC.cu) { CC.cu = null; $('cccu').hidden = true; } }
+function navCloseAll(){ ['done', 'cc', 'ords', 'drs', 'more', 'mysheet', 'ff', 'dor', 'cash', 'cb', 'sv'].forEach(function(id){ var e = $(id); if (e && !e.hidden) e.hidden = true; }); clearInterval(CC.timer); if (CC.cu) { CC.cu = null; $('cccu').hidden = true; } }
 function navSync(){ var t = !$('cc').hidden ? 'chats' : !$('ords').hidden ? 'orders' : !$('done').hidden ? 'memo' : !$('more').hidden ? 'more' : 'stock'; document.querySelectorAll('#nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.nv === t); }); }
 function navGo(t){
   if (t === 'stock') { navCloseAll(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -3226,7 +3478,8 @@ $('timoopen').onclick = openTimo;
 window.addEventListener('message', function(e){ if (e.data && e.data.timo === 'close') $('timo').hidden = true; });
 function moreDraw(){ var o = isOwner(), bo = isBoss(), nm = me();
   var it = [
-    { id: 'bills', t: 'Bills · فواتير', s: 'invoice · receipt voucher · payment voucher', i: '🧾', on: true },
+    { id: 'bills', t: 'Bills · فواتير', s: 'invoice · receipt voucher · payment voucher · return', i: '🧾', on: true },
+    { id: 'drbtn', t: 'Drafts · مسودات', s: 'orders and bills saved half-way · open, change, carry on', i: '📝', on: true },
     { id: 'catbtn', t: 'Catalogue · كتالوج', s: 'design numbers → customer link with photos and videos', i: '📘', on: o },
     { id: 'cbopen', t: 'Customer balances · أرصدة العملاء', s: 'opening balance once · every sale and receipt continues from it', i: '👤', on: o },
     { id: 'svopen', t: 'Small vendors · موردين صغار', s: 'office expenses · opening balances · kept in the cloud', i: '🏪', on: o },
