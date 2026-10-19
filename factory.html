@@ -37,6 +37,7 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 .cardrow{display:flex;gap:12px;background:var(--card);border-radius:var(--r);padding:10px;margin-bottom:10px;align-items:center;box-shadow:var(--sh);content-visibility:auto;contain-intrinsic-size:112px;cursor:pointer}.cardrow:active{background:#fbf8f2}
 .ph{width:88px;height:88px;border-radius:14px;background:#efe8db center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
 .cardrow .t{flex:1;min-width:0}.cardrow .no{font-weight:800;font-size:19px;letter-spacing:-.01em}.cardrow .sub{color:var(--mute);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.age{display:inline-block;margin-top:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.01em;white-space:nowrap}.age.g{background:#e3f4e8;color:#1b6b35}.age.a{background:#fff1d6;color:#8a5a00}.age.r{background:#c62828;color:#fff}#cnm .age{display:block;width:max-content;margin-top:3px;font-size:11.5px}
 .cardrow .lst{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.05em;margin-top:3px}
 .empty{color:var(--mute);text-align:center;padding:40px 10px}
 .lbs{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.lb{font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px;background:#ece4d6;color:#2b2118}
@@ -188,7 +189,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-18g';
+var VER = '2026-10-19a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -411,7 +412,7 @@ $('cupin').onclick = function(){ if (open) setLater(open, !(D.later || {})[open.
 $('inbox').onclick = function(e){ if (e.target.closest('#bcatch')) { catchUp(); return; } var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
 var DRAWN = '';
 function draw(force){
-  var sig = cur + '|' + $('q').value + '|' + D.cards.map(function(c){ return c.id + c.l + c.pos + c.img + c.name + JSON.stringify(c.lb || '') + (D.th[c.id] ? D.th[c.id].n : 0) + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|' + D.w;
+  var sig = cur + '|' + Math.floor(Date.now() / 86400000) + '|' + $('q').value + '|' + D.cards.map(function(c){ return c.id + c.l + c.pos + c.img + c.name + JSON.stringify(c.lb || '') + (D.th[c.id] ? D.th[c.id].n : 0) + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|' + D.w;
   sig += '|dm' + unread(DMC) + ((D.dm || {}).name || '') + ((D.later || {}).dm ? 'L' : '') + '|lais' + unread(LAISC) + ((D.lais || {}).name || '') + ((D.later || {}).lais ? 'L' : '');
   if (!force && sig === DRAWN) { inbox(); chatsDraw(); return; } DRAWN = sig;   // the Chats tab has its own check (newest line / time per chat)
   dmRow(); laisRow();
@@ -425,8 +426,16 @@ function draw(force){
   inbox(); laterBox(); retBox(); chatsDraw(); retDraw(); tabBadges();
 }
 function cardTitle(c){ var p = parse(c.name); return c.dm ? c.title : p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card'; }
+// 19 Oct 2026 (Abbas): "when a new card is added, show on the card how many days have passed since I put it in - so my employees have a little urgency".
+// The day count comes from the Trello card id itself (its first 8 hex digits = the moment the card was made), so it needs no extra Trello call.
+// Green under 7 days, amber 7-13, red 14+. Not shown on the finished / stock lists (READY, READY 2, FINISH, SAMPLE DONE, FINISH SAMPLES, RETURNS BACK).
+var AGEOFF = /^(READY|READY 2|FINISH|SAMPLE DONE|FINISH SAMPLES|RETURNS BACK)$/;
+function bnum(n){ return String(n).replace(/\d/g, function(d){ return '০১২৩৪৫৬৭৮৯'.charAt(+d); }); }
+function ageDays(c){ var t = parseInt(String((c && c.id) || '').slice(0, 8), 16) * 1000; if (!t) return -1; var d = Math.floor((Date.now() - t) / 86400000); return d >= 0 && d < 1500 ? d : -1; }
+function ageHtml(c){ if (!c || c.dm || c.lo) return ''; var d = ageDays(c); if (d < 0 || AGEOFF.test(lname(c.l))) return '';
+  return '<span class="age ' + (d >= 14 ? 'r' : d >= 7 ? 'a' : 'g') + '">⏱ ' + (d === 0 ? 'Today · আজ' : d + (d === 1 ? ' day' : ' days') + ' · ' + bnum(d) + ' দিন') + '</span>'; }
 function rowHtml(c, showStage){ var u = unread(c);
-  return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + cardTitle(c) + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + (showStage ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : (D.later || {})[c.id] ? '<span class="pinb">📌 LATER</span>' : '') + '</div>'; }
+  return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + cardTitle(c) + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + ageHtml(c) + (showStage ? '<div class="lst">' + esc(lname(c.l)) + '</div>' : '') + '</div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : (D.later || {})[c.id] ? '<span class="pinb">📌 LATER</span>' : '') + '</div>'; }
 // ===== 17 Oct 2026 REDESIGN (Abbas: "redesign the app to make the UI smoother … change the design completely for efficiency"):
 // bottom tabs CARDS · CHATS · ＋ · RETURNS · MORE; Chats = every conversation like WhatsApp (newest / unread first); Returns = its own tab;
 // the card screen keeps Done + Problem in front and folds Move / Trello / Add photo / Edit / Copy into one ⋯ menu.
@@ -515,7 +524,7 @@ function paintCard(){
   else if (c.dm) { $('cnm').innerHTML = '💬 Direct chat<small>সরাসরি কথা · Abbas ↔ factory</small>'; $('cstage').textContent = '#' + ((D.dm || {}).name || ''); $('cstage').onclick = function(){ dmPick(); }; $('cstage').style.cursor = 'pointer'; $('tcount').textContent = ''; $('thh').textContent = 'DIRECT CHAT · সরাসরি কথা'; return; }
   $('cstage').onclick = null; $('cstage').style.cursor = ''; $('thh').textContent = 'CARD CHAT · কার্ড চ্যাট';
   var p = parse(c.name), ln = lname(c.l), nx = NEXT[ln];
-  $('cnm').innerHTML = (p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '<small>' + [p.pcs && p.pcs + ' pcs', p.col && p.col + ' colours', p.size].filter(Boolean).map(esc).join(' · ') + '</small>';
+  $('cnm').innerHTML = (p.no ? 'SJ-' + esc(p.no) : isRet(c) ? '↩️ Return' : 'Card') + '<small>' + [p.pcs && p.pcs + ' pcs', p.col && p.col + ' colours', p.size].filter(Boolean).map(esc).join(' · ') + '</small>' + ageHtml(c);
   $('cstage').textContent = ln;
   var big = $('cimg'); big.setAttribute('data-img', c.img || ''); big.style.backgroundImage = ''; if (c.img && IMGFAIL[c.img]) { delete IMGFAIL[c.img]; delete IMGWANT[c.img]; } photo(c, big);
   $('cttl').innerHTML = esc(c.name) + labels(c);
