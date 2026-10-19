@@ -1,0 +1,30 @@
+{
+ "id": "rmvfm9br69l03",
+ "op": "retbill",
+ "ref": "RET-0004",
+ "ok": true,
+ "cards": [
+  {
+   "card": "69188ee7b6e570f5ee38f74c",
+   "no": "98737",
+   "before": "SJ-98737 , (9)…(0/4/5) ()",
+   "after": "SJ-98737 , (13)…(4/4/5) ()",
+   "left": 13,
+   "lines": [
+    "colour 1: 0 → 4 (+4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69660f7499e71bf862ccbf5e",
+   "no": "15907",
+   "before": "Sj = **(15907)**(44) pcs….color = (4) (8/8/0/16/12/0)",
+   "after": "Sj = **(15907)**(47) pcs….color = (4) (8/8/3/16/12/0)",
+   "left": 47,
+   "lines": [
+    "colour 3: 0 → 3 (+3)"
+   ],
+   "moved": ""
+  }
+ ]
+}
