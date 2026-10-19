@@ -35,7 +35,7 @@ function doPost(e) {
     // 15 Oct 2026: Slack's Event Subscriptions point here. The event is only a nudge ("something was written in a channel"): it makes every
     // phone's next poll re-read Slack at once. Nothing in it is trusted or stored, so a fake one can only cause an extra re-read.
     if (b.type === 'url_verification' && b.challenge) return ContentService.createTextOutput(String(b.challenge)).setMimeType(ContentService.MimeType.TEXT);
-    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') facNudge(P, facCardOf(P, evc)); } catch (x) {} try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
+    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') facNudge(P, facCardOf(P, evc)); } catch (x) {} try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { var evm = b.event || {}; if (evm.type === 'message' && evm.channel === CC_CH) { var cEE = CacheService.getScriptCache(); cEE.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEE, 'CC_HIST'); var rk = ''; try { var hh = ccHist(P.getProperty('SLACK_BOT_TOKEN'), true).filter(function (m) { return m.ts === (evm.thread_ts || evm.ts); })[0]; rk = hh ? ccKey(ccName(hh.text)) : ''; } catch (x) {} ccNudge(P, rk); if (evm.thread_ts) ccNudge(P, 'O' + evm.thread_ts); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel === GD_CH) { var cEG = CacheService.getScriptCache(); cEG.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEG, 'GD_HIST'); ccNudge(P, 'G' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
     if (b.job === 'fastchk') {                                // 16 Oct 2026: the FAST LANE worker (Cloudflare) asks "is this phone key right?" - key = sha256("sjfast|" + password)
@@ -48,7 +48,7 @@ function doPost(e) {
       var fpw = P.getProperty('FACTORY_PASSWORD'), sg = String(b.sig), okf = [fpw, pw].some(function (k) { return k && hex(Utilities.computeHmacSha256Signature(b.req, k, Utilities.Charset.UTF_8)) === sg; });
       return okf ? fac(b.req, P) : out({ ok: false, error: 'wrong password' });
     }
-    if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'slackpdf2' || b.job === 'dorder' || b.job === 'cash' || b.job === 'cchat' ? 25000000 : b.job === 'timo' ? 2000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
+    if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'slackpdf2' || b.job === 'dorder' || b.job === 'cash' || b.job === 'cchat' || b.job === 'bills' ? 25000000 : b.job === 'timo' ? 2000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
     if (b.job === 'live') return live(b.req, P);
     if (b.job === 'orders') return orders(b.req, P);
@@ -59,6 +59,7 @@ function doPost(e) {
     if (b.job === 'cust') return cust(b.req, P);
     if (b.job === 'cash') return cashPost(b.req, P);
     if (b.job === 'cchat') return cchat(b.req, P);
+    if (b.job === 'bills') return bills(b.req, P);           // 18 Oct 2026: saved bills (drafts a phone can reopen and change)
     if (b.job === 'timo') return timo(b.req, P);         // 19 Oct 2026: Timo planner (owner phones) - one saved copy, synced between his phone and iPad
     var wf = JOBS[b.job];
     if (!wf) return out({ ok: false, error: 'bad request' });
@@ -1038,6 +1039,10 @@ function orders(reqText, P) {
         if (ORD_STEPS.indexOf(req.step) < 0) return out({ ok: false, error: 'bad step' });
         o.steps[req.step] = req.on ? { by: by, t: now, n: String(req.note || '').slice(0, 60) } : null; o.upd = now;
         o.done = ORD_STEPS.every(function (k) { return o.steps[k]; }) ? (o.done || now) : 0;
+      } else if (op === 'link') {                                 // 19 Oct 2026: the order's #godown / #customer posts (its two chats) and its invoice
+        if (!o) return out({ ok: false, error: 'that order is not on the list any more' });
+        ['gts', 'cts'].forEach(function (f) { if (req[f]) o[f] = String(req[f]).replace(/[^\d.]/g, '').slice(0, 20); });
+        if (req.bill) o.bill = String(req.bill).slice(0, 30); o.upd = now;
       } else if (op === 'del') {
         if (!o) return out({ ok: true, orders: ordList(P) });
         o.del = now; o.delby = by; o.upd = now;
@@ -1129,7 +1134,15 @@ function slackPdf(reqText, P, v2) {
   var c = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: H, muteHttpExceptions: true,
     payload: { files: JSON.stringify([{ id: a.file_id, title: name.replace(/\.pdf$/i, '') }].concat((v2 && Array.isArray(req.fids) ? req.fids : []).filter(function (f) { return /^F[A-Z0-9]{6,20}$/.test(String(f)); }).slice(0, 25).map(function (f) { return { id: String(f) }; }))), channels: chans.join(','), initial_comment: String(req.text || '').slice(0, 3000) } }).getContentText());
   if (!c.ok) return out({ ok: false, error: 'Slack said ' + c.error + (c.error === 'not_in_channel' || c.error === 'channel_not_found' ? ' (invite @SJ Memo to #godown and #customer)' : '') });
-  return out({ ok: true, file: a.file_id, to: v2 ? req.to : 'both' });
+  // 18 Oct 2026 (Abbas: "if an order is sent to customer, right away you have to open a chat for that ... for that specific order"):
+  // the #customer post IS the order's chat (its Slack thread). Its ts goes back to the phone so the app can open that chat at once.
+  var ts = '';
+  try { var sh = ((c.files || [])[0] || {}).shares || {}; [sh.public, sh.private].forEach(function (g) { if (g) Object.keys(g).forEach(function (ch) { (g[ch] || []).forEach(function (x) { if (x.ts) ts = x.ts; }); }); }); } catch (e) {}
+  if (v2) {
+    if (!ts) { try { Utilities.sleep(700); var want = String(req.text || '').split('\n')[0].slice(0, 60), hh = slackApi(tok, 'conversations.history', { channel: chans[0], limit: 6 }, true); ((hh.ok && hh.messages) || []).forEach(function (m) { if (!ts && want && String(m.text || '').indexOf(want) === 0) ts = m.ts; }); } catch (e) {} }
+    try { bigDrop(CacheService.getScriptCache(), to === 'godown' ? 'GD_HIST' : 'CC_HIST'); } catch (e) {}
+  }
+  return out({ ok: true, file: a.file_id, to: v2 ? req.to : 'both', ts: ts });
 }
 // DESIGN ORDERS FROM THE APP (Abbas, 11 Oct 2026: "the #order-2 process ... I want this process to be built in the app ... just for me").
 // Replaces posting in #order-2 and waiting for the 22:30 laptop run. From the memo (owner phone only) the relay:
@@ -1207,7 +1220,12 @@ function doClearField(cardId, fid, tok) {
 // the memo sends belongs to that customer, and each customer gets ONE chat thread under a "👤 *CUSTOMER* · NAME" message, made on the first
 // line written. Needs on the SJ Memo Slack app: channels:history (groups:history if #customer is private), files:read, users:read.
 var CC_CH = MEMO_PDF_CHANNELS[1];
-function ccName(t) { var s = String(t || ''), m = s.match(/^\*ORDER MEMO\*[^\n]*?[—-]\s*([^\n]+)/) || s.match(/^👤\s*\*CUSTOMER\*\s*·\s*([^\n]+)/); if (!m) return ''; var n = m[1].replace(/[*_]/g, '').trim(); return /^no name$/i.test(n) ? '' : n.slice(0, 60); }
+// 17 Oct 2026 23:50: Slack hands the 👤 back as the shortcode :bust_in_silhouette:, so every root was invisible to the relay - the chat read nothing and each post made a NEW root (three roots for Matiullah naif). Both spellings are accepted now.
+function ccIsRoot(t) { return /^\s*(?:👤|:bust_in_silhouette:)/.test(String(t || '')); }
+function ccIsMemo(t) { return /^\*ORDER MEMO[^*\n]*\*/.test(String(t || '')); }                       // 18 Oct 2026: every ORDER MEMO post is a chat of its own (key 'O' + ts)
+function ccRootKey(m) { return ccIsMemo(m.text) ? 'O' + m.ts : ccKey(ccName(m.text)); }
+function ccMemoHead(t) { var L = String(t || '').split('\n').slice(1).map(function (x) { return x.replace(/[*_]/g, '').trim(); }).filter(Boolean); return L.slice(0, 2).join(' · ').slice(0, 160); }
+function ccName(t) { var s = String(t || ''), m = s.match(/^\*ORDER MEMO[^*\n]*\*[^\n]*?[—-]\s*([^\n]+)/) || s.match(/^\s*(?:👤|:bust_in_silhouette:)\s*\*CUSTOMER\*\s*·\s*([^\n]+)/); if (!m) return ''; var n = m[1].replace(/[*_]/g, '').trim(); return /^no name$/i.test(n) ? '' : n.slice(0, 60); }
 function ccKey(n) { return String(n || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
 function ccErr(e) { return 'Slack said ' + e + (e === 'missing_scope' ? ' — the SJ Memo Slack app needs channels:history (or groups:history), files:read and users:read: api.slack.com/apps → SJ Memo → OAuth & Permissions → Bot Token Scopes → add → Reinstall' : e === 'not_in_channel' ? ' — invite @SJ Memo to #customer' : ''); }
 function ccHist(tok, fresh) {                                   // newest 400 messages of #customer, kept 20 s for every phone
@@ -1231,44 +1249,185 @@ function ccDiag() {                                            // read-only chec
   var r = UrlFetchApp.fetch('https://slack.com/api/conversations.history?channel=' + CC_CH + '&limit=3', { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true }), h = r.getHeaders(), j = JSON.parse(r.getContentText());
   L.push('scopes: ' + (h['x-oauth-scopes'] || h['X-OAuth-Scopes'] || '?')); L.push('#customer history ok=' + j.ok + (j.ok ? ' · ' + (j.messages || []).length + ' msgs' : ' err=' + j.error + ' needed=' + (j.needed || '')));
   (j.messages || []).forEach(function (m) { L.push('  ' + String(m.text || '').slice(0, 60).replace(/\n/g, ' ') + ((m.files || []).length ? ' [+' + m.files.length + ' file]' : '')); });
+  var P = PropertiesService.getScriptProperties(); L.push('live topic set: ' + !!P.getProperty('CC_LIVE') + ' · notify people: ' + Object.keys(JSON.parse(P.getProperty('CCNTFY') || '{}')).join(',') + ' · seen records: ' + Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('CCSEEN_') === 0; }).length);
   Logger.log(L.join('\n')); return L.join('\n');
+}
+// ---- 17 Oct 2026 (Abbas: the customer chat must have "a catch-up process as well, just like Slack, just like we did on the other app, and
+// notification as well"). Per PERSON (the name typed in the memo): CCSEEN_<NAME> = {customer key: newest ts seen}. A message counts as new when
+// it is newer than that mark, newer than the person's first use, and written by someone else. The relay keeps one private doorbell topic
+// (CC_LIVE) and rings it with the customer key only (no text) on every post and on every Slack event in #customer, so every open memo pulls at
+// once. Phone notifications go through ntfy (CCNTFY = {NAME: topic}), sent on Slack events and, as a fallback, from any phone's list call once a minute.
+function ccWhoKey(w) { return String(w || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 40) || 'SJ'; }
+function ccSeenGet(P, who) { var k = 'CCSEEN_' + ccWhoKey(who), s = {}; try { s = JSON.parse(P.getProperty(k) || '{}'); } catch (e) { s = {}; } if (!s._t0) { s._t0 = String(Date.now() / 1000 - 30 * 86400); try { P.setProperty(k, JSON.stringify(s)); } catch (e) {} } return s; }
+function ccSeenPut(P, who, s) { try { var ks = Object.keys(s).filter(function (k) { return k !== '_t0'; }); while (JSON.stringify(s).length > 7500 && ks.length) { var old = ks.sort(function (a, b) { return +s[a] - +s[b]; }).shift(); delete s[old]; } P.setProperty('CCSEEN_' + ccWhoKey(who), JSON.stringify(s)); } catch (e) {} }
+function ccMine(w, who) { var a = String(w.who || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim(), b = String(who || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim(); if (!a || !b) return false; if (a === b) return true; var a1 = a.split(' ')[0], b1 = b.split(' ')[0]; return a1.length >= 3 && b1.length >= 3 && (a1.indexOf(b1) === 0 || b1.indexOf(a1) === 0); }
+function ccLine(w, m) { var t = String(w.text || '').replace(/\s+/g, ' ').trim(); if (!t || t === '📎') t = (m.files || []).map(function (f) { return /^audio/.test(f.type) || /^voice-/i.test(f.name) ? '🎤 voice note' : /^image/.test(f.type) ? '📷 photo' : /^video/.test(f.type) ? '🎬 video' : '📎 ' + f.name; }).join(' · ') || t; return (w.who ? w.who + ': ' : '') + t.slice(0, 120); }
+function ccReplies(tok, root) {                                 // one thread's replies, cached by its newest reply
+  var c = CacheService.getScriptCache(), k = 'CC_TH_' + root.ts + '_' + (root.lr || '0'), h = bigGet(c, k); if (h) return JSON.parse(h);
+  var rp = slackApi(tok, 'conversations.replies', { channel: CC_CH, ts: root.ts, limit: 200 }, true); if (!rp.ok) throw new Error(ccErr(rp.error));
+  var L = (rp.messages || []).filter(function (x) { return x.ts !== root.ts; }).map(function (x) { var w = ccWho(tok, { text: x.text, user: x.user, bot: !!x.bot_id }); return { ts: x.ts, who: w.who, app: w.app, text: w.text, files: (x.files || []).map(function (f) { return { id: f.id, name: f.name || '', type: f.mimetype || '', size: f.size || 0 }; }) }; });
+  try { bigPut(c, k, JSON.stringify(L), 1800); } catch (e) {}
+  return L;
+}
+function ccUnread(P, tok, hist, who, budget) {                  // {key: {n, last, tx, name}} for this person - at most `budget` thread reads
+  var seen = ccSeenGet(P, who), t0 = +seen._t0 || 0, out = {}, reads = 0;
+  hist.filter(function (m) { return (ccIsRoot(m.text) || ccIsMemo(m.text)) && m.rc; }).sort(function (a, b) { return +(b.lr || b.ts) - +(a.lr || a.ts); }).forEach(function (m) {
+    var nm = ccName(m.text), k = ccRootKey(m); if (!k || k === 'O') return; var mark = Math.max(+(seen[k] || 0), t0); if (+(m.lr || 0) <= mark) return;
+    var c = CacheService.getScriptCache(), ck = 'CC_UN_' + ccWhoKey(who) + '_' + k.replace(/[^A-Z0-9]/g, '').slice(0, 30) + '_' + m.lr + '_' + String(mark).slice(0, 15), cached = c.get(ck);
+    if (cached) { var o = JSON.parse(cached); if (o.n) out[k] = o; return; }
+    if (reads >= budget) return; reads++;
+    var L; try { L = ccReplies(tok, m); } catch (e) { return; }
+    var n = 0, last = '', tx = '';
+    L.forEach(function (x) { if (+x.ts <= mark) return; if (ccMine(x, who)) return; n++; if (+x.ts > +last) { last = x.ts; tx = ccLine(x, x); } });
+    var res = { n: n, last: last, tx: tx, name: nm || 'no name', root: ccIsMemo(m.text) ? m.ts : '' }; try { c.put(ck, JSON.stringify(res), 600); } catch (e) {} if (n) out[k] = res;
+  });
+  return out;
+}
+function ccLive(P) { var t = P.getProperty('CC_LIVE'); if (!t) { t = 'sjcust-' + Utilities.getUuid().replace(/-/g, '').slice(0, 22); P.setProperty('CC_LIVE', t); } return t; }
+function ccNudge(P, key) { try { UrlFetchApp.fetch('https://ntfy.sh/' + ccLive(P), { method: 'post', payload: 'k=' + encodeURIComponent(String(key || '').slice(0, 60)), headers: { 'Cache': 'no', 'Firebase': 'no' }, muteHttpExceptions: true }); } catch (e) {} }
+// ---- 19 Oct 2026 (Abbas: "when an order is made to send to godown, bring the #godown chat for it directly ... two options of the chats in that
+// order, one #godown, one #customers"). Each ORDER has two chats: the thread under its pick-list post in #godown (key 'G' + ts) and the thread under
+// its memo post in #customer (key 'O' + ts). The order (ORD_<id>) remembers both ts (gts / cts, op "link").
+var GD_CH = MEMO_PDF_CHANNELS[0];
+function gdHist(tok, fresh) {                                    // newest 200 top-level posts of #godown (rc / lr only), kept 20 s for every phone
+  var c = CacheService.getScriptCache(), h = fresh ? null : bigGet(c, 'GD_HIST'); if (h) return JSON.parse(h);
+  var j = slackApi(tok, 'conversations.history', { channel: GD_CH, limit: 200 }, true); if (!j.ok) throw new Error(ccErr(j.error).replace('#customer', '#godown'));
+  var all = (j.messages || []).map(function (m) { return { ts: m.ts, rc: m.reply_count || 0, lr: m.latest_reply || '' }; });
+  try { bigPut(c, 'GD_HIST', JSON.stringify(all), 20); } catch (e) {} return all;
+}
+function chReplies(tok, ch, root, lr) {                          // one thread of #godown or #customer: root first, then the replies (cached by its newest reply)
+  var c = CacheService.getScriptCache(), k = 'CH_TH_' + ch + '_' + root + '_' + (lr || '0'), h = lr ? bigGet(c, k) : null; if (h) return JSON.parse(h);
+  var rp = slackApi(tok, 'conversations.replies', { channel: ch, ts: root, limit: 200 }, true); if (!rp.ok) throw new Error(ccErr(rp.error));
+  var L = (rp.messages || []).map(function (x) { var w = ccWho(tok, { text: x.text, user: x.user, bot: !!x.bot_id }); return { ts: x.ts, who: w.who, app: w.app, text: w.text, root: x.ts === root, files: (x.files || []).map(function (f) { return { id: f.id, name: f.name || '', type: f.mimetype || '', size: f.size || 0 }; }) }; });
+  if (lr) { try { bigPut(c, k, JSON.stringify(L), 1800); } catch (e) {} } return L;
+}
+function gdUnread(P, tok, who, roots, budget, fresh) {           // {'G'+ts: {n, last, tx}} for this person over the given #godown roots
+  var out = {}; roots = (roots || []).map(function (x) { return String(x).replace(/[^\d.]/g, ''); }).filter(String).slice(0, 40); if (!roots.length) return out;
+  var hist; try { hist = gdHist(tok, fresh); } catch (e) { return out; }
+  var seen = ccSeenGet(P, who), t0 = +seen._t0 || 0, reads = 0, c = CacheService.getScriptCache();
+  hist.filter(function (m) { return m.rc && roots.indexOf(m.ts) >= 0; }).forEach(function (m) {
+    var k = 'G' + m.ts, mark = Math.max(+(seen[k] || 0), t0); if (+(m.lr || 0) <= mark) return;
+    var ck = 'GD_UN_' + ccWhoKey(who) + '_' + m.ts + '_' + m.lr + '_' + String(mark).slice(0, 15), cached = c.get(ck); if (cached) { var o = JSON.parse(cached); if (o.n) out[k] = o; return; }
+    if (reads >= budget) return; reads++;
+    var L; try { L = chReplies(tok, GD_CH, m.ts, m.lr); } catch (e) { return; }
+    var n = 0, last = '', tx = ''; L.forEach(function (x) { if (x.root || +x.ts <= mark || ccMine(x, who)) return; n++; if (+x.ts > +last) { last = x.ts; tx = ccLine(x, x); } });
+    var res = { n: n, last: last, tx: tx }; try { c.put(ck, JSON.stringify(res), 600); } catch (e) {} if (n) out[k] = res; });
+  return out;
+}
+function gdOrders(P) {                                           // open orders that have a #godown chat: {ts: {oid, name}}
+  var all = P.getProperties(), r = {}; Object.keys(all).forEach(function (k) { if (k.indexOf('ORD_') !== 0) return; try { var o = JSON.parse(all[k]); if (o.gts && !o.del && !o.done) r[o.gts] = { oid: o.id, name: o.name || 'order' }; } catch (e) {} }); return r;
+}
+function ccNotifyScan(P, why) {                                  // phone notifications (ntfy app) for everyone who turned them on
+  var map = {}; try { map = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} var names = Object.keys(map); if (!names.length) return 0;
+  var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return 0;
+  var lock = LockService.getScriptLock(); if (!lock.tryLock(200)) return 0; var sent = 0;
+  try {
+    var hist; try { hist = ccHist(tok, why === 'event'); } catch (e) { return 0; }
+    names.forEach(function (nm) {
+      var un = ccUnread(P, tok, hist, nm, 6), nk = 'CCNOTE_' + ccWhoKey(nm), noted = {}; try { noted = JSON.parse(P.getProperty(nk) || '{}'); } catch (e) {} var changed = false;
+      Object.keys(un).forEach(function (k) { var u = un[k]; if (!u.n || !u.last || +(noted[k] || 0) >= +u.last) return;
+        if (facNtfy(map[nm], { title: (u.root ? '📄 ' : '👤 ') + (u.name || k) + (u.n > 1 ? ' · ' + u.n + ' new' : ''), msg: u.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#chat=' + encodeURIComponent(u.name || k) + (u.root ? '&o=' + u.root : '') })) { sent++; noted[k] = u.last; changed = true; } });
+      try { var go = gdOrders(P), gu = gdUnread(P, tok, nm, Object.keys(go), 4, why === 'event');
+        Object.keys(gu).forEach(function (k) { var u = gu[k], o2 = go[k.slice(1)] || {}; if (!u.n || !u.last || +(noted[k] || 0) >= +u.last) return;
+          if (facNtfy(map[nm], { title: '📦 ' + (o2.name || 'order') + ' · godown' + (u.n > 1 ? ' · ' + u.n + ' new' : ''), msg: u.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#ord=' + encodeURIComponent(o2.oid || '') + '&c=g' })) { sent++; noted[k] = u.last; changed = true; } }); } catch (e) {}
+      if (changed) { var ks = Object.keys(noted); while (JSON.stringify(noted).length > 7500 && ks.length) delete noted[ks.shift()]; try { P.setProperty(nk, JSON.stringify(noted)); } catch (e) {} }
+    });
+  } finally { lock.releaseLock(); }
+  return sent;
+}
+function ccRoot(P, tok, nm, k2, cR) {                            // the customer's 👤 thread root: remembered (CC_ROOT_), else found in #customer, else made. Works with chat:write alone once remembered.
+  var pk = 'CC_ROOT_' + k2.replace(/[^A-Z0-9]/g, '_').slice(0, 60), r = P.getProperty(pk); if (r) return r;
+  var lock = LockService.getScriptLock(); lock.waitLock(15000); var rootTs = '';
+  try { r = P.getProperty(pk); if (r) return r;
+    try { rootTs = (ccHist(tok, true).filter(function (m) { return ccIsRoot(m.text) && ccKey(ccName(m.text)) === k2; }).sort(function (a, b) { return +a.ts - +b.ts; })[0] || {}).ts || ''; } catch (e) { if (!/missing_scope/.test(String(e.message || e))) throw e; }   // no history scope yet: a new root is made (the chat still goes through)
+    if (!rootTs) { var r0 = slackApi(tok, 'chat.postMessage', { channel: CC_CH, text: '👤 *CUSTOMER* · ' + nm + '\n_customer chat · SJ memo app_' }); if (!r0.ok) throw new Error(ccErr(r0.error)); rootTs = r0.ts; bigDrop(cR, 'CC_HIST'); }
+    P.setProperty(pk, rootTs);
+  } finally { lock.releaseLock(); }
+  return rootTs;
 }
 function cchat(reqText, P) {
   var req = JSON.parse(reqText);
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
   var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return out({ ok: false, error: 'the relay has no SLACK_BOT_TOKEN yet' });
-  var cR = CacheService.getScriptCache(), rid = String(req.rid || '').replace(/[^\w-]/g, '').slice(0, 40);
+  var cR = CacheService.getScriptCache(), rid = String(req.rid || '').replace(/[^\w-]/g, '').slice(0, 40), who = String(req.who || '').replace(/[*\n]/g, '').trim().slice(0, 40) || 'SJ';
   if (rid) { var prev = cR.get('CCR_' + rid); if (prev) return ContentService.createTextOutput(prev).setMimeType(ContentService.MimeType.JSON); }
   try {
-    if (req.op === 'list') {
-      var by = {};
-      ccHist(tok, !!req.fresh).forEach(function (m) { var n = ccName(m.text); if (!n) return; var k = ccKey(n), e = by[k] || (by[k] = { name: n, last: '0', memos: 0, chat: 0, root: '' });
-        if (/^\*ORDER MEMO\*/.test(m.text)) e.memos++; else { e.root = m.ts; e.chat += m.rc; }
-        var l = m.lr && +m.lr > +m.ts ? m.lr : m.ts; if (+l > +e.last) e.last = l; });
-      return out({ ok: true, customers: Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return +b.last - +a.last; }) });
+    if (req.op === 'list' || req.op === 'ping') {
+      var by = {}, ords = [], hist = ccHist(tok, !!req.fresh);
+      hist.forEach(function (m) { var n = ccName(m.text), memo = ccIsMemo(m.text), l = m.lr && +m.lr > +m.ts ? m.lr : m.ts;
+        if (memo) ords.push({ k: 'O' + m.ts, ts: m.ts, name: n || 'no name', head: ccMemoHead(m.text), chat: m.rc, last: l, un: 0, tx: '' });
+        if (!n) return; var k = ccKey(n), e = by[k] || (by[k] = { k: k, name: n, last: '0', memos: 0, chat: 0, root: '', un: 0, tx: '' });
+        if (memo) e.memos++; else { e.root = m.ts; e.chat += m.rc; }
+        if (+l > +e.last) e.last = l; });
+      var un = ccUnread(P, tok, hist, who, req.op === 'ping' ? 4 : 8), ntf = {}; try { ntf = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {}
+      Object.keys(un).forEach(function (k) { if (by[k]) { by[k].un = un[k].n; by[k].tx = un[k].tx; } ords.forEach(function (o) { if (o.k === k) { o.un = un[k].n; o.tx = un[k].tx; } }); });
+      ords.sort(function (a, b) { return +b.last - +a.last; });
+      if (!cR.get('CC_NSCAN')) { cR.put('CC_NSCAN', '1', 60); try { ccNotifyScan(P, 'poll'); } catch (e) {} }   // fallback when Slack's push is not pointed at the relay
+      var gun = {}; try { gun = gdUnread(P, tok, who, req.groots || Object.keys(gdOrders(P)), req.op === 'ping' ? 4 : 8, !!req.fresh); } catch (e) {}
+      var ev = cR.get('CC_EV_AT'); return out({ ok: true, gun: gun, customers: Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return +b.last - +a.last; }), orders: ords.slice(0, 150), live: ccLive(P), nt: !!ntf[ccWhoKey(who)], ev: !!ev });
+    }
+    if (req.ch === 'godown' && (req.op === 'thread' || req.op === 'seen' || req.op === 'post' || req.op === 'up')) {
+      var gr = String(req.root || '').replace(/[^\d.]/g, ''); if (!gr) return out({ ok: false, error: 'no #godown post for this order' });
+      if (req.op === 'thread') {
+        var gh = []; try { gh = gdHist(tok, !!req.fresh); } catch (e) {} var gm = gh.filter(function (m) { return m.ts === gr; })[0];
+        var GL = chReplies(tok, GD_CH, gr, gm && gm.lr && !req.fresh ? gm.lr : ''), gms = GL.map(function (x) { if (x.root) { x.memo = true; x.who = 'Godown pick list'; x.text = String(x.text || '').replace(/^\*GODOWN PICK LIST\*[^\n]*\n?/, ''); } return x; });
+        if (req.look && gms.length) { var sg = ccSeenGet(P, who), tg = gms[gms.length - 1].ts; if (+tg > +(sg['G' + gr] || 0)) { sg['G' + gr] = tg; ccSeenPut(P, who, sg); } }
+        return out({ ok: true, root: gr, msgs: gms });
+      }
+      if (req.op === 'seen') { var sg2 = ccSeenGet(P, who), tg2 = String(req.ts || (Date.now() / 1000)); if (+tg2 > +(sg2['G' + gr] || 0)) { sg2['G' + gr] = tg2; ccSeenPut(P, who, sg2); } return out({ ok: true }); }
+      var gtx = String(req.text || '').slice(0, 3000), gres;
+      if (req.op === 'post') { if (!gtx.trim()) return out({ ok: false, error: 'empty' }); var gp = slackApi(tok, 'chat.postMessage', { channel: GD_CH, thread_ts: gr, text: '*' + who + ':* ' + gtx }); if (!gp.ok) return out({ ok: false, error: ccErr(gp.error) }); gres = { ok: true, ts: gp.ts, root: gr }; }
+      else {
+        var gfs = Array.isArray(req.files) ? req.files.slice(0, 10) : [], gids = [], gtot = 0;
+        for (var gi = 0; gi < gfs.length; gi++) { var gb = Utilities.base64Decode(String(gfs[gi].b64 || '')); gtot += gb.length; if (gb.length > 18000000 || gtot > 40000000) return out({ ok: false, error: 'files too big (18 MB each, 40 MB together)' }); gids.push(slackUp(tok, String(gfs[gi].name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80), gb)); }
+        if (!gids.length) return out({ ok: false, error: 'no file' });
+        var gj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+          payload: { files: JSON.stringify(gids.map(function (f) { return { id: f }; })), channel_id: GD_CH, thread_ts: gr, initial_comment: '*' + who + ':* ' + (gtx || '📎') } }).getContentText());
+        if (!gj.ok) return out({ ok: false, error: ccErr(gj.error) }); gres = { ok: true, root: gr, files: gids.length };
+      }
+      bigDrop(cR, 'GD_HIST');
+      var sg3 = ccSeenGet(P, who), nowG = String(Date.now() / 1000 + 2); if (+nowG > +(sg3['G' + gr] || 0)) { sg3['G' + gr] = nowG; ccSeenPut(P, who, sg3); }
+      ccNudge(P, 'G' + gr);
+      var grt = JSON.stringify(gres); if (rid) cR.put('CCR_' + rid, grt, 21600); return ContentService.createTextOutput(grt).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (req.op === 'mkroot') {                                    // an order sent before 19 Oct has no post in that channel yet: one short post starts its chat
+      var mch = req.ch === 'godown' ? GD_CH : CC_CH, mtx = String(req.text || '').slice(0, 1500); if (!mtx.trim()) return out({ ok: false, error: 'empty' });
+      var mp = slackApi(tok, 'chat.postMessage', { channel: mch, text: mtx }); if (!mp.ok) return out({ ok: false, error: ccErr(mp.error) });
+      bigDrop(cR, req.ch === 'godown' ? 'GD_HIST' : 'CC_HIST'); var mrt = JSON.stringify({ ok: true, ts: mp.ts }); if (rid) cR.put('CCR_' + rid, mrt, 21600); return ContentService.createTextOutput(mrt).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (req.op === 'thread' && req.root) {
+      var rts = String(req.root).replace(/[^\d.]/g, ''), rm = ccHist(tok, !!req.fresh).filter(function (m) { return m.ts === rts; })[0];
+      if (!rm) { try { var one = slackApi(tok, 'conversations.replies', { channel: CC_CH, ts: rts, limit: 1 }, true); var x0 = one.ok && (one.messages || [])[0]; if (x0) rm = { ts: x0.ts, text: String(x0.text || '').slice(0, 1500), rc: x0.reply_count || 0, lr: x0.latest_reply || '', files: (x0.files || []).map(function (f) { return { id: f.id, name: f.name || '', type: f.mimetype || '', size: f.size || 0 }; }) }; } catch (e) {} }
+      if (!rm) return out({ ok: false, error: 'this order post is not in #customer any more' });
+      var ms2 = [{ ts: rm.ts, who: 'Order memo', memo: true, text: rm.text.replace(/^\*ORDER MEMO[^*\n]*\*[^\n]*\n?/, ''), files: rm.files }];
+      if (rm.rc) ccReplies(tok, rm).forEach(function (x) { ms2.push(x); });
+      if (req.look) { var so = ccSeenGet(P, who), tp2 = ms2[ms2.length - 1].ts; if (+tp2 > +(so['O' + rts] || 0)) { so['O' + rts] = tp2; ccSeenPut(P, who, so); } }
+      return out({ ok: true, name: ccName(rm.text) || String(req.name || ''), root: rts, head: ccMemoHead(rm.text), msgs: ms2 });
     }
     if (req.op === 'thread') {
       var key = ccKey(req.name); if (!key) return out({ ok: false, error: 'no customer name' });
       var mine = ccHist(tok, !!req.fresh).filter(function (m) { return ccKey(ccName(m.text)) === key; }), msgs = [];
       mine.forEach(function (m) {
-        var memo = /^\*ORDER MEMO\*/.test(m.text);
-        if (memo) msgs.push({ ts: m.ts, who: 'Order memo', memo: true, text: m.text.replace(/^\*ORDER MEMO\*[^\n]*\n?/, ''), files: m.files });
-        if (m.rc) { var rp = slackApi(tok, 'conversations.replies', { channel: CC_CH, ts: m.ts, limit: 200 }, true); if (!rp.ok) throw new Error(ccErr(rp.error));
-          (rp.messages || []).forEach(function (x) { if (x.ts === m.ts) return; var w = ccWho(tok, { text: x.text, user: x.user, bot: !!x.bot_id });
-            msgs.push({ ts: x.ts, who: w.who, app: w.app, text: w.text, files: (x.files || []).map(function (f) { return { id: f.id, name: f.name || '', type: f.mimetype || '', size: f.size || 0 }; }) }); }); }
+        var memo = /^\*ORDER MEMO[^*\n]*\*/.test(m.text);
+        if (memo) msgs.push({ ts: m.ts, who: 'Order memo', memo: true, text: m.text.replace(/^\*ORDER MEMO[^*\n]*\*[^\n]*\n?/, ''), files: m.files });
+        if (m.rc) ccReplies(tok, m).forEach(function (x) { msgs.push(x); });
       });
       msgs.sort(function (a, b) { return +a.ts - +b.ts; });
-      var root = (mine.filter(function (m) { return /^👤/.test(m.text); })[0] || {}).ts || '';
+      var root = (mine.filter(function (m) { return ccIsRoot(m.text); })[0] || {}).ts || '';
+      if (req.look && msgs.length) { var s = ccSeenGet(P, who), top = msgs[msgs.length - 1].ts; if (+top > +(s[key] || 0)) { s[key] = top; ccSeenPut(P, who, s); } }   // seen only while the person is really looking (the app says)
       return out({ ok: true, name: req.name, root: root, msgs: msgs });
     }
+    if (req.op === 'seen') { var sk = req.root ? 'O' + String(req.root).replace(/[^\d.]/g, '') : ccKey(req.name); if (!sk || sk === 'O') return out({ ok: false, error: 'no customer name' }); var s2 = ccSeenGet(P, who), t2 = String(req.ts || (Date.now() / 1000)); if (+t2 > +(s2[sk] || 0)) { s2[sk] = t2; ccSeenPut(P, who, s2); } return out({ ok: true }); }
+    if (req.op === 'ntfyset') { var tp = String(req.topic || '').replace(/[^\w-]/g, '').slice(0, 64); if (tp.length < 8) return out({ ok: false, error: 'bad topic' }); var nmap = {}; try { nmap = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} nmap[ccWhoKey(who)] = tp; P.setProperty('CCNTFY', JSON.stringify(nmap));
+      var hs; try { hs = ccHist(tok, false); } catch (e) { hs = []; } var un0 = ccUnread(P, tok, hs, who, 8), noted0 = {}; Object.keys(un0).forEach(function (k) { noted0[k] = un0[k].last; }); try { P.setProperty('CCNOTE_' + ccWhoKey(who), JSON.stringify(noted0)); } catch (e) {}   // no flood of old messages
+      return out({ ok: true }); }
+    if (req.op === 'ntfyoff') { var omap = {}; try { omap = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} delete omap[ccWhoKey(who)]; P.setProperty('CCNTFY', JSON.stringify(omap)); return out({ ok: true }); }
+    if (req.op === 'ntfytest') { var tmap = {}; try { tmap = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} var tt = tmap[ccWhoKey(who)]; if (!tt) return out({ ok: false, error: 'notifications are off for ' + who }); return out({ ok: facNtfy(tt, { title: 'SJ Stock · test', msg: 'Notifications are on for ' + who + ' ✓', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#chat=' }) }); }
     if (req.op === 'post' || req.op === 'up') {
-      var nm = String(req.name || '').replace(/[*_\n]/g, ' ').trim().slice(0, 60), k2 = ccKey(nm), who = String(req.who || '').replace(/[*\n]/g, '').slice(0, 40) || 'SJ', txt = String(req.text || '').slice(0, 3000);
-      if (!k2) return out({ ok: false, error: 'no customer name' });
-      var lock = LockService.getScriptLock(); lock.waitLock(15000); var rootTs = '';
-      try { rootTs = (ccHist(tok, true).filter(function (m) { return /^👤/.test(m.text) && ccKey(ccName(m.text)) === k2; }).sort(function (a, b) { return +a.ts - +b.ts; })[0] || {}).ts || '';
-        if (!rootTs) { var r0 = slackApi(tok, 'chat.postMessage', { channel: CC_CH, text: '👤 *CUSTOMER* · ' + nm + '\n_customer chat · SJ memo app_' }); if (!r0.ok) return out({ ok: false, error: ccErr(r0.error) }); rootTs = r0.ts; bigDrop(cR, 'CC_HIST'); }
-      } finally { lock.releaseLock(); }
-      var res;
+      var nm = String(req.name || '').replace(/[*_\n]/g, ' ').trim().slice(0, 60), k2 = ccKey(nm), txt = String(req.text || '').slice(0, 3000);
+      var oroot = String(req.root || '').replace(/[^\d.]/g, '');                 // 18 Oct 2026: a line written in an ORDER chat goes under that order's post
+      if (!k2 && !oroot) return out({ ok: false, error: 'no customer name' });
+      var rootTs = oroot || ccRoot(P, tok, nm, k2, cR), res, sk2 = oroot ? 'O' + oroot : k2;
       if (req.op === 'post') { if (!txt.trim()) return out({ ok: false, error: 'empty' }); var pj = slackApi(tok, 'chat.postMessage', { channel: CC_CH, thread_ts: rootTs, text: '*' + who + ':* ' + txt }); if (!pj.ok) return out({ ok: false, error: ccErr(pj.error) }); res = { ok: true, ts: pj.ts, root: rootTs }; }
       else {
         var fs = Array.isArray(req.files) ? req.files.slice(0, 10) : [], ids = [], tot = 0;
@@ -1279,6 +1438,8 @@ function cchat(reqText, P) {
         if (!cj.ok) return out({ ok: false, error: ccErr(cj.error) }); res = { ok: true, root: rootTs, files: ids.length };
       }
       bigDrop(cR, 'CC_HIST');
+      var s3 = ccSeenGet(P, who), nowTs = String(Date.now() / 1000 + 2); if (+nowTs > +(s3[sk2] || 0)) { s3[sk2] = nowTs; ccSeenPut(P, who, s3); }   // my own line is never "new" for me
+      ccNudge(P, sk2);
       var rt = JSON.stringify(res); if (rid) cR.put('CCR_' + rid, rt, 21600); return ContentService.createTextOutput(rt).setMimeType(ContentService.MimeType.JSON);
     }
     if (req.op === 'file') {                                    // a photo / PDF / voice note of the chat, for the phone (original bytes)
@@ -1356,13 +1517,14 @@ function dorder(reqText, P) {
         card = trApi('post', '/cards', { idList: DOX.USORDER, name: name, pos: 'top', idLabels: lid }, tok);
         doCostSale(card.id, req, tok, notes);
         st.newCard = true;
-      } else if (req.fresh) {                                 // /N with nothing to copy: a plain card with RATE + HISAAB
+      } else if (req.fresh && !req.src && !(req.base && doFindCard(req.base, tok))) {   // /N with nothing to copy: a plain card with RATE + HISAAB
         var labs = [DOX.RATE, DOX.HISAAB]; if (req.customer) labs.push(doLabel(DOX.ALM, req.customer, tok));
         card = trApi('post', '/cards', { idList: DOX.START, name: name, pos: 'top', idLabels: labs.join(',') }, tok);
         st.newCard = true;
       } else {                                                // the normal order: a real COPY of the newest ALM card
-        var src = req.src ? trApi('get', '/cards/' + req.src, { fields: 'name,closed,idAttachmentCover,shortUrl' }, tok) : doFindCard(req.no, tok);
-        if (!src) return out({ ok: false, error: 'no ALM card found for ' + req.no + ' - mark it /N if it is a new fabric' });
+        // 18 Oct 2026 (Abbas, SJ-35895): /N with a design number = copy THAT design's card (pictures + custom fields) under the NEW number - before, /N made an empty card
+        var src = req.src ? trApi('get', '/cards/' + req.src, { fields: 'name,closed,idAttachmentCover,shortUrl' }, tok) : doFindCard(req.base || req.no, tok);
+        if (!src) return out({ ok: false, error: 'no ALM card found for ' + (req.base || req.no) + ' - mark it /N if it is a new fabric' });
         if (!src.idAttachmentCover && src.idAttachmentCover !== null) src = trApi('get', '/cards/' + src.id, { fields: 'name,idAttachmentCover,shortUrl' }, tok);
         var hand = false, toList = DOX.START;
         card = trApi('post', '/cards', { idList: toList, idCardSource: src.id, keepFromSource: 'attachments,customFields', name: name, pos: 'top' }, tok);
@@ -1585,6 +1747,44 @@ function cashPost(reqText, P) {
 }
 function doGet() { return out({ ok: true, relay: 'sj-memo' }); }
 function hex(bytes) { return bytes.map(function (x) { return ('0' + (x & 255).toString(16)).slice(-2); }).join(''); }
+// ---------- SAVED BILLS (Abbas, 18 Oct 2026: "keep that invoice in the draft somewhere. So if I had to make some changes in the bill, I would go
+// inside the bill and change whatever I want to change") ----------
+// Every invoice / receipt voucher / payment voucher the app draws is kept here, one row per number, in the BILLS tab of the customer-balances
+// spreadsheet. Any phone with the shop password can list them, open one (the app rebuilds the form from DATA), change it and send it again.
+// STATUS: draft (made) -> sent (Send PDF pressed) -> included (Include & share pressed). 'deleted' hides a row. DATA = the app's JSON, in 45k chunks.
+function billsSheet(ss) { var S = ss.getSheetByName('BILLS'); if (!S) { S = ss.insertSheet('BILLS'); S.appendRow(['REF', 'TYPE', 'CUSTOMER', 'STATUS', 'TOTAL', 'DATE', 'UPDATED', 'BY', 'DEVICE', 'DATA1', 'DATA2', 'DATA3', 'DATA4', 'DATA5', 'DATA6']); S.setFrozenRows(1); S.getRange('A:O').setNumberFormat('@'); } return S; }
+function bills(reqText, P) {
+  var req = JSON.parse(reqText);
+  if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  var ref = String(req.ref || '').trim().toUpperCase().slice(0, 30), op = req.op;
+  try {
+    var S = billsSheet(custBook(P)), rows = S.getDataRange().getDisplayValues().slice(1);
+    function row(r) { return { ref: r[0], type: r[1], name: r[2], status: r[3], total: r[4], date: r[5], updated: r[6], by: r[7], dev: r[8] }; }
+    if (op === 'list') { var L = rows.map(row).filter(function (b) { return b.ref && b.status !== 'deleted'; }); L.sort(function (a, b) { return a.updated < b.updated ? 1 : -1; }); return out({ ok: true, bills: L.slice(0, 400) }); }
+    if (!ref) return out({ ok: false, error: 'no bill number' });
+    var idx = -1; rows.forEach(function (r, i) { if (r[0] === ref) idx = i; });
+    if (op === 'get') { if (idx < 0 || rows[idx][3] === 'deleted') return out({ ok: false, error: 'not saved' }); var o = row(rows[idx]); o.ok = true; o.data = rows[idx].slice(9).map(function (x) { return String(x || '').replace(/^J/, ''); }).join(''); return out(o); }
+    if (op === 'put') {
+      var data = String(req.data || ''); if (!data || data.length > 268000) return out({ ok: false, error: 'bill too big to keep' });
+      var lock = LockService.getScriptLock(); lock.waitLock(15000);
+      try {
+        rows = S.getDataRange().getDisplayValues().slice(1); idx = -1; rows.forEach(function (r, i) { if (r[0] === ref) idx = i; });
+        var old = idx >= 0 ? row(rows[idx]) : null, st = String(req.status || 'draft').slice(0, 12), rank = { draft: 0, sent: 1, included: 2 };
+        if (old && old.dev && req.dev && old.dev !== String(req.dev) && custKey(old.name) !== custKey(req.name) && !req.force) return out({ ok: false, clash: true, error: ref + ' is already used on another phone (for ' + (old.name || 'another customer') + ')' });   // bill numbers run per phone
+        if (old && !req.force && (rank[old.status] || 0) > (rank[st] || 0)) st = old.status;      // a bill never goes back from sent/included by itself
+        var vals = [ref, String(req.type || 'inv').slice(0, 4), String(req.name || '').slice(0, 80), st, String(req.total || '').slice(0, 20), String(req.date || '').slice(0, 10), new Date().toISOString(), String(req.by || '').slice(0, 40), String(req.dev || '').slice(0, 12)];
+        for (var i = 0; i < 6; i++) { var ch = data.slice(i * 45000, (i + 1) * 45000); vals.push(ch ? 'J' + ch : ''); }   // 'J' in front: a cell can never be read as a formula
+        if (idx < 0) S.appendRow(vals); else S.getRange(idx + 2, 1, 1, vals.length).setValues([vals]);
+      } finally { lock.releaseLock(); }
+      return out({ ok: true, ref: ref, status: st });
+    }
+    if (op === 'del') { if (idx >= 0) S.getRange(idx + 2, 4).setValue('deleted'); return out({ ok: true }); }
+    return out({ ok: false, error: 'the relay does not know "' + op + '" yet' });
+  } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 200) }); }
+}
+// 19 Oct 2026: run this ONE time from the editor (▷ Run) when the app says "Balance not checked … SpreadsheetApp … permission".
+// It opens the customer-balances sheet, so Google asks for the Sheets permission; after Allow, Deploy → New version.
+function sheetCheck() { var P = PropertiesService.getScriptProperties(), ss = custBook(P); var L = ['sheet: ' + ss.getName(), 'tabs: ' + ss.getSheets().map(function (x) { return x.getName(); }).join(', '), 'bills saved: ' + Math.max(0, billsSheet(ss).getLastRow() - 1)]; Logger.log(L.join('\n')); return L.join('\n'); }
 function out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
 var READY = '66254dc6f8ade3c3a0c9b7d4', TKEY = '83fea3748717dd1e3fe28a15f2371759';

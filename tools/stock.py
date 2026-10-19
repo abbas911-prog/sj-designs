@@ -5,6 +5,9 @@
   - a comment is left on the card: who, invoice no., colour by colour before -> after
   - a card with every colour at 0 moves to the TOP of the FINISH list (his answer, 7 Oct 2026)
   - the same invoice from the same phone is never taken twice (marker in the comment); "return" puts it back once
+  - "retbill" (19 Oct 2026, Abbas: "include return bill in the app, so when it's generated automatically add that specific colour on to Trello"):
+    a RETURN BILL from the memo adds the pieces it lists back onto that colour of the card (found by card id, or by design number on
+    READY / SAMPLES / FINISH); a card that was sold out goes back from FINISH to the top of READY. Once per return number per phone.
 Runs on GitHub Actions (workflow memo-stock), started by memo.html. Secrets: TRELLO_TOKEN (read+write), MEMO_PASSWORD. No AI."""
 import base64, datetime, hashlib, hmac, json, os, re, sys, urllib.parse, urllib.request
 
@@ -65,19 +68,42 @@ def call(method, path, **q):
     with urllib.request.urlopen(req, timeout=60) as r:
         return json.loads(r.read() or b'null')
 
+_LISTS = {}
+def find_card(no):
+    """The Trello card of a design number for a return: READY first, then SAMPLES, then FINISH (top = most recently moved there).
+    '6668-1' only matches a card whose title carries 6668-1; a plain '6668' prefers a card with no suffix."""
+    no = re.sub(r'^S[JH]-?', '', str(no).strip(), flags=re.I).replace(' ', '')
+    m = re.match(r'\d{3,6}', no)
+    if not m: return None
+    base, suf = m.group(), no[len(m.group()):]
+    for lst in (READY, SAMPLES, FINISH):
+        if lst not in _LISTS: _LISTS[lst] = call('GET', '/lists/%s/cards' % lst, fields='name,idList,closed')
+        hits = [c for c in _LISTS[lst] if parse(c['name'])['no'] == base]
+        if suf: hits = [c for c in hits if (base + suf) in c['name'].replace(' ', '')]
+        else: hits = sorted(hits, key=lambda c: bool(re.search(base + r'\s*-\s*[A-Za-z0-9]', c['name'])))
+        if hits: return hits[0]['id']
+    return None
+
 def run(req):
     op, ref, dev = req.get('op', 'sell'), str(req.get('ref', '')).strip(), str(req.get('dev', ''))[:16]
     who = str(req.get('who', '')).strip()[:60]
     tag = '#memo %s %s %s' % (op, ref, dev)
     by_card = {}
+    out = []
     for l in req.get('lines', []):
         if int(l.get('pcs', 0)) > 0:
-            by_card.setdefault(l['card'], []).append((int(l['c']), int(l['pcs']), str(l.get('no', ''))))
-    out = []
+            cid = str(l.get('card') or '')
+            if not cid and op == 'retbill':
+                try: cid = find_card(l.get('no', '')) or ''
+                except Exception as e: cid = ''
+                if not cid: out.append({'card': '', 'no': str(l.get('no', '')), 'err': 'no Trello card found for SJ-%s on READY / SAMPLES / FINISH' % l.get('no', '')}); continue
+            by_card.setdefault(cid, []).append((int(l['c']), int(l['pcs']), str(l.get('no', ''))))
     for cid, lines in by_card.items():
         r = {'card': cid, 'no': lines[0][2]}
         try:
             card = call('GET', '/cards/' + cid, fields='name,idList,closed')
+            if op == 'retbill' and card.get('closed'):                    # an archived card comes back for the returned pieces
+                call('PUT', '/cards/' + cid, closed='false'); card['closed'] = False
             r['no'] = parse(card['name'])['no'] or r['no']
             notes = [a['data']['text'] for a in call('GET', '/cards/%s/actions' % cid, filter='commentCard', limit=1000)]
             if op != 'check' and any(n.splitlines()[-1].strip() == tag for n in notes if n.strip()):
@@ -86,6 +112,8 @@ def run(req):
                 sold = [n for n in notes if n.strip() and n.splitlines()[-1].strip() == '#memo sell %s %s' % (ref, dev)]
                 if not sold: r.update(err='no sale for %s on this card' % ref); out.append(r); continue
                 lines = [(int(a), int(b), r['no']) for a, b in re.findall(r'colour (\d+): \d+ → \d+ \(−(\d+)\)', sold[0])]
+            if op == 'retbill' and (card['idList'] == SAMPLES or any(n.strip() and n.splitlines()[0].startswith('SOLD SAMPLE') for n in notes)) and not parse(card['name'])['ok']:
+                out.append(sample(cid, card, op, ref, who, tag, r)); continue
             if card['idList'] == SAMPLES or (op == 'return' and any('SAMPLE' in n.splitlines()[0] for n in notes if n.strip() and n.splitlines()[-1].strip() == '#memo sell %s %s' % (ref, dev))):
                 out.append(sample(cid, card, op, ref, who, tag, r)); continue
             p = parse(card['name'])
@@ -97,7 +125,7 @@ def run(req):
                 if not 1 <= c <= len(new) or not p['cells'][c - 1][1]:
                     desc.append('colour %d: not on the card' % c); continue
                 b = new[c - 1]
-                if op == 'return':
+                if op in ('return', 'retbill'):
                     new[c - 1] = b + pcs; desc.append('colour %d: %d → %d (+%d)' % (c, b, new[c - 1], pcs))
                 else:
                     take = min(b, pcs); new[c - 1] = b - take
@@ -112,9 +140,9 @@ def run(req):
             moved = ''
             if op == 'sell' and sum(new) == 0 and card['idList'] != FINISH:
                 call('PUT', '/cards/' + cid, idList=FINISH, pos='top'); moved = 'moved to FINISH (sold out)'
-            if op == 'return' and card['idList'] == FINISH and sum(new) > 0:
+            if op in ('return', 'retbill') and card['idList'] == FINISH and sum(new) > 0:
                 call('PUT', '/cards/' + cid, idList=READY, pos='top'); moved = 'moved back to READY'
-            head = ('SOLD' if op == 'sell' else 'RETURNED') + ' · %s%s · from the order memo' % (ref, ' · ' + who if who else '')
+            head = ('SOLD' if op == 'sell' else 'RETURN BILL' if op == 'retbill' else 'RETURNED') + ' · %s%s · from the order memo' % (ref, ' · ' + who if who else '')
             text = '\n'.join([head] + desc + ([moved] if moved else []) + ['%d pcs left' % sum(new), tag])
             call('POST', '/cards/%s/actions/comments' % cid, text=text)
             r.update(before=card['name'], after=name, left=sum(new), lines=desc, moved=moved)
