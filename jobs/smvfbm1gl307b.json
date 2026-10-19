@@ -1,0 +1,33 @@
+{
+ "id": "smvfbm1gl307b",
+ "op": "sell",
+ "ref": "INV-0016",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6a7c44396c35228ee3a32b21",
+   "no": "48293",
+   "before": "Sj = **(48293)** (39) pcs colour= (6) ,,,(8/8/4/7/8/4)",
+   "after": "Sj = **(48293)** (31) pcs colour= (6) ,,,(8/8/4/7/4/0)",
+   "left": 31,
+   "lines": [
+    "colour 5: 8 → 4 (−4)",
+    "colour 6: 4 → 0 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6ac9e7a5c6ae93519be179fe",
+   "no": "51862",
+   "before": "Sj = **(51862)** (40) pcs __ colour _(4)__(12/8/12/8)",
+   "after": "Sj = **(51862)** (32) pcs __ colour _(4)__(8/4/12/8)",
+   "left": 32,
+   "lines": [
+    "colour 1: 12 → 8 (−4)",
+    "colour 2: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
