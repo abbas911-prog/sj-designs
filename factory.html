@@ -37,6 +37,7 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 .cardrow{display:flex;gap:12px;background:var(--card);border-radius:var(--r);padding:10px;margin-bottom:10px;align-items:center;box-shadow:var(--sh);content-visibility:auto;contain-intrinsic-size:112px;cursor:pointer}.cardrow:active{background:#fbf8f2}
 .ph{width:88px;height:88px;border-radius:14px;background:#efe8db center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
 .cardrow .t{flex:1;min-width:0}.cardrow .no{font-weight:800;font-size:19px;letter-spacing:-.01em}.cardrow .sub{color:var(--mute);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#nserr{margin:8px 2px 0;padding:10px 12px;border-radius:10px;background:#fde8e8;color:#b71c1c;font-size:13.5px;font-weight:700;line-height:1.35}
 .age{display:inline-block;margin-top:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.01em;white-space:nowrap}.age.g{background:#e3f4e8;color:#1b6b35}.age.a{background:#fff1d6;color:#8a5a00}.age.r{background:#c62828;color:#fff}#cnm .age{display:block;width:max-content;margin-top:3px;font-size:11.5px}
 .cardrow .lst{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.05em;margin-top:3px}
 .empty{color:var(--mute);text-align:center;padding:40px 10px}
@@ -79,6 +80,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .atts .a{flex:none;width:68px;height:68px;border-radius:12px;background:#f1ebe0 center/cover no-repeat;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;position:relative}
 .atts .a.cv{border-color:var(--gold)}.atts .a small{position:absolute;bottom:0;left:0;right:0;font-size:9px;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:0 0 10px 10px}
 .atts .n{flex:none;align-self:center;font-size:12px;color:var(--mute);padding-right:4px}
+#vbar{position:fixed;left:0;right:0;bottom:calc(16px + env(safe-area-inset-bottom));z-index:31;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:0 16px}#viewer #vbar button{position:static;width:auto;height:auto;border-radius:999px;padding:12px 18px;background:#fff;color:#111;font-size:15px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.4)}#viewer #vbar button[disabled]{opacity:.55}#vmsg{flex-basis:100%;text-align:center;color:#fff;font-size:13px;font-weight:700;min-height:16px}.mshare{display:block;margin-top:6px;border:1px solid var(--line,#ddd);background:#fff;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:800;color:#333}
 #vx{position:fixed;top:calc(10px + env(safe-area-inset-top));right:12px;z-index:31;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.95);color:#111;font-size:22px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.4)}
 #viewer{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:30;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:center;justify-content:center;touch-action:pinch-zoom}#viewer img{max-width:100%;max-height:100%;object-fit:contain}#viewer button{position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:20px}
 .hero .ttl{padding:10px 12px 0;font-size:13.5px;color:var(--mute)}
@@ -158,7 +160,7 @@ body.co .toast{bottom:90px}
   <div id="cu" hidden><span id="cutxt"></span><button id="cupin">📌 Later</button><button class="nx" id="cunext">Next ›</button></div>
   <div class="cbody" id="cbody">
     <div class="hero"><div class="big" id="cimg"></div><div class="atts" id="catts" hidden></div><div class="ttl" id="cttl"></div><div class="info" id="cinfo"></div></div>
-    <div id="viewer" hidden><img id="vimg" alt=""><button id="vx">✕</button></div>
+    <div id="viewer" hidden><img id="vimg" alt=""><button id="vx">✕</button><div id="vbar"><button id="vshare">⬆️ Share · Save</button><button id="vcopy">📋 Copy photo</button><div id="vmsg"></div></div></div>
     <div class="act"><button class="bdone" id="bdone">✅ Done → <span id="bnext"></span><small id="bnextar"></small></button><button class="bdone bdel" id="bdel" hidden>🗑 Delete card<small>মুছে ফেলুন</small></button><button class="bprob" id="bprob">🚩<small>Problem · সমস্যা</small></button></div>
     <input type="file" id="tfile" accept="image/*" multiple hidden>
     <div class="thr"><h3><span id="thh" style="float:none">CARD CHAT · কার্ড চ্যাট</span> <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
@@ -178,7 +180,7 @@ body.co .toast{bottom:90px}
 <div class="sheet" id="cp" hidden><div class="in"><h3>⧉ Copy this card · কার্ড কপি</h3><input id="cpname" placeholder="Title of the new card · নতুন শিরোনাম"><select id="cpto"></select><label class="ck"><input type="checkbox" id="cpkeep" checked> Keep photos, labels and details · ছবি ও বিবরণ রাখুন</label><button class="go" id="cpgo">Make the copy · কপি তৈরি করুন</button><button class="x" id="cpx">Cancel</button></div></div>
 <div class="sheet" id="ns" hidden><div class="in"><h3>⭐ New sample · নতুন স্যাম্পল</h3><input id="nsname" placeholder="Sample name, e.g. SJ-58429 SAMPLE · নাম"><textarea id="nsdesc" placeholder="What to make · কী বানাতে হবে (optional)"></textarea><label class="usm" id="nsusml"><input type="checkbox" id="nsusm"><span>🧵 <b>USMAN hand work</b> — chat in #usman sample</span><small>উসমান হ্যান্ড ওয়ার্ক — চ্যাট উসমান স্যাম্পল চ্যানেলে</small></label>
 <div class="pend" id="nspend"></div><div class="tools"><button class="mic" id="nsmic" title="tap to record">🎤</button><label title="photo">📷<input type="file" id="nscam" accept="image/*,video/*" capture="environment" hidden></label><button id="nspaste" title="paste">📋</button><label title="files">📎<input type="file" id="nsfiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div><div class="hint">🎤 record &nbsp;·&nbsp; 📷 photo / video &nbsp;·&nbsp; 📋 paste · পেস্ট &nbsp;·&nbsp; 📎 files<br>or paste straight into the boxes · বক্সে পেস্ট করলেও হবে</div>
-<button class="go" id="nsgo">⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন</button><button class="x" id="nsx">Cancel</button></div></div>
+<button class="go" id="nsgo">⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন</button><div id="nserr" hidden></div><button class="x" id="nsx">Cancel</button></div></div>
 <div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><label class="usm" id="ncusml"><input type="checkbox" id="ncusm"><span>🧵 <b>USMAN hand work</b> — chat in #usmancutting</span><small>উসমান হ্যান্ড ওয়ার্ক — চ্যাট #usmancutting-এ</small></label><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
 <div class="sheet" id="dms" hidden><div class="in"><h3 id="dmh">💬 Direct chat · which Slack channel? · কোন চ্যানেল</h3><button class="go" id="dmnewb" style="margin:0 0 8px">👤 New direct chat with a person · নতুন সরাসরি চ্যাট</button><input id="dmq" placeholder="Search · খুঁজুন" autocomplete="off"><div id="dml" style="max-height:46vh;overflow:auto"><div class="empty">Loading…</div></div><div id="dmnote" style="font-size:12px;color:var(--mute);margin-top:6px">A private group shows here only when the bot is inside it — in Slack type <b>/invite @SJ Orders</b> in that group, or make a new chat above.</div><button class="x" id="dmx">Cancel</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
@@ -189,7 +191,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-19a';
+var VER = '2026-10-19d';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -458,7 +460,8 @@ $('bmore').onclick = function(){ if (!open) return; $('cmh').textContent = cardT
 $('cmx').onclick = function(){ $('cmenu').hidden = true; };
 $('cmenu').addEventListener('click', function(e){ if (e.target.closest('button')) $('cmenu').hidden = true; }, true);
 function tabBadges(){ var t = totUnread(); $('tbchat').textContent = t ? String(t) : ''; var n = D.cards.filter(function(c){ return lname(c.l) === 'RETURNS'; }).length; $('tbret').textContent = n ? String(n) : ''; }
-function when(ts){ var d = new Date(+ts * 1000), n = new Date(); if (isNaN(d)) return ''; var hm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); return d.toDateString() === n.toDateString() ? hm : d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; }
+var DAYN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function when(ts){ var d = new Date(+ts * 1000), n = new Date(); if (isNaN(d)) return ''; var hm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); return d.toDateString() === n.toDateString() ? hm : DAYN[d.getDay()] + ' ' + d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; }
 // 17 Oct 2026: Slack sends emoji as :names: (":microphone: voice note") - shown as the emoji
 var EMO = { microphone: '🎤', leftwards_arrow_with_hook: '↩️', arrow_right_hook: '↪️', camera: '📷', camera_with_flash: '📸', movie_camera: '🎥', clapper: '🎬', video_camera: '📹', white_check_mark: '✅', heavy_check_mark: '✔️', ballot_box_with_check: '☑️', x: '❌', star: '⭐', thread: '🧵', pushpin: '📌', round_pushpin: '📍', warning: '⚠️', triangular_flag_on_post: '🚩', paperclip: '📎', page_facing_up: '📄', frame_with_picture: '🖼️', arrow_right: '➡️', arrow_left: '⬅️', heavy_plus_sign: '➕', '+1': '👍', thumbsup: '👍', '-1': '👎', ok_hand: '👌', pray: '🙏', fire: '🔥', heart: '❤️', sparkles: '✨', tada: '🎉', bell: '🔔', speech_balloon: '💬', scissors: '✂️', package: '📦', truck: '🚚', hourglass: '⌛', hourglass_flowing_sand: '⏳', alarm_clock: '⏰', red_circle: '🔴', large_green_circle: '🟢', large_yellow_circle: '🟡', eyes: '👀', smile: '😄', slightly_smiling_face: '🙂', joy: '😂', grinning: '😀', wave: '👋', raised_hands: '🙌', clap: '👏', muscle: '💪', 100: '💯', moneybag: '💰', dress: '👗', repeat: '🔁', arrows_counterclockwise: '🔄', memo: '📝', bulb: '💡', heavy_minus_sign: '➖', no_entry: '⛔', question: '❓', exclamation: '❗', telephone_receiver: '📞', calendar: '📅', ok: '🆗', new: '🆕', rocket: '🚀', zap: '⚡' };
 function emo(s){ return String(s == null ? '' : s).replace(/:([a-z0-9_+\-]+)(?:::skin-tone-\d)?:/g, function(a, k){ return EMO[k] || a; }); }
@@ -549,15 +552,35 @@ $('catts').onclick = async function(e){ var a = e.target.closest('.a'); if (!a) 
 // 17 Oct 2026 (Abbas: "if I use it a little fast it gets stuck … whatever chat I open, it comes back to the same photo, then I have to close
 // the app"): the photo viewer had no visible close button and stayed open across cards, and a slow full-size photo arriving late could
 // replace the next one. Now: a big ✕, a tap anywhere closes it, Back closes it, every card open/close closes it, and late photos are dropped.
-var VIEW = { n: 0, st: false };
-function viewOpen(src){ VIEW.n++; $('viewer').hidden = false; $('vimg').src = src || ''; if (!VIEW.st) { VIEW.st = true; try { history.pushState({ view: 1 }, ''); } catch(e){} } return VIEW.n; }
+var VIEW = { n: 0, st: false, blob: null, name: '' };
+// 19 Oct 2026 (Abbas): "when I long press a picture and copy it, it copies the link, not the photo - I want to press any photo or video, share it,
+// copy it, and get the actual photo / video". The viewer keeps the ORIGINAL file (not a link): ⬆️ Share · Save hands the file itself to the
+// phone's share sheet (WhatsApp, Save Image / Save Video, Copy, AirDrop…); 📋 Copy photo puts the picture itself on the clipboard.
+// Videos and voice notes in the chat get a ⬆️ Share · Save button under the player (the share sheet's Copy copies the video file).
+function urlBlob(u){ if (/^data:/.test(u || '')) { var m = u.match(/^data:([^;,]+)?(;base64)?,(.*)$/); return m ? b64blob(m[3], m[1] || 'image/jpeg') : null; } return null; }
+function extOf(t){ return /png/.test(t) ? 'png' : /webp/.test(t) ? 'webp' : /heic/.test(t) ? 'heic' : /gif/.test(t) ? 'gif' : /quicktime/.test(t) ? 'mov' : /mp4/.test(t) ? (/audio/.test(t) ? 'm4a' : 'mp4') : /webm/.test(t) ? 'webm' : /ogg|opus/.test(t) ? 'ogg' : /mpeg/.test(t) ? 'mp3' : 'jpg'; }
+function fileOf(blob, name){ var t = blob.type || 'image/jpeg', n = String(name || '').replace(/[\\/:*?"<>|]+/g, '_'); if (!n || !/\.[a-z0-9]{2,5}$/i.test(n)) n = (n || 'SJ-' + new Date().toISOString().slice(0, 10)) + '.' + extOf(t); try { return new File([blob], n, { type: t }); } catch(e){ blob.name = n; return blob; } }
+function shareFile(blob, name, say){ var f = fileOf(blob, name);
+  if (navigator.canShare && navigator.share) { var ok = false; try { ok = navigator.canShare({ files: [f] }); } catch(e){}
+    if (ok) { navigator.share({ files: [f] }).then(function(){ say && say('✓ Shared'); }).catch(function(e){ if (e && e.name !== 'AbortError') say && say('✗ ' + (e.message || e)); }); return; } }
+  var a = document.createElement('a'), u = URL.createObjectURL(f); a.href = u; a.download = f.name || 'file'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(u); }, 60000); say && say('✓ Saved to Downloads'); }
+function toPng(blob){ if (/png/.test(blob.type)) return Promise.resolve(blob);
+  return new Promise(function(ok, bad){ var u = URL.createObjectURL(blob), im = new Image(); im.onload = function(){ try { var c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); URL.revokeObjectURL(u); c.toBlob(function(b){ b ? ok(b) : bad(new Error('could not read the photo')); }, 'image/png'); } catch(e){ bad(e); } }; im.onerror = function(){ URL.revokeObjectURL(u); bad(new Error('could not read the photo')); }; im.src = u; }); }
+function vmsg(t){ $('vmsg').textContent = t || ''; }
+function vbarPaint(){ var ready = !!VIEW.blob; $('vshare').disabled = !ready; $('vcopy').disabled = !ready; if (!ready) vmsg('⏳ loading the full photo… · আসল ছবি লোড হচ্ছে'); else if (/^⏳/.test($('vmsg').textContent)) vmsg(''); }
+$('vbar').onclick = function(e){ e.stopPropagation(); };
+$('vshare').onclick = function(e){ e.stopPropagation(); if (!VIEW.blob) return; shareFile(VIEW.blob, VIEW.name, vmsg); };
+$('vcopy').onclick = function(e){ e.stopPropagation(); var b = VIEW.blob; if (!b) return;
+  if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) { vmsg('This browser cannot copy a photo — tap Share · Save → Copy'); return; }
+  navigator.clipboard.write([new ClipboardItem({ 'image/png': toPng(b) })]).then(function(){ vmsg('✓ Photo copied — paste it in WhatsApp / Slack · কপি হয়েছে'); }).catch(function(err){ vmsg('Copy refused (' + ((err && err.message) || err) + ') — tap Share · Save → Copy'); }); };
+function viewOpen(src, full, name){ VIEW.n++; VIEW.blob = full || null; VIEW.name = name || ''; vmsg(''); $('viewer').hidden = false; $('vimg').src = src || ''; vbarPaint(); var vn0 = VIEW.n; setTimeout(function(){ if (vn0 !== VIEW.n || VIEW.blob || $('viewer').hidden) return; var u = $('vimg').src; if (!u) return; fetch(u).then(function(r){ return r.blob(); }).then(function(b){ if (vn0 === VIEW.n && !VIEW.blob && b && b.size) { VIEW.blob = b; vbarPaint(); } }).catch(function(){}); }, 20000); if (!VIEW.st) { VIEW.st = true; try { history.pushState({ view: 1 }, ''); } catch(e){} } return VIEW.n; }
 function viewClose(fromPop){ if ($('viewer').hidden) return false; VIEW.n++; $('viewer').hidden = true; $('vimg').removeAttribute('src'); if (VIEW.st) { VIEW.st = false; if (!fromPop) { VIEW.skip = true; try { history.back(); } catch(e){ VIEW.skip = false; } } } return true; }
-function viewSet(n, src){ if (n === VIEW.n && !$('viewer').hidden) $('vimg').src = src; }
+function viewSet(n, src, blob){ if (n === VIEW.n && !$('viewer').hidden) { $('vimg').src = src; VIEW.blob = blob || urlBlob(src) || VIEW.blob; vbarPaint(); } }
 $('vx').onclick = function(e){ e.stopPropagation(); viewClose(); };
 $('viewer').onclick = function(){ viewClose(); };
 $('cimg').onclick = function(){ if (open && open.img) { var vn = viewOpen(IMG[open.img] ? imgSrc(IMG[open.img]) : ''); bigPhoto(open.id, open.img, vn); } };
 async function bigPhoto(cid, att, vn){ var fj = fastTr() ? await fast({ op: 'timg', card: cid, att: att, big: 1, top: 1 }) : null;
-  if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size) { viewSet(vn, URL.createObjectURL(fj.blob)); return; }
+  if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size) { viewSet(vn, URL.createObjectURL(fj.blob), fj.blob); return; }
   var j = await call({ op: 'img', card: cid, att: att, big: 1 }); if (j.ok) viewSet(vn, 'data:image/jpeg;base64,' + j.b64); }
 function closeCard(){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } if (REC.r) recStop(); try { if (open && TH.opened && LOOK.act > TH.opened) { var rl = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }); call({ op: 'thread', card: open.id, since: rl.length ? rl[rl.length - 1].ts : '', look: 1 }); } } catch(e){} $('card').hidden = true; cardShow(false); $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; CHATSIG = ''; draw(); }
 $('back').onclick = function(){ history.back(); };
@@ -708,12 +731,12 @@ function bubble(m){
   var me = isMe(m), cls = m.sys ? 'sys' : me ? 'me' : '', body = esc(emo(m.sys || m.root ? m.text.replace(/\*/g, '') : m.text));
   if (m.root) cls += ' root'; if (/^🚩/.test(m.text)) cls += ' prob';
   (m.files || []).forEach(function(f){
-    if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="img">tap to load photo</div>';
-    else if (f.audio) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="audio" style="height:44px">▶ voice note · ভয়েস নোট</div>';
-    else if (f.video) body += '<div class="fph" data-f="' + esc(f.id) + '" data-k="video" style="height:120px;flex-direction:column"><span style="font-size:28px">🎬</span>video · tap to play · ভিডিও</div>';
+    if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="img">tap to load photo</div>';
+    else if (f.audio) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="audio" style="height:44px">▶ voice note · ভয়েস নোট</div>';
+    else if (f.video) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="video" style="height:120px;flex-direction:column"><span style="font-size:28px">🎬</span>video · tap to play · ভিডিও</div>';
     else body += '<div class="fl">📎 ' + esc(f.name) + '</div>';
   });
-  var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = t.getDate() + '/' + (t.getMonth() + 1);
+  var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = DAYN[t.getDay()] + ' ' + t.getDate() + '/' + (t.getMonth() + 1);   // 19 Oct 2026 (Abbas): the day name next to the name - "Mon 19/10 · 18:48"
   return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who"><span class="nm" style="background:' + pcol(m.who) + '">' + esc(m.who || '?') + '</span>' + (m.app ? '' : '<span class="sl">Slack</span>') + (m.pend ? '' : '<span class="wt">' + dd + ' · ' + hh + '</span>') + '</div>') + '<div class="bub"' + (m.sys ? '' : ' style="border-' + (me ? 'right' : 'left') + ':4px solid ' + pcol(m.who) + '"') + '>' + body + (m.pend || m.sys ? '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span>' : '') + '</div></div>';   // 17 Oct 2026 (Abbas): date and time ABOVE the message, with the name
 }
 function thDedupe(){ var seenTs = {}; TH.msgs = TH.msgs.filter(function(m){ if (m.pend) return true; if (seenTs[m.ts]) return false; seenTs[m.ts] = 1; return true; }); }
@@ -728,22 +751,22 @@ function playing(){ return Array.from(document.querySelectorAll('#thread audio, 
 // (a 1-minute note ≈ 240 KB instead of ~1 MB), so sending and opening are 3-4x faster.
 var MCACHE = null; try { if (window.caches) caches.open('fac-media-1').then(function(c){ MCACHE = c; }); } catch(e){}
 function b64blob(b64, type){ var bin = atob(b64), u8 = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return new Blob([u8], { type: type }); }
-var MWAIT = {};
+var MWAIT = {}, MBLOB = {};
 function getMedia(id, k, top, pre){
   if (MEDIA[id]) return Promise.resolve({ url: MEDIA[id] });
   if (MWAIT[id]) { var w0 = MWAIT[id]; if (top && !w0.top) { w0.top = true; var qi = w0.obj ? NET.lo.indexOf(w0.obj._q) : -1; if (qi >= 0) { NET.lo.splice(qi, 1); w0.obj._q.top = true; NET.hi.unshift(w0.obj._q); netGo(); } } return w0.p; }
   var w = { top: !!top }; MWAIT[id] = w;
   w.p = (async function(){
     var key = 'https://fac.media/' + id + (k === 'img' ? '-t' : '');
-    try { if (MCACHE) { var hit = await MCACHE.match(key); if (hit) { var bl = await hit.blob(); return { url: (MEDIA[id] = URL.createObjectURL(bl)) }; } } } catch(e){}
+    try { if (MCACHE) { var hit = await MCACHE.match(key); if (hit) { var bl = await hit.blob(); MEDIA[id] = URL.createObjectURL(bl); MBLOB[id] = MBLOB[MEDIA[id]] = bl; return { url: MEDIA[id] }; } } } catch(e){}
     if (fastOn()) { var fj = await fast({ op: 'file', id: id, thumb: k === 'img' ? 1 : 0, top: w.top });
-      if (fj && fj.ok && fj.blob && fj.blob.size) { delete MWAIT[id]; var fb = fj.blob; try { if (MCACHE && fb.size < 8 * 1024 * 1024) MCACHE.put(key, new Response(fb, { headers: { 'Content-Type': fb.type } })); } catch(e){} return { url: (MEDIA[id] = URL.createObjectURL(fb)) }; } }
+      if (fj && fj.ok && fj.blob && fj.blob.size) { delete MWAIT[id]; var fb = fj.blob; try { if (MCACHE && fb.size < 8 * 1024 * 1024) MCACHE.put(key, new Response(fb, { headers: { 'Content-Type': fb.type } })); } catch(e){} MEDIA[id] = URL.createObjectURL(fb); MBLOB[id] = MBLOB[MEDIA[id]] = fb; return { url: MEDIA[id] }; } }
     w.obj = { op: 'media', file: id, full: k === 'img' ? 0 : 1, pre: pre && !top ? 1 : 0 }; var j = await call(w.obj, null, w.top);
     delete MWAIT[id];
     if (!j.ok) return { err: j.error, link: j.link };
     var blob = b64blob(j.b64, j.type || (k === 'audio' ? 'audio/mp4' : k === 'video' ? 'video/mp4' : 'image/jpeg'));
     try { if (MCACHE && blob.size < 8 * 1024 * 1024) MCACHE.put(key, new Response(blob, { headers: { 'Content-Type': blob.type } })); } catch(e){}
-    return { url: (MEDIA[id] = URL.createObjectURL(blob)) };
+    MEDIA[id] = URL.createObjectURL(blob); MBLOB[id] = MBLOB[MEDIA[id]] = blob; return { url: MEDIA[id] };
   })();
   return w.p;
 }
@@ -760,12 +783,14 @@ async function loadMedia(e, tap){
   var r = await getMedia(id, k, tap !== false);
   if (!r.url) { if (r.link) { e.textContent = (r.err === 'file too big' ? 'Video too big for the app — ' : '') + 'open in Slack ↗'; e.dataset.busy = ''; e.onclick = function(ev){ ev.stopPropagation(); window.open(r.link, '_blank'); }; } else { e.textContent = '↻ could not load — tap to try again'; e.dataset.busy = ''; } return; }
   if (!e.isConnected) return;
-  if (k === 'img') { var im = document.createElement('img'); im.src = r.url; im.dataset.f = id; e.replaceWith(im); }
-  else if (k === 'video') { var vd = document.createElement('video'); vd.controls = true; vd.playsInline = true; vd.setAttribute('playsinline', ''); vd.src = r.url; vd.style.cssText = 'max-width:230px;max-height:300px;border-radius:10px;display:block;background:#000'; e.replaceWith(vd); vd.play().catch(function(){}); }
-  else { var au = document.createElement('audio'); au.controls = true; au.preload = 'auto'; au.src = r.url; e.replaceWith(au); au.play().catch(function(){}); }
+  if (k === 'img') { var im = document.createElement('img'); im.src = r.url; im.dataset.f = id; im.dataset.n = e.dataset.n || ''; e.replaceWith(im); }
+  else if (k === 'video') { var vd = document.createElement('video'); vd.controls = true; vd.playsInline = true; vd.setAttribute('playsinline', ''); vd.src = r.url; vd.style.cssText = 'max-width:230px;max-height:300px;border-radius:10px;display:block;background:#000'; e.replaceWith(vd); vd.after(mshareBtn(id, e.dataset.n)); vd.play().catch(function(){}); }
+  else { var au = document.createElement('audio'); au.controls = true; au.preload = 'auto'; au.src = r.url; e.replaceWith(au); au.after(mshareBtn(id, e.dataset.n)); au.play().catch(function(){}); }
 }
-$('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f); };
-async function openBig(src, fid){ var vn = viewOpen(src); if (!fid) return; var fj = fastOn() ? await fast({ op: 'file', id: fid, top: 1 }) : null; if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size && /^image/.test(fj.blob.type || 'image')) { viewSet(vn, URL.createObjectURL(fj.blob)); return; } var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && /^image/.test(j.type || 'image')) viewSet(vn, 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64); }
+function mshareBtn(id, n){ var b = document.createElement('button'); b.className = 'mshare'; b.dataset.f = id; b.dataset.n = n || ''; b.textContent = '⬆️ Share · Save · শেয়ার'; return b;
+}
+$('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var sh = e.target.closest('.mshare'); if (sh) { var sb = MBLOB[sh.dataset.f]; if (sb) shareFile(sb, sh.dataset.n, toast); else toast('⏳ still loading…'); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f, im.dataset.n); };
+async function openBig(src, fid, nm){ var vn = viewOpen(src, null, nm); if (!fid) { viewSet(vn, src, MBLOB[src] || null); return; } var fj = fastOn() ? await fast({ op: 'file', id: fid, top: 1 }) : null; if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size && /^image/.test(fj.blob.type || 'image')) { viewSet(vn, URL.createObjectURL(fj.blob), fj.blob); return; } var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && /^image/.test(j.type || 'image')) viewSet(vn, 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64); }
 
 // ===== RETURNS (16 Oct 2026). First version (a form with design number, pieces, reasons) - Abbas: "I want it more simple … no need to write a
 // design number … paste as many photos or videos … it should appear just like a card … open it, below it a chat … exactly like the START list."
@@ -782,7 +807,7 @@ function nsMode(m){ NSMODE = m; var r = m === 'ret';
   $('ns').querySelector('h3').textContent = r ? '↩️ New return · নতুন ফেরত' : '⭐ New sample · নতুন স্যাম্পল';
   $('nsname').hidden = r; $('nsusml').hidden = r; $('nsusm').checked = false; $('nsdesc').placeholder = r ? 'What must be fixed? (optional) · কী ঠিক করতে হবে?' : 'What to make · কী বানাতে হবে (optional)';
   $('nsgo').textContent = r ? '↩️ Make the return card · ফেরত কার্ড তৈরি করুন' : '⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন'; }
-function retNew(){ if (!needW()) return; nsMode('ret'); $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('ns').hidden = false; }
+function retNew(){ if (!needW()) return; nsMode('ret'); $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('nserr').hidden = true; $('ns').hidden = false; }
 // ===== OUTBOX (15 Oct 2026, Abbas: "when I press Send and I'm in a hurry, it says sending, I go back, do something else, come back and the
 // message is nowhere to be found"). A message (text and/or files) is saved ON THE PHONE the moment Send is pressed (IndexedDB) and sent by a
 // background sender that does not care which screen is open, keeps trying (also after the app was closed / the phone locked) and uses one
@@ -858,7 +883,7 @@ async function pendAdd(file, name, kind){
 var SP = [];
 function spDraw(){ $('nspend').innerHTML = SP.map(function(x, i){ return '<div class="pi"' + (x.url ? ' style="background-image:url(' + x.url + ')"' : '') + '>' + (x.url ? '' : x.kind === 'audio' ? '🎤' : x.kind === 'video' ? '🎬' : '📎') + '<small>' + esc(x.label) + '</small><b data-i="' + i + '">✕</b></div>'; }).join(''); }
 $('nspend').onclick = function(e){ var b = e.target.closest('b[data-i]'); if (!b) return; var x = SP.splice(+b.dataset.i, 1)[0]; if (x && x.url) URL.revokeObjectURL(x.url); spDraw(); };
-$('bstar').onclick = function(){ if (!needW()) return; nsMode('sample'); $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('ns').hidden = false; $('nsname').focus(); };
+$('bstar').onclick = function(){ if (!needW()) return; nsMode('sample'); $('nsname').value = ''; $('nsdesc').value = ''; SP.length = 0; spDraw(); $('nserr').hidden = true; $('ns').hidden = false; $('nsname').focus(); };
 $('nsx').onclick = function(){ if (REC.r) recStop(); $('ns').hidden = true; };
 // 13 Oct 2026 (Abbas): paste a photo / video / file into the sample - Ctrl-V / long-press Paste in a box, or the 📋 button (reads the clipboard)
 function pasteItems(items){ var n = 0; Array.from(items || []).forEach(function(it){ var f = it.kind === 'file' ? it.getAsFile() : null; if (f) { n++; pendAdd(f, f.name || ((/^image\//.test(f.type) ? 'pasted-' : 'file-') + Date.now() + (f.type === 'image/png' ? '.png' : /^image\//.test(f.type) ? '.jpg' : '')), kindOf(f)); } }); return n; }
@@ -876,7 +901,11 @@ $('nsgo').onclick = async function(){ var RET = NSMODE === 'ret', nm = $('nsname
   if (RET) { if (!SP.length && !$('nsdesc').value.trim()) { toast('Add photos / videos of the pieces · ছবি যোগ করুন'); return; }
     var dn = new Date(), first = $('nsdesc').value.trim().split('\n')[0].slice(0, 60); nm = '↩️ RETURN · ' + dn.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dn.getMonth()] + (first ? ' · ' + first : ''); }
   else if (!nm) { toast('Give the sample a name · নাম লিখুন'); return; }
-  var tot = SP.reduce(function(a, x){ return a + x.blob.size; }, 0);
+  var tot = SP.reduce(function(a, x){ return a + x.blob.size; }, 0), STEP = 'preparing the photo';
+  // 19 Oct 2026 (Abbas: "I'm trying to post a sample, but it's not posting"): the reason used to flash for 2 s as a toast and was missed -
+  // now it stays in red inside the sheet, with the step it stopped at, until the next try.
+  var nserr = function(m){ $('nserr').hidden = false; $('nserr').textContent = '✗ Not made (' + STEP + '): ' + m + ' — press again, nothing was doubled · আবার চাপুন'; };
+  $('nserr').hidden = true;
   var btn = this; btn.disabled = true; btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
   try {
     // Abbas 13 Oct: the Trello card gets ONLY a cover - the first photo, else a frame of the first video; the rest goes to Slack
@@ -884,17 +913,17 @@ $('nsgo').onclick = async function(){ var RET = NSMODE === 'ret', nm = $('nsname
     var cover = null, ph = SP.filter(function(x){ return x.kind === 'photo'; })[0], vd = SP.filter(function(x){ return x.kind === 'video'; })[0];
     if (ph && ph.blob.size <= 10 * 1024 * 1024) cover = { name: ph.name, b64: await b64of(ph.blob) };
     else if (vd || ph) { var fr = vd ? await videoFrame(vd.blob) : null; if (fr) cover = { name: 'cover.jpg', b64: await b64of(fr) }; }
-    btn.textContent = '⏳ Sending ' + mb(tot) + ' in full quality… · পাঠানো হচ্ছে';
+    STEP = 'sending the files to Slack'; btn.textContent = '⏳ Sending ' + mb(tot) + ' in full quality… · পাঠানো হচ্ছে';
     var fids = [], files = [];
     try { if (SP.length) fids = await slackDirect(SP, function(i){ btn.textContent = '⏳ ' + (i + 1) + ' / ' + SP.length + ' · ' + mb(SP[i].blob.size) + '…'; }); }
     catch (e) { if (tot > 18 * 1024 * 1024) throw new Error('Slack refused the upload (' + e.message + ')'); fids = []; for (var i = 0; i < SP.length; i++) files.push({ name: SP[i].name, type: SP[i].blob.type || '', b64: await b64of(SP[i].blob) }); }
-    btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
+    STEP = 'making the card'; btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
     var j = await call({ op: 'sample', kind: RET ? 'ret' : '', usman: !RET && $('nsusm').checked ? 1 : 0, name: nm, desc: $('nsdesc').value, files: files, fids: fids, cover: cover });
-    if (!j.ok) { toast('✗ ' + j.error); if (j.card) { $('ns').hidden = true; if (RET) await load(true); await gotoNew(j.card, j.list || lid(RET ? 'RETURNS' : 'SAMPLES')); } return; }
+    if (!j || !j.ok) { var em = (j && j.error) || 'no answer from the relay'; toast('✗ ' + em); if (!(j && j.card)) nserr(em); if (j && j.card) { $('ns').hidden = true; if (RET) await load(true); await gotoNew(j.card, j.list || lid(RET ? 'RETURNS' : 'SAMPLES')); } return; }
     SP.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); SP.length = 0; spDraw(); $('ns').hidden = true;
     if (RET && !lid('RETURNS')) await load(true);
     toast(RET ? '↩️ Return card made · the factory sees it now' : '⭐ Sample card made · posted in #samples-discuss'); await gotoNew(j.id, j.list || lid(RET ? 'RETURNS' : 'SAMPLES'));
-  } catch (e) { toast('✗ ' + e.message); }
+  } catch (e) { toast('✗ ' + e.message); nserr(e.message || String(e)); }
   finally { btn.disabled = false; nsMode(NSMODE); } };
 function videoFrame(blob){ return new Promise(function(ok){ try { var v = document.createElement('video'), done = false, url = URL.createObjectURL(blob);
     function fin(res){ if (done) return; done = true; try { URL.revokeObjectURL(url); } catch(e){} ok(res); }
