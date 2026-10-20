@@ -1,0 +1,33 @@
+{
+ "ok": true,
+ "kind": "sizes",
+ "page": "sz-1021.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sz-1021.html?v=1",
+ "cover": "og-sz-1021.jpg",
+ "name": "SJ TRADING",
+ "country": "",
+ "ref": "INV-0021",
+ "cust": "#50 Matiullah naif",
+ "designs": [
+  "28562",
+  "58273",
+  "85974",
+  "91074",
+  "91273"
+ ],
+ "report": [
+  "SJ-28562  3+3+2+1+4+2 → 6 colours on the bill, 15 pcs · sizes M L XL XXL (default)",
+  "SJ-58273  4+4+4+4 → 4 colours on the bill, 16 pcs · sizes M L XL XXL (default)",
+  "SJ-85974  0+4+0+4+0+4 → 3 colours on the bill, 12 pcs · sizes M L XL XXL (default)",
+  "SJ-91074  4+4+4+4+4+4 → 6 colours on the bill, 24 pcs · sizes M L XL XXL (default)",
+  "SJ-91273  4+4+4+4 → 4 colours on the bill, 16 pcs · sizes M L XL XXL (default)"
+ ],
+ "flags": [
+  "SJ-28562: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-58273: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-91074: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-91273: no JAMĀL photo for every colour group — shop photo used."
+ ],
+ "bytes": 1488769,
+ "id": "zmvh4ft3aa3z0"
+}
