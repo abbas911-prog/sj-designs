@@ -1,4 +1,4 @@
-// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
+// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, employees see balances (no delete), hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
 const { chromium } = require('playwright'); const http = require('http'); const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
 const DIR = require('path').join(__dirname, '..'), PW = 'test1234';
 function lock(obj) { const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12), key = crypto.pbkdf2Sync(PW, salt, 1000, 32, 'sha256'); const c = crypto.createCipheriv('aes-256-gcm', key, iv); const ct = Buffer.concat([c.update(JSON.stringify(obj)), c.final(), c.getAuthTag()]); return { salt: salt.toString('base64'), iv: iv.toString('base64'), iter: 1000, ct: ct.toString('base64') }; }
@@ -10,7 +10,7 @@ const jobs = {}, custPosts = []; let stockReq = null;
 BILLS['INV-0015'].data = JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [{ d: 'SJ-77001 · C1 4 pcs', q: 4, r: 50, fz: '77001' }, { d: 'SJ 6668-1 lace', q: 2, r: 10 }] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }] });
 function relay(b) { const req = JSON.parse(b.req);
   if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: Object.values(BILLS).map(x => Object.assign({}, x, { data: undefined })) }; if (req.op === 'get') return BILLS[req.ref] ? Object.assign({ ok: true }, BILLS[req.ref]) : { ok: false, error: 'not saved' }; if (req.op === 'put') { BILLS[req.ref] = Object.assign({}, req, { updated: new Date().toISOString() }); return { ok: true, status: req.status }; } }
-  if (b.job === 'cust') { if (req.op === 'post') { custPosts.push(req); return { ok: true, name: 'X', bal: 0, n: 1 }; } return { ok: true, found: false, names: [], list: [] }; }
+  if (b.job === 'cust') { if (req.op === 'post') { custPosts.push(req); return { ok: true, name: 'X', bal: 0, n: 1 }; } if (req.op === 'list') return { ok: true, list: [{ name: 'MAMA BAKHTA', bal: 100, n: 1, last: '2026-10-18' }] }; if (req.op === 'get' && req.name) return { ok: true, found: true, name: req.name, open: 0, odate: '2026-10-01', bal: 100, n: 1, entries: [{ id: 'x1', type: 'inv', ref: 'INV-1', date: '2026-10-18', sale: 100, recv: 0, adj: 0 }] }; return { ok: true, found: false, names: [], list: [] }; }
   if (b.job === 'stock') { stockReq = req; jobs[req.id] = { id: req.id, ok: true, cards: [] }; return { ok: true }; }
   if (b.job === 'cchat') return { ok: true, customers: [], orders: [] };
   return { ok: false, error: 'not in test' }; }
@@ -50,6 +50,13 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   // bell screen stays while the chats poll runs
   await pg.$eval('#back', e => e.click()); await pg.click('#nav button[data-nv="more"]'); await pg.click('.mgrid button[data-go="ccbell"]'); await pg.waitForSelector('#belltp'); await pg.waitForTimeout(14000);
   out.push(['🔔 setup still on screen after the 12 s poll', !!(await pg.$('#belltp'))]);
+  // employee phone (catalogue off): Customer balances opens, but no delete / change-opening buttons
+  const p2 = await br.newPage({ viewport: { width: 390, height: 844 } }); p2.on('pageerror', e => errs.push(e.message)); p2.on('dialog', d => d.accept());
+  await p2.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) })); await p2.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
+  await p2.goto(URL0); await p2.evaluate(pw => { localStorage.clear(); localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Musalim'); }, PW); await p2.reload(); await p2.waitForSelector('#feed .design', { timeout: 15000 });
+  await p2.click('#nav button[data-nv="more"]'); const hasCb = !!(await p2.$('.mgrid button[data-go="cbopen"]')); if (hasCb) await p2.click('.mgrid button[data-go="cbopen"]'); await p2.waitForSelector('.cbrow', { timeout: 8000 }).catch(() => {});
+  await p2.click('.cbrow').catch(() => {}); await p2.waitForSelector('#cbcopy', { timeout: 8000 }).catch(() => {});
+  out.push(['employee sees customer balances, without delete buttons', hasCb && !!(await p2.$('#cbcopy')) && !(await p2.$('#cbdel')) && !(await p2.$('#cbopenbal')) && !(await p2.$('[data-cbx]'))]);
   out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); console.log('errors:', errs.slice(0, 5));
   await br.close(); srv.close();
 })().catch(e => { console.error('CRASH', e); process.exit(1); });

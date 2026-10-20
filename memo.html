@@ -884,7 +884,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-20d';
+var VER = '2026-10-20e';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] > VER) { saveWork();   // only ever forward: a stale cached copy must not send the phone back to an older version
     location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
@@ -3036,7 +3036,7 @@ async function custVoid(d){ if (!(d.name || '').trim()) return; try { var j = aw
 async function custNames(){ try { var j = await custCall({ op: 'names' }, 2); $('custnames').innerHTML = (j.names || []).map(function(n){ return '<option value="' + esc(n) + '">'; }).join(''); } catch(e){} }
 // owner screen: every customer's balance, and a statement per customer
 function cbDate(s){ return esc(dmy(s)); }
-async function cbOpen(){ if (!isOwner()) return; $('mysheet').hidden = true; $('cb').hidden = false; CU.view = ''; cbDraw(); try { var j = await custCall({ op: 'list' }); CU.list = j.list || []; CU.sheet = j.sheet; } catch(e){ CU.list = { err: e.message }; } cbDraw(); }
+async function cbOpen(){ $('mysheet').hidden = true; $('cb').hidden = false; CU.view = ''; cbDraw(); try { var j = await custCall({ op: 'list' }); CU.list = j.list || []; CU.sheet = j.sheet; } catch(e){ CU.list = { err: e.message }; } cbDraw(); }
 async function cbView(name){ CU.view = name; CU.st = null; cbDraw(); try { CU.st = await custCall({ op: 'get', name: name }); } catch(e){ CU.st = { err: e.message }; } cbDraw(); }
 function cbDraw(){
   var el = $('cbbody'), h = '';
@@ -3067,8 +3067,8 @@ function cbDraw(){
   h += '<div class="svtot"><small>' + esc(st.name) + ' · balance · الرصيد</small><b class="' + (st.bal < 0 ? 'neg' : '') + '">' + amt(st.bal) + ' AED</b><small>opening ' + amt(st.open) + ' on ' + cbDate(st.odate) + '</small></div>';
   var run = st.open, es = (st.entries || []).slice().sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
   h += '<table class="svt"><tr><th>Date</th><th>Ref</th><th>Sale</th><th>Received</th><th>Balance</th><th></th></tr><tr class="op"><td>' + cbDate(st.odate) + '</td><td>Opening</td><td></td><td></td><td>' + amt(run) + '</td><td></td></tr>';
-  es.forEach(function(e){ run += e.sale - e.recv + e.adj; h += '<tr><td>' + cbDate(e.date) + '</td><td>' + esc(e.ref) + '</td><td>' + (e.sale ? amt(e.sale) : e.adj ? (e.adj > 0 ? '+' : '') + amt(e.adj) : '') + '</td><td>' + (e.recv ? amt(e.recv) : '') + '</td><td><b>' + amt(run) + '</b></td><td><button type="button" data-cbx="' + esc(e.id) + '" data-cbr="' + esc(e.ref) + '" aria-label="delete line">✕</button></td></tr>'; });
-  h += '</table><div class="ffbtns"><button type="button" id="cbcopy">Copy statement</button><button type="button" id="cbopenbal">Change opening</button></div><button type="button" class="odel" id="cbdel">Delete this customer</button>';
+  es.forEach(function(e){ run += e.sale - e.recv + e.adj; h += '<tr><td>' + cbDate(e.date) + '</td><td>' + esc(e.ref) + '</td><td>' + (e.sale ? amt(e.sale) : e.adj ? (e.adj > 0 ? '+' : '') + amt(e.adj) : '') + '</td><td>' + (e.recv ? amt(e.recv) : '') + '</td><td><b>' + amt(run) + '</b></td><td>' + (isBoss() ? '<button type="button" data-cbx="' + esc(e.id) + '" data-cbr="' + esc(e.ref) + '" aria-label="delete line">✕</button>' : '') + '</td></tr>'; });
+  h += '</table><div class="ffbtns"><button type="button" id="cbcopy">Copy statement</button>' + (isBoss() ? '<button type="button" id="cbopenbal">Change opening</button>' : '') + '</div>' + (isBoss() ? '<button type="button" class="odel" id="cbdel">Delete this customer</button>' : '');   // staff can look and copy; only the owner deletes or changes the opening
   el.innerHTML = h;
 }
 function cbText(){ var st = CU.st, run = st.open, L = ['STATEMENT — ' + st.name, 'Opening ' + dmy(st.odate) + ': ' + amt(st.open) + ' AED'];
@@ -3572,7 +3572,7 @@ function moreDraw(){ var o = isOwner(), bo = isBoss(), nm = me();
     { id: 'bills', t: 'Bills · فواتير', s: 'invoice · receipt voucher · payment voucher · return', i: '🧾', on: true },
     { id: 'drbtn', t: 'Drafts · مسودات', s: 'orders and bills saved half-way · open, change, carry on', i: '📝', on: true },
     { id: 'catbtn', t: 'Catalogue · كتالوج', s: 'design numbers → customer link with photos and videos', i: '📘', on: o },
-    { id: 'cbopen', t: 'Customer balances · أرصدة العملاء', s: 'opening balance once · every sale and receipt continues from it', i: '👤', on: o },
+    { id: 'cbopen', t: 'Customer balances · أرصدة العملاء', s: 'opening balance once · every sale and receipt continues from it', i: '👤', on: true },   // 20 Oct 2026 (Abbas): employees see the balances too
     { id: 'svopen', t: 'Small vendors · موردين صغار', s: 'office expenses · opening balances · kept in the cloud', i: '🏪', on: o },
     { id: 'ffbtn', t: '50·50 bills', s: 'reprice · review · MAKE BILL', i: '½', on: bo },
     { id: 'doropen', t: 'New design order', s: 'Trello card + factory Slack · instead of #order-2', i: '✂️', on: bo },

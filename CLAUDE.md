@@ -85,7 +85,7 @@ when the right change is clear, do it, test it, commit it and report; ask only w
 - `tools/stock.py` (GitHub job memo-stock: Include & share takes pieces off Trello; op `retbill` puts a return bill's pieces back),
   `tools/catalog/*` (catalogue builder), `.github/workflows/*`.
 - **Tests** in `tests/` (Playwright + a fake relay; no real Slack/Trello/Google is touched):
-  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (8), `python3 tests/t_stock.py`.
+  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (9), `python3 tests/t_stock.py`.
   Run them before every memo commit (if `require('playwright')` fails: `NODE_PATH=$(npm root -g)`). The test list password
   `test1234` is a fake list made inside the test, not the shop password.
 - Relay deploy: Abbas pastes `tools/relay.gs` into the Apps Script editor → Save → Deploy → Manage deployments → ✏️ → New version
@@ -96,7 +96,8 @@ Memo rules (his words, short):
 - Never handle, type or ask for the shop password, the owner password or any token/key.
 - A memo never changes Trello; only Include & share (and a Return bill's Return & share) does.
 - Nothing goes to a Slack group unless its button is pressed. #godown gets only the godown part.
-- Work in progress must never reset. Costs and 50-50 are never shown to staff.
+- Work in progress must never reset. Costs and 50-50 are never shown to staff. Customer balances: staff may look and copy
+  statements (20 Oct 2026); only the owner phone deletes lines/customers or changes an opening balance.
 - Every order has one screen: preview with photos, 4 steps with ticks, Make / Continue bill, and two chats —
   📦 #godown (thread under its pick-list post) and 👤 #customer (thread under its memo post).
 - A return line's colour is the card's colour NUMBER (1, 2, 3…), never a name.
@@ -120,3 +121,4 @@ Memo rules (his words, short):
 - 2026-10-20 (VER 2026-10-20d) "do all" UX, part 2: the app opens at once / offline (fac-sw.js, factory.html only); phone notifications without
   ntfy (Web Push via relay + worker; ntfy unchanged); Home Screen icon. NEEDS: relay deploy + fast-worker.js paste in Cloudflare.
 - 2026-10-20: memo 2026-10-20d — order screen: customer + photo tile per design at the top, opens at the preview (newest line if unread), steps folded under one tap; old orders find their #godown/#customer posts (`findroot`); customer balances: owe/advance totals, search #50 or words, filter, sort, ＋Receipt/＋Invoice; long return bills print on more pages; same design twice → oldest card keeps the plain number; failed cost sync is sent again. t_ord now 32/32.
+- 2026-10-20: memo 2026-10-20e — employees can open Customer balances (look + copy statement, ＋Receipt/＋Invoice); delete / change opening stay owner-only.
