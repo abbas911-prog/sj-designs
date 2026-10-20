@@ -903,7 +903,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-20h';
+var VER = '2026-10-20i';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1448,6 +1448,8 @@ $('dinc').onclick = async function(){
     keepNo('inv', d.ref); var nr = nextRef('inv');
     if (!confirm(d.ref + ' was undone — its pieces went back on Trello, and one invoice number takes pieces only once.\n\nInclude it again as ' + nr + '? · أعد الفاتورة برقم جديد')) return;
     B.inv = Object.assign({}, d, { ref: nr, status: 'draft' }); redraw(); stkShow(); return $('dinc').onclick(); }
+  if (d.status === 'included' || (s0 && (s0.st === 'ok' || s0.st === 'busy'))) {   // 21 Oct 2026: on ANY phone or laptop — a bill that went through the green button never takes pieces twice
+    alert(d.ref + ' already went through the green button — its pieces are already off Trello and it is already in 50-50.\n\nTo send it again use Share PDF (the orange button). Nothing changes.\n\n' + d.ref + ' تم تأكيده مسبقاً — استخدم مشاركة PDF فقط'); return; }
   clearTimeout(B.timer); await preview(); if (!B.pdf) return;
   var lines = stkLines(), pcs = lines.reduce(function(a, l){ return a + l.pcs; }, 0), s = STK[stkKey(d.ref)];
   var hasMan = manLines(d).length > 0;
