@@ -903,7 +903,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-20i';
+var VER = '2026-10-20j';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1463,7 +1463,11 @@ $('dinc').onclick = async function(){
   if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   custAfter('inv', d);
   Object.keys(state).forEach(function(k){ var s = state[k]; if (s && s.all) { var p = k.split(':'); state[k] = { sets: 0, all: false, pcs: lab(s, colPcs(byNo(p[0]), +p[1])).pcs }; } });   // 21 Oct 2026: frozen as sold
+  // 21 Oct 2026 (INV-0018 / INV-0021): the bill itself keeps exactly what it sold — every phone and laptop shows these numbers, whatever Trello says later
+  d.sold = colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ return { no: l.no, c: l.c, pcs: l.qty, rate: l.rate }; }); d.soldAt = Date.now(); d.soldBy = me();
+  if (!d.oid) { var so = ls('sj_oid'); if (so) d.oid = so; }   // the order this bill belongs to
   d.status = 'included'; bsSave(true); drDone('bd');
+  if (d.oid && RELAY) ordCall({ op: 'link', id: d.oid, bill: d.ref }).then(function(){ d.linked = d.ref; }).catch(function(){});   // the order's "Continue bill" opens THIS bill
   var szl = lines.slice();
   stkRun('sell');
   if (d.cat !== false && szl.length) szRun(d, szl);
@@ -1523,7 +1527,15 @@ function bsRestore(snap){ var k = snap.k;
     state = snap.state || {}; Object.keys(snap.prices || {}).forEach(function(no){ prices[no] = snap.prices[no]; });
     var gone = Object.keys(byDesign()).filter(function(no){ return !byNo(no); });
     B.inv = snap.d;                                              // so reapply knows whether this bill already took its pieces (then nothing is cut)
-    var sk = STK[stkKey(snap.d.ref)], fixed = [];                // 21 Oct 2026: this phone sent these exact lines to Trello — put them back if the saved copy lost some
+    var sk = STK[stkKey(snap.d.ref)], fixed = [];
+    if (Array.isArray(snap.d.sold) && snap.d.sold.length) {                // 21 Oct 2026: a sold bill shows exactly what it sold, on any device
+      var st2 = {}; snap.d.sold.forEach(function(l){ st2[l.no + ':' + l.c] = { sets: 0, all: false, pcs: l.pcs }; if (l.rate > 0) prices[l.no] = l.rate; });
+      Object.keys(st2).forEach(function(k){ var cur = state[k], d3 = byNo(k.split(':')[0]); if (!d3) return; if (!cur || lab(cur, colPcs(d3, +k.split(':')[1])).pcs !== st2[k].pcs) fixed.push('SJ-' + shown(k.split(':')[0]) + ' colour ' + k.split(':')[1] + ': ' + st2[k].pcs + ' pcs'); });
+      Object.keys(state).forEach(function(k){ if (!st2[k]) fixed.push('SJ-' + shown(k.split(':')[0]) + ' colour ' + k.split(':')[1] + ': taken off (not sold)'); });
+      state = st2; sk = null; gone = Object.keys(byDesign()).filter(function(no){ return !byNo(no); });
+      snap.d.man = snap.d.man || []; gone.forEach(function(no){ if (snap.d.man.some(function(m){ return m.fz === no; })) return;   // sold out since: a typed line with the sold pieces and price
+        var ls3 = snap.d.sold.filter(function(l){ return l.no === no; }), q3 = ls3.reduce(function(a, l){ return a + l.pcs; }, 0);
+        snap.d.man.push({ d: 'SJ-' + no.replace(/-S$/, '') + ' · ' + ls3.map(function(l){ return 'C' + l.c + ' ' + l.pcs + ' pcs'; }).join(' · '), q: String(q3), r: String(ls3[0].rate || ''), fz: no }); }); }                // 21 Oct 2026: this phone sent these exact lines to Trello — put them back if the saved copy lost some
     if (snap.d.status === 'included' && sk && sk.op === 'sell' && sk.st === 'ok' && Array.isArray(sk.lines)) sk.lines.forEach(function(l){ var k = l.no + ':' + l.c, d2 = byNo(l.no); if (!d2) return; var cur = state[k] ? lab(state[k], colPcs(d2, l.c)).pcs : 0; if (cur !== l.pcs && l.pcs > 0) { state[k] = { sets: 0, all: false, pcs: l.pcs }; fixed.push('SJ-' + shown(l.no) + ' colour ' + l.c + ': ' + l.pcs + ' pcs'); } });
     reapply();                                                   // paints the rows; designs no longer in READY are taken off (and told)
     if (fixed.length) setTimeout(function(){ alert('This bill already took its pieces off Trello. Lines put back as they were sold: ' + fixed.join(', ') + '.'); bsSoon(); }, 300);
@@ -1632,7 +1644,7 @@ async function stkRun(op){
   try { await relay('stock', req); }
   catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); stkPaint(s); return; }
   var res = await waitJob(id, 'stock', 8);
-  s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; if (res.ok && op === 'sell') ordBillMade(d.ref); if (res.ok && op === 'return') custVoid(d);   // d = the invoice this job ran for, even if another bill is open now s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
+  s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; if (res.ok && op === 'sell') ordBillMade(d.ref, d.oid); if (res.ok && op === 'return') custVoid(d);   // d = the invoice this job ran for, even if another bill is open now s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
   applyCards(res.cards || []); szPaint();
 }
 function applyCards(cs){ if (!RAW) return; var ch = false;     // show the new numbers at once; the full list refreshes within a few minutes
@@ -2543,7 +2555,7 @@ async function ordPreview(bd){
 async function ordKeep(oid, bd){ var url = await ordPreview(bd); if (!url) return; ORD.pv[oid] = url; if (!$('ords').hidden) ordDraw();
   await relay('stock', { id: jobId('k'), op: 'keep', ref: oid, dev: devId(), lines: [], img: url.split(',')[1] }); }
 // the bill of this memo was included: tick "Bill made" on its order
-function ordBillMade(ref){ var oid = ls('sj_oid'); if (oid && RELAY) ordCall({ op: 'tick', id: oid, step: 'bill', on: true, by: me(), note: ref || '' }).catch(function(){}); }
+function ordBillMade(ref, oid){ oid = oid || ls('sj_oid'); if (oid && RELAY) ordCall({ op: 'tick', id: oid, step: 'bill', on: true, by: me(), note: ref || '' }).catch(function(){}); }
 setTimeout(ordLoad, 2500);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && Date.now() - (ORD.last || 0) > 60000) { ORD.last = Date.now(); ordLoad(); } });
 
