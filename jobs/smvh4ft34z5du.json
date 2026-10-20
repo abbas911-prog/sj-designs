@@ -1,0 +1,82 @@
+{
+ "id": "smvh4ft34z5du",
+ "op": "sell",
+ "ref": "INV-0021",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6935bc80ab6a8ab0a2a8b1b7",
+   "no": "28562",
+   "before": "SJ-28562 ,39 pcs , 6 colors ,  …(7/7/6/5/8/6) ()",
+   "after": "SJ-28562 ,24 pcs , 6 colors ,  …(4/4/4/4/4/4) ()",
+   "left": 24,
+   "lines": [
+    "colour 1: 7 → 4 (−3)",
+    "colour 2: 7 → 4 (−3)",
+    "colour 3: 6 → 4 (−2)",
+    "colour 4: 5 → 4 (−1)",
+    "colour 5: 8 → 4 (−4)",
+    "colour 6: 6 → 4 (−2)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6aad4c00a2a1b3dad8c57e0b",
+   "no": "58273",
+   "before": "Sj = **(58273)** (44) pcs ... color = (4) ...(8/12/12/12)",
+   "after": "Sj = **(58273)** (28) pcs ... color = (4) ...(4/8/8/8)",
+   "left": 28,
+   "lines": [
+    "colour 1: 8 → 4 (−4)",
+    "colour 2: 12 → 8 (−4)",
+    "colour 3: 12 → 8 (−4)",
+    "colour 4: 12 → 8 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a54946fa75337252850a2ca",
+   "no": "85974",
+   "before": "SJ = **(85974)** (36) pcs ,,color = (6) ,,,,(4/8/8/4/8/4)",
+   "after": "SJ = **(85974)** (24) pcs ,,color = (6) ,,,,(4/4/8/0/8/0)",
+   "left": 24,
+   "lines": [
+    "colour 2: 8 → 4 (−4)",
+    "colour 4: 4 → 0 (−4)",
+    "colour 6: 4 → 0 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a5dc61f4d499c09601ae61a",
+   "no": "91074",
+   "before": "SJ-= **91074** (24) pcs color = (6) ,,,(4/4/4/4/4/4)",
+   "after": "SJ-= **91074** (0) pcs color = (6) ,,,(0/0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 4 → 0 (−4)",
+    "colour 5: 4 → 0 (−4)",
+    "colour 6: 4 → 0 (−4)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "69a850c8370ca9a3124ac246",
+   "no": "91273",
+   "before": "SJ =**91273**,,,,(112) pcs …. = (4) colors …..(28/28/28/28)",
+   "after": "SJ =**91273**,,,,(96) pcs …. = (4) colors …..(24/24/24/24)",
+   "left": 96,
+   "lines": [
+    "colour 1: 28 → 24 (−4)",
+    "colour 2: 28 → 24 (−4)",
+    "colour 3: 28 → 24 (−4)",
+    "colour 4: 28 → 24 (−4)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
