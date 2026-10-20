@@ -183,6 +183,47 @@ async function file(env, q, req) {                              // a photo / voi
   return new Response(r.body, { status: r.status, headers: oh });
 }
 
+// ---- WEB PUSH (20 Oct 2026, Abbas: "do all" - phone notifications without the ntfy app). Only the RELAY calls these two (signed with the same
+// phone key as everything else): "vapidnew" makes the push key pair once (the relay keeps it), "push" encrypts a notification for each phone
+// address (RFC 8291, aes128gcm) and sends it with a VAPID signature (RFC 8292). Nothing is stored here.
+const TE = new TextEncoder();
+const b64u = b => { const u = new Uint8Array(b); let s = ''; for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const ub64 = s => { s = String(s || '').replace(/-/g, '+').replace(/_/g, '/'); s += '='.repeat((4 - s.length % 4) % 4); const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+const cat = (...a) => { const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let p = 0; a.forEach(x => { o.set(x, p); p += x.length; }); return o; };
+async function hkdf(salt, ikm, info, n) { const k = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']); return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, k, n * 8)); }
+async function vapidNew() {
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const pub = await crypto.subtle.exportKey('raw', kp.publicKey), j = await crypto.subtle.exportKey('jwk', kp.privateKey);
+  return { ok: true, pub: b64u(pub), priv: { kty: 'EC', crv: 'P-256', x: j.x, y: j.y, d: j.d } };
+}
+async function wpEncrypt(sub, text) {
+  const ua = ub64(sub.keys.p256dh), auth = ub64(sub.keys.auth);
+  const as = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']), asPub = new Uint8Array(await crypto.subtle.exportKey('raw', as.publicKey));
+  const uaKey = await crypto.subtle.importKey('raw', ua, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, as.privateKey, 256));
+  const ikm = await hkdf(auth, shared, cat(TE.encode('WebPush: info\0'), ua, asPub), 32), salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, TE.encode('Content-Encoding: aes128gcm\0'), 16), nonce = await hkdf(salt, ikm, TE.encode('Content-Encoding: nonce\0'), 12);
+  const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, cat(TE.encode(text), new Uint8Array([2]))));
+  return cat(salt, new Uint8Array([0, 0, 16, 0]), new Uint8Array([asPub.length]), asPub, ct);     // header: salt · record size 4096 · key id = our public key
+}
+async function vapidJwt(priv, aud) {
+  const h = b64u(TE.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' }))), p = b64u(TE.encode(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://abbas911-prog.github.io/sj-designs/' })));
+  const k = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', x: priv.x, y: priv.y, d: priv.d, ext: true }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  return h + '.' + p + '.' + b64u(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, k, TE.encode(h + '.' + p)));
+}
+async function wpush(q) {
+  const v = q.vapid || {}, subs = Array.isArray(q.subs) ? q.subs.slice(0, 20) : [], m = q.msg || {}; if (!v.pub || !v.priv || !subs.length) return { ok: false, error: 'bad request' };
+  const text = JSON.stringify({ title: String(m.title || '').slice(0, 120), body: String(m.body || '').slice(0, 300), url: String(m.url || '').slice(0, 300), tag: String(m.tag || '').slice(0, 60) });
+  const res = await Promise.all(subs.map(async s => { const ep = String((s && s.endpoint) || '');
+    try { if (!/^https:\/\//.test(ep) || !s.keys) return { ep, ok: false, e: 'bad address' };
+      const body = await wpEncrypt(s, text), jwt = await vapidJwt(v.priv, new URL(ep).origin);
+      const r = await fetch(ep, { method: 'POST', headers: { Authorization: 'vapid t=' + jwt + ', k=' + v.pub, 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'high' }, body });
+      return { ep, ok: r.status >= 200 && r.status < 300, st: r.status, gone: r.status === 404 || r.status === 410 };
+    } catch (e) { return { ep, ok: false, e: String(e && e.message || e).slice(0, 80) }; } }));
+  return { ok: res.some(x => x.ok), res };
+}
+
 export default {
   async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
@@ -203,7 +244,9 @@ export default {
       if (q.op === 'thread') return json(await thread(env, q));
       if (q.op === 'dm') return json(await dm(env, q));
       if (q.op === 'post') return json(await post(env, q, ctx));
-      if (q.op === 'hello') return json({ ok: true, sj: 'fast', slack: !!env.SLACK_TOKEN, trello: !!env.TRELLO_TOKEN });
+      if (q.op === 'hello') return json({ ok: true, sj: 'fast', slack: !!env.SLACK_TOKEN, trello: !!env.TRELLO_TOKEN, push: true });
+      if (q.op === 'vapidnew') return json(await vapidNew());
+      if (q.op === 'push') return json(await wpush(q));
       return json({ ok: false, error: 'unknown op' }, 400);
     } catch (e) { return json({ ok: false, error: String(e && e.message || e).slice(0, 200) }, 500); }
   }

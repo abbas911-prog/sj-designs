@@ -160,8 +160,36 @@ function facLine(mm) { var t = String(mm.text || '').replace(/\*/g, '').replace(
 function facNtfy(topic, o) {
   try { var r = UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify({ topic: topic, title: o.title, message: o.msg, click: o.click, tags: ['speech_balloon'], priority: 4 }) }); return r.getResponseCode() === 200; } catch (e) { return false; }
 }
+// ---- 20 Oct 2026 (Abbas: "do all" - notifications without the ntfy app): WEB PUSH. A phone that has the app on its Home Screen turns it on
+// from 🔔; its push address is kept per person (FWP_<NAME>, up to 4 phones). Google cannot do the push encryption, so the fast-lane worker
+// does it: the relay hands it the addresses + the VAPID key pair (made once by the worker, kept in FAC_VAPID, never shown to a phone except
+// the public half). ntfy keeps working exactly as before, side by side.
+function facFastKey(P) { var pw = P.getProperty('FACTORY_PASSWORD') || P.getProperty('MEMO_PASSWORD'); return hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'sjfast|' + pw, Utilities.Charset.UTF_8)); }
+function facWorker(P, body) {
+  var fu = P.getProperty('FAC_FAST'); if (!fu) throw new Error('phone notifications need the fast lane (status line -> Fast lane)');
+  body.k = facFastKey(P);
+  var r = UrlFetchApp.fetch(fu + '/', { method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true }), j = null;
+  try { j = JSON.parse(r.getContentText()); } catch (e) {}
+  if (!j) throw new Error('the fast lane answered ' + r.getResponseCode());
+  if (j.error === 'unknown op') throw new Error('paste the new tools/fast-worker.js into Cloudflare and press Deploy first');
+  return j;
+}
+function facVapid(P) {
+  var v = JSON.parse(P.getProperty('FAC_VAPID') || 'null'); if (v) return v;
+  var j = facWorker(P, { op: 'vapidnew' }); if (!j.ok || !j.pub || !j.priv) throw new Error(j.error || 'the fast lane made no key');
+  v = { pub: j.pub, priv: j.priv }; P.setProperty('FAC_VAPID', JSON.stringify(v)); return v;
+}
+function facWpSubs(P, nm) { try { return JSON.parse(P.getProperty('FWP_' + nm) || '[]') || []; } catch (e) { return []; } }
+function facWpSend(P, nm, o) {                                   // true when at least one phone of this person took it
+  var subs = facWpSubs(P, nm); if (!subs.length) return false;
+  var j = facWorker(P, { op: 'push', vapid: facVapid(P), subs: subs, msg: { title: o.title, body: o.msg, url: o.click, tag: o.tag || '' } });
+  var gone = (j.res || []).filter(function (x) { return x.gone; }).map(function (x) { return x.ep; });
+  if (gone.length) { subs = subs.filter(function (s) { return gone.indexOf(s.endpoint) < 0; }); if (subs.length) P.setProperty('FWP_' + nm, JSON.stringify(subs)); else P.deleteProperty('FWP_' + nm); }
+  return (j.res || []).some(function (x) { return x.ok; });
+}
 function facNotifyScan(P, why) {
-  var map = JSON.parse(P.getProperty('FNTFY') || '{}'), names = Object.keys(map); if (!names.length) return 0;
+  var map = JSON.parse(P.getProperty('FNTFY') || '{}'), wpn = Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('FWP_') === 0; }).map(function (k) { return k.slice(4); });
+  var names = Object.keys(map).concat(wpn.filter(function (n) { return !map[n]; })); if (!names.length) return 0;
   var FT = P.getProperty('SLACK_FACTORY_TOKEN'); if (!FT) return 0;
   var lock = LockService.getScriptLock(); if (!lock.tryLock(200)) return 0;          // one scan at a time - never two notifications for one message
   var sent = 0;
@@ -176,7 +204,10 @@ function facNotifyScan(P, why) {
       Object.keys(un).forEach(function (id) {
         var u = un[id]; if (!u || !u.n || !u.last || +noted[id] >= +u.last) return;
         var card = byId[id], ttl = id === 'dm' ? '💬 Direct chat' + (dm ? ' #' + dm.name : '') : (card && card.name ? (String(card.name).match(/\d{3,6}/) ? 'SJ-' + String(card.name).match(/\d{3,6}/)[0] : String(card.name).slice(0, 40)) : 'Card chat');
-        if (facNtfy(map[nm], { title: ttl + (u.n > 1 ? ' · ' + u.n + ' new' : ''), msg: u.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/factory.html#card=' + id })) { sent++; noted[id] = u.last; changed = true; }
+        var note = { title: ttl + (u.n > 1 ? ' · ' + u.n + ' new' : ''), msg: u.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/factory.html#card=' + id, tag: id }, took = false;
+        if (map[nm] && facNtfy(map[nm], note)) took = true;
+        if (wpn.indexOf(nm) >= 0) { try { if (facWpSend(P, nm, note)) took = true; } catch (e) {} }   // 20 Oct 2026: Web Push too
+        if (took) { sent++; noted[id] = u.last; changed = true; }
       });
       if (changed) { facFit(noted, []); try { P.setProperty(nk, JSON.stringify(noted)); } catch (e) {} }
     });
@@ -668,6 +699,24 @@ function fac0(reqText, P) {
     if (req.op === 'ntfytest') {
       var tw = String(req.who || '').trim().toUpperCase().slice(0, 40), tmap = JSON.parse(P.getProperty('FNTFY') || '{}'); if (!tmap[tw]) return out({ ok: false, error: 'notifications are off for ' + tw });
       return out({ ok: facNtfy(tmap[tw], { title: 'AL MUTAGADED · test', msg: '✅ Notifications work · নোটিফিকেশন চালু আছে', click: 'https://abbas911-prog.github.io/sj-designs/factory.html' }) });
+    }
+    if (req.op === 'wpkey') {                                 // 20 Oct 2026: the public half of the push key, for a phone that turns Web Push on
+      try { return out({ ok: true, key: facVapid(P).pub }); } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 160) }); }
+    }
+    if (req.op === 'wpset') {                                 // keep / drop this phone's push address for this person
+      var ww = String(req.who || '').trim().toUpperCase().slice(0, 40), wsub = req.sub || {}, wk = wsub.keys || {}, wdev = String(req.dev || '').replace(/[^a-z0-9]/g, '').slice(0, 12);
+      if (!ww || !/^https:\/\/[^\s]+$/.test(String(wsub.endpoint || '')) || !wk.p256dh || !wk.auth) return out({ ok: false, error: 'bad request' });
+      var wsubs = facWpSubs(P, ww).filter(function (x) { return x.endpoint !== wsub.endpoint && !(wdev && x.dev === wdev); });
+      if (req.on) wsubs.push({ endpoint: String(wsub.endpoint).slice(0, 700), keys: { p256dh: String(wk.p256dh).slice(0, 200), auth: String(wk.auth).slice(0, 60) }, dev: wdev, at: Date.now() });
+      wsubs = wsubs.slice(-4); if (wsubs.length) P.setProperty('FWP_' + ww, JSON.stringify(wsubs)); else P.deleteProperty('FWP_' + ww);
+      var wtimer = '';
+      if (req.on) { try { var whas = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'facNotifyTick'; }); if (!whas) setupFacNotify(); wtimer = 'ok'; } catch (e) { wtimer = String(e.message || e).slice(0, 120); }
+        if (!P.getProperty('FNOTE_' + ww)) { try { var wc0 = CacheService.getScriptCache(), wl1 = bigGet(wc0, 'FAC_LIST_L') || bigGet(wc0, 'FAC_LIST'), wu0 = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), wl1 ? JSON.parse(wl1).cards : [], ww, false), wn0 = {}; Object.keys(wu0).forEach(function (k) { if (wu0[k].last) wn0[k] = wu0[k].last; }); P.setProperty('FNOTE_' + ww, JSON.stringify(wn0)); } catch (e) {} } }   // nothing old fires when it is turned on
+      return out({ ok: true, on: wsubs.length > 0, n: wsubs.length, timer: wtimer, events: !!P.getProperty('FAC_EVENTS_ON') });
+    }
+    if (req.op === 'wptest') {
+      var wtw = String(req.who || '').trim().toUpperCase().slice(0, 40); if (!facWpSubs(P, wtw).length) return out({ ok: false, error: 'no phone of ' + wtw + ' has notifications on' });
+      try { return out({ ok: facWpSend(P, wtw, { title: 'AL MUTAGADED · test', msg: '✅ Notifications work · নোটিফিকেশন চালু আছে', click: 'https://abbas911-prog.github.io/sj-designs/factory.html', tag: 'test' }) }); } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 160) }); }
     }
     if (req.op === 'ntfyget') { var gm = JSON.parse(P.getProperty('FNTFY') || '{}'), gw = String(req.who || '').trim().toUpperCase().slice(0, 40); return out({ ok: true, on: !!gm[gw], topic: gm[gw] || '', events: !!P.getProperty('FAC_EVENTS_ON') }); }
     if (req.op === 'img') {                                   // a card's cover photo, ~300-600 px, fetched with the auth header (browsers are refused)

@@ -7,10 +7,11 @@ const { chromium } = require(PW_PATH);
 const FASTURL = 'https://sj-fast.test.workers.dev';
 const PROPS = { MEMO_PASSWORD: 'shop-test-pw', FACTORY_PASSWORD: 'fac-test-pw', TRELLO: 'tr-read', TRELLO_W: 'tr-write', SLACK_FACTORY_TOKEN: 'xoxb-factory-test', SLACK_BOT_TOKEN: 'xoxb-memo-test' };
 
-function serve() {
-  return new Promise(ok => { const s = http.createServer((q, r) => { const p = path.join(F.ROOT, decodeURIComponent(q.url.split('?')[0]));
+function serve(T) {
+  return new Promise(ok => { const s = http.createServer((q, r) => { if (T && T.offline) { q.socket.destroy(); return; } const p = path.join(F.ROOT, decodeURIComponent(q.url.split('?')[0]));
+    const ov = T && T.override && T.override(q.url.split('?')[0]); if (ov != null) { r.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); r.end(ov); return; }
     if (!p.startsWith(F.ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { r.writeHead(404); r.end('no'); return; }
-    r.writeHead(200, { 'Content-Type': /\.html$/.test(p) ? 'text/html; charset=utf-8' : /\.jpg$/.test(p) ? 'image/jpeg' : 'application/octet-stream', 'Cache-Control': 'no-store' }); fs.createReadStream(p).pipe(r); });
+    r.writeHead(200, { 'Content-Type': /\.html$/.test(p) ? 'text/html; charset=utf-8' : /\.jpg$/.test(p) ? 'image/jpeg' : /\.png$/.test(p) ? 'image/png' : /\.js$/.test(p) ? 'text/javascript' : /\.webmanifest$/.test(p) ? 'application/manifest+json' : 'application/octet-stream', 'Cache-Control': 'no-store' }); fs.createReadStream(p).pipe(r); });
     s.listen(0, '127.0.0.1', () => ok(s)); });
 }
 
@@ -18,12 +19,15 @@ function serve() {
 async function boot(opts) {
   opts = opts || {};
   const W = F.makeWorld(); if (opts.setup) opts.setup(W);
-  const relay = F.makeRelay(W, Object.assign({}, PROPS, opts.fast ? { FAC_FAST: FASTURL } : {}, opts.props || {}));
+  const props = Object.assign({}, PROPS, opts.fast ? { FAC_FAST: FASTURL } : {}, opts.props || {});
+  if (opts.push) W.fastSync = F.makeSyncWorker(props, { SLACK_TOKEN: 'xoxb-factory-test', TRELLO_TOKEN: 'tr-write' });   // the relay -> worker calls (Web Push)
+  const relay = F.makeRelay(W, props);
   const worker = await F.makeWorker(W, relay, { SLACK_TOKEN: 'xoxb-factory-test', TRELLO_TOKEN: 'tr-write' });
-  const srv = await serve(), base = 'http://127.0.0.1:' + srv.address().port + '/';
+  const T0 = {}, srv = await serve(T0), base = 'http://127.0.0.1:' + srv.address().port + '/';
   const browser = opts.browser || await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined });
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, serviceWorkers: 'block' });
-  const T = { W, relay, worker, base, browser, ctx, errors: [], relayCalls: [], sse: {}, trace: [] };
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, serviceWorkers: opts.sw ? 'allow' : 'block' });
+  const T = Object.assign(T0, { W, relay, worker, base, browser, ctx, errors: [], relayCalls: [], sse: {}, trace: [] });
+  if (opts.init) await ctx.addInitScript(opts.init);
   await ctx.route('https://script.google.com/**', async route => { const body = route.request().postData() || '';
     let op = '', rq = {}; try { rq = JSON.parse(JSON.parse(body).req); op = rq.op; } catch (e) {}
     T.trace.push([Date.now(), 'send', op, rq.look, rq.since || rq.ts || '']);
@@ -53,7 +57,7 @@ async function boot(opts) {
     await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length, null, { timeout: 15000 });
     return page;
   };
-  T.close = async () => { await ctx.close(); if (!opts.browser) await browser.close(); srv.close(); };
+  T.close = async () => { await ctx.close(); if (!opts.browser) await browser.close(); srv.close(); if (W.fastSync) await W.fastSync.stop(); };
   return T;
 }
 

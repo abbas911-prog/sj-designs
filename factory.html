@@ -7,6 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f4efe6">
 <title>AL MUTAGADED GARMENTS</title>
+<link rel="manifest" href="factory.webmanifest"><link rel="apple-touch-icon" href="fac-icon-180.png"><link rel="icon" href="fac-icon-180.png">
+<meta name="apple-mobile-web-app-title" content="AL MUTAGADED">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f6f2ea;--card:#fff;--ink:#1f1a14;--mute:#7b6f61;--gold:#a8824a;--gold2:#f6ecd8;--green:#1f8a4c;--red:#c0243f;--line:#e9e1d3;--sh:0 1px 2px rgba(40,30,15,.05),0 6px 18px rgba(40,30,15,.05);--r:18px;--tab:calc(62px + env(safe-area-inset-bottom))}
@@ -35,7 +37,7 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 #lorders .lon{color:#c62828}#lorders .lomore{width:100%;margin:4px 0 10px;padding:10px;border:1px solid #ddd;border-radius:10px;background:transparent;font-size:14px;color:inherit}.loph{display:inline-block;width:34px;height:34px;border-radius:8px;background:#eee center/cover;vertical-align:middle;margin-right:8px;font-size:0;color:transparent;overflow:hidden}
 /* ---- card rows ---- */
 .cardrow{display:flex;gap:12px;background:var(--card);border-radius:var(--r);padding:10px;margin-bottom:10px;align-items:center;box-shadow:var(--sh);content-visibility:auto;contain-intrinsic-size:112px;cursor:pointer}.cardrow:active{background:#fbf8f2}
-.cardrow{position:relative;touch-action:pan-y;transition:transform .18s}.cardrow.sw{transition:none}#list,#retlist{overflow-x:clip}
+.cardrow{position:relative;touch-action:pan-y;transition:transform .18s;-webkit-user-select:none;user-select:none}.cardrow.sw{transition:none;content-visibility:visible}#list,#retlist{overflow-x:clip}
 .cardrow.sw::after{content:attr(data-nx);position:absolute;left:calc(100% + 8px);top:0;bottom:0;width:170px;display:flex;align-items:center;padding-left:14px;border-radius:var(--r);background:#d9efe0;color:#1f8a4c;font-weight:800;font-size:14px;white-space:nowrap}.cardrow.go::after{background:#1f8a4c;color:#fff}
 .ph{width:88px;height:88px;border-radius:14px;background:#efe8db center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
 .cardrow .t{flex:1;min-width:0}.cardrow .no{font-weight:800;font-size:19px;letter-spacing:-.01em}.cardrow .sub{color:var(--mute);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
@@ -200,7 +202,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-20c';
+var VER = '2026-10-20d';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -1076,14 +1078,14 @@ $('mic').oncontextmenu = function(e){ e.preventDefault(); };
 // relay sends real phone notifications through the free ntfy app. 🔔 → install ntfy → subscribe to this person's secret topic → done.
 function devId(){ var d = ls('sj_fac_dev'); if (!d) { d = Math.random().toString(36).slice(2, 10); ls('sj_fac_dev', d); } return d; }
 var NT = { on: ls('sj_fac_nt') === '1' };
-function bellPaint(){ $('bell').hidden = false; $('bell').classList.toggle('on', NT.on); }
+function bellPaint(){ $('bell').hidden = false; $('bell').classList.toggle('on', NT.on || (typeof WP !== 'undefined' && WP.on)); }
 function ntTopic(){ var t = ls('sj_fac_ntt'); if (!t) { var a = new Uint8Array(12); crypto.getRandomValues(a); t = 'sjfac-' + Array.from(a).map(function(x){ return 'abcdefghjkmnpqrstuvwxyz23456789'.charAt(x % 31); }).join(''); ls('sj_fac_ntt', t); } return t; }
 $('bell').onclick = async function(){
   $('tg').hidden = false; $('tg').querySelector('h3').textContent = '🔔 Phone notifications · নোটিফিকেশন'; $('tgbody').innerHTML = 'Checking… · চেক হচ্ছে';
   var g = await call({ op: 'ntfyget' }); if (!g.ok) { $('tgbody').innerHTML = '<span style="color:var(--red)">' + esc(g.error) + '</span>'; return; }
   if (g.topic) ls('sj_fac_ntt', g.topic); NT.on = !!g.on; ls('sj_fac_nt', NT.on ? '1' : null); bellPaint();
   var tp = ntTopic(), btn = 'style="display:block;width:100%;margin-top:8px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:11px;font:inherit;font-weight:700"';
-  $('tgbody').innerHTML = (NT.on ? '<div style="color:#2e7d32;font-weight:800;margin-bottom:6px">✅ On for ' + esc(WHO) + '</div>' : '')
+  $('tgbody').innerHTML = wpHtml(btn) + '<div style="font-weight:800;margin:14px 0 6px;color:var(--mute)">Or with the ntfy app (as before) · অথবা ntfy অ্যাপ দিয়ে</div>' + (NT.on ? '<div style="color:#2e7d32;font-weight:800;margin-bottom:6px">✅ On for ' + esc(WHO) + '</div>' : '')
     + '<b>1.</b> Install <b>ntfy</b> from the App Store (free, no account) · <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">open App Store</a><br>'
     + '<b>2.</b> In ntfy tap <b>＋</b>, paste this topic, tap <b>Subscribe</b>, allow notifications:'
     + '<div style="font:700 17px/1.3 ui-monospace,Menlo,monospace;background:#f6efe2;border-radius:10px;padding:10px;margin:8px 0;word-break:break-all;text-align:center">' + esc(tp) + '</div>'
@@ -1096,12 +1098,43 @@ $('bell').onclick = async function(){
     if (!j.ok) { toast('✗ ' + j.error); return; } NT.on = !!j.on; ls('sj_fac_nt', NT.on ? '1' : null); bellPaint();
     if (NT.on && j.timer && j.timer !== 'ok' && !j.events) toast('On · the 1-minute timer needs Abbas: run setupFacNotify once in Apps Script'); else toast(NT.on ? '✓ Notifications on · চালু' : 'Off · বন্ধ');
     $('bell').onclick(); };
+  wpWire();
   if ($('nttest')) $('nttest').onclick = async function(){ var j = await call({ op: 'ntfytest' }); toast(j.ok ? '✓ Sent — check the phone' : '✗ ' + (j.error || 'ntfy did not take it')); };
 };
+// ---- 20 Oct 2026 (Abbas: "do all" - notifications without the ntfy app): WEB PUSH. Needs the app on the Home Screen (iPhone: Share → Add to
+// Home Screen, open it from the AM icon). 🔔 → Turn on → allow → this phone's push address goes to the relay; the relay sends each new message
+// (same rules as Catch up, same as ntfy) through the fast lane, and the phone shows it like any app. A tap opens that chat.
+var SWR = null, WP = { on: ls('sj_fac_wp') === '1' };
+function wpCan(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function wpHome(){ return !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)); }
+function wpIos(){ return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function ub64(s){ s = String(s).replace(/-/g, '+').replace(/_/g, '/'); s += '='.repeat((4 - s.length % 4) % 4); var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+async function wpReg(){ if (!SWR) SWR = await navigator.serviceWorker.register('fac-sw.js', { scope: 'factory.html' }); return SWR; }
+function wpHtml(btn){ var h = '<div style="font-weight:800;margin-bottom:6px">📲 On this phone, no extra app · এই ফোনেই, আলাদা অ্যাপ ছাড়া</div>';
+  if (!wpCan() || (wpIos() && !wpHome())) return h + (wpIos() && !wpHome() ? '<div>First put the app on the Home Screen: tap <b>Share ⬆️</b> → <b>Add to Home Screen</b>, then open it from the <b>AM</b> icon and come back here.<br>আগে হোম স্ক্রিনে যোগ করুন: Share ⬆️ → Add to Home Screen, তারপর AM আইকন থেকে খুলুন।</div>' : '<div style="color:var(--mute)">This phone cannot do it — use ntfy below · এই ফোনে হবে না, নিচের ntfy ব্যবহার করুন</div>');
+  return h + (WP.on ? '<div style="color:#2e7d32;font-weight:800">✅ On for ' + esc(WHO) + ' · চালু</div>' : '') + '<button id="wpon" ' + btn + '>' + (WP.on ? '🔕 Turn off on this phone · বন্ধ করুন' : '🔔 Turn on · চালু করুন') + '</button>' + (WP.on ? '<button id="wptest" ' + btn + '>🧪 Send a test · পরীক্ষা</button>' : '') + '<div id="wperr" style="color:var(--red);font-size:13px;margin-top:6px"></div>'; }
+function wpWire(){ var b = $('wpon'); if (!b) return;
+  b.onclick = async function(){ var me = this; me.disabled = true; $('wperr').textContent = '';
+    try { if (WP.on) await wpOff(); else await wpOn(); toast(WP.on ? '✓ Notifications on · নোটিফিকেশন চালু' : 'Off · বন্ধ'); $('bell').onclick(); }
+    catch (e) { $('wperr').textContent = '✗ ' + (e.message || e) + ' · হয়নি'; } finally { me.disabled = false; } };
+  if ($('wptest')) $('wptest').onclick = async function(){ var j = await call({ op: 'wptest' }); toast(j.ok ? '✓ Sent — check the phone · ফোনে দেখুন' : '✗ ' + (j.error || 'not sent')); }; }
+async function wpOn(){
+  var perm = await Notification.requestPermission();           // asked first, straight from the tap (iPhone needs that)
+  if (perm !== 'granted') throw new Error('notifications are not allowed — Settings → Notifications → AL MUTAGADED');
+  var k = await call({ op: 'wpkey' }); if (!k.ok) throw new Error(k.error);
+  var reg = await wpReg(); await navigator.serviceWorker.ready;
+  var sub = await reg.pushManager.getSubscription();
+  if (sub && sub.options && sub.options.applicationServerKey && btoa(String.fromCharCode.apply(null, new Uint8Array(sub.options.applicationServerKey))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') !== k.key) { await sub.unsubscribe(); sub = null; }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: ub64(k.key) });
+  var j = await call({ op: 'wpset', on: 1, sub: sub.toJSON(), dev: devId() }); if (!j.ok) throw new Error(j.error);
+  WP.on = true; ls('sj_fac_wp', '1'); bellPaint(); }
+async function wpOff(){ try { var reg = await wpReg(), sub = await reg.pushManager.getSubscription(); if (sub) { await call({ op: 'wpset', on: 0, sub: sub.toJSON(), dev: devId() }); await sub.unsubscribe(); } } finally { WP.on = false; ls('sj_fac_wp', null); bellPaint(); } }
+// the helper also keeps the app page on the phone (opens at once, even on a weak line) - see fac-sw.js; it only looks after factory.html
+if ('serviceWorker' in navigator) { try { wpReg().catch(function(){}); navigator.serviceWorker.addEventListener('message', function(e){ var c = e.data && e.data.open; if (c) { location.hash = 'card=' + c; openFromHash(); } }); } catch(e){} }
 $('tgx').onclick = function(){ $('tg').hidden = true; };
 bellPaint();
 // a Telegram link opens the card straight away: factory.html#card=<id>
-function openFromHash(){ var m = (location.hash || '').match(/card=([0-9a-f]{24}|dm|lais)/); if (!m) return false; var c = D.byId[m[1]]; if (c) { history.replaceState(null, '', location.pathname + location.search); openCard(c); return true; } return false; }
+function openFromHash(){ var m = (location.hash || '').match(/card=([0-9a-f]{24}|dm|lais|L\d+\.\d+)/); if (!m) return false; var c = D.byId[m[1]]; if (c) { history.replaceState(null, '', location.pathname + location.search); openCard(c); return true; } return false; }
 window.addEventListener('hashchange', openFromHash);
 
 // ----- sign in once -----
@@ -1215,7 +1248,9 @@ $('who').textContent = WHO;
 thcLoad(); oload(); setInterval(function(){ if (OUT.length && !OUTRUN) outRun(); }, 10000);
 setTab(TAB); $('verline').textContent = 'AL MUTAGADED GARMENTS · app ' + VER;
 if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } load(false); }
-checkVer();
+// 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
+// is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
+(function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
 window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping };
 })();
 </script>

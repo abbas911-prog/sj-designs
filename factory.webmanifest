@@ -1,0 +1,13 @@
+{
+  "name": "AL MUTAGADED GARMENTS",
+  "short_name": "AL MUTAGADED",
+  "start_url": "factory.html",
+  "scope": "factory.html",
+  "display": "standalone",
+  "background_color": "#f6f2ea",
+  "theme_color": "#f4efe6",
+  "icons": [
+    { "src": "fac-icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "fac-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

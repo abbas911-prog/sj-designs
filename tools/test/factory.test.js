@@ -274,9 +274,86 @@ async function slowSuite(fast, browser) {
   } finally { await T.close(); }
 }
 
+// ---- Web Push: 🔔 → Turn on, then a Slack message arrives on the phone as a real (encrypted) notification ----
+const crypto = require('crypto');
+async function pushSuite(browser) {
+  console.log('\n— phone notifications (Web Push) —');
+  const ua = crypto.createECDH('prime256v1'); ua.generateKeys(); const auth = crypto.randomBytes(16);
+  const SUB = { endpoint: 'https://push.test/phone-1', keys: { p256dh: ua.getPublicKey().toString('base64url'), auth: auth.toString('base64url') } };
+  const init = `(() => { const SUB = ${JSON.stringify(SUB)};
+    const reg = { pushManager: { getSubscription: async () => window.__sub || null, subscribe: async o => (window.__sub = { endpoint: SUB.endpoint, options: o, toJSON: () => SUB, unsubscribe: async () => { window.__sub = null; return true; } }) } };
+    Object.defineProperty(Navigator.prototype, 'serviceWorker', { configurable: true, get: () => ({ register: async () => reg, ready: Promise.resolve(reg), addEventListener() {} }) });
+    window.PushManager = function () {}; window.Notification = { permission: 'default', requestPermission: async () => 'granted' }; })();`;
+  const T = await boot({ fast: true, push: true, browser, init, setup: world });
+  const W = T.W, open = b => { const salt = b.slice(0, 16), n = b[20], as = b.slice(21, 21 + n), ct = b.slice(21 + n), sh = ua.computeSecret(as);
+    const ikm = Buffer.from(crypto.hkdfSync('sha256', sh, auth, Buffer.concat([Buffer.from('WebPush: info\0'), ua.getPublicKey(), as]), 32));
+    const k = Buffer.from(crypto.hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: aes128gcm\0'), 16)), iv = Buffer.from(crypto.hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: nonce\0'), 12));
+    const d = crypto.createDecipheriv('aes-128-gcm', k, iv); d.setAuthTag(ct.slice(-16)); const pt = Buffer.concat([d.update(ct.slice(0, -16)), d.final()]); return JSON.parse(pt.slice(0, -1).toString()); };
+  try {
+    const page = await T.open();
+    await test('🔔 Turn on (no extra app): the phone address is kept on the relay', async () => {
+      await page.click('#tabs button[data-t="more"]'); await page.click('#bell');
+      await until(() => page.locator('#wpon').isVisible(), 8000, 'Turn on button');
+      await page.click('#wpon');
+      await until(() => JSON.parse(T.relay.P.FWP_ABBAS || '[]').some(x => x.endpoint === SUB.endpoint), 15000, 'FWP_ABBAS');
+      ok(T.relay.P.FAC_VAPID, 'push key made once by the worker');
+      await until(() => page.locator('#wptest').isVisible(), 8000, 'test button');
+      await page.click('#wptest'); await until(() => (W.pushes || []).length, 15000, 'test push sent');
+      ok(/test/.test(open(W.pushes[0].body).title), 'test push readable: ' + JSON.stringify(open(W.pushes[0].body)));
+      ok(T.relay.P.FNTFY === undefined || !JSON.parse(T.relay.P.FNTFY).ABBAS, 'ntfy untouched');
+      await page.click('#tgx'); await page.click('#tabs button[data-t="cards"]');
+    });
+    await test('a new Slack message on a card arrives as a notification that opens that card', async () => {
+      W.pushes.length = 0;
+      F.postSlack(W, CUT, { text: 'need more thread', user: 'U1', thread_ts: W.rootB });
+      T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));
+      await until(() => (W.pushes || []).length, 15000, 'push for the new message');
+      const n = open(W.pushes[0].body); ok(/17841/.test(n.title) && /need more thread/.test(n.body) && n.url.endsWith('#card=' + W.cardB.id), 'notification: ' + JSON.stringify(n));
+      F.postSlack(W, CUT, { text: 'x2', user: 'U1', thread_ts: W.rootL }); const before = W.pushes.length;
+      T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E2' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootL, ts: F.slackTs() } }));
+      await until(() => W.pushes.length > before, 15000, 'second push'); await new Promise(r => setTimeout(r, 1500));
+      ok(W.pushes.filter(p => /need more thread/.test(open(p.body).body)).length === 1, 'the first message is notified once');
+    });
+    await test('a phone address that is gone (410) is dropped', async () => {
+      W.fastSync.ctl({ pushStatus: 410 }); const st = await page.evaluate(() => window.__call({ op: 'wptest' })); W.fastSync.ctl({ pushStatus: 0 });
+      ok(!st.ok && !(T.relay.P.FWP_ABBAS), 'dropped: ' + JSON.stringify(st) + ' ' + T.relay.P.FWP_ABBAS);
+    });
+    await test('no page errors (push)', async () => { ok(!T.errors.length, T.errors.join('\n')); });
+  } finally { await T.close(); }
+}
+// ---- the phone helper (fac-sw.js): opens with no line, still updates, never looks after other pages ----
+async function swSuite(browser) {
+  console.log('\n— opens instantly / offline (helper) —');
+  const T = await boot({ sw: true, browser, setup: world });
+  try {
+    const page = await T.open();
+    await test('the helper looks after factory.html only', async () => {
+      await until(() => page.evaluate(() => navigator.serviceWorker.getRegistration().then(r => r && r.active && r.scope)), 15000, 'helper active');
+      const sc = await page.evaluate(() => navigator.serviceWorker.getRegistration().then(r => r.scope)); ok(/\/factory\.html$/.test(sc), 'scope ' + sc);
+      const p2 = await T.ctx.newPage(); await p2.goto(T.base + 'factory-proto.html').catch(() => {}); ok(!(await p2.evaluate(() => !!(navigator.serviceWorker && navigator.serviceWorker.controller))), 'other pages not controlled'); await p2.close();
+    });
+    await test('with the site unreachable the app still opens and shows the cards', async () => {
+      await page.reload(); await page.waitForFunction(() => navigator.serviceWorker.controller, null, { timeout: 10000 });
+      T.offline = true; await page.reload();
+      await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length, null, { timeout: 10000 });
+      ok((await page.textContent('#list')).includes('SJ-'), 'cards shown'); T.offline = false;
+    });
+    await test('a new version still arrives (VER check reloads to it)', async () => {
+      const fs = require('fs'), src = fs.readFileSync(F.ROOT + '/factory.html', 'utf8').replace(/var VER = '[^']+'/, "var VER = '2099-01-01z'");
+      T.override = u => /\/factory\.html$/.test(u) ? src : null;
+      await page.reload();
+      await until(async () => /2099-01-01z/.test(await page.textContent('#verline').catch(() => '')), 20000, 'new version running');
+      T.override = null;
+    });
+    await test('no page errors (helper)', async () => { ok(!T.errors.length, T.errors.join('\n')); });
+  } finally { await T.close(); }
+}
+
+const ONLY = process.argv[2];   // e.g. node tools/test/factory.test.js push
 (async () => {
   const browser = await chromium.launch();
-  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); } finally { await browser.close(); }
+  if (ONLY) { try { await ({ push: pushSuite, sw: swSuite }[ONLY])(browser); } finally { await browser.close(); } const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed'); process.exit(bad.length ? 1 : 0); }
+  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); await pushSuite(browser); await swSuite(browser); } finally { await browser.close(); }
   const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed');
   process.exit(bad.length ? 1 : 0);
 })();

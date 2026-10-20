@@ -56,6 +56,7 @@ function handle(W, method, url, body, headers) {
   }
   if (u.hostname === 'trello.com' && /^\/fake\//.test(u.pathname)) return { status: 200, body: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]), type: 'image/jpeg' };
   if (u.hostname === 'ntfy.sh') { const topic = u.pathname.replace(/^\//, '') || form.topic; W.ntfy.push({ topic, body: typeof body === 'string' ? body : (form.message || JSON.stringify(form)), t: Date.now() }); return J({ id: 'n' + W.ntfy.length }); }
+  if (u.hostname === 'push.test') { W.pushes = W.pushes || []; W.pushes.push({ url, headers: headers || {}, body: Buffer.isBuffer(body) ? body : Buffer.from(body || '') }); return { status: W.pushStatus || 201, body: Buffer.from(''), type: 'text/plain' }; }   // a fake Web Push service
   if (u.hostname === 'api.telegram.org') return J({ ok: false, error: 'no telegram in tests' });
   if (u.hostname === 'api.github.com') return { status: 204, body: Buffer.alloc(0), type: 'text/plain' };
   return { status: 404, body: Buffer.from('unknown host ' + u.hostname), type: 'text/plain' };
@@ -129,6 +130,8 @@ function makeRelay(W, props) {
     putAll: (o, ttl) => Object.keys(o).forEach(k => cache.put(k, o[k], ttl)), getAll: ks => { const r = {}; ks.forEach(k => { const v = cget(k); if (v != null) r[k] = v; }); return r; }, remove: k => CACHE.delete(k), removeAll: ks => ks.forEach(k => CACHE.delete(k)) };
   const props_ = { getProperty: k => (k in P ? P[k] : null), setProperty: (k, v) => { if (String(v).length > 9000) throw new Error('property too large ' + k); P[k] = String(v); return props_; }, deleteProperty: k => { delete P[k]; return props_; }, getProperties: () => Object.assign({}, P), setProperties: o => { Object.assign(P, o); return props_; } };
   const fetchSync = (url, o) => { o = o || {}; let body = o.payload; if (body && typeof body === 'object' && body._b) body = body._b;
+    if (W.fastSync && /\.workers\.dev\//.test(url)) { const r = W.fastSync.call(url, String(body)); (r.pushes || []).forEach(x => { W.pushes = W.pushes || []; W.pushes.push({ url: x.url, headers: x.headers, body: Buffer.from(x.body) }); }); W.log.push(['fetch', 'POST', url]);
+      return { getResponseCode: () => r.status, getContentText: () => r.text, getBlob: () => blob(Buffer.from(r.text), 'application/json'), getHeaders: () => ({}) }; }
     const r = handle(W, o.method || 'get', url, body, o.headers || {}); W.log.push(['fetch', (o.method || 'get').toUpperCase(), url.replace(/token=[^&]+/, 'token=…').slice(0, 140)]);
     return { getResponseCode: () => r.status, getContentText: () => r.body.toString(), getBlob: () => blob(r.body, r.type), getHeaders: () => ({ 'Content-Type': r.type }) }; };
   const triggers = [];
@@ -156,12 +159,21 @@ async function makeWorker(W, relay, env) {
   const fakeFetch = async (url, o) => { o = o || {}; url = String(url);
     if (/script\.google\.com/.test(url)) { const t = relay.post(String(o.body)); return new Response(t, { headers: { 'Content-Type': 'application/json' } }); }
     while (W.slackDelay && /slack\.com/.test(url)) { await new Promise(r => setTimeout(r, W.slackDelay)); break; }
-    let body = o.body; if (body && typeof body !== 'string' && !Buffer.isBuffer(body)) body = String(body);
-    const r = handle(W, o.method || 'GET', url, body, o.headers); return new Response(r.body, { status: r.status, headers: { 'Content-Type': r.type } }); };
-  const mod = { exports: {} }; const ctx = vm.createContext({ module: mod, fetch: fakeFetch, Response, Request, Headers, URL, URLSearchParams, setTimeout, clearTimeout, console, Map, Date, JSON, Math, Promise, Object, Array, String, Number, RegExp, Error, encodeURIComponent });
+    let body = o.body; if (body && ArrayBuffer.isView(body)) body = Buffer.from(body.buffer, body.byteOffset, body.byteLength); else if (body && typeof body !== 'string' && !Buffer.isBuffer(body)) body = String(body);
+    const r = handle(W, o.method || 'GET', url, body, o.headers || {}); return new Response(r.body, { status: r.status, headers: { 'Content-Type': r.type } }); };
+  const mod = { exports: {} }; const ctx = vm.createContext({ module: mod, fetch: fakeFetch, crypto: globalThis.crypto, TextEncoder, btoa, atob, Response, Request, Headers, URL, URLSearchParams, setTimeout, clearTimeout, console, Map, Date, JSON, Math, Promise, Object, Array, String, Number, RegExp, Error, encodeURIComponent });
   vm.runInContext(src, ctx, { filename: 'fast-worker.js' });
   const w = mod.exports, waits = [];
   return { fetch: async req => { const r = await w.fetch(req, env, { waitUntil: p => waits.push(p) }); await Promise.allSettled(waits.splice(0)); return r; } };
 }
 
-module.exports = { ROOT, makeWorld, addCard, postSlack, handle, makeRelay, makeWorker, hexId, slackTs };
+// the relay waits for its answers (Apps Script), the worker does not: for relay -> worker calls the worker runs in its own thread
+function makeSyncWorker(props, env) {
+  const { Worker, MessageChannel, receiveMessageOnPort } = require('worker_threads');
+  const ch = new MessageChannel(), flag = new Int32Array(new SharedArrayBuffer(4));
+  const th = new Worker(path.join(__dirname, 'sync-thread.js'), { workerData: { props, env, port: ch.port2, flag }, transferList: [ch.port2] }); th.unref();
+  return { call(url, body) { Atomics.store(flag, 0, 0); ch.port1.postMessage({ url, body }); Atomics.wait(flag, 0, 0, 30000); const m = receiveMessageOnPort(ch.port1); if (!m) throw new Error('sync worker gave no answer'); return m.message; },
+    ctl(o) { return this.call('ctl://x', JSON.stringify(o)); }, stop() { return th.terminate(); } };
+}
+
+module.exports = { makeSyncWorker, ROOT, makeWorld, addCard, postSlack, handle, makeRelay, makeWorker, hexId, slackTs };
