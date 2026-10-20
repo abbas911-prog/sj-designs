@@ -1,4 +1,4 @@
-// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, employees see balances (no delete), lag: live update keeps unchanged designs, chats/orders shown from the phone, hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
+// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, employees see balances (no delete), chat colours + bubbles kept, no page re-download, instant tick, lag: live update keeps unchanged designs, chats/orders shown from the phone, hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
 const { chromium } = require('playwright'); const http = require('http'); const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
 const DIR = require('path').join(__dirname, '..'), PW = 'test1234';
 function lock(obj) { const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12), key = crypto.pbkdf2Sync(PW, salt, 1000, 32, 'sha256'); const c = crypto.createCipheriv('aes-256-gcm', key, iv); const ct = Buffer.concat([c.update(JSON.stringify(obj)), c.final(), c.getAuthTag()]); return { salt: salt.toString('base64'), iv: iv.toString('base64'), iter: 1000, ct: ct.toString('base64') }; }
@@ -12,11 +12,13 @@ function relay(b) { const req = JSON.parse(b.req);
   if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: Object.values(BILLS).map(x => Object.assign({}, x, { data: undefined })) }; if (req.op === 'get') return BILLS[req.ref] ? Object.assign({ ok: true }, BILLS[req.ref]) : { ok: false, error: 'not saved' }; if (req.op === 'put') { BILLS[req.ref] = Object.assign({}, req, { updated: new Date().toISOString() }); return { ok: true, status: req.status }; } }
   if (b.job === 'cust') { if (req.op === 'post') { custPosts.push(req); return { ok: true, name: 'X', bal: 0, n: 1 }; } if (req.op === 'list') return { ok: true, list: [{ name: 'MAMA BAKHTA', bal: 100, n: 1, last: '2026-10-18' }] }; if (req.op === 'get' && req.name) return { ok: true, found: true, name: req.name, open: 0, odate: '2026-10-01', bal: 100, n: 1, entries: [{ id: 'x1', type: 'inv', ref: 'INV-1', date: '2026-10-18', sale: 100, recv: 0, adj: 0 }] }; return { ok: true, found: false, names: [], list: [] }; }
   if (b.job === 'stock') { stockReq = req; jobs[req.id] = { id: req.id, ok: true, cards: [] }; return { ok: true }; }
-  if (b.job === 'cchat') return { ok: true, customers: [], orders: [] };
+  if (b.job === 'orders') { if (req.op === 'tick') ORDS[0].steps[req.step] = req.on ? { by: req.by, t: Date.now() } : null; return { ok: true, orders: ORDS }; }
+  if (b.job === 'cchat') { if (req.op === 'thread') return { ok: true, name: 'MAMA BAKHTA', root: '1760690000.2', msgs: [{ ts: '1760690000.2', who: 'Order memo', memo: true, text: 'memo', files: [] }, { ts: '1760700000.1', who: 'Matiullah', text: 'one', files: [] }, { ts: '1760700001.1', who: 'Abbas', text: 'two', files: [] }, { ts: '1760700002.1', who: 'Musalim', text: 'three', files: [] }, { ts: '1760700003.1', who: 'Matiullah', text: 'four', files: [] }] }; return { ok: true, customers: [{ k: 'MAMA BAKHTA', name: 'MAMA BAKHTA', last: '1760700003.1', memos: 1, chat: 4, un: 0, tx: '' }], orders: [] }; }
   if (b.job === 'live') return { ok: true, cards: LIVE };
   return { ok: false, error: 'not in test' }; }
 
-const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u === '/memo-data.enc') { rs.setHeader('content-type', 'application/json'); return rs.end(JSON.stringify(enc)); } const f = path.join(DIR, u === '/' ? 'memo.html' : u.slice(1)); if (fs.existsSync(f) && fs.statSync(f).isFile()) { rs.setHeader('content-type', 'text/html'); return rs.end(fs.readFileSync(f)); } rs.statusCode = 404; rs.end('nf'); });
+let HTML_SENT = 0; const ORDS = [{ id: 'o1', name: '#5 Test', created: Date.now(), items: [{ no: '18634', pcs: 8, c: 'C1 8' }], pcs: 8, steps: {} }];
+const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u === '/memo-data.enc') { rs.setHeader('content-type', 'application/json'); return rs.end(JSON.stringify(enc)); } const f = path.join(DIR, u === '/' ? 'memo.html' : u.slice(1)); if (fs.existsSync(f) && fs.statSync(f).isFile()) { rs.setHeader('content-type', 'text/html'); rs.setHeader('etag', '"e1"'); if (rq.headers['if-none-match'] === '"e1"') { rs.statusCode = 304; return rs.end(); } if (/memo\.html$/.test(f)) HTML_SENT++; return rs.end(fs.readFileSync(f)); } rs.statusCode = 404; rs.end('nf'); });
 (async () => {
   await new Promise(r => srv.listen(0, r)); const URL0 = 'http://localhost:' + srv.address().port + '/memo.html';
   const br = await chromium.launch(); const pg = await br.newPage({ viewport: { width: 390, height: 844 } }); const errs = [];
@@ -52,6 +54,23 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   // bell screen stays while the chats poll runs
   await pg.$eval('#back', e => e.click()); await pg.click('#nav button[data-nv="more"]'); await pg.click('.mgrid button[data-go="ccbell"]'); await pg.waitForSelector('#belltp'); await pg.waitForTimeout(14000);
   out.push(['🔔 setup still on screen after the 12 s poll', !!(await pg.$('#belltp'))]);
+  // chats: each person has their own colour (me orange on the right), same person = same colour; a redraw keeps the bubbles
+  await pg.click('#nav button[data-nv="stock"]'); await pg.waitForTimeout(300); await pg.click('#nav button[data-nv="chats"]'); await pg.waitForSelector('.ccrow', { timeout: 8000 }); await pg.click('.ccrow'); await pg.waitForSelector('.ccm:not(.memo)', { timeout: 8000 }); await pg.waitForTimeout(300);
+  const cols = await pg.$$eval('.ccm:not(.memo)', L => L.map(e => ({ who: (() => { const w = e.querySelector('.w').cloneNode(true); w.querySelectorAll('i,em').forEach(x => x.remove()); return w.textContent.trim(); })(), c: (e.className.match(/\bp\d\b/) || [''])[0], me: e.classList.contains('me') })));
+  const byWho = {}; cols.forEach(x => { byWho[x.who] = byWho[x.who] || new Set(); byWho[x.who].add(x.c); });
+  out.push(['chat: own colour per person, me orange on the right', cols.length === 4 && Object.keys(byWho).length === 3 && Object.values(byWho).every(s => s.size === 1) && new Set(cols.map(x => x.c)).size === 3 && cols.find(x => x.who === 'Abbas').c === 'p4' && cols.find(x => x.who === 'Abbas').me && !cols.find(x => x.who === 'Musalim').me]);
+  await pg.evaluate(() => { document.querySelectorAll('.ccm')[1].__keep = 1; }); await pg.evaluate(() => window.__sj.ccDraw && window.__sj.ccDraw()); await pg.waitForTimeout(300);
+  out.push(['chat: a refresh keeps the bubbles (no flicker)', await pg.evaluate(() => document.querySelectorAll('.ccm')[1].__keep === 1)]);
+  // coming back to the app: the page is not downloaded again when nothing changed (ETag)
+  await pg.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await pg.waitForTimeout(1500); const h0 = HTML_SENT;
+  await pg.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await pg.waitForTimeout(1500); await pg.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await pg.waitForTimeout(1500);
+  out.push(['coming back to the app does not re-download the page', HTML_SENT === h0]);
+  // a step tick shows at once even when Google takes 2 s, and stays
+  await pg.route(/script\.google\.com/, async r => { const b = JSON.parse(r.request().postData() || '{}'); if (b.job === 'orders') await new Promise(x => setTimeout(x, 2000)); r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(b)) }); });
+  await pg.click('#nav button[data-nv="orders"]'); await pg.waitForSelector('#ordbody [data-ot="o1"]', { timeout: 8000 }); await pg.click('#ordbody [data-ot="o1"]'); await pg.waitForSelector('.optiles', { timeout: 8000 }); await pg.click('[data-ofold]'); await pg.waitForSelector('#ccbody .ock[data-ok="s2"]', { timeout: 8000 });
+  const t0 = Date.now(); await pg.click('#ccbody .ock[data-ok="s2"]'); const quick = await pg.waitForSelector('#ccbody .ock.on[data-ok="s2"]', { timeout: 900 }).then(() => Date.now() - t0, () => -1); await pg.waitForTimeout(3000);
+  out.push(['tick shows at once (Google slow) and stays', quick >= 0 && quick < 900 && !!(await pg.$('#ccbody .ock.on[data-ok="s2"]'))]);
+  await pg.unroute(/script\.google\.com/); await pg.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) }));
   // lag fixes: a live update keeps the designs that did not change; chats + orders show at once from the phone while Google is slow
   await pg.evaluate(() => { document.querySelector('#feed .design[data-no="18634"]').__keep = 1; document.querySelector('#feed .design[data-no="55555"]').__keep = 1; });
   LIVE = cards.map(c => c.id === 'a5' ? Object.assign({}, c, { name: 'SJ-55555 (7) colour = (1) (7)' }) : c);
