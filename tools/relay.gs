@@ -149,7 +149,14 @@ function facSlow(j) { if (j && j.error === 'ratelimited') CacheService.getScript
 // app: the app makes a secret topic name, the relay keeps it (FNTFY = {NAME: topic}), and whenever Slack tells the relay something was
 // written (Event Subscriptions) - or every minute from a timer as a fallback - the relay works out each person's NEW unread messages
 // (same rules as Catch up) and sends "SJ-17841 · Mohammod: …" with a link that opens that card. Already-sent ones are remembered (FNOTE_<NAME>).
-function facLine(mm) { var t = String(mm.text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(); if (!t && (mm.files || []).length) t = mm.files.map(function (f) { return f.audio ? '🎤 voice note' : f.img ? '📷 photo' : f.video ? '🎬 video' : '📎 ' + f.name; }).join(' · '); return (mm.who ? mm.who + ': ' : '') + t.slice(0, 160); }
+// 20 Oct 2026 (Abbas): "when a card is moved from one list to another, write it down in the chat - and treat it as a notification as well".
+// A move line ("→ *CUTTING* · Usman", also edits / photos / delete lines that start with →) now counts as NEW for everyone except the person
+// who did it (the name after " · "). Moves made straight in Trello (not from the app) are written into the card's chat by facTrelloMoves.
+function facNote(mm, who) { if (!mm || !mm.sys) return false; var t = String(mm.text || '').replace(/\*/g, ''); if (!/^→ /.test(t)) return false;
+  var w1 = function (x) { return facWho1(x) || nrmName(String(x || '').trim().split(/\s+/)[0]); };
+  var act = w1((t.split(' · ')[1] || '').split(/\s+(?:changed|added|opened|linked|copied|made|deleted)\b/)[0]), me = w1(who);
+  return !(act && me && (act === me || (act.length >= 3 && me.length >= 3 && (act.indexOf(me) === 0 || me.indexOf(act) === 0)))); }
+function facLine(mm) { var t = String(mm.text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(); if (mm.sys) return t.replace(/^→ /, '🔀 ').slice(0, 160); if (!t && (mm.files || []).length) t = mm.files.map(function (f) { return f.audio ? '🎤 voice note' : f.img ? '📷 photo' : f.video ? '🎬 video' : '📎 ' + f.name; }).join(' · '); return (mm.who ? mm.who + ': ' : '') + t.slice(0, 160); }
 function facNtfy(topic, o) {
   try { var r = UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify({ topic: topic, title: o.title, message: o.msg, click: o.click, tags: ['speech_balloon'], priority: 4 }) }); return r.getResponseCode() === 200; } catch (e) { return false; }
 }
@@ -421,6 +428,30 @@ function facSampleNeed(P, wtok) {
     }
   } catch (e) { c.put('SNEED_ERR', String(e.message || e).slice(0, 200), 21600); } finally { lock.releaseLock(); }
 }
+// 20 Oct 2026: moves made straight in Trello (or by anyone not using the app) are written into the card's chat too - "→ *CUTTING* · Name · in Trello".
+// Checked at most every 45 s on the factory app's ping: one Trello call for the board's list moves + comments since the last check. Moves made by
+// the app already wrote their own line (and left the Trello comment "→ LIST · who (factory app)"), so those are skipped. Only cards that already
+// have a chat get the line (no new #cutting posts). First run only notes "now".
+function facTrelloMoves(P, wtok, FT) {
+  if (!wtok || !FT) return; var c = CacheService.getScriptCache(); if (c.get('FMV_AT')) return; c.put('FMV_AT', '1', 45);
+  var last = P.getProperty('FMOVE_LAST'); if (!last) { P.setProperty('FMOVE_LAST', new Date().toISOString()); return; }
+  var lock = LockService.getScriptLock(); if (!lock.tryLock(200)) return;
+  try {
+    var acts = trApi('get', '/boards/' + FAC.BOARD + '/actions', { filter: 'updateCard:idList,commentCard', since: last, limit: 200 }, wtok) || [], cut = Date.now() - 20000, app = {}, newest = last;
+    acts.forEach(function (a) { if (a.type === 'commentCard' && /^→ |\(factory app\)|^SOLD|SOLD SAMPLE/.test(String((a.data || {}).text || ''))) { var cid = ((a.data || {}).card || {}).id; (app[cid] = app[cid] || []).push(Date.parse(a.date)); } });
+    acts.filter(function (a) { return a.type === 'updateCard' && a.data && a.data.listAfter && a.data.card && Date.parse(a.date) < cut; })
+      .sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); }).forEach(function (a) {
+        if (Date.parse(a.date) > Date.parse(newest)) newest = a.date;
+        if (c.get('FMV_D_' + a.id)) return; c.put('FMV_D_' + a.id, '1', 86400);
+        var cid = a.data.card.id, t = Date.parse(a.date); if ((app[cid] || []).some(function (d) { return d >= t - 5000 && d <= t + 120000; })) return;   // the app (or the stock job) already wrote it
+        var th = P.getProperty('FTH_' + cid); if (!th) return; th = JSON.parse(th);
+        var who = String(((a.memberCreator || {}).fullName) || 'Trello').slice(0, 40), to = String(a.data.listAfter.name || '?'), fr = String((a.data.listBefore || {}).name || '');
+        var pr = slackApi(FT, 'chat.postMessage', { channel: th.ch, thread_ts: th.ts, text: '→ *' + to + '* · ' + who + ' · in Trello' + (fr ? ' (from ' + fr + ')' : '') });
+        if (pr.ok) { try { facNudge(P, cid); facNudge(P, 'list:' + cid); } catch (e) {} }
+      });
+    P.setProperty('FMOVE_LAST', newest); if (newest !== last) { bigDrop(c, 'FAC_LIST'); facBump(); }
+  } finally { lock.releaseLock(); }
+}
 function nrmName(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
 function facUsers(FT) {                                        // the people of the workspace (no bots, no deleted), for "new direct chat with..."; cached 10 min
   var c = CacheService.getScriptCache(), h = c.get('FAC_USERS'); if (h) return JSON.parse(h);
@@ -452,20 +483,20 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
     var all = P.getProperties(), byCard = {}; Object.keys(all).forEach(function (x) { if (x.indexOf('FTH_') === 0) byCard[x.slice(4)] = JSON.parse(all[x]); });
     Object.keys(th).sort(function (a, b) { return +th[b].last - +th[a].last; }).forEach(function (cid) {   // newest activity first: a fresh message is counted before old move lines
       var t = th[cid], seen = Math.max(+(rec[cid] || 0), +rec._t0); if (!(+t.last > seen) || !byCard[cid]) return;
-      var rk = 'FUR_' + W + '_' + cid + '_' + t.last + '_' + seen, rh = cache.get(rk);
+      var rk = 'FUR2_' + W + '_' + cid + '_' + t.last + '_' + seen, rh = cache.get(rk);
       if (rh) { var r0 = JSON.parse(rh); if (r0.n) outm[cid] = r0; return; }             // this thread has not changed since we last counted it
       if (!facBudget()) { if (lastGood[cid]) outm[cid] = lastGood[cid]; return; }
       looked++;
       var rp = slackApi(FT, 'conversations.replies', { channel: byCard[cid].ch, ts: byCard[cid].ts, oldest: String(seen), limit: 100 }, true);
       if (!rp.ok) { facSlow(rp); if (lastGood[cid]) outm[cid] = lastGood[cid]; return; }  // Slack busy: keep what we knew, never blank it
       var n = 0, lastOther = '', tx = '';
-      (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if (mm.sys || mine(mm)) return; n++; lastOther = m.ts; tx = facLine(mm); });
+      (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if ((mm.sys && !facNote(mm, who)) || mine(mm)) return; n++; lastOther = m.ts; tx = facLine(mm); });
       var r = { n: n, last: lastOther, tx: tx }; try { cache.put(rk, JSON.stringify(r), 21600); } catch (e) {} if (n) outm[cid] = r;
     });
   } else Object.keys(lastGood).forEach(function (x) { if (x !== 'dm' && x !== 'lais' && x.charAt(0) !== 'L') outm[x] = lastGood[x]; });
   try { var dm = facDm(P, FT); if (dm) {                      // the direct chat counts too (Abbas 14 Oct: "include those chats notifications in catchup")
     var seenD = Math.max(+(rec.dm || 0), +rec._t0), nd = 0, lastD = '', txD = '';
-    facDmMsgs(P, FT, dm, fresh).forEach(function (m) { if (+m.ts <= seenD) return; var md = facMsg(P, FT, m, null); if (md.sys || mine(md)) return; nd++; lastD = m.ts; txD = facLine(md); });
+    facDmMsgs(P, FT, dm, fresh).forEach(function (m) { if (+m.ts <= seenD) return; var md = facMsg(P, FT, m, null); if ((md.sys && !facNote(md, who)) || mine(md)) return; nd++; lastD = m.ts; txD = facLine(md); });
     if (nd) outm.dm = { n: nd, last: lastD, tx: txD };
   } } catch (e) { if (lastGood.dm) outm.dm = lastGood.dm; }
   try { var lsr = facLaisFor(P, FT, who); if (lsr) {           // #laisfactory counts too - only for the people who may see it
@@ -613,6 +644,7 @@ function fac0(reqText, P) {
       return out(res);
     }
     if (req.op === 'ping') {                                  // 15 Oct 2026: the cheap "anything new?" every 4 s - no Trello call; the cards come from the cached list
+      try { facTrelloMoves(P, wtok, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) {}   // 20 Oct 2026: a card moved straight in Trello -> a line in its chat
       try { facSampleNeed(P, wtok); } catch (e) {}           // 18 Oct 2026: #samplesneed pictures -> SAMPLE cards on RETURNS (at most once a minute)
       var FTp = P.getProperty('SLACK_FACTORY_TOKEN'), whp = String(req.who || '').slice(0, 40), lc0 = bigGet(CacheService.getScriptCache(), 'FAC_LIST') || bigGet(CacheService.getScriptCache(), 'FAC_LIST_L');
       var pcards = lc0 ? JSON.parse(lc0).cards : Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('FTH_') === 0; }).map(function (k) { return { id: k.slice(4) }; });
@@ -1292,7 +1324,7 @@ var GD_CH = MEMO_PDF_CHANNELS[0];
 function gdHist(tok, fresh) {                                    // newest 200 top-level posts of #godown (rc / lr only), kept 20 s for every phone
   var c = CacheService.getScriptCache(), h = fresh ? null : bigGet(c, 'GD_HIST'); if (h) return JSON.parse(h);
   var j = slackApi(tok, 'conversations.history', { channel: GD_CH, limit: 200 }, true); if (!j.ok) throw new Error(ccErr(j.error).replace('#customer', '#godown'));
-  var all = (j.messages || []).map(function (m) { return { ts: m.ts, rc: m.reply_count || 0, lr: m.latest_reply || '' }; });
+  var all = (j.messages || []).map(function (m) { return { ts: m.ts, rc: m.reply_count || 0, lr: m.latest_reply || '', text: String(m.text || '').slice(0, 300) }; });
   try { bigPut(c, 'GD_HIST', JSON.stringify(all), 20); } catch (e) {} return all;
 }
 function chReplies(tok, ch, root, lr) {                          // one thread of #godown or #customer: root first, then the replies (cached by its newest reply)
@@ -1389,6 +1421,13 @@ function cchat(reqText, P) {
       var sg3 = ccSeenGet(P, who), nowG = String(Date.now() / 1000 + 2); if (+nowG > +(sg3['G' + gr] || 0)) { sg3['G' + gr] = nowG; ccSeenPut(P, who, sg3); }
       ccNudge(P, 'G' + gr);
       var grt = JSON.stringify(gres); if (rid) cR.put('CCR_' + rid, grt, 21600); return ContentService.createTextOutput(grt).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (req.op === 'findroot') {                                  // 20 Oct 2026: an order sent before its posts were remembered - find its pick-list post in #godown and its memo post in #customer
+      var fk = ccKey(String(req.name || '').replace(/[*_]/g, ' ')) || 'NO NAME', at = (+req.at || Date.now()) / 1000, best = function (list, re) {
+        var hit = null, gap = 3 * 86400; list.forEach(function (m) { var mm = String(m.text || '').match(re); if (!mm) return; var nk = ccKey(mm[1].replace(/[*_]/g, ' ')); if (nk !== fk) return;
+          var d = Math.abs(+m.ts - at) + (+m.ts < at - 120 ? 3600 : 0); if (d < gap) { gap = d; hit = m.ts; } }); return hit || ''; };
+      var fg = '', fc = ''; try { fg = best(gdHist(tok, true), /^\*GODOWN PICK LIST\*[^\n]*—\s*([^\n]+)/); } catch (e) {} try { fc = best(ccHist(tok, true), /^\*ORDER MEMO[^*\n]*\*[^\n]*—\s*([^\n]+)/); } catch (e) {}
+      return out({ ok: true, gts: fg, cts: fc });
     }
     if (req.op === 'mkroot') {                                    // an order sent before 19 Oct has no post in that channel yet: one short post starts its chat
       var mch = req.ch === 'godown' ? GD_CH : CC_CH, mtx = String(req.text || '').slice(0, 1500); if (!mtx.trim()) return out({ ok: false, error: 'empty' });
