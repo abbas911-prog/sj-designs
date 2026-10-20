@@ -8,13 +8,16 @@
 - `memo.html` — SJ Stock app. **Another chat works on it — don't touch unless Abbas asks.**
 - `tools/relay.gs` — Google Apps Script relay shared by **all** apps (memo, factory, timo, bills…).
 - `tools/fast-worker.js` — Cloudflare worker "sj-fast" (the fast lane).
+- `fac-sw.js` — the factory app's phone helper (service worker, scope = factory.html ONLY): keeps the page on the phone (opens at once /
+  offline; `?v=` reloads go network-first so updates still arrive) and shows Web Push notifications. `factory.webmanifest`, `fac-icon-*.png`.
+- `tools/test/` — the factory test harness (see rule 5).
 - `facthumbs/` — card cover thumbnails, made every 20 min by `.github/workflows/fac-thumbs.yml` (`tools/facthumbs.py`).
 
 ## Rules (from Abbas)
 1. Push app changes straight to `main` (Pages serves `main`). **Bump `var VER` in factory.html on every change**
    (format `YYYY-MM-DDx`, e.g. `2026-10-20a` → `2026-10-20b`) — phones check it every 5 min (`checkVer`) and reload themselves.
 2. relay.gs: always start from the **newest copy in the repo**, never an old one. List every `function` before and after an
-   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 131 on 20 Oct 2026).
+   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 136 on 20 Oct 2026).
    Abbas deploys it himself (Apps Script editor → paste → Save → Deploy → New version) — tell him when a relay deploy is needed.
    **Never ask him to open Script properties**; any new setting is set from inside the app (an op that stores it, like `fastset`).
 3. **Never put tokens, passwords, costs or prices in any file** — the repo is public. Secrets live only in Script properties /
@@ -55,6 +58,10 @@ straight from the phone (`upurl` → upload → `up`). Outbox on the phone (Inde
 `c=list:<id>` (list changed → reload), `c=ret:<n>`, `s:<channel>:<thread>` (from Slack Event Subscriptions → worker `/slack`; app maps it
 to the card with `refs`). No message text ever goes on the doorbell. Polling stays as the safety net. Phone notifications: 🔔 → ntfy app,
 per-person topic `FNTFY`, sent by `facNotifyScan` (on Slack events + 1-min timer `facNotifyTick`). Old Telegram buzz (`facWatch`) still exists.
+**Web Push** (no extra app, phone must have the app on its Home Screen): 🔔 → Turn on → `wpkey` / `wpset` → `FWP_<NAME>` (≤4 phones).
+`facNotifyScan` sends to both ntfy and Web Push; the relay hands the worker (`op:push`, `op:vapidnew`) the addresses + the VAPID pair
+(`FAC_VAPID`, made once by the worker) because Apps Script cannot do the encryption. Phone notifications need the fast lane on.
+**Done / Move**: no question; ↩ Undo bar 5 s (`MV`, `mvGo`), sent to Trello after 5 s or when the app goes to the background.
 
 **Returns**: a return IS a card on RETURNS (new via ↩️ sheet = `op:sample` with `kind:'ret'`, chat in #cutting); Done → RETURNS BACK =
 pieces came back; there it can be deleted (archived). Older record-style returns (`FRT_<n>`, `retlist/retnew/retset`) still in the relay.
@@ -110,3 +117,5 @@ Memo rules (his words, short):
   told after 5 s, or at once when the app goes to the background); swipe a card row left = Done; voice notes load by themselves into a
   player (photos already did); status line "● Up to date" / "⚠ No internet"; every error message also in Bengali; search by words; ↩ reply
   to a message (Slack quote "> *Name:* text"); Slack's &amp; shown as &.
+- 2026-10-20 (VER 2026-10-20d) "do all" UX, part 2: the app opens at once / offline (fac-sw.js, factory.html only); phone notifications without
+  ntfy (Web Push via relay + worker; ntfy unchanged); Home Screen icon. NEEDS: relay deploy + fast-worker.js paste in Cloudflare.
