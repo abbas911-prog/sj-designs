@@ -1,10 +1,10 @@
-// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, employees see balances (no delete), hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
+// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, employees see balances (no delete), lag: live update keeps unchanged designs, chats/orders shown from the phone, hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
 const { chromium } = require('playwright'); const http = require('http'); const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
 const DIR = require('path').join(__dirname, '..'), PW = 'test1234';
 function lock(obj) { const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12), key = crypto.pbkdf2Sync(PW, salt, 1000, 32, 'sha256'); const c = crypto.createCipheriv('aes-256-gcm', key, iv); const ct = Buffer.concat([c.update(JSON.stringify(obj)), c.final(), c.getAuthTag()]); return { salt: salt.toString('base64'), iv: iv.toString('base64'), iter: 1000, ct: ct.toString('base64') }; }
 const cards = [{ id: 'c1', idShort: 1, list: 'r', name: 'SJ-18634 (16) colour = (2) (8/8)', attachments: [{ id: 'a1', mimeType: 'image/jpeg', date: '2026-10-01T00:00:00Z', name: 'x.jpg' }] }];
 cards.push({ id: 'a5', idShort: 5, list: 'r', name: 'SJ-55555 (8) colour = (1) (8)', attachments: [] }, { id: 'b5', idShort: 6, list: 'r', name: 'SJ-55555 (4) colour = (1) (4)', attachments: [] });
-const enc = lock({ updated: new Date().toISOString(), cards });
+const enc = lock({ updated: new Date().toISOString(), cards }); let LIVE = cards;
 const BILLS = { 'INV-0015': { ref: 'INV-0015', type: 'inv', name: 'MAMA BAKHTA', status: 'included', total: '1,600.00', date: '2026-10-18', updated: '2026-10-18T19:00:00Z', data: JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }, { no: '48293', base: '48293', card: 'cGONE', c: 2, qty: 8, rate: 100 }] }) } };
 const jobs = {}, custPosts = []; let stockReq = null;
 BILLS['INV-0015'].data = JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [{ d: 'SJ-77001 · C1 4 pcs', q: 4, r: 50, fz: '77001' }, { d: 'SJ 6668-1 lace', q: 2, r: 10 }] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }] });
@@ -13,7 +13,9 @@ function relay(b) { const req = JSON.parse(b.req);
   if (b.job === 'cust') { if (req.op === 'post') { custPosts.push(req); return { ok: true, name: 'X', bal: 0, n: 1 }; } if (req.op === 'list') return { ok: true, list: [{ name: 'MAMA BAKHTA', bal: 100, n: 1, last: '2026-10-18' }] }; if (req.op === 'get' && req.name) return { ok: true, found: true, name: req.name, open: 0, odate: '2026-10-01', bal: 100, n: 1, entries: [{ id: 'x1', type: 'inv', ref: 'INV-1', date: '2026-10-18', sale: 100, recv: 0, adj: 0 }] }; return { ok: true, found: false, names: [], list: [] }; }
   if (b.job === 'stock') { stockReq = req; jobs[req.id] = { id: req.id, ok: true, cards: [] }; return { ok: true }; }
   if (b.job === 'cchat') return { ok: true, customers: [], orders: [] };
+  if (b.job === 'live') return { ok: true, cards: LIVE };
   return { ok: false, error: 'not in test' }; }
+
 const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u === '/memo-data.enc') { rs.setHeader('content-type', 'application/json'); return rs.end(JSON.stringify(enc)); } const f = path.join(DIR, u === '/' ? 'memo.html' : u.slice(1)); if (fs.existsSync(f) && fs.statSync(f).isFile()) { rs.setHeader('content-type', 'text/html'); return rs.end(fs.readFileSync(f)); } rs.statusCode = 404; rs.end('nf'); });
 (async () => {
   await new Promise(r => srv.listen(0, r)); const URL0 = 'http://localhost:' + srv.address().port + '/memo.html';
@@ -50,6 +52,21 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   // bell screen stays while the chats poll runs
   await pg.$eval('#back', e => e.click()); await pg.click('#nav button[data-nv="more"]'); await pg.click('.mgrid button[data-go="ccbell"]'); await pg.waitForSelector('#belltp'); await pg.waitForTimeout(14000);
   out.push(['🔔 setup still on screen after the 12 s poll', !!(await pg.$('#belltp'))]);
+  // lag fixes: a live update keeps the designs that did not change; chats + orders show at once from the phone while Google is slow
+  await pg.evaluate(() => { document.querySelector('#feed .design[data-no="18634"]').__keep = 1; document.querySelector('#feed .design[data-no="55555"]').__keep = 1; });
+  LIVE = cards.map(c => c.id === 'a5' ? Object.assign({}, c, { name: 'SJ-55555 (7) colour = (1) (7)' }) : c);
+  await pg.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); }); await pg.waitForFunction(() => /7 pcs/.test((document.querySelector('#feed .design[data-no="55555"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  out.push(['live update: unchanged design kept, changed one redrawn', await pg.evaluate(() => document.querySelector('#feed .design[data-no="18634"]').__keep === 1 && !document.querySelector('#feed .design[data-no="55555"]').__keep && /7 pcs/.test(document.querySelector('#feed .design[data-no="55555"]').textContent))]);
+  const p3 = await br.newPage({ viewport: { width: 390, height: 844 } }); p3.on('pageerror', e => errs.push(e.message));
+  await p3.route(/script\.google\.com/, r => { const b = JSON.parse(r.request().postData() || '{}'); if (b.job === 'cchat' || b.job === 'orders') return; r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(b)) }); });   // Google never answers chats / orders
+  await p3.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
+  await p3.goto(URL0); await p3.evaluate(pw => { localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas');
+    localStorage.setItem('sj_c_list', JSON.stringify({ c: [{ k: 'MATIULLAH', name: 'MATIULLAH', last: '1760700000.1', memos: 1, chat: 2, un: 0, tx: '' }], o: [] }));
+    localStorage.setItem('sj_c_ord', JSON.stringify([{ id: 'o9', name: '#9 Cached order', created: Date.now(), items: [{ no: '18634', pcs: 8, c: 'C1 8' }], pcs: 8, steps: {} }])); }, PW);
+  await p3.reload(); await p3.waitForSelector('#feed .design', { timeout: 15000 });
+  await p3.click('#nav button[data-nv="chats"]'); const chatsAt = await p3.waitForSelector('.ccrow', { timeout: 1500 }).then(() => true, () => false);
+  await p3.click('#nav button[data-nv="orders"]'); const ordAt = await p3.waitForSelector('#ordbody [data-ot="o9"]', { timeout: 1500 }).then(() => true, () => false);
+  out.push(['chats + orders show at once from the phone (Google slow)', chatsAt && ordAt]); await p3.close();
   // employee phone (catalogue off): Customer balances opens, but no delete / change-opening buttons
   const p2 = await br.newPage({ viewport: { width: 390, height: 844 } }); p2.on('pageerror', e => errs.push(e.message)); p2.on('dialog', d => d.accept());
   await p2.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) })); await p2.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());

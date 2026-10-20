@@ -85,7 +85,8 @@ when the right change is clear, do it, test it, commit it and report; ask only w
 - `tools/stock.py` (GitHub job memo-stock: Include & share takes pieces off Trello; op `retbill` puts a return bill's pieces back),
   `tools/catalog/*` (catalogue builder), `.github/workflows/*`.
 - **Tests** in `tests/` (Playwright + a fake relay; no real Slack/Trello/Google is touched):
-  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (9), `node tests/t_ntfy.js` (3, real relay.gs), `python3 tests/t_stock.py`.
+  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (11), `node tests/t_ntfy.js` (3, real relay.gs), `python3 tests/t_stock.py`.
+  Speed: `node tests/perf.js` (350 fake designs at phone CPU speed; prints freeze ms per action).
   Run them before every memo commit (if `require('playwright')` fails: `NODE_PATH=$(npm root -g)`). The test list password
   `test1234` is a fake list made inside the test, not the shop password.
 - Relay deploy: Abbas pastes `tools/relay.gs` into the Apps Script editor → Save → Deploy → Manage deployments → ✏️ → New version
@@ -124,3 +125,4 @@ Memo rules (his words, short):
 - 2026-10-20: memo 2026-10-20e — employees can open Customer balances (look + copy statement, ＋Receipt/＋Invoice); delete / change opening stay owner-only.
 - 2026-10-20: relaycode.html — phone page to copy the newest relay code (loads tools/relay.gs fresh; like fastcode.html for the worker).
 - 2026-10-20: SJ Stock 🔔 "Send a test" (relay `cchat` `ntfytest`) now shows ntfy's real reason when it refuses (was "ntfy did not answer"). NEEDS relay deploy.
+- 2026-10-20: memo 2026-10-20f — "very laggy": off-screen designs not drawn (`content-visibility`), live update re-uses unchanged designs, design lookup indexed (`byNo`), tap only touches changed price boxes, memo/bill PDF + preview encoded in the background (`toBlob`), memo/bill/order photos load first, chat list / last chats / orders kept on the phone (`sj_c_list`, `sj_c_mc`, `sj_c_ord`) so they show at once. Phone-speed freeze: tap 0.4 s → 0.06 s, live update 1.8 s → 0.2 s, scroll 1.4 s → 0, first screen 3.8 s → 0.8 s.

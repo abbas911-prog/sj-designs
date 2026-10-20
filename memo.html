@@ -18,6 +18,8 @@ header{position:sticky;top:0;z-index:5;background:rgba(246,242,236,.96);backdrop
 #cnt{font-size:12px;color:var(--mute);white-space:nowrap;align-self:center}
 main{max-width:720px;margin:0 auto;padding:10px 12px 120px}
 .design{background:var(--card);border-radius:16px;margin:12px 0;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+/* 20 Oct 2026 (Abbas: "the app is very laggy"): the phone skips drawing designs that are off the screen — a tap no longer re-measures all ~350 */
+.design{content-visibility:auto;contain-intrinsic-size:auto 760px}
 .design[hidden]{display:none}
 .head{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px 6px}
 .no{font-size:26px;font-weight:700;letter-spacing:.02em}
@@ -734,10 +736,11 @@ async function fetchPhoto(p){
 }
 // 20 Oct 2026: one photo per attachment id for the whole visit (a live update re-builds the list; before, every photo was fetched again and the counter grew)
 var PH = {};
-function getPhoto(p){ if (p.job) return p.job; if (!p.att) { p.blob = null; return (p.job = Promise.resolve(null)); }
+function getPhoto(p, hi){ if (p.att && hi && PH[p.att] && PH[p.att].fn) { var qi = queue.indexOf(PH[p.att].fn); if (qi > 0) { queue.splice(qi, 1); queue.unshift(PH[p.att].fn); } }   // hi: the memo / bill / order screen needs it now — goes before the feed's photos
+  if (p.job) return p.job; if (!p.att) { p.blob = null; return (p.job = Promise.resolve(null)); }
   var c = PH[p.att];
   if (!c || (c.done && !c.u && Date.now() - c.t > 60000)) { c = PH[p.att] = { t: Date.now(), done: false, u: null };   // a photo not ready yet is tried again after a minute
-    c.job = new Promise(function(ok){ queue.push(function(){ return fetchPhoto(p).then(function(u){ c.u = u; c.done = true; phCount(); showPst(); ok(u); }); }); pump(); }); }
+    c.job = new Promise(function(ok){ c.fn = function(){ c.fn = null; return fetchPhoto(p).then(function(u){ c.u = u; c.done = true; phCount(); showPst(); ok(u); }); }; if (hi) queue.unshift(c.fn); else queue.push(c.fn); pump(); }); }
   if (c.u) p.blob = c.u;
   return (p.job = c.job.then(function(u){ p.blob = u; return u; })); }
 function phCount(){ var ok = 0, bad = 0; Object.keys(PH).forEach(function(k){ if (PH[k].done) { if (PH[k].u) ok++; else bad++; } }); pstat.ok = ok; pstat.bad = bad; }
@@ -811,9 +814,12 @@ function lab(sel, pcs){ if (sel.pcs) { return { en: sel.pcs + ' pc' + (sel.pcs >
   if (sel.all) { var st = Math.floor(pcs / 4), r = pcs % 4; return { en: (st ? st + ' set' + (st > 1 ? 's' : '') : '') + (st && r ? ' + ' : '') + (r ? r + ' pc' + (r > 1 ? 's' : '') : '') + ' (' + pcs + ' pcs)', ar: (st ? arSets(st) : '') + (st && r ? ' + ' : '') + (r ? arPcs(r) : ''), pcs: pcs, sets: st }; }
   return { en: sel.sets + ' set' + (sel.sets > 1 ? 's' : '') + ' (' + sel.sets * 4 + ' pcs)', ar: arSets(sel.sets), pcs: sel.sets * 4, sets: sel.sets }; }
 function render(){
-  var feed = $('feed'); feed.innerHTML = '';
+  // 20 Oct 2026: a live update re-uses every design that did not change (before, all ~350 were rebuilt: ~2 s frozen on a phone)
+  var feed = $('feed'), old = {}, fresh = [], frag = document.createDocumentFragment(); feed.querySelectorAll('article.design').forEach(function(a){ old[a.dataset.sig] = a; });
   designs.forEach(function(d){
-    var art = document.createElement('article'); art.className = 'design' + (d.sample ? ' sample' : ''); art.dataset.no = d.no;
+    var sig = d.id + '|' + d.no + '|' + d.title + '|' + d.photos.map(function(p){ return p.att; }).join(',');
+    if (old[sig]) { frag.appendChild(old[sig]); delete old[sig]; return; }
+    var art = document.createElement('article'); art.className = 'design' + (d.sample ? ' sample' : ''); art.dataset.no = d.no; art.dataset.sig = sig;
     var meta = d.total != null ? '<b>' + d.total + ' pcs</b> · ' + d.colours.length + ' colours' : d.colours.length + ' colours';
     if (d.sample) meta = '<span class="tag smp">SAMPLE</span> <b>1 pc</b> · عينة';
     if (!d.ok) meta += '<span class="tag warn">check card</span>';
@@ -829,9 +835,10 @@ function render(){
     }).join('');
     art.innerHTML = '<div class="head"><div class="no">' + d.no + '</div><div class="meta">' + meta + '</div></div><div class="photos">' + ph + '</div><div class="rows">' + rows + '</div>' +
       '<div class="price" hidden><span>Price / pc · السعر للقطعة</span><input class="prc" type="number" inputmode="decimal" min="0" step="any" placeholder="AED"><span class="amt"></span></div>';
-    feed.appendChild(art);
+    frag.appendChild(art); fresh.push(art);
   });
-  feed.querySelectorAll('.ph img').forEach(function(im){ if (io) io.observe(im); else loadInto(im); });
+  feed.innerHTML = ''; feed.appendChild(frag);
+  fresh.forEach(function(a){ a.querySelectorAll('.ph img').forEach(function(im){ if (io) io.observe(im); else loadInto(im); }); });
   $('cnt').textContent = designs.length + ' designs';
   reapply();
   feed.onclick = function(e){
@@ -884,12 +891,13 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-20e';
+var VER = '2026-10-20f';
 async function checkVer(){ try { var t = await (await fetch('memo.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] > VER) { saveWork();   // only ever forward: a stale cached copy must not send the phone back to an older version
     location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); } } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
-function byNo(no){ return designs.filter(function(d){ return d.no === no; })[0]; }
+var NOIX = { of: null, m: {} };   // 20 Oct 2026: design by number in one step (it searched the whole list on every call — thousands of times per tap)
+function byNo(no){ if (NOIX.of !== designs || NOIX.n !== designs.length) { var m = {}; designs.forEach(function(d){ if (!(d.no in m)) m[d.no] = d; }); NOIX = { of: designs, n: designs.length, m: m }; } return Object.prototype.hasOwnProperty.call(NOIX.m, no) ? NOIX.m[no] : undefined; }
 // 9 Oct 2026 (Abbas: "you mentioned S in front of it by yourself"): the -S is only the memo's own key for a SAMPLES card; bills, PDFs and texts print the real design number
 function shown(no){ var d = byNo(no); return d && d.sample ? d.base : no; }
 // GODOWN ROW (Abbas, 9 Oct 2026): every batch card says which godown row it sits in, in brackets — e.g. (row 3). Order memo PDF only.
@@ -913,8 +921,11 @@ function designPcs(no, st){ st = st || state; var d = byNo(no), t = 0; Object.ke
 function orderAmount(){ return Object.keys(byDesign()).reduce(function(a, no){ return a + (prices[no] > 0 ? designPcs(no) * prices[no] : 0); }, 0); }
 function priced(){ return Object.keys(byDesign()).some(function(no){ return prices[no] > 0; }); }
 function refresh(){
-  document.querySelectorAll('.design').forEach(function(a){ var no = a.dataset.no, box = a.querySelector('.price'), sel = Object.keys(state).some(function(k){ return k.split(':')[0] === no; });
-    box.hidden = !sel; var t = designPcs(no); box.querySelector('.amt').textContent = sel && prices[no] > 0 ? t + ' pcs × ' + prices[no] + ' = ' + money(t * prices[no]) : ''; });
+  var picked = {}; Object.keys(state).forEach(function(k){ picked[k.split(':')[0]] = 1; });   // 20 Oct 2026: one pass, and only boxes that change are touched
+  document.querySelectorAll('#feed .design').forEach(function(a){ var no = a.dataset.no, sel = !!picked[no], box = a.querySelector('.price'); if (!box) return;
+    if (box.hidden !== !sel) box.hidden = !sel; if (!sel && !box.dataset.t) return;
+    var t = sel ? designPcs(no) : 0, tx = sel && prices[no] > 0 ? t + ' pcs × ' + prices[no] + ' = ' + money(t * prices[no]) : '';
+    if (box.dataset.t !== tx) { box.dataset.t = tx; box.querySelector('.amt').textContent = tx; } });
   var keys = Object.keys(state), ds = {}, sets = 0, pcs = 0;
   keys.forEach(function(k){ var p = k.split(':'), d = byNo(p[0]); ds[p[0]] = 1; var L = lab(state[k], colPcs(d, +p[1])); sets += L.sets; pcs += L.pcs; });
   var nd = Object.keys(ds).length; $('ok').disabled = !keys.length; $('clr').hidden = !keys.length; navMemo(nd, keys.length);
@@ -950,6 +961,7 @@ async function drawPages(opt){
   var W = 1240, H = 1754, P = 60, name = $('name').value.trim(), d = new Date();
   var date = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
   var pages = [], bd = byDesign(st), nos = Object.keys(bd), tp = 0;
+  nos.forEach(function(no){ var dz0 = byNo(no); if (dz0) dz0.photos.forEach(function(p){ if (p.nums || dz0.photos.length === 1) getPhoto(p, true); }); });   // all memo photos start loading together, first in line
   for (var i = 0; i < nos.length; i++){
     var no = nos[i], dz = byNo(no), cv = document.createElement('canvas'); cv.width = W; cv.height = H; var g = cv.getContext('2d');
     g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
@@ -984,7 +996,7 @@ async function drawPages(opt){
     if (!phs.length) phs = dz.photos.slice(0, 1);
     var slotH = Math.floor((H - T - y - P) / Math.max(1, phs.length)) - 16;
     for (var j = 0; j < phs.length; j++){
-      var p = phs[j], u = await getPhoto(p), im = u ? await loadImg(u) : null; if (!im) continue;
+      var p = phs[j], u = await getPhoto(p, true), im = u ? await loadImg(u) : null; if (!im) continue;
       var k = Math.min((W - 2 * P) / im.naturalWidth, slotH / im.naturalHeight), dw = im.naturalWidth * k, dh = im.naturalHeight * k, x0 = (W - dw) / 2;
       g.drawImage(im, x0, y, dw, dh);
       if (p.nums && !dz.sample){ var n = p.nums.length, cw = dw / n;
@@ -1013,7 +1025,14 @@ function drawDelivery(g, x, y, w){
   g.fillStyle = '#1C1A17';
 }
 function b64bytes(dataUrl){ var s = atob(dataUrl.split(',')[1]), u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
-function makePDF(canvases){
+// 20 Oct 2026 (lag): pages become JPEG in the background (toBlob) instead of freezing the screen (toDataURL) — the PDF is the same
+function jpgOf(cv, q){ return new Promise(function(ok){ try { cv.toBlob(function(b){ if (!b) { ok(b64bytes(cv.toDataURL('image/jpeg', q))); return; } b.arrayBuffer().then(function(a){ ok(new Uint8Array(a)); }, function(){ ok(b64bytes(cv.toDataURL('image/jpeg', q))); }); }, 'image/jpeg', q); } catch(e){ ok(b64bytes(cv.toDataURL('image/jpeg', q))); } }); }
+var PVU = { marks: [], dprev: [] };
+function pvShow(id, pages){ var el = $(id), old = PVU[id]; PVU[id] = []; el.innerHTML = ''; pages.forEach(function(cv){ var im = document.createElement('img'); el.appendChild(im);
+  cv.toBlob(function(b){ if (!b) { im.src = cv.toDataURL('image/jpeg', 0.7); return; } var u = URL.createObjectURL(b); PVU[id].push(u); im.src = u; }, 'image/jpeg', 0.7); });
+  setTimeout(function(){ old.forEach(function(u){ URL.revokeObjectURL(u); }); }, 3000); }
+async function makePDF(canvases){
+  var jpgs = await Promise.all(canvases.map(function(cv){ return jpgOf(cv, 0.86); }));
   var parts = [], len = 0, offs = [];
   function add(x){ if (typeof x === 'string'){ var u = new Uint8Array(x.length); for (var i = 0; i < x.length; i++) u[i] = x.charCodeAt(i) & 255; x = u; } parts.push(x); len += x.length; }
   function obj(n){ offs[n] = len; add(n + ' 0 obj\n'); }
@@ -1021,7 +1040,7 @@ function makePDF(canvases){
   add('%PDF-1.4\n%âãÏÓ\n'); obj(1); add('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
   var kids = []; for (var i = 0; i < n; i++) kids.push((3 + 3 * i) + ' 0 R');
   obj(2); add('<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + n + ' >>\nendobj\n');
-  canvases.forEach(function(cv, i){ var p = 3 + 3 * i, c = p + 1, im = p + 2, jpg = b64bytes(cv.toDataURL('image/jpeg', 0.86)), PH = Math.round(MW * cv.height / cv.width * 100) / 100, cs = 'q ' + MW + ' 0 0 ' + PH + ' 0 0 cm /Im0 Do Q';
+  canvases.forEach(function(cv, i){ var p = 3 + 3 * i, c = p + 1, im = p + 2, jpg = jpgs[i], PH = Math.round(MW * cv.height / cv.width * 100) / 100, cs = 'q ' + MW + ' 0 0 ' + PH + ' 0 0 cm /Im0 Do Q';
     obj(p); add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + MW + ' ' + PH + '] /Resources << /XObject << /Im0 ' + im + ' 0 R >> >> /Contents ' + c + ' 0 R >>\nendobj\n');
     obj(c); add('<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream\nendobj\n');
     obj(im); add('<< /Type /XObject /Subtype /Image /Width ' + cv.width + ' /Height ' + cv.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n'); add(jpg); add('\nendstream\nendobj\n'); });
@@ -1041,12 +1060,12 @@ $('ok').onclick = async function(){
 };
 var memoP = null, dlT = null, memoGen = 0;
 async function memoRender(){
-  var my = ++memoGen, pages = await drawPages(), box = document.createDocumentFragment();
+  var my = ++memoGen, pages = await drawPages();
   if (my !== memoGen) return;   // a newer render (e.g. delivery time typed) started meanwhile — keep its PDF, not this older one
-  pages.forEach(function(cv){ var im = document.createElement('img'); im.src = cv.toDataURL('image/jpeg', 0.7); box.appendChild(im); });
-  $('marks').innerHTML = ''; $('marks').appendChild(box);
+  pvShow('marks', pages);
   var nm = ($('name').value.trim() || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-');
-  pdfFile = new File([makePDF(pages)], nm + '-SJ-memo.pdf', { type: 'application/pdf' });
+  var pdfB = await makePDF(pages); if (my !== memoGen) return;
+  pdfFile = new File([pdfB], nm + '-SJ-memo.pdf', { type: 'application/pdf' });
   $('ds').textContent = orderText().split('\n').filter(function(l){ return /^Total/.test(l); })[0] + ' · ' + pages.length + (pages.length === 1 ? ' page' : ' pages');
 }
 function dlChanged(){ clearTimeout(dlT); dlT = setTimeout(function(){ if (!$('done').hidden && B.mode === 'memo') memoP = memoRender(); }, 500); }
@@ -1292,13 +1311,13 @@ async function drawInvoice(d){
     var PW = 310, bh = 168;
     if (small) {}
     else if (l.all && l.photos && l.photos.length) {          // every colour chosen: the whole lineup picture(s)
-      var ims = []; for (var q = 0; q < l.photos.length; q++) { var uu = await getPhoto(l.photos[q]), ii = uu ? await loadImg(uu) : null; if (ii) ims.push(ii); }
+      var ims = []; for (var q = 0; q < l.photos.length; q++) { var uu = await getPhoto(l.photos[q], true), ii = uu ? await loadImg(uu) : null; if (ii) ims.push(ii); }
       var tw = ims.reduce(function(a, im){ return a + im.naturalWidth * bh / im.naturalHeight; }, 0), sc = tw > PW ? PW / tw : 1, x = P;
       ims.forEach(function(im){ var w = im.naturalWidth * bh / im.naturalHeight * sc, h = bh * sc; g.drawImage(im, x, y + (bh - h) / 2, w, h); g.strokeStyle = LINE; g.strokeRect(x, y + (bh - h) / 2, w, h); x += w + 4; });
     } else {                                              // the chosen colours side by side in one cell
       var np = l.parts.length, gap = 6, bw = Math.min(140, (PW - gap * (np - 1)) / np), x2 = P;
       for (var q2 = 0; q2 < np; q2++) { var pt = l.parts[q2]; if (!pt.photo) { x2 += bw + gap; continue; }
-        var u = await getPhoto(pt.photo), im = u ? await loadImg(u) : null;
+        var u = await getPhoto(pt.photo, true), im = u ? await loadImg(u) : null;
         if (im) { var sw = im.naturalWidth / pt.n, sx = pt.qi * sw, k = Math.max(bw / sw, bh / im.naturalHeight), cw = bw / k, ch = bh / k;
           g.save(); g.beginPath(); g.rect(x2, y, bw, bh); g.clip(); g.drawImage(im, sx + (sw - cw) / 2, (im.naturalHeight - ch) / 2, cw, ch, x2, y, bw, bh); g.restore(); g.strokeStyle = LINE; g.strokeRect(x2, y, bw, bh); }
         x2 += bw + gap; }
@@ -1370,8 +1389,9 @@ var pv = 0;
 async function preview(){
   var k = B.mode, d = B[k], my = ++pv; if (!d) return;
   var pages = k === 'inv' ? await drawInvoice(d) : k === 'rn' ? drawReturn(d) : drawVoucher(k, d); if (my !== pv) return;
-  $('dprev').innerHTML = ''; pages.forEach(function(cv){ var im = document.createElement('img'); im.src = cv.toDataURL('image/jpeg', 0.7); $('dprev').appendChild(im); });
-  B.pdf = new File([makePDF(pages)], (d.ref + '-' + (d.name || 'customer')).replace(/[^A-Za-z0-9؀-ۿ-]+/g, '-') + '.pdf', { type: 'application/pdf' });
+  pvShow('dprev', pages);
+  var pdfB = await makePDF(pages); if (my !== pv) return;
+  B.pdf = new File([pdfB], (d.ref + '-' + (d.name || 'customer')).replace(/[^A-Za-z0-9؀-ۿ-]+/g, '-') + '.pdf', { type: 'application/pdf' });
   bsSoon();
 }
 function setMode(m){
@@ -2383,7 +2403,7 @@ async function ordCall(o){
   if (!j.ok) throw new Error(j.error === 'bad request' ? 'the relay needs its new version — Abbas: Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy' : (j.error || 'refused'));
   if (!Array.isArray(j.orders)) throw new Error('the relay answered without the orders');
   if (o.op === 'list' && my < (ORD.wseq || 0)) return j;   // 20 Oct 2026: an older list answer must not wipe a tick made meanwhile
-  ORD.list = j.orders; ORD.err = ''; ordBadge(); return j;
+  ORD.list = j.orders; ORD.cached = false; ORD.err = ''; ordBadge(); cKeep('sj_c_ord', function(){ return ORD.list; }); return j;
 }
 function ordDone(o){ var s = o.steps || {}; return OKEYS.every(function(k){ return s[k]; }); }
 function ordStage(o){ var s = o.steps || {}; return (s.s1 ? 1 : 0) + (s.s2 ? 1 : 0) + (s.s3 ? 1 : 0) + (OSUB.every(function(x){ return s[x[0]]; }) ? 1 : 0); }
@@ -2472,7 +2492,7 @@ async function ordPreview(bd){
   for (var i = 0; i < nos.length; i++){
     var no = nos[i], dz = byNo(no); if (!dz) continue;
     var phs = dz.photos.filter(function(p){ return p.nums && p.nums.some(function(n){ return bd[no][n.c]; }); }); if (!phs.length) phs = dz.photos.slice(0, 1);
-    var p = phs[0], u = p ? await getPhoto(p) : null, im = u ? await loadImg(u) : null; tiles.push({ no: no, p: p, im: im });
+    var p = phs[0], u = p ? await getPhoto(p, true) : null, im = u ? await loadImg(u) : null; tiles.push({ no: no, p: p, im: im });
   }
   if (!tiles.length) return null;
   var cols = tiles.length <= 3 ? 1 : 2, TW = cols === 1 ? 440 : 230, LH = 26, W = TW * cols, rowsH = [], H = 0;   // each row as tall as its photos need (lineups are wide)
@@ -2670,7 +2690,7 @@ function gdSplitSet(k, n){ var p = k.split(':'), t = colTot(p[0], p[1]); n = Mat
 $('gdl').addEventListener('click', function(e){ var b = e.target.closest('[data-gs]'); if (!b) return; gdSplitSet(b.dataset.gs, offPcs.apply(null, b.dataset.gs.split(':')) + (+b.dataset.d)); });
 $('gdl').addEventListener('change', function(e){ var k = e.target.dataset && e.target.dataset.gsi; if (k) gdSplitSet(k, parseInt(String(e.target.value).replace(/[^\d]/g, ''), 10) || 0); });
 $('gdl').addEventListener('click', async function(e){ if (e.target.closest('#gdshare')) { var b = $('gdshare'); b.disabled = true;
-  try { var nm = $('name').value.trim(), f = new File([makePDF(await drawPages({ st: gdSel(), pick: true }))], (nm || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-') + '-GODOWN-pick.pdf', { type: 'application/pdf' });
+  try { var nm = $('name').value.trim(), f = new File([await makePDF(await drawPages({ st: gdSel(), pick: true }))], (nm || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-') + '-GODOWN-pick.pdf', { type: 'application/pdf' });
     var done = false; try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); done = true; } } catch(x){ if (x && x.name === 'AbortError') done = true; }
     if (!done) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); } } finally { b.disabled = false; } } });
 $('gdl').addEventListener('change', function(e){ if (e.target.id === 'tg') SLK.g = e.target.checked; if (e.target.id === 'tc') SLK.c = e.target.checked; });
@@ -2701,7 +2721,7 @@ async function memoSlack2(oid, plan){
   if (plan.g) {
     try {
       var st = gdSel(), gs = byDesign(st), gn = Object.keys(gs), all = Object.keys(byDesign()), off = all.filter(function(no){ return !gs[no]; });
-      var pages = await drawPages({ st: st, pick: true, upd: plan.upd, chg: plan.chg }), f = new File([makePDF(pages)], (nm || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-') + '-GODOWN-pick.pdf', { type: 'application/pdf' });
+      var pages = await drawPages({ st: st, pick: true, upd: plan.upd, chg: plan.chg }), f = new File([await makePDF(pages)], (nm || 'customer').replace(/[^A-Za-z0-9؀-ۿ]+/g, '-') + '-GODOWN-pick.pdf', { type: 'application/pdf' });
       var text = '*GODOWN PICK LIST*' + (plan.upd ? ' — *' + plan.upd + '*' : '') + ' — ' + (nm || 'no name') + '\n' + date + ' · ' + gn.length + ' of ' + all.length + (all.length === 1 ? ' design' : ' designs') + ' · ' + gn.reduce(function(a, no){ return a + designPcs(no, st); }, 0) + ' pcs' + (me() ? ' · sent by ' + me() : '') +
         '\nPick: ' + gn.map(function(x){ var r = rowsFor(x, st); return 'SJ-' + shown(x) + (r ? ' (row ' + r + ')' : ''); }).join(' · ') + (off.length ? '\nAlready in office — don\'t pick: ' + off.map(function(x){ return 'SJ-' + shown(x); }).join(' · ') : '') + (plan.chg ? '\nChanges: ' + plan.chg : '') + dlt;
       var fids = GA.media.length ? await gaUpload(function(m){ slkMsg(m); }) : [];
@@ -3230,6 +3250,14 @@ $('cashbody').addEventListener('change', async function(e){
 // customer with unread lines, ⚡ Catch up walks through them, the Chats tab carries the count, a live doorbell (ntfy topic, customer key only)
 // pulls a chat the moment something is written, and 🔔 turns on real phone notifications through the free ntfy app.
 var CC = { mc: {}, list: null, orders: [], root: '', ch: '', ord: null, ordOpen: false, err: '', cur: '', msgs: [], timer: null, files: [], url: {}, busy: false, un: {}, tot: 0, live: '', es: null, cu: null, nt: false, touched: 0, lastPoll: 0, ev: false };
+// 20 Oct 2026 (Abbas: "very laggy"): the chat list, the last chats and the orders are kept on the phone, so they show at once when the app
+// opens (Google answers in 1-3 s) and are quietly refreshed. Nothing with prices or costs is in them.
+var CKT = {};
+function cKeep(k, v){ clearTimeout(CKT[k]); CKT[k] = setTimeout(function(){ try { localStorage.setItem(k, JSON.stringify(v())); } catch(e){} }, 1500); }
+function cLoad(k){ try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch(e){ return null; } }
+(function(){ var l = cLoad('sj_c_list'); if (l && Array.isArray(l.c)) { CC.list = l.c; CC.orders = l.o || []; } var m = cLoad('sj_c_mc'); if (m && typeof m === 'object') CC.mc = m;
+  if (!ORD.list) { var o = cLoad('sj_c_ord'); if (Array.isArray(o)) { ORD.list = o; ORD.cached = true; setTimeout(function(){ ordBadge(); ordLoad(); }, 2500); } } })();
+function cKeepMc(){ cKeep('sj_c_mc', function(){ var ks = Object.keys(CC.mc), o = {}; ks.slice(-25).forEach(function(k){ o[k] = (CC.mc[k] || []).slice(-80); }); return o; }); }
 function ccWho(){ return me() || (isOwner() ? 'Abbas' : 'SJ'); }
 function ccCall(o, tries){ o.t = Date.now(); o.who = ccWho(); return relayJson('cchat', o, tries || 3); }
 function ccK(n){ return String(n || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
@@ -3252,7 +3280,7 @@ function ccApply(j){ var un = {}, tot = 0; (j.customers || []).concat(j.orders |
   Object.keys(j.gun || {}).forEach(function(k){ var u = j.gun[k], o = ordByTs(k.slice(1)); un[k] = { n: u.n, tx: u.tx || '', name: o ? (o.name || 'order') : 'order', last: u.last, root: k.slice(1), ch: 'godown', oid: o ? o.id : '' }; tot += u.n; });
   Object.keys(un).forEach(function(k){ if (k.charAt(0) === 'O') { var o2 = (ORD.list || []).filter(function(x){ return x.cts === k.slice(1); })[0]; if (o2) un[k].oid = o2.id; } });
   if (CC.cur && un[ccCurK()] && ccLooking()) { delete un[ccCurK()]; tot = Object.keys(un).reduce(function(s, k){ return s + un[k].n; }, 0); }
-  var was = CC.tot; CC.un = un; CC.tot = tot; CC.list = j.customers || []; if (j.orders) CC.orders = j.orders; CC.err = ''; CC.nt = !!j.nt; CC.ev = !!j.ev;
+  var was = CC.tot; CC.un = un; CC.tot = tot; CC.list = j.customers || []; if (j.orders) CC.orders = j.orders; cKeep('sj_c_list', function(){ return { c: CC.list, o: CC.orders }; }); CC.err = ''; CC.nt = !!j.nt; CC.ev = !!j.ev;
   if (j.live && j.live !== CC.live) { CC.live = j.live; ccLiveStart(); }
   ccBadge(); if (tot > was && was >= 0 && CC.lastPoll) { ccBeep(); if (CC.cur && un[ccCurK()]) {} else uiToast('💬 ' + tot + ' new message' + (tot > 1 ? 's' : '')); if (!$('ords').hidden) ordDraw(); }
   CC.lastPoll = Date.now(); if (!$('cc').hidden && !CC.cur) ccDrawList(); else if (!$('cc').hidden && CC.ord) { var tb = document.querySelector('.otabs2'); if (tb) { var tmp = document.createElement('div'); tmp.innerHTML = ordTabs(CC.ord); tb.replaceWith(tmp.firstChild); } } }
@@ -3271,7 +3299,7 @@ function ccLiveStart(){ if (!CC.live || !window.EventSource) return; try { if (C
   } catch(e){ CC.es = null; } }
 // ---- list screen
 async function ccLoad(fresh){ try { var j = await ccCall({ op: 'list', fresh: fresh ? 1 : 0 }); if (!j.ok) throw new Error(j.error); ccApply(j); } catch(e){ CC.err = e.message; } if (!CC.cur) ccDrawList(); }
-function ccList(){ CC.bell = false; if (!ORD.list) ordLoad().then(function(){ if (!$('cc').hidden && !CC.cur) ccDrawList(); }); CC.cur = ''; CC.root = ''; CC.ch = ''; CC.ord = null; $('cc').classList.remove('isord'); clearInterval(CC.timer); $('cct').innerHTML = 'Chats · المحادثات<small>' + (CC.es ? '⚡ live · ' : '') + 'one chat per order · Slack #customer</small>'; $('cccomp').hidden = true; $('ccpend').innerHTML = ''; $('cccu').hidden = true; ccDrawList(); ccLoad(false); }
+function ccList(){ CC.bell = false; if (!ORD.list || ORD.cached) ordLoad().then(function(){ if (!$('cc').hidden && !CC.cur) ccDrawList(); }); CC.cur = ''; CC.root = ''; CC.ch = ''; CC.ord = null; $('cc').classList.remove('isord'); clearInterval(CC.timer); $('cct').innerHTML = 'Chats · المحادثات<small>' + (CC.es ? '⚡ live · ' : '') + 'one chat per order · Slack #customer</small>'; $('cccomp').hidden = true; $('ccpend').innerHTML = ''; $('cccu').hidden = true; ccDrawList(); ccLoad(false); }
 function ccRowSub(r){ var u = CC.un[r.k || ccK(r.name)]; if (u && u.tx) return esc(u.tx);
   var n = r.chat ? r.chat + ' message' + (r.chat > 1 ? 's' : '') : '';
   if (r.ts) return esc(r.head || 'order memo') + (n ? ' · ' + n : ' · no reply yet'); return 'general chat' + (n ? ' · ' + n : ''); }
@@ -3312,7 +3340,7 @@ function ccChat(name, root, ch){ CC.bell = false; if (!ch) { CC.ord = null; $('c
   if (CC.ord || mc) ccDraw(); else $('ccbody').innerHTML = '<div class="ffempty">Loading… · جارٍ التحميل</div>'; if (CC.root || !CC.ord) ccPull(false); clearInterval(CC.timer); CC.timer = setInterval(function(){ if (!document.hidden && CC.cur) ccPull(false); }, CC.es ? 15000 : 6000); }
 async function ccPull(fresh){ var name = CC.cur, root = CC.root, ch = CC.ch, ck = ccCurK(); if (!name || CC.busy) { if (name && CC.busy) CC.again = true; return; } if (CC.ord && !root) return; CC.busy = true; var look = ccLooking();
   try { var j = await ccCall({ op: 'thread', name: name, root: root || undefined, ch: ch || undefined, fresh: fresh ? 1 : 0, look: look ? 1 : 0 }, 2); if (CC.cur !== name || CC.root !== root || CC.ch !== ch) return; if (!j.ok) throw new Error(j.error);
-    var sig = JSON.stringify(j.msgs.map(function(m){ return m.ts; })); CC.mc[ck] = j.msgs; if (sig !== CC.sig) { CC.sig = sig; CC.msgs = j.msgs.concat(CC.msgs.filter(function(m){ return m.rid && !m.sent && CCO.q.some(function(it){ return it.rid === m.rid; }); })); ccDraw(); }   // keep lines still in the outbox
+    var sig = JSON.stringify(j.msgs.map(function(m){ return m.ts; })); CC.mc[ck] = j.msgs; delete CC.mc[ck]; CC.mc[ck] = j.msgs; cKeepMc(); if (sig !== CC.sig) { CC.sig = sig; CC.msgs = j.msgs.concat(CC.msgs.filter(function(m){ return m.rid && !m.sent && CCO.q.some(function(it){ return it.rid === m.rid; }); })); ccDraw(); }   // keep lines still in the outbox
     if (look && CC.un[ck]) { CC.tot -= CC.un[ck].n; if (CC.tot < 0) CC.tot = 0; delete CC.un[ck]; ccBadge(); } }
   catch(e){ if (CC.cur === name && !CC.msgs.length) $('ccbody').innerHTML = (CC.ord ? ordPanel(CC.ord) : '') + '<div class="stk bad">' + esc(e.message) + (/missing_scope/.test(e.message) ? '<br><br>Until the Slack scopes are added, messages you send still reach #customer, but the chat cannot be read here.' : '') + '</div>'; }
   finally { CC.busy = false; if (CC.again) { CC.again = false; setTimeout(function(){ ccPull(true); }, 300); } } }
@@ -3431,7 +3459,7 @@ function ordTiles(o){ var it = o.items || [];
   var h = '<div class="ophead"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + ' · ' + it.length + (it.length === 1 ? ' design' : ' designs') + ' · ' + (o.pcs || 0) + ' pcs</small></div>';
   if (!it.length) return h;
   return h + '<div class="optiles">' + it.map(function(x){ var no = String(x.no), dz = byNo(no) || byNo(no.replace(/-.*/, '')), p = dz && dz.photos && (dz.photos.filter(function(q){ return q.nums && q.nums.length; })[0] || dz.photos[0]);
-    if (p && !p.blob) getPhoto(p).then(function(u){ if (u) document.querySelectorAll('.optile[data-opt="' + no.replace(/[^\w-]/g, '') + '"] i').forEach(function(e){ var im = document.createElement('img'); im.src = u; im.alt = 'SJ-' + no; e.replaceWith(im); }); });
+    if (p && !p.blob) getPhoto(p, true).then(function(u){ if (u) document.querySelectorAll('.optile[data-opt="' + no.replace(/[^\w-]/g, '') + '"] i').forEach(function(e){ var im = document.createElement('img'); im.src = u; im.alt = 'SJ-' + no; e.replaceWith(im); }); });
     return '<div class="optile" data-opt="' + esc(no.replace(/[^\w-]/g, '')) + '">' + (p && p.blob ? '<img src="' + p.blob + '" alt="SJ-' + esc(no) + '">' : '<i></i>') + '<b>SJ-' + esc(shown(no)) + '</b><small>' + (x.pcs || 0) + ' pcs' + (x.c ? '<br>' + esc(x.c) : '') + '</small></div>'; }).join('') + '</div>'; }
 function ordPanel(o){ var h = ordTabs(o) + ordTiles(o);
   var stg = ordStage(o), dn = ordDone(o), pvs = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o.id) + '.jpg?v=' + (o.upd || o.created || 0));
