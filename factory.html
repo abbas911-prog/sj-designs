@@ -191,7 +191,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-19d';
+var VER = '2026-10-20a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -471,7 +471,7 @@ var PCOL = ['#0e8a5a', '#c4561a', '#8e3bbf', '#c2185b', '#00838f', '#7a6200', '#
 function pcol(n){ var ws = String(n || '').toLowerCase().split(/[\s·._-]+/).map(nrm).filter(function(w){ return w && !/^(md|mohd|mohammad|mohammed|muhammad|mohammod)$/.test(w); }), k = (ws[0] || nrm(n)).slice(0, 5); if (!k) return '#8a7f70'; /* "Md ibrahimmiah" (Slack) and "Ibrahim" (app) = one colour */ var fx = { abbas: '#1565c0', ibrah: '#c2185b', usman: '#c4561a', ali: '#8e3bbf', moham: '#0e8a5a', ullah: '#0e8a5a', sj: '#7a6200' }; if (fx[k]) return fx[k];
   var h = 0; for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0; return PCOL[h % PCOL.length]; }
 function whoLine(tx){ var t = emo(tx || ''), m = t.match(/^([^:]{1,32}): ([\s\S]*)$/); return m ? '<span class="wn" style="color:' + pcol(m[1]) + '">' + esc(m[1]) + ':</span> ' + esc(m[2]) : esc(t); }
-function lineOf(m){ if (!m) return ''; var t = String(m.text || '').replace(/\s+/g, ' ').trim(); var f = (m.files || []).length ? (m.files.some(function(x){ return x.audio; }) ? '🎤 voice note' : m.files.some(function(x){ return x.video; }) ? '🎬 video' : '📷 photo') : ''; return (m.sys ? '' : (m.who ? m.who + ': ' : '')) + (t || f); }
+function lineOf(m){ if (!m) return ''; var t = String(m.text || '').replace(/\s+/g, ' ').trim(); var f = (m.files || []).length ? (m.files.some(function(x){ return x.audio; }) ? '🎤 voice note' : m.files.some(function(x){ return x.video; }) ? '🎬 video' : '📷 photo') : ''; if (m.sys) t = t.replace(/\*/g, '').replace(/^→ /, '🔀 '); return (m.sys ? '' : (m.who ? m.who + ': ' : '')) + (t || f); }
 var CHATSIG = '';
 function chatsDraw(){ if (TAB !== 'chats' || !D.cards) return; loDraw();
   var items = [];
@@ -717,7 +717,7 @@ async function thPull(){
   var have = {}; TH.msgs.forEach(function(m){ have[m.ts] = 1; }); var add = (j.msgs || []).filter(function(m){ return !have[m.ts]; });
   if (!add.length && TH.msgs.length) return;
   if (!add.length && !TH.msgs.length) { $('thread').innerHTML = '<div class="empty" style="padding:14px">No messages yet — write the first one.<br>এখনো কোনো মেসেজ নেই</div>'; $('tcount').textContent = ''; return; }
-  var fresh = last ? add.filter(function(m){ return !m.sys && !isMe(m); }) : []; fresh.forEach(function(m){ m.nw = 1; });
+  var fresh = last ? add.filter(function(m){ return (!m.sys || noteOf(m)) && !isMe(m); }) : []; fresh.forEach(function(m){ m.nw = 1; });
   add.forEach(function(m){ if (isMe(m) && +m.ts > (TH.lastMine || 0)) TH.lastMine = +m.ts; });
   var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thcSave(); if (playing() && !pend.length) { $('thread').insertAdjacentHTML('beforeend', add.map(bubble).join('')); $('tcount').textContent = TH.msgs.length + ' messages'; } else thDraw(); if (look) seen(c); draw();
   if (fresh.length) { beep(); toast('💬 New: ' + (fresh[fresh.length - 1].who || '') + ' · নতুন মেসেজ'); }
@@ -725,6 +725,11 @@ async function thPull(){
 function firstName(x){ return String(x || '').trim().split(/[\s·]+/)[0].toUpperCase(); }
 function nrm(x){ return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
 // my side = the message carries my name: "Abbas" matches Abbas, abbas_911, Abbas Jamal, ABBAS J... (any of the names Slack has for the writer)
+// 20 Oct 2026 (Abbas): a card moved to another list is written in its chat AND counts as a notification - for everyone except who moved it
+function noteOf(m){ if (!m || !m.sys) return false; var t = String(m.text || '').replace(/\*/g, ''); if (!/^→ /.test(t)) return false;
+  var w1 = function(x){ var ws = String(x || '').toLowerCase().split(/[\s._·-]+/).map(nrm).filter(Boolean), r = ws.filter(function(w){ return !/^(md|mohd|mohammad|mohammed|muhammad|mohammod)$/.test(w); })[0]; return r || ws[0] || ''; };
+  var a = w1((t.split(' · ')[1] || '').split(/\s+(?:changed|added|opened|linked|copied|made|deleted)\b/)[0]), k = w1(WHO);
+  return !(a.length >= 2 && k.length >= 2 && (a.indexOf(k) === 0 || k.indexOf(a) === 0)); }
 function isMe(m){ if (m.sys) return false; var k = nrm(firstName(WHO)); if (k.length < 2) return false;
   return [m.who].concat(m.wn || []).some(function(n){ n = nrm(n); return n.length >= 2 && (n.indexOf(k) === 0 || k.indexOf(n) === 0); }); }
 function bubble(m){
@@ -1090,7 +1095,7 @@ async function liveFetch(cid){ if (!fastOn() || cid === 'lais') return; var room
   var j = await fast(room ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (!j || !j.ok || !j.msgs) return;
   var hv = {}; have.forEach(function(m){ hv[m.ts] = 1; }); var add = j.msgs.filter(function(m){ return /^\d+\.\d+$/.test(m.ts) && !hv[m.ts]; }); if (!add.length) return;
   if (open && (open.id === cid || (cid === 'dm' && open.dm))) return;
-  THC[cid] = have.concat(add); var news = add.filter(function(m){ return !m.sys && !isMe(m) && +m.ts > Date.now() / 1000 - 180; });
+  THC[cid] = have.concat(add); var news = add.filter(function(m){ return (!m.sys || noteOf(m)) && !isMe(m) && +m.ts > Date.now() / 1000 - 180; });
   if (news.length) { var u = (D.th = D.th || {})[cid] || {}, nl = news[news.length - 1];
     if (!(+u.last >= +nl.ts)) { var t = String(nl.text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(); if (!t && (nl.files || []).length) t = nl.files.map(function(f){ return f.audio ? '🎤 voice note' : f.img ? '📷 photo' : f.video ? '🎬 video' : '📎 ' + f.name; }).join(' · ');
       D.th[cid] = { n: (u.n || 0) + news.length, last: nl.ts, tx: (nl.who ? nl.who + ': ' : '') + t.slice(0, 160) }; draw(); alertNew(); } }
