@@ -122,3 +122,4 @@ Memo rules (his words, short):
   ntfy (Web Push via relay + worker; ntfy unchanged); Home Screen icon. NEEDS: relay deploy + fast-worker.js paste in Cloudflare.
 - 2026-10-20: memo 2026-10-20d — order screen: customer + photo tile per design at the top, opens at the preview (newest line if unread), steps folded under one tap; old orders find their #godown/#customer posts (`findroot`); customer balances: owe/advance totals, search #50 or words, filter, sort, ＋Receipt/＋Invoice; long return bills print on more pages; same design twice → oldest card keeps the plain number; failed cost sync is sent again. t_ord now 32/32.
 - 2026-10-20: memo 2026-10-20e — employees can open Customer balances (look + copy statement, ＋Receipt/＋Invoice); delete / change opening stay owner-only.
+- 2026-10-20: relaycode.html — phone page to copy the newest relay code (loads tools/relay.gs fresh; like fastcode.html for the worker).
