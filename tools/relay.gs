@@ -1510,7 +1510,12 @@ function cchat(reqText, P) {
       var hs; try { hs = ccHist(tok, false); } catch (e) { hs = []; } var un0 = ccUnread(P, tok, hs, who, 8), noted0 = {}; Object.keys(un0).forEach(function (k) { noted0[k] = un0[k].last; }); try { P.setProperty('CCNOTE_' + ccWhoKey(who), JSON.stringify(noted0)); } catch (e) {}   // no flood of old messages
       return out({ ok: true }); }
     if (req.op === 'ntfyoff') { var omap = {}; try { omap = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} delete omap[ccWhoKey(who)]; P.setProperty('CCNTFY', JSON.stringify(omap)); return out({ ok: true }); }
-    if (req.op === 'ntfytest') { var tmap = {}; try { tmap = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} var tt = tmap[ccWhoKey(who)]; if (!tt) return out({ ok: false, error: 'notifications are off for ' + who }); return out({ ok: facNtfy(tt, { title: 'SJ Stock · test', msg: 'Notifications are on for ' + who + ' ✓', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#chat=' }) }); }
+    if (req.op === 'ntfytest') { var tmap = {}; try { tmap = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} var tt = tmap[ccWhoKey(who)]; if (!tt) return out({ ok: false, error: 'notifications are off for ' + who }); // 20 Oct 2026: a failed SJ Stock test now says WHY (ntfy's own answer), so the phone shows the real reason instead of "ntfy did not answer"
+      try { var tr = UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify({ topic: tt, title: 'SJ Stock · test', message: 'Notifications are on for ' + who + ' ✓', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#chat=', tags: ['speech_balloon'], priority: 4 }) });
+        var tc = tr.getResponseCode(); if (tc === 200) return out({ ok: true });
+        var tb = ''; try { var tj = JSON.parse(tr.getContentText()); tb = tj.error || ''; } catch (e) { tb = String(tr.getContentText() || '').slice(0, 120); }
+        return out({ ok: false, error: 'ntfy refused it (' + tc + (tb ? ': ' + tb : '') + ')' + (tc === 429 ? ' - ntfy limits messages from Google servers; tell Claude' : '') });
+      } catch (e) { return out({ ok: false, error: 'could not reach ntfy (' + String(e.message || e).slice(0, 120) + ')' }); } }
     if (req.op === 'post' || req.op === 'up') {
       var nm = String(req.name || '').replace(/[*_\n]/g, ' ').trim().slice(0, 60), k2 = ccKey(nm), txt = String(req.text || '').slice(0, 3000);
       var oroot = String(req.root || '').replace(/[^\d.]/g, '');                 // 18 Oct 2026: a line written in an ORDER chat goes under that order's post

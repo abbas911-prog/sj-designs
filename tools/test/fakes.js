@@ -55,6 +55,7 @@ function handle(W, method, url, body, headers) {
     return { status: 200, body: f.bytes || Buffer.alloc(f.size || 10, 7), type: f.mimetype };
   }
   if (u.hostname === 'trello.com' && /^\/fake\//.test(u.pathname)) return { status: 200, body: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]), type: 'image/jpeg' };
+  if (u.hostname === 'ntfy.sh' && W.ntfyFail) return J({ code: 42908, http: 429, error: 'limit reached: daily message quota reached' }, 429);   // SJ Stock test of a refused ntfy
   if (u.hostname === 'ntfy.sh') { const topic = u.pathname.replace(/^\//, '') || form.topic; W.ntfy.push({ topic, body: typeof body === 'string' ? body : (form.message || JSON.stringify(form)), t: Date.now() }); return J({ id: 'n' + W.ntfy.length }); }
   if (u.hostname === 'push.test') { W.pushes = W.pushes || []; W.pushes.push({ url, headers: headers || {}, body: Buffer.isBuffer(body) ? body : Buffer.from(body || '') }); return { status: W.pushStatus || 201, body: Buffer.from(''), type: 'text/plain' }; }   // a fake Web Push service
   if (u.hostname === 'api.telegram.org') return J({ ok: false, error: 'no telegram in tests' });
