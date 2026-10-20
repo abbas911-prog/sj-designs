@@ -871,16 +871,23 @@ function render(){
 // KEEP THE WORK (Abbas, 7 Oct 2026: staff marked pieces + prices while packing, opened WhatsApp, came back and everything was gone).
 // Every tap is saved on this phone; when the page reloads (phone closed the tab, new list from Trello) the marks, prices,
 // customer name, open bill and place in the list come back. Only "clear" starts a new memo.
+// 21 Oct 2026 (Abbas: SJ-85974 showed 4 pcs instead of 12 when its bill was opened again): a bill that already took its pieces off Trello
+// is history — its colours are never cut down to what is left in READY now. Only a draft is re-checked, and then it says which colour was cut.
+function billLocked(){ var d = B.inv; return !!(d && (d.status === 'included' || ((STK[stkKey(d.ref)] || {}).st === 'ok'))); }
 function reapply(){
-  var gone = [];
+  var gone = [], cut = [], lock = billLocked();
   Object.keys(state).forEach(function(k){ var p = k.split(':'), d = byNo(p[0]), c = +p[1], pcs = d ? colPcs(d, c) : 0;
-    if (!pcs) { if (gone.indexOf('SJ-' + p[0]) < 0) gone.push('SJ-' + p[0]); delete state[k]; return; }
-    var s = state[k]; if (s.pcs && s.pcs > pcs) s.pcs = pcs; if (s.sets && s.sets > Math.floor(pcs / 4)) s.sets = Math.floor(pcs / 4); if (!s.sets && !s.all && !s.pcs) delete state[k]; });
+    if (!d) { if (gone.indexOf('SJ-' + p[0]) < 0) gone.push('SJ-' + p[0]); delete state[k]; return; }
+    if (lock) return;
+    var s = state[k], had = lab(s, pcs).pcs;
+    if (!pcs) { cut.push('SJ-' + shown(p[0]) + ' colour ' + c + ': ' + (s.pcs || (s.sets ? s.sets * 4 : '?')) + ' → 0'); delete state[k]; return; }
+    if (s.pcs && s.pcs > pcs) s.pcs = pcs; if (s.sets && s.sets > Math.floor(pcs / 4)) s.sets = Math.floor(pcs / 4); if (!s.sets && !s.all && !s.pcs) delete state[k]; else if (lab(s, pcs).pcs !== had) cut.push('SJ-' + shown(p[0]) + ' colour ' + c + ': ' + had + ' → ' + lab(s, pcs).pcs); });
+  reapply.cut = cut;
   Object.keys(prices).forEach(function(no){ if (!byNo(no)) delete prices[no]; });
   document.querySelectorAll('#feed .row[data-k]').forEach(function(r){ var k = r.dataset.k, s = state[k]; if (!s) return; var d = byNo(k.split(':')[0]);
     paint(r, s, Math.floor(colPcs(d, +k.split(':')[1]) / 4)); var pc = r.querySelector('.pc'); if (pc && s.pcs) pc.value = s.pcs; });
   document.querySelectorAll('#feed .design').forEach(function(a){ var v = prices[a.dataset.no], x = a.querySelector('.prc'); if (x && v > 0) x.value = v; });
-  if (gone.length) { rfst('No longer in READY, taken off this memo: ' + gone.join(', ')); setTimeout(function(){ rfst(''); }, 12000); }
+  if (gone.length || cut.length) { rfst((gone.length ? 'No longer in READY, taken off this memo: ' + gone.join(', ') : '') + (gone.length && cut.length ? ' · ' : '') + (cut.length ? 'Less in READY now: ' + cut.join(', ') : '')); setTimeout(function(){ rfst(''); }, 15000); }
 }
 var WK = 'sj_work', wkT = null;
 function topNo(){ var best = null; document.querySelectorAll('#feed .design').forEach(function(a){ if (a.hidden) return; var r = a.getBoundingClientRect(); if (r.bottom > 60 && !best) best = a.dataset.no; }); return best; }
@@ -896,7 +903,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-20g';
+var VER = '2026-10-20h';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1453,6 +1460,7 @@ $('dinc').onclick = async function(){
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   custAfter('inv', d);
+  Object.keys(state).forEach(function(k){ var s = state[k]; if (s && s.all) { var p = k.split(':'); state[k] = { sets: 0, all: false, pcs: lab(s, colPcs(byNo(p[0]), +p[1])).pcs }; } });   // 21 Oct 2026: frozen as sold
   d.status = 'included'; bsSave(true); drDone('bd');
   var szl = lines.slice();
   stkRun('sell');
@@ -1512,7 +1520,12 @@ function bsRestore(snap){ var k = snap.k;
   if (k === 'inv') {
     state = snap.state || {}; Object.keys(snap.prices || {}).forEach(function(no){ prices[no] = snap.prices[no]; });
     var gone = Object.keys(byDesign()).filter(function(no){ return !byNo(no); });
+    B.inv = snap.d;                                              // so reapply knows whether this bill already took its pieces (then nothing is cut)
+    var sk = STK[stkKey(snap.d.ref)], fixed = [];                // 21 Oct 2026: this phone sent these exact lines to Trello — put them back if the saved copy lost some
+    if (snap.d.status === 'included' && sk && sk.op === 'sell' && sk.st === 'ok' && Array.isArray(sk.lines)) sk.lines.forEach(function(l){ var k = l.no + ':' + l.c, d2 = byNo(l.no); if (!d2) return; var cur = state[k] ? lab(state[k], colPcs(d2, l.c)).pcs : 0; if (cur !== l.pcs && l.pcs > 0) { state[k] = { sets: 0, all: false, pcs: l.pcs }; fixed.push('SJ-' + shown(l.no) + ' colour ' + l.c + ': ' + l.pcs + ' pcs'); } });
     reapply();                                                   // paints the rows; designs no longer in READY are taken off (and told)
+    if (fixed.length) setTimeout(function(){ alert('This bill already took its pieces off Trello. Lines put back as they were sold: ' + fixed.join(', ') + '.'); bsSoon(); }, 300);
+    else if (reapply.cut && reapply.cut.length) setTimeout(function(){ alert('Less in READY than when this draft was made — taken off the bill: ' + reapply.cut.join(', ') + '. Check the bill before sending it.'); }, 300);
     snap.d.man = snap.d.man || [];
     (snap.lines || []).forEach(function(l){ if (!l.manual && gone.indexOf(l.no) >= 0 && !snap.d.man.some(function(m){ return m.fz === l.no; })) snap.d.man.push({ d: l.desc + ' · ' + l.sub, q: l.qty, r: l.rate, fz: l.no }); });
     if (gone.length) setTimeout(function(){ alert(gone.map(function(x){ return 'SJ-' + shown(x); }).join(', ') + ' — no longer in READY (sold or moved). Kept on this bill as typed lines with the same quantity and price, without photo.'); }, 400);

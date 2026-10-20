@@ -1,9 +1,9 @@
-// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, employees see balances (no delete), chat colours + bubbles kept, no page re-download, instant tick, lag: live update keeps unchanged designs, chats/orders shown from the phone, hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
+// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, employees see balances (no delete), chat colours + bubbles kept, no page re-download, instant tick, included bill keeps its lines, lag: live update keeps unchanged designs, chats/orders shown from the phone, hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
 const { chromium } = require('playwright'); const http = require('http'); const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
 const DIR = require('path').join(__dirname, '..'), PW = 'test1234';
 function lock(obj) { const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12), key = crypto.pbkdf2Sync(PW, salt, 1000, 32, 'sha256'); const c = crypto.createCipheriv('aes-256-gcm', key, iv); const ct = Buffer.concat([c.update(JSON.stringify(obj)), c.final(), c.getAuthTag()]); return { salt: salt.toString('base64'), iv: iv.toString('base64'), iter: 1000, ct: ct.toString('base64') }; }
 const cards = [{ id: 'c1', idShort: 1, list: 'r', name: 'SJ-18634 (16) colour = (2) (8/8)', attachments: [{ id: 'a1', mimeType: 'image/jpeg', date: '2026-10-01T00:00:00Z', name: 'x.jpg' }] }];
-cards.push({ id: 'a5', idShort: 5, list: 'r', name: 'SJ-55555 (8) colour = (1) (8)', attachments: [] }, { id: 'b5', idShort: 6, list: 'r', name: 'SJ-55555 (4) colour = (1) (4)', attachments: [] });
+cards.push({ id: 'c2', idShort: 2, list: 'r', name: 'SJ-46209 (24) colour = (3) (8/8/8)', attachments: [] }, { id: 'a5', idShort: 5, list: 'r', name: 'SJ-55555 (8) colour = (1) (8)', attachments: [] }, { id: 'b5', idShort: 6, list: 'r', name: 'SJ-55555 (4) colour = (1) (4)', attachments: [] });
 const enc = lock({ updated: new Date().toISOString(), cards }); let LIVE = cards;
 const BILLS = { 'INV-0015': { ref: 'INV-0015', type: 'inv', name: 'MAMA BAKHTA', status: 'included', total: '1,600.00', date: '2026-10-18', updated: '2026-10-18T19:00:00Z', data: JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }, { no: '48293', base: '48293', card: 'cGONE', c: 2, qty: 8, rate: 100 }] }) } };
 const jobs = {}, custPosts = []; let stockReq = null;
@@ -86,6 +86,20 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await p3.click('#nav button[data-nv="chats"]'); const chatsAt = await p3.waitForSelector('.ccrow', { timeout: 1500 }).then(() => true, () => false);
   await p3.click('#nav button[data-nv="orders"]'); const ordAt = await p3.waitForSelector('#ordbody [data-ot="o9"]', { timeout: 1500 }).then(() => true, () => false);
   out.push(['chats + orders show at once from the phone (Google slow)', chatsAt && ordAt]); await p3.close();
+  // a bill that took its pieces off Trello keeps its lines when opened again, even when READY now shows those colours at 0 (SJ-85974, 21 Oct 2026)
+  await pg.click('#nav button[data-nv="stock"]'); await pg.waitForTimeout(300); await pg.evaluate(() => { window.confirm = () => true; const c = document.querySelector('#clr'); if (c) c.click(); });
+  const pcs3 = await pg.$$('#feed .design[data-no="46209"] input.pc'); for (const i of pcs3) await i.fill('4'); await pg.waitForTimeout(500);
+  await pg.click('#nav button[data-nv="more"]'); await pg.click('.mgrid button[data-go="bills"]'); await pg.waitForTimeout(300); await pg.$eval('#mode button[data-m="inv"]', e => e.click()); await pg.waitForTimeout(300);
+  await pg.fill('#bform input[data-k="name"]', 'MAMA'); await pg.fill('#bform input[data-p]', '100'); await pg.waitForTimeout(900); const R2 = await pg.evaluate(() => window.__sj.B().inv.ref);
+  out.push(['bill of 3 colours × 4 pcs = 1,200', (await t('#btot')).indexOf('1,200.00') >= 0]);
+  await pg.click('#dinc'); await pg.waitForFunction(R => { try { return JSON.parse(localStorage.getItem('sj_stock'))['dev1|' + R].st === 'ok'; } catch (e) { return false; } }, R2, { timeout: 40000 }).catch(() => {}); await pg.waitForTimeout(1500);
+  LIVE = cards.map(c => c.id === 'c2' ? Object.assign({}, c, { name: 'SJ-46209 (4) colour = (3) (4/0/0)' }) : c);
+  await pg.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); }); await pg.waitForFunction(() => /^4 pcs/.test((document.querySelector('#feed .design[data-no="46209"] .meta') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  await pg.click('#dsaved'); await pg.waitForSelector('.bsrow[data-ref="' + R2 + '"]', { timeout: 8000 }); await pg.click('.bsrow[data-ref="' + R2 + '"]'); await pg.waitForTimeout(1200);
+  out.push(['included bill opened again after the sale still says 1,200 (12 pcs)', !!BILLS[R2] && BILLS[R2].status === 'included' && (await t('#btot')).indexOf('1,200.00') >= 0]);
+  const sv = JSON.parse(BILLS[R2].data); sv.state = { '46209:1': { sets: 0, all: false, pcs: 4 } }; BILLS[R2].data = JSON.stringify(sv);   // the saved copy lost two colours (what happened to INV-0021)
+  await pg.click('#dsaved'); await pg.waitForSelector('.bsrow[data-ref="' + R2 + '"]', { timeout: 8000 }); await pg.click('.bsrow[data-ref="' + R2 + '"]'); await pg.waitForTimeout(1500);
+  out.push(['the phone that sold repairs a bill whose saved copy lost lines → 1,200 again', (await t('#btot')).indexOf('1,200.00') >= 0]);
   // employee phone (catalogue off): Customer balances opens, but no delete / change-opening buttons
   const p2 = await br.newPage({ viewport: { width: 390, height: 844 } }); p2.on('pageerror', e => errs.push(e.message)); p2.on('dialog', d => d.accept());
   await p2.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) })); await p2.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
