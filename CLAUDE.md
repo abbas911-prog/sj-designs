@@ -20,9 +20,10 @@
 3. **Never put tokens, passwords, costs or prices in any file** — the repo is public. Secrets live only in Script properties /
    Cloudflare secrets / GitHub secrets. (The Trello app *key* `TKEY` and list/channel ids are public ids, not secrets.)
 4. Factory app second language = **Bengali** (every label "English · বাংলা"). **Never compress photos or videos** — originals only.
-5. **Test before pushing**: Playwright (Chromium is pre-installed, don't `playwright install`) driving factory.html against the
-   **real relay.gs code** run in Node with fake Apps Script services (PropertiesService, CacheService, UrlFetchApp, LockService…)
-   and fake Trello / Slack / ntfy answers. Also load fast-worker.js with fake `fetch` when it changes.
+5. **Test before pushing**: `node tools/test/factory.test.js` (≈3 min, must end "0 failed"). It runs factory.html in Chromium
+   (Playwright, pre-installed — never `playwright install`) against the **real relay.gs** (in Node, fake Apps Script services) and the
+   **real fast-worker.js**, with fake Trello / Slack / ntfy (`tools/test/fakes.js`). Four rounds: relay only, fast lane, and both again
+   with a 2-s relay delay (real Google speed). Add a test for every bug fixed (it must fail on the old code).
 6. Every change Abbas asks for gets a short line in this file under **Change log**.
 
 ## How the factory app works (map)
@@ -100,3 +101,7 @@ Memo rules (his words, short):
 ## Change log
 - 2026-10-20: CLAUDE.md created (rules + map of the factory app).
 - 2026-10-20: memo tests added in `tests/` (t_shell, t_ord, t_rn, t_stock) + SJ Stock notes merged in here.
+- 2026-10-20 (VER 2026-10-20b) "make the whole process more smooth": test harness added (tools/test). Fixed: (1) a message written just after
+  leaving a chat was marked read (no NEW badge / notification) — the phone now sends "seen" only for lines it showed; (2) long chats showed only
+  the last 40 lines after the app was reopened; (3) chat answers dropped when the card list refreshed (extra wait); (4) photo / voice retries
+  could post twice; (5) new-message chats now pre-load through the fast lane. No relay deploy needed.

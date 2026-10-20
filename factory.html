@@ -191,7 +191,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-20a';
+var VER = '2026-10-20b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -582,19 +582,21 @@ $('cimg').onclick = function(){ if (open && open.img) { var vn = viewOpen(IMG[op
 async function bigPhoto(cid, att, vn){ var fj = fastTr() ? await fast({ op: 'timg', card: cid, att: att, big: 1, top: 1 }) : null;
   if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size) { viewSet(vn, URL.createObjectURL(fj.blob), fj.blob); return; }
   var j = await call({ op: 'img', card: cid, att: att, big: 1 }); if (j.ok) viewSet(vn, 'data:image/jpeg;base64,' + j.b64); }
-function closeCard(){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } if (REC.r) recStop(); try { if (open && TH.opened && LOOK.act > TH.opened) { var rl = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }); call({ op: 'thread', card: open.id, since: rl.length ? rl[rl.length - 1].ts : '', look: 1 }); } } catch(e){} $('card').hidden = true; cardShow(false); $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; CHATSIG = ''; draw(); }
+// 20 Oct 2026: on leaving a chat it is marked seen up to the last line ON SCREEN - it used to re-read the chat, and with the relay's delay a
+// message that came in just after leaving was marked read too (no NEW badge, no notification).
+function closeCard(){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } if (REC.r) recStop(); try { if (open && TH.opened && LOOK.act > TH.opened) { var rl = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }); if (rl.length) call({ op: 'seen', card: open.id, ts: rl[rl.length - 1].ts }); } } catch(e){} $('card').hidden = true; cardShow(false); $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; CHATSIG = ''; draw(); }
 $('back').onclick = function(){ history.back(); };
 window.addEventListener('popstate', function(){ if (VIEW.skip) { VIEW.skip = false; return; } if (VIEW.st) { viewClose(true); return; } if (!$('card').hidden) closeCard(); });
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
 // ---- 13 Oct 2026 (Abbas): edit the card's description/title, copy the card, add a new card ----
 function listSel(sel, def){ sel.innerHTML = D.lists.map(function(l){ return '<option value="' + esc(l[1]) + '"' + (l[1] === def ? ' selected' : '') + '>' + esc(l[0]) + ' · ' + (UR[l[0]] || '') + '</option>'; }).join(''); }
 function needW(){ if (!D.w) { toast('View only — the relay cannot change cards yet'); return false; } return true; }
-$('bedit').onclick = async function(){ if (!open || !needW()) return; var c = open; if (c.desc == null) { var j = await call({ op: 'atts', card: c.id }); if (j.ok) { c.desc = j.desc || ''; c._atts = j.atts || []; c._cover = j.cover || ''; } } if (open !== c) return; $('edname').value = c.name; $('eddesc').value = c.desc || ''; $('ed').hidden = false; $('eddesc').focus(); };
+$('bedit').onclick = async function(){ if (!open || !needW()) return; var c = open; if (c.desc == null) { var j = await call({ op: 'atts', card: c.id }); if (j.ok) { c.desc = j.desc || ''; c._atts = j.atts || []; c._cover = j.cover || ''; } } if (!open || open.id !== c.id) return; c = open; $('edname').value = c.name; $('eddesc').value = c.desc || ''; $('ed').hidden = false; $('eddesc').focus(); };
 $('edx').onclick = function(){ $('ed').hidden = true; };
 $('edgo').onclick = async function(){ var c = open; if (!c) return; var nm = $('edname').value.trim(), ds = $('eddesc').value; if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
   var r = {}; if (nm !== c.name) r.name = nm; if (ds !== (c.desc || '')) r.desc = ds; if (!Object.keys(r).length) { $('ed').hidden = true; return; }
   this.disabled = true; try { r.op = 'edit'; r.card = c.id; var j = await call(r); if (!j.ok) { toast('✗ ' + j.error); return; }
-    if (r.name != null) c.name = nm; if (r.desc != null) c.desc = ds; $('ed').hidden = true; if (open === c) paintCard(); draw(true); toast('✓ Saved to Trello · সেভ হয়েছে'); load(false); } finally { this.disabled = false; } };
+    if (r.name != null) c.name = nm; if (r.desc != null) c.desc = ds; $('ed').hidden = true; if (open && open.id === c.id) { open.name = c.name; open.desc = c.desc; paintCard(); } draw(true); toast('✓ Saved to Trello · সেভ হয়েছে'); load(false); } finally { this.disabled = false; } };
 $('bcopy').onclick = function(){ if (!open || !needW()) return; $('cpname').value = open.name; listSel($('cpto'), open.l); $('cpkeep').checked = true; $('cp').hidden = false; };
 $('cpx').onclick = function(){ $('cp').hidden = true; };
 $('cpgo').onclick = async function(){ var c = open; if (!c) return; var nm = $('cpname').value.trim(); if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
@@ -623,7 +625,7 @@ $('tfile').onchange = async function(){                     // 13 Oct 2026 (Abba
     if (big) toast('⚠ ' + big + ' photo' + (big > 1 ? 's are' : ' is') + ' over 10 MB — Trello (free plan) refuses those · send it in the chat instead');
     if (!done) return;
     toast('✓ ' + done + ' photo' + (done > 1 ? 's' : '') + ' added to Trello in full quality · ট্রেলোতে যোগ হয়েছে');
-    c._atts = null; if (open === c) attsLoad(c); load(false);
+    c._atts = null; if (open && open.id === c.id) { open._atts = null; attsLoad(open); } load(false);
   } catch (e) { toast('✗ ' + e.message); }
   finally { b.disabled = false; b.innerHTML = '📷 Add photo<small>ট্রেলোতে ছবি যোগ করুন</small>'; }
 };
@@ -704,22 +706,29 @@ var SEENSENT = {};
 function fastSeen(c, msgs, last){ var top = last || ''; (msgs || []).forEach(function(m){ if (/^\d+\.\d+$/.test(m.ts) && +m.ts > +(top || 0)) top = m.ts; }); if (!top || SEENSENT[c.id] === top) return; SEENSENT[c.id] = top; call({ op: 'seen', card: c.id, ts: top }); }
 async function thPull(){
   var c = TH.card; if (!c) return; if (TH.busy && Date.now() - TH.busy < 30000) { TH.again = true; return; } TH.busy = Date.now(); TH.again = false;
-  var real = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }), last = real.length ? real[real.length - 1].ts : '';
+  var real = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }), top = real.length ? real[real.length - 1].ts : '', part = !!THCP[c.id], last = part ? '' : top;
   TH.n = (TH.n || 0) + 1; var look = looking(), frc = TH.n % 4 === 0 || TH.force; TH.force = false; var j = null;
   if (fastOn()) { var rf = c.id === 'lais' || c.lo ? null : c.dm ? (roomCh(c) ? [roomCh(c).ch] : null) : FAST.refs[c.id];   // #laisfactory is in the SJTC workspace - the relay only
-    if (rf) { j = await fast(c.dm ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (j && !j.ok) j = null; if (j && look) fastSeen(c, j.msgs, last); } }
-  if (!j) { j = await call({ op: 'thread', card: c.id, since: last, look: look ? 1 : 0, force: frc ? 1 : 0 }); if (j && j.ok && j.ch && j.ts && !c.dm) { var rr = {}; rr[c.id] = [j.ch, j.ts]; refsSet(rr, true); } }
-  TH.busy = 0; if (TH.again) { TH.again = false; setTimeout(thPull, 30); } if (TH.card !== c) { if (TH.card) setTimeout(thPull, 50); return; } if (j && j.ok) TH.lastPull = Date.now();
+    if (rf) { j = await fast(c.dm ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (j && !j.ok) j = null; } }
+  if (!j) { j = await call({ op: 'thread', card: c.id, since: last, look: 0, force: frc ? 1 : 0 }); if (j && j.ok && j.ch && j.ts && !c.dm) { var rr = {}; rr[c.id] = [j.ch, j.ts]; refsSet(rr, true); } }
+  // 20 Oct 2026: compared by id - the card object is replaced on every list refresh, and an answer that arrived just after one was thrown away (the chat waited for the next pull)
+  TH.busy = 0; if (TH.again) { TH.again = false; setTimeout(thPull, 30); } if (!TH.card || TH.card.id !== c.id) { if (TH.card) setTimeout(thPull, 50); return; } c = TH.card; if (j && j.ok) TH.lastPull = Date.now();
+  // 20 Oct 2026: "seen" is sent by the phone, for the lines it really shows, while the chat is still open and being looked at. Before, the relay marked
+  // the chat seen up to the newest line in Slack when the answer was made - a pull sent just before leaving the chat swallowed a message that
+  // arrived a moment later (no NEW badge, no notification).
+  look = look && looking(); if (j && j.ok && !j.none && look) fastSeen(c, j.msgs, top);
   if (!j.ok) { $('tmsg').textContent = j.error; if (!TH.msgs.length) $('thread').innerHTML = '<div class="empty" style="padding:14px">⏳ ' + esc(j.error) + '<br>আবার চেষ্টা করা হচ্ছে…</div>'; return; }
   $('tmsg').textContent = '';
   if (j.none) { TH.none = true; $('thread').innerHTML = '<div class="empty" style="padding:14px">No chat yet — write the first message, send a photo or a voice note.<br>এখনো কোনো মেসেজ নেই — প্রথম মেসেজ লিখুন</div>'; $('tcount').textContent = ''; return; }
   TH.none = false;
+  if (part && !j.none) delete THCP[c.id];
   var have = {}; TH.msgs.forEach(function(m){ have[m.ts] = 1; }); var add = (j.msgs || []).filter(function(m){ return !have[m.ts]; });
   if (!add.length && TH.msgs.length) return;
+  var old = part && add.some(function(m){ return top && +m.ts < +top; });   // older lines came back: put everything in time order
   if (!add.length && !TH.msgs.length) { $('thread').innerHTML = '<div class="empty" style="padding:14px">No messages yet — write the first one.<br>এখনো কোনো মেসেজ নেই</div>'; $('tcount').textContent = ''; return; }
-  var fresh = last ? add.filter(function(m){ return (!m.sys || noteOf(m)) && !isMe(m); }) : []; fresh.forEach(function(m){ m.nw = 1; });
+  var fresh = top ? add.filter(function(m){ return +m.ts > +top && (!m.sys || noteOf(m)) && !isMe(m); }) : []; fresh.forEach(function(m){ m.nw = 1; });
   add.forEach(function(m){ if (isMe(m) && +m.ts > (TH.lastMine || 0)) TH.lastMine = +m.ts; });
-  var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add).concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thcSave(); if (playing() && !pend.length) { $('thread').insertAdjacentHTML('beforeend', add.map(bubble).join('')); $('tcount').textContent = TH.msgs.length + ' messages'; } else thDraw(); if (look) seen(c); draw();
+  var pend = TH.msgs.filter(function(m){ return m.pend; }); TH.msgs = TH.msgs.filter(function(m){ return !m.pend; }).concat(add); if (old) TH.msgs.sort(function(a, b){ return +a.ts - +b.ts; }); TH.msgs = TH.msgs.concat(pend); THC[c.id] = TH.msgs.filter(function(m){ return !m.pend; }); thcSave(); if (playing() && !pend.length && !old) { $('thread').insertAdjacentHTML('beforeend', add.map(bubble).join('')); $('tcount').textContent = TH.msgs.length + ' messages'; } else thDraw(); if (look) seen(c); draw();
   if (fresh.length) { beep(); toast('💬 New: ' + (fresh[fresh.length - 1].who || '') + ' · নতুন মেসেজ'); }
 }
 function firstName(x){ return String(x || '').trim().split(/[\s·]+/)[0].toUpperCase(); }
@@ -838,7 +847,7 @@ async function outOne(it){
     return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id }); }
   var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
   if (!it.fids) { try { it.fids = await slackDirect(it.files, null, it.card); oput(it); } catch(e){ it.fids = null; } }      // originals straight to Slack (full quality)
-  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.dtry = (it.dtry || 0) + 1) }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; oput(it); } }
+  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.fset || 0) }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; it.fset = (it.fset || 0) + 1; oput(it); } }   // 20 Oct 2026: the same once-only id on every retry of the same upload (it used to change each try, so an answer lost on a weak line could post the photos twice)
   if (tot > 18 * 1024 * 1024) return { ok: false, error: 'Slack did not take the upload' };
   var files = []; for (var i = 0; i < it.files.length; i++) files.push({ name: it.files[i].name, b64: await b64of(it.files[i].blob) });
   return await call({ op: 'up', card: it.card, files: files, text: it.text, who: it.who, rid: it.id + 'b' });
@@ -1060,9 +1069,14 @@ function liveMark(){ var n = new Date(); if (!D.w) return; $('msg').className = 
 var PREF = {};
 async function prefetch(){ var ids = Object.keys(D.th || {}).filter(function(id){ var u = D.th[id]; if (!u || !u.n || (open && open.id === id)) return false; var have = THC[id] || []; var top = have.length ? have[have.length - 1].ts : ''; return !(top && +top >= +u.last) && !(PREF[id] && Date.now() - PREF[id] < 8000); }).slice(0, 3);
   for (var i = 0; i < ids.length; i++) { var id = ids[i]; PREF[id] = Date.now(); var have = THC[id] || [], last = have.length ? have[have.length - 1].ts : '';
-    var j = await call({ op: 'thread', card: id, since: last, look: 0, pre: 1 }); if (!j.ok || j.none) continue; if (open && open.id === id) continue;
+    var rf = fastOn() && !/^(lais|L)/.test(id) ? (id === 'dm' ? (D.dm ? [D.dm.ch] : null) : FAST.refs[id]) : null, j = null;   // 20 Oct 2026: through the fast lane when it is on (~0.2 s instead of 1-3 s), so a new message is already on the phone when the chat is opened
+    if (rf) { j = await fast(id === 'dm' ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (j && !j.ok) j = null; }
+    if (!j) j = await call({ op: 'thread', card: id, since: last, look: 0, pre: 1 }); if (!j.ok || j.none) continue; if (open && open.id === id) continue;
     var hv = {}; have.forEach(function(m){ hv[m.ts] = 1; }); THC[id] = have.concat((j.msgs || []).filter(function(m){ return !hv[m.ts]; })); thcSave(); } }
-function thcLoad(){ try { var o = JSON.parse(ls('sj_fac_thc') || '{}'); Object.keys(o).forEach(function(k){ if (!THC[k]) THC[k] = (o[k] || []).filter(function(m){ return /^\d+\.\d+$/.test(m.ts); }); }); } catch(e){} }
+// 20 Oct 2026: the phone keeps only the newest 40 lines of a chat - a longer chat used to show just those 40 after the app was reopened (the
+// older ones never came back). Now a chat kept that way is read again from its start the first time it is opened, then merged in order.
+var THCP = {};
+function thcLoad(){ try { var o = JSON.parse(ls('sj_fac_thc') || '{}'); Object.keys(o).forEach(function(k){ if (!THC[k]) { THC[k] = (o[k] || []).filter(function(m){ return /^\d+\.\d+$/.test(m.ts); }); if (THC[k].length >= 40) THCP[k] = 1; } }); } catch(e){} }
 var THCT = null;
 function thcSave(){ CHATSIG = ''; if (TAB === 'chats' && $('card').hidden) chatsDraw(); clearTimeout(THCT); THCT = setTimeout(function(){ try { var o = {}, ks = Object.keys(THC).filter(function(k){ return THC[k] && THC[k].length; });
   ks.sort(function(a, b){ return +(THC[b][THC[b].length - 1].ts) - +(THC[a][THC[a].length - 1].ts); }).slice(0, 40).forEach(function(k){ o[k] = THC[k].filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }).slice(-40).map(function(m){ var x = {}; for (var q in m) if (q !== 'nw' && q !== 'pend') x[q] = m[q]; return x; }); });
