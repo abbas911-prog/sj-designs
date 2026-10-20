@@ -85,7 +85,7 @@ when the right change is clear, do it, test it, commit it and report; ask only w
 - `tools/stock.py` (GitHub job memo-stock: Include & share takes pieces off Trello; op `retbill` puts a return bill's pieces back),
   `tools/catalog/*` (catalogue builder), `.github/workflows/*`.
 - **Tests** in `tests/` (Playwright + a fake relay; no real Slack/Trello/Google is touched):
-  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (6), `python3 tests/t_stock.py`.
+  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (8), `python3 tests/t_stock.py`.
   Run them before every memo commit (if `require('playwright')` fails: `NODE_PATH=$(npm root -g)`). The test list password
   `test1234` is a fake list made inside the test, not the shop password.
 - Relay deploy: Abbas pastes `tools/relay.gs` into the Apps Script editor → Save → Deploy → Manage deployments → ✏️ → New version
@@ -119,3 +119,4 @@ Memo rules (his words, short):
   to a message (Slack quote "> *Name:* text"); Slack's &amp; shown as &.
 - 2026-10-20 (VER 2026-10-20d) "do all" UX, part 2: the app opens at once / offline (fac-sw.js, factory.html only); phone notifications without
   ntfy (Web Push via relay + worker; ntfy unchanged); Home Screen icon. NEEDS: relay deploy + fast-worker.js paste in Cloudflare.
+- 2026-10-20: memo 2026-10-20d — order screen: customer + photo tile per design at the top, opens at the preview (newest line if unread), steps folded under one tap; old orders find their #godown/#customer posts (`findroot`); customer balances: owe/advance totals, search #50 or words, filter, sort, ＋Receipt/＋Invoice; long return bills print on more pages; same design twice → oldest card keeps the plain number; failed cost sync is sent again. t_ord now 32/32.
