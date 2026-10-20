@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="SJ Stock">
 <title>SJ Stock</title>
+<link rel="manifest" href="memo.webmanifest"><link rel="apple-touch-icon" href="memo-icon-180.png"><link rel="icon" href="memo-icon-180.png"><meta name="theme-color" content="#F6F2EC">
 <style>
 :root{--ink:#1C1A17;--mute:#6E675D;--bg:#F6F2EC;--card:#fff;--gold:#A8864A;--line:#E3DBCF;--fade:rgba(236,233,226,.72)}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -903,7 +904,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-20j';
+var VER = '2026-10-21a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1139,6 +1140,12 @@ function lastNo(k){ try { return parseInt(localStorage.getItem('sj_no_' + k) || 
 function keepNo(k, ref){ var m = String(ref).match(/(\d+)\s*$/); if (m && +m[1] > lastNo(k)) { try { localStorage.setItem('sj_no_' + k, m[1]); } catch(e){} } }
 var PFX = { inv: 'INV-', rv: 'RV-', pv: 'PV-', rn: 'RET-' };
 function nextRef(k){ return PFX[k] + String(lastNo(k) + 1).padStart(4, '0'); }
+// 21 Oct 2026: ONE number series for the whole shop. When a bill is finalised (green button / Send) the relay confirms its number: if another phone
+// already used it, or is ahead of it, the bill moves to the next free number and says so. Offline or an older relay: the number is kept as before.
+async function bsNext(k, d){ if (!RELAY || !token || !d || (d.status && d.status !== 'draft')) return;
+  try { var j = await bsCall({ op: 'next', type: k, ref: d.ref, name: d.name || '', date: d.date }, 1); if (!j.ok || !j.ref || j.ref === d.ref) return;
+    var old = d.ref; keepNo(k, old); delete BS.last[old]; d.ref = j.ref; keepNo(k, j.ref); if (B[k] === d) redraw();
+    uiToast(old + ' → ' + j.ref + ' · that number was already used on another phone · الرقم مستخدم'); } catch(e){} }
 function n2(v){ var x = parseFloat(String(v == null ? '' : v).replace(/[,\s]/g, '')); return isFinite(x) ? x : 0; }
 function r2(x){ return Math.round(x * 100) / 100; }
 function amt(x){ x = r2(x); return (x < 0 ? '-' : '') + Math.abs(x).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -1432,6 +1439,7 @@ $('bform').addEventListener('click', function(e){ var d = B[B.mode];
 $('dsend').onclick = async function(){
   var k = B.mode, d = B[k]; if (!d) return;
   if (k === 'rv' && !custBefore(k, d)) return;
+  await bsNext(k, d);
   clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
   var f = B.pdf, txt = docText(k, d), done = false;
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); done = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
@@ -1450,6 +1458,7 @@ $('dinc').onclick = async function(){
     B.inv = Object.assign({}, d, { ref: nr, status: 'draft' }); redraw(); stkShow(); return $('dinc').onclick(); }
   if (d.status === 'included' || (s0 && (s0.st === 'ok' || s0.st === 'busy'))) {   // 21 Oct 2026: on ANY phone or laptop — a bill that went through the green button never takes pieces twice
     alert(d.ref + ' already went through the green button — its pieces are already off Trello and it is already in 50-50.\n\nTo send it again use Share PDF (the orange button). Nothing changes.\n\n' + d.ref + ' تم تأكيده مسبقاً — استخدم مشاركة PDF فقط'); return; }
+  await bsNext('inv', d);
   clearTimeout(B.timer); await preview(); if (!B.pdf) return;
   var lines = stkLines(), pcs = lines.reduce(function(a, l){ return a + l.pcs; }, 0), s = STK[stkKey(d.ref)];
   var hasMan = manLines(d).length > 0;
@@ -1508,7 +1517,7 @@ $('dsaved').onclick = function(){ if (BS.open) { bsClose(); return; } bsList(); 
 function bsClose(){ BS.open = false; $('bsaved').hidden = true; $('bform').hidden = false; }
 async function bsList(){ BS.open = true; var el = $('bsaved'); el.hidden = false; if (!BS.list) { var cb = cLoad('sj_c_bills'); if (Array.isArray(cb)) BS.list = cb; }   // 20 Oct 2026: last list shown at once, then refreshed
   if (BS.list) bsDrawList(); else el.innerHTML = '<div class="ffempty">Loading saved bills… · جارٍ التحميل</div>'; window.scrollTo(0, 0);
-  try { var j = await bsCall({ op: 'list' }); if (!j.ok) throw new Error(j.error); BS.list = j.bills || []; cKeep('sj_c_bills', function(){ return BS.list; }); if (BS.open) bsDrawList(); }
+  try { var j = await bsCall({ op: 'list' }); if (!j.ok) throw new Error(j.error); BS.list = j.bills || []; BS.list.forEach(function(b){ if (PFX[b.type]) keepNo(b.type, b.ref); });   /* this phone's counter jumps past every number any phone used */ cKeep('sj_c_bills', function(){ return BS.list; }); if (BS.open) bsDrawList(); }
   catch(e){ if (BS.list && BS.open) { uiToast('Could not refresh the saved bills — showing the last list'); return; } el.innerHTML = '<div class="bsh"><b>Saved bills</b><button type="button" id="bsx">✕</button></div><div class="stk bad">' + esc(e.message) + (/does not know|bad request/.test(e.message) ? '<br><br><b>What to do:</b> Apps Script → Deploy → Manage deployments → ✏️ → New version → Deploy.' : '') + '</div>'; $('bsx').onclick = bsClose; } }
 function bsDrawList(){ var q = ($('bsq') || {}).value || '', qq = q.toUpperCase().trim(), L = (BS.list || []).filter(function(b){ return ['od', 'bd', 'or'].indexOf(b.type) < 0; }).filter(function(b){ return !qq || (b.ref + ' ' + (b.name || '')).toUpperCase().indexOf(qq) >= 0; }), own = isOwner();
   var h = '<div class="bsh"><b>🗂 Saved bills · ' + (BS.list || []).length + '</b><button type="button" id="bsx">✕</button></div><div class="ccsrch"><input id="bsq" placeholder="Search number or customer · ابحث" autocomplete="off" value="' + esc(q) + '"></div>';
@@ -3688,6 +3697,9 @@ function moreDraw(){ var o = isOwner(), bo = isBoss(), nm = me();
 }
 new MutationObserver(function(){ navMemo(+($('nvm').textContent || 0), !$('ok').disabled ? 1 : 0); }).observe($('ok'), { attributes: true, attributeFilter: ['disabled'] });
 setTimeout(function(){ navMemo(+($('nvm').textContent || 0), !$('ok').disabled ? 1 : 0); navSync(); ccPoll(true); }, 1500);
+setTimeout(checkVer, 4000);   // a page kept on the phone by the helper still updates itself
+// 21 Oct 2026: the phone's helper (memo-sw.js, scope memo.html only) keeps the app page on the phone — opens at once, even on a weak line
+if ('serviceWorker' in navigator) { try { navigator.serviceWorker.register('memo-sw.js', { scope: 'memo.html' }).catch(function(){}); } catch(e){} }
 
 boot();
 window.__memo = { pstat: function(){ return pstat; }, parse: parseTitle, pages: drawPages, designs: function(){ return designs; }, state: function(){ return state; }, cashRead: cashRead, cashVendor: cashVendor, vendors: CASH_VENDORS };

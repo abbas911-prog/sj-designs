@@ -1871,6 +1871,23 @@ function bills(reqText, P) {
       } finally { lock.releaseLock(); }
       return out({ ok: true, ref: ref, status: st });
     }
+    if (op === 'next') {                                          // 21 Oct 2026: ONE number series for the whole shop. When a bill is finalised (green button / Send) the phone
+      // asks "is my number free?": kept when no other phone used it and it is ahead of every number in the sheet; otherwise the next free number is
+      // given (and reserved here at once, so two phones can never get the same one). The phone's old draft row moves aside (deleted).
+      var ty = String(req.type || 'inv').slice(0, 4), pfx = (ref.match(/^[A-Z]+-/) || [ty.toUpperCase() + '-'])[0], mine = +((ref.match(/(\d+)\s*$/) || [])[1] || 0), give = ref;
+      var lock2 = LockService.getScriptLock(); lock2.waitLock(15000);
+      try {
+        rows = S.getDataRange().getDisplayValues().slice(1); var top = 0, taken = false, ri = -1;
+        rows.forEach(function (r, i) { if (r[1] !== ty) return; var n = +((String(r[0]).match(/(\d+)\s*$/) || [])[1] || 0), own = r[0] === ref && !(r[8] && req.dev && r[8] !== String(req.dev));
+          if (r[0] === ref) { ri = i; if (!own && r[3] !== 'deleted') taken = true; }
+          if (own && r[3] !== 'deleted') return;                 // my own live draft under this number does not count against me; every other number (even deleted ones) does
+          if (n > top) top = n; });
+        if (taken || mine <= top) { give = pfx + String(top + 1).padStart(4, '0');
+          S.appendRow([give, ty, String(req.name || '').slice(0, 80), 'draft', '', String(req.date || '').slice(0, 10), new Date().toISOString(), String(req.by || '').slice(0, 40), String(req.dev || '').slice(0, 12)]);
+          if (ri >= 0 && !taken && rows[ri][3] === 'draft') S.getRange(ri + 2, 4).setValue('deleted'); }
+      } finally { lock2.releaseLock(); }
+      return out({ ok: true, ref: give, was: ref });
+    }
     if (op === 'del') { if (idx >= 0) S.getRange(idx + 2, 4).setValue('deleted'); return out({ ok: true }); }
     return out({ ok: false, error: 'the relay does not know "' + op + '" yet' });
   } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 200) }); }

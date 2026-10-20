@@ -11,6 +11,8 @@
 - `fac-sw.js` — the factory app's phone helper (service worker, scope = factory.html ONLY): keeps the page on the phone (opens at once /
   offline; `?v=` reloads go network-first so updates still arrive) and shows Web Push notifications. `factory.webmanifest`, `fac-icon-*.png`.
 - `tools/test/` — the factory test harness (see rule 5).
+- `memo-sw.js` — SJ Stock's phone helper (service worker, scope = memo.html ONLY): keeps the app page on the phone (opens at once / offline;
+  ETag check in the background; `?v=` reloads go network-first). `memo.webmanifest`, `memo-icon-180/512.png` (Home Screen icon).
 - `facthumbs/` — card cover thumbnails, made every 20 min by `.github/workflows/fac-thumbs.yml` (`tools/facthumbs.py`).
 
 ## Rules (from Abbas)
@@ -85,7 +87,8 @@ when the right change is clear, do it, test it, commit it and report; ask only w
 - `tools/stock.py` (GitHub job memo-stock: Include & share takes pieces off Trello; op `retbill` puts a return bill's pieces back),
   `tools/catalog/*` (catalogue builder), `.github/workflows/*`.
 - **Tests** in `tests/` (Playwright + a fake relay; no real Slack/Trello/Google is touched):
-  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (21), `node tests/t_ntfy.js` (3, real relay.gs), `python3 tests/t_stock.py`.
+  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (21), `node tests/t_ntfy.js` (3, real relay.gs), `node tests/t_bills.js` (6, real relay.gs + fake Sheet: one number series),
+  `node tests/t_sw.js` (5, Home Screen helper), `python3 tests/t_stock.py`.
   Speed: `node tests/perf.js` (350 fake designs at phone CPU speed; prints freeze ms per action), `node tests/walk.js` (walks every screen with
   Google answering after 2 s = real relay speed; prints ms until each screen is usable, and KB downloaded when the app comes to the front).
   Run them before every memo commit (if `require('playwright')` fails: `NODE_PATH=$(npm root -g)`). The test list password
@@ -99,6 +102,8 @@ Memo rules (his words, short):
 - A memo never changes Trello; only Include & share (and a Return bill's Return & share) does. The green button works ONCE per bill,
   on any device: a bill with status `included` refuses it everywhere (21 Oct 2026); to send it again use Share PDF.
   A sold bill keeps what it sold in itself (`d.sold`: design, colour, pcs, rate) and always shows exactly that, on any device.
+- Bill numbers are ONE series for the whole shop: at the green button / Send the relay confirms the number (`bills` op `next`, under a lock);
+  a number another phone used or reserved is never given twice; a draft behind the shop's last number moves to the next free one.
 - Nothing goes to a Slack group unless its button is pressed. #godown gets only the godown part.
 - Work in progress must never reset. Costs and 50-50 are never shown to staff. Customer balances: staff may look and copy
   statements (20 Oct 2026); only the owner phone deletes lines/customers or changes an opening balance.
@@ -133,3 +138,4 @@ Memo rules (his words, short):
 - 2026-10-21: memo 2026-10-20h — INV-0021 / SJ-85974 showed 4 pcs instead of 12 when opened again: a saved bill was re-checked against today's READY, and the two colours the sale itself had emptied were silently dropped (then auto-saved). Now a bill that took its pieces (`status included` or its stock job ok) is never cut down (`billLocked` in `reapply`); at Include, "All" marks become exact pcs; the phone that sold repairs a bill whose saved copy lost lines from `STK[].lines`; a draft that really lost stock gets a per-colour alert instead of a silent cut.
 - 2026-10-21: memo 2026-10-20i — the green button is refused on ANY device for a bill already included (was only remembered on the phone that pressed it; another phone/laptop opening the saved bill — e.g. INV-0018 from "Continue bill" — could take its pieces off Trello a second time).
 - 2026-10-21: memo 2026-10-20j — (order showed "Continue bill INV-0018" with 4 pcs while INV-0021 was the real 12-pc sale) the green button now stores what the bill sold inside the bill (`d.sold`, saved to BILLS) and every device opening it shows exactly that (sold-out designs become typed lines with the sold pcs/price); the bill is linked to its own order at the green button (`d.oid` / `sj_oid` → `link`) and "Bill made" is ticked on that order, not on whatever order the phone opened last (`ordBillMade(ref, oid)`).
+- 2026-10-21: memo 2026-10-21a — (a) ONE bill-number series for the whole shop: `bsNext` at the green button / Send asks relay `bills` op `next` (lock; reserves the number; the phone's old draft row is cleared) — INV-0018/0021 could never happen again; the phone's counter also jumps past every number in the saved-bills list. NEEDS relay deploy (136 functions, unchanged). (b) Home Screen app: `memo-sw.js` + `memo.webmanifest` + icons — opens at once / offline, ETag background refresh, `checkVer` also 4 s after boot. Tests: t_bills (6), t_sw (5).

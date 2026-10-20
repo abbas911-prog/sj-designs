@@ -1,0 +1,13 @@
+{
+  "name": "SJ Stock",
+  "short_name": "SJ Stock",
+  "start_url": "memo.html",
+  "scope": "memo.html",
+  "display": "standalone",
+  "background_color": "#F6F2EC",
+  "theme_color": "#F6F2EC",
+  "icons": [
+    { "src": "memo-icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "memo-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
