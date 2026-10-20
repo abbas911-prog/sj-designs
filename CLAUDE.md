@@ -106,3 +106,7 @@ Memo rules (his words, short):
   the last 40 lines after the app was reopened; (3) chat answers dropped when the card list refreshed (extra wait); (4) photo / voice retries
   could post twice; (5) new-message chats now pre-load through the fast lane. No relay deploy needed.
 - 2026-10-20: memo 2026-10-20c — bug sweep: Undo→Include gets a new number, stock job result goes to the right invoice, return lines from typed lines keep their number, no double #godown/#customer post, photos cached, staff never see factory password/costs, Small vendors keeps typing, 🔔 screen stays, new design order never makes a 2nd card (+ `tests/t_fix.js`).
+- 2026-10-20 (VER 2026-10-20c) "do all" UX, part 1 (phone only): Done / Move = ↩ Undo bar for 5 s instead of the "Move…?" question (Trello is
+  told after 5 s, or at once when the app goes to the background); swipe a card row left = Done; voice notes load by themselves into a
+  player (photos already did); status line "● Up to date" / "⚠ No internet"; every error message also in Bengali; search by words; ↩ reply
+  to a message (Slack quote "> *Name:* text"); Slack's &amp; shown as &.

@@ -17,7 +17,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}button:active{trans
 header{position:sticky;top:0;z-index:5;background:rgba(246,242,234,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:calc(8px + env(safe-area-inset-top)) 14px 0;border-bottom:1px solid var(--line)}
 .hrow{display:flex;align-items:center;gap:10px;min-height:40px}
 .brand{font-family:'Cormorant Garamond',Georgia,serif;font-weight:700;font-size:16.5px;letter-spacing:.06em;color:#6e4f1e;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#msg{font-size:11.5px;color:var(--red);max-width:52%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 9px;flex:none}#msg:empty{display:none}#msg.ok{color:var(--mute)}#msg.live{color:#1f8a4c}
+#msg{font-size:11.5px;color:var(--red);max-width:52%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 9px;flex:none}#msg:empty{display:none}#msg.ok{color:var(--mute)}#msg.live{color:#1f8a4c}#msg.off{color:#fff;background:var(--red);border-color:var(--red)}
 .search{padding:8px 0 10px}.search input{width:100%;border:0;border-radius:14px;padding:11px 14px 11px 40px;font:inherit;font-size:16px;background:#fff;box-shadow:inset 0 0 0 1.5px var(--line);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%237b6f61' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:13px center}.search input:focus{outline:0;box-shadow:inset 0 0 0 2px var(--gold)}
 .stages{display:flex;gap:6px;padding:0 0 10px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity}.stages::-webkit-scrollbar{display:none}
 .stages button{position:relative;flex:none;border:0;background:#fff;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--ink);line-height:1.1;white-space:nowrap;text-align:left;scroll-snap-align:start}
@@ -35,6 +35,8 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 #lorders .lon{color:#c62828}#lorders .lomore{width:100%;margin:4px 0 10px;padding:10px;border:1px solid #ddd;border-radius:10px;background:transparent;font-size:14px;color:inherit}.loph{display:inline-block;width:34px;height:34px;border-radius:8px;background:#eee center/cover;vertical-align:middle;margin-right:8px;font-size:0;color:transparent;overflow:hidden}
 /* ---- card rows ---- */
 .cardrow{display:flex;gap:12px;background:var(--card);border-radius:var(--r);padding:10px;margin-bottom:10px;align-items:center;box-shadow:var(--sh);content-visibility:auto;contain-intrinsic-size:112px;cursor:pointer}.cardrow:active{background:#fbf8f2}
+.cardrow{position:relative;touch-action:pan-y;transition:transform .18s}.cardrow.sw{transition:none}#list,#retlist{overflow-x:clip}
+.cardrow.sw::after{content:attr(data-nx);position:absolute;left:calc(100% + 8px);top:0;bottom:0;width:170px;display:flex;align-items:center;padding-left:14px;border-radius:var(--r);background:#d9efe0;color:#1f8a4c;font-weight:800;font-size:14px;white-space:nowrap}.cardrow.go::after{background:#1f8a4c;color:#fff}
 .ph{width:88px;height:88px;border-radius:14px;background:#efe8db center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
 .cardrow .t{flex:1;min-width:0}.cardrow .no{font-weight:800;font-size:19px;letter-spacing:-.01em}.cardrow .sub{color:var(--mute);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 #nserr{margin:8px 2px 0;padding:10px 12px;border-radius:10px;background:#fde8e8;color:#b71c1c;font-size:13.5px;font-weight:700;line-height:1.35}
@@ -99,7 +101,10 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .bub img{max-width:230px;max-height:300px;border-radius:10px;display:block;cursor:zoom-in}.bub .fph{width:200px;height:120px;border-radius:10px;background:#e6dccb;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:12px}
 .bub audio{width:220px;height:36px;display:block}.bub .fl{font-size:13px;color:var(--mute)}
 .msg.nw .bub{box-shadow:0 0 0 2.5px #c0392b}.msg.nw .who:after{content:' · NEW';color:#c0392b;font-weight:800}
-.msg.out .bub{opacity:.75}.msg.out.bad .bub{box-shadow:0 0 0 2px var(--red);opacity:1}
+.msg.out .bub{opacity:.75}.msg .bub .q{border-left:3px solid #b9a27a;background:rgba(0,0,0,.05);border-radius:6px;padding:4px 8px;margin:0 0 5px;font-size:13px;color:#5a5047;white-space:pre-wrap}
+.msg .who .rp{border:0;background:none;color:#a8957a;font-size:15px;padding:0 4px;margin-left:4px;line-height:1}
+#rbar{display:flex;align-items:center;gap:8px;padding:8px 12px 0;font-size:13.5px}#rbar[hidden]{display:none}#rbar span{flex:1;border-left:3px solid var(--gold);background:#f7f3ec;border-radius:8px;padding:6px 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#rbar small{display:block;color:var(--mute);font-size:11px}#rbar button{border:0;background:#f0e9dd;border-radius:999px;width:32px;height:32px;font-size:15px;flex:none}
+.msg.out.bad .bub{box-shadow:0 0 0 2px var(--red);opacity:1}
 .compw{background:#fff;border-top:1px solid var(--line)}.chint{display:none}
 .comp{display:flex;gap:6px;padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:#fff;align-items:flex-end}
 .comp textarea{flex:1;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:14px;padding:11px 12px;font:inherit;font-size:16px;resize:none;max-height:120px;min-height:44px;background:#faf7f1}.comp textarea:focus{outline:0;box-shadow:inset 0 0 0 2px var(--gold)}
@@ -131,6 +136,9 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 #lerr{color:var(--red);font-size:14px;min-height:18px;margin-top:8px}
 .toast{position:fixed;left:50%;bottom:calc(var(--tab) + 14px);transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 14px;border-radius:12px;font-size:14px;z-index:50;opacity:0;transition:.25s;pointer-events:none;max-width:90%;text-align:center}.toast.show{opacity:1}
 body.co .toast{bottom:90px}
+#undo{position:fixed;left:12px;right:12px;bottom:calc(var(--tab) + 12px);z-index:60;background:var(--ink);color:#fff;border-radius:14px;padding:10px 10px 12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);overflow:hidden;animation:up .2s}
+#undo[hidden]{display:none}#undo span{flex:1;font-size:15px;line-height:1.25}#undo small{display:block;font-size:12px;opacity:.75}#undo button{border:0;background:#fff;color:var(--ink);font-weight:800;border-radius:10px;padding:10px 12px;font-size:15px;flex:none}
+#undo i{position:absolute;left:0;bottom:0;height:3px;background:var(--gold);width:100%}#undo.run i{animation:mvbar 5s linear forwards}@keyframes mvbar{to{width:0}}body.co #undo{bottom:96px}
 </style>
 </head>
 <body>
@@ -139,7 +147,7 @@ body.co .toast{bottom:90px}
 
 <header>
   <div class="hrow"><div class="brand">AL MUTAGADED GARMENTS</div><div id="msg"></div></div>
-  <div id="hcards"><div class="search"><input id="q" placeholder="Search design number · ডিজাইন নম্বর" inputmode="search" autocomplete="off"></div><div class="stages" id="stages"></div></div>
+  <div id="hcards"><div class="search"><input id="q" placeholder="Search number or word · নম্বর বা শব্দ দিয়ে খুঁজুন" inputmode="search" type="search" enterkeyhint="search" autocomplete="off"></div><div class="stages" id="stages"></div></div>
 </header>
 <main id="home">
   <section data-t="cards"><div id="list"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></section>
@@ -165,7 +173,7 @@ body.co .toast{bottom:90px}
     <input type="file" id="tfile" accept="image/*" multiple hidden>
     <div class="thr"><h3><span id="thh" style="float:none">CARD CHAT · কার্ড চ্যাট</span> <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
-  <div class="compw"><div class="pend" id="pend"></div><div class="chint">🎤 tap to record, tap again to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo &nbsp;·&nbsp; 📎 files</div><div class="comp"><button class="mic" id="mic" title="tap to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Message · মেসেজ"></textarea><button id="send">Send</button></div></div>
+  <div class="compw"><div id="rbar" hidden></div><div class="pend" id="pend"></div><div class="chint">🎤 tap to record, tap again to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo &nbsp;·&nbsp; 📎 files</div><div class="comp"><button class="mic" id="mic" title="tap to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Message · মেসেজ"></textarea><button id="send">Send</button></div></div>
 </div>
 <div class="sheet" id="probs" hidden><div class="in"><h3>What is the problem? · সমস্যা কী?</h3>
 <button data-p="🚩 Fabric short · কাপড় কম">🧵 Fabric short · কাপড় কম</button>
@@ -188,16 +196,17 @@ body.co .toast{bottom:90px}
 <div class="sheet" id="cmenu" hidden><div class="in"><h3 id="cmh">Card · কার্ড</h3><button id="bmove">↔ Move to… · অন্য জায়গায়</button><button id="battach">📷 Add photo to Trello · ট্রেলোতে ছবি যোগ করুন</button><button id="bedit">✏️ Edit card · বিবরণ বদলান</button><button id="bcopy">⧉ Copy card · কার্ড কপি করুন</button><button id="btrello">Open in Trello · ট্রেলোতে খুলুন</button><button class="x" id="cmx">Cancel</button></div></div>
 <div class="sheet" id="plus" hidden><div class="in"><h3>New · নতুন</h3><button id="pcard">＋ New card · নতুন কার্ড</button><button id="psample">⭐ New sample · নতুন স্যাম্পল</button><button id="pret">↩️ New return · নতুন ফেরত</button><button class="x" id="plusx">Cancel</button></div></div>
 <div class="toast" id="toast"></div>
+<div id="undo" hidden></div>
 
 <script>
 (function(){
-var VER = '2026-10-20b';
+var VER = '2026-10-20c';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function sleep(ms){ return new Promise(function(ok){ setTimeout(ok, ms); }); }
-function toast(s){ var e = $('toast'); e.textContent = s; e.classList.add('show'); clearTimeout(e._t); e._t = setTimeout(function(){ e.classList.remove('show'); }, 2600); }
+function toast(s){ s = String(s); if (/^[✗⚠]/.test(s) && !/[\u0980-\u09ff]/.test(s)) s += /^✗/.test(s) ? ' · হয়নি, আবার চেষ্টা করুন' : ' · সতর্কতা'; var e = $('toast'); e.textContent = s; e.classList.add('show'); clearTimeout(e._t); e._t = setTimeout(function(){ e.classList.remove('show'); }, 2600); }
 var PW = ls('sj_fac_pw') || '', WHO = ls('sj_fac_who') || '';
 
 // ----- stages: the ALM production lists (ids come from the relay); hand-work lists are one chip -----
@@ -233,6 +242,7 @@ async function call(obj, pw, top){
   var lo = !top && /^(img|media|atts)$/.test(obj.op); if (!now) await new Promise(function(ok){ ok.h = heavy; ok.top = !!top; obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
   var t0 = Date.now(), res;
   if (now) { try { res = await call0(obj, pw); } catch(e){ res = { ok: false, error: e.message }; } } else { try { res = await call0(obj, pw); } finally { NET.busy--; if (heavy) NET.heavy--; netGo(); } }
+  if (res && res.ok) LASTOK = Date.now();
   NET.log.unshift({ op: obj.op, ms: Date.now() - t0, ok: !!(res && res.ok), e: res && !res.ok ? String(res.error || '').slice(0, 60) : '', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
   return res;
 }
@@ -316,7 +326,7 @@ function loSync(){ if (!D.byId) return; var by = {}; (D.cards || []).forEach(fun
     D.byId[o.id] = c; }); }
 function phc(c){ return c && c.lo ? (c.src || c) : c; }          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
 function applyList(j){ D.lists = j.lists; D.show = j.show || []; if (j.limit) D.limit = j.limit; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.lais = j.lais || null; D.lo = j.lo || []; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; loSync(); bellPaint(); }
-function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); if (j.live && PW) liveStart(j.live); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = 'Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · ' + D.cards.length + ' cards'; draw(); return true; } catch(e){ return false; } }
+function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); if (j.live && PW) liveStart(j.live); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = '⏳ Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · লোড হচ্ছে'; draw(); return true; } catch(e){ return false; } }
 // 18 Oct 2026 (Abbas: "when it's done it has to be in Came back, but it's not there — it's deleted. Why?"): the fast lane does not read the
 // long done-lists (RETURNS BACK, FINISH, SAMPLE DONE, FINISH SAMPLES — Cloudflare's CPU limit); the phone kept them from the relay's list, but the
 // 5-minute background relay list only refreshed the counts, never those cards — so a card moved there (Done) was in Trello but not in the app.
@@ -338,9 +348,9 @@ async function load(fresh){
   if (j && (fresh || Date.now() - (FAST.relAt || 0) > 90000)) { FAST.relAt = Date.now(); call({ op: 'list', fresh: !!fresh }).then(function(rj){ if (rj && rj.ok && !LOADING) { relCards(rj); D.th = rj.th || D.th; D.later = rj.later || D.later; if (rj.dm !== undefined) D.dm = rj.dm; if (rj.lais !== undefined) D.lais = rj.lais; if (rj.lo !== undefined) { D.lo = rj.lo || []; loSync(); } if (rj.limit) D.limit = rj.limit; if (rj.lists) D.lists = rj.lists; if (rj.show) D.show = rj.show; D.w = rj.w; if (rj.refs) refsSet(rj.refs, true); if (rj.act) D.act = rj.act; if (rj.fast !== undefined) fastSet(rj.fast); if (rj.live) liveStart(rj.live); CHATSIG = ''; draw(); } }); }
   if (!j) { j = await call({ op: 'list', fresh: !!fresh }); if (j && j.ok) FAST.relAt = Date.now(); }
   $('rf').classList.remove('spin'); LOADING = 0;
-  if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password — tap SJ to sign in again' : 'Could not load: ' + j.error; if (j.error === 'wrong password') showLogin(); return false; }
+  if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password · ভুল পাসওয়ার্ড' : '⚠ Could not load · লোড হয়নি'; if (j.error === 'wrong password') showLogin(); return false; }
   applyList(j); if (j.live) liveStart(j.live); j.t = Date.now(); try { ls('sj_fac_list', JSON.stringify(j)); } catch(e){}
-  var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? 'Updated ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') : '⚠ View only';
+  var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? '● Up to date ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') + ' · আপডেট' : '⚠ View only · শুধু দেখা';
   draw(); liveMark(); if (open && D.byId[open.id] && open !== D.byId[open.id]) { var oc = open; open = D.byId[open.id]; ['_atts', '_cover', 'desc'].forEach(function(k){ if (oc[k] !== undefined) open[k] = oc[k]; }); if (TH.card && TH.card.id === open.id) TH.card = open; paintCard(); }
   if (!open) openFromHash();
   return true;
@@ -414,16 +424,21 @@ $('cupin').onclick = function(){ if (open) setLater(open, !(D.later || {})[open.
 $('inbox').onclick = function(e){ if (e.target.closest('#bcatch')) { catchUp(); return; } var r = e.target.closest('.row'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
 var DRAWN = '';
 function draw(force){
+  mvApply();
   var sig = cur + '|' + Math.floor(Date.now() / 86400000) + '|' + $('q').value + '|' + D.cards.map(function(c){ return c.id + c.l + c.pos + c.img + c.name + JSON.stringify(c.lb || '') + (D.th[c.id] ? D.th[c.id].n : 0) + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|' + D.w;
   sig += '|dm' + unread(DMC) + ((D.dm || {}).name || '') + ((D.later || {}).dm ? 'L' : '') + '|lais' + unread(LAISC) + ((D.lais || {}).name || '') + ((D.later || {}).lais ? 'L' : '');
   if (!force && sig === DRAWN) { inbox(); chatsDraw(); return; } DRAWN = sig;   // the Chats tab has its own check (newest line / time per chat)
   dmRow(); laisRow();
   $('stages').innerHTML = CHIPS.map(function(ch, i){ if (/^RETURNS/.test(ch[0])) return ''; var cs0 = D.cards.filter(function(c){ return inChip(c, i); }), n = cs0.length, u = cs0.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0);
     return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i>' + (u ? '<b class="u">' + u + '</b>' : '') + '<small>' + ch[2] + '</small></button>'; }).join('');
-  var q = $('q').value.replace(/\D/g, ''), cs = D.cards.filter(function(c){ return q ? parse(c.name).no.indexOf(q) >= 0 || c.name.indexOf(q) >= 0 : inChip(c, cur); });
+  // 20 Oct 2026 (Abbas: "do all"): search by words too - "lace", "red", a worker's name, a label: every word must be on the card (title, labels,
+  // fields, stage). Only numbers (or SJ + number) = the design-number search as before.
+  var qr = $('q').value.trim().toLowerCase(), qn = qr.replace(/^s[jh]\s*[-=:#]?\s*(?=\d)/, ''), q = /[a-z\u0980-\u09ff]/.test(qn) ? '' : qr.replace(/\D/g, ''), qw = q || !qr ? null : qr.split(/\s+/).filter(Boolean);
+  var cs = D.cards.filter(function(c){ if (qw) { var hay = (c.name + ' ' + (c.lb || []).map(function(l){ return l.n; }).join(' ') + ' ' + Object.keys(c.f || {}).map(function(k){ return k + ' ' + c.f[k]; }).join(' ') + ' ' + lname(c.l)).toLowerCase(); return qw.every(function(w){ return hay.indexOf(w) >= 0; }); }
+    return q ? parse(c.name).no.indexOf(q) >= 0 || c.name.indexOf(q) >= 0 : inChip(c, cur); });
   cs.sort(function(a, b){ return a.pos - b.pos; });
-  $('list').innerHTML = cs.length ? cs.map(function(c){ return rowHtml(c, !!q || CHIPS[cur][1].length > 1); }).join('')
-    : '<div class="empty">' + (q ? 'No card with ' + esc(q) : 'No cards here · এখানে কোনো কার্ড নেই') + '</div>';
+  $('list').innerHTML = cs.length ? cs.map(function(c){ return rowHtml(c, !!qr || CHIPS[cur][1].length > 1); }).join('')
+    : '<div class="empty">' + (qr ? 'No card with “' + esc(qr) + '” · কোনো কার্ড পাওয়া যায়নি' : 'No cards here · এখানে কোনো কার্ড নেই') + '</div>';
   document.querySelectorAll('#list .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); });
   inbox(); laterBox(); retBox(); chatsDraw(); retDraw(); tabBadges();
 }
@@ -470,8 +485,8 @@ function emo(s){ return String(s == null ? '' : s).replace(/:([a-z0-9_+\-]+)(?::
 var PCOL = ['#0e8a5a', '#c4561a', '#8e3bbf', '#c2185b', '#00838f', '#7a6200', '#5d4037', '#3949ab', '#ad1457', '#2e7d32'];
 function pcol(n){ var ws = String(n || '').toLowerCase().split(/[\s·._-]+/).map(nrm).filter(function(w){ return w && !/^(md|mohd|mohammad|mohammed|muhammad|mohammod)$/.test(w); }), k = (ws[0] || nrm(n)).slice(0, 5); if (!k) return '#8a7f70'; /* "Md ibrahimmiah" (Slack) and "Ibrahim" (app) = one colour */ var fx = { abbas: '#1565c0', ibrah: '#c2185b', usman: '#c4561a', ali: '#8e3bbf', moham: '#0e8a5a', ullah: '#0e8a5a', sj: '#7a6200' }; if (fx[k]) return fx[k];
   var h = 0; for (var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0; return PCOL[h % PCOL.length]; }
-function whoLine(tx){ var t = emo(tx || ''), m = t.match(/^([^:]{1,32}): ([\s\S]*)$/); return m ? '<span class="wn" style="color:' + pcol(m[1]) + '">' + esc(m[1]) + ':</span> ' + esc(m[2]) : esc(t); }
-function lineOf(m){ if (!m) return ''; var t = String(m.text || '').replace(/\s+/g, ' ').trim(); var f = (m.files || []).length ? (m.files.some(function(x){ return x.audio; }) ? '🎤 voice note' : m.files.some(function(x){ return x.video; }) ? '🎬 video' : '📷 photo') : ''; if (m.sys) t = t.replace(/\*/g, '').replace(/^→ /, '🔀 '); return (m.sys ? '' : (m.who ? m.who + ': ' : '')) + (t || f); }
+function whoLine(tx){ var t = emo(sdec(String(tx || '').replace(/(^|: )\s*(?:&gt;|>)\s?/, '$1↩ '))), m = t.match(/^([^:]{1,32}): ([\s\S]*)$/); return m ? '<span class="wn" style="color:' + pcol(m[1]) + '">' + esc(m[1]) + ':</span> ' + esc(m[2]) : esc(t); }
+function lineOf(m){ if (!m) return ''; var t = sdec(qstrip(m.text)).replace(/\s+/g, ' ').trim(); var f = (m.files || []).length ? (m.files.some(function(x){ return x.audio; }) ? '🎤 voice note' : m.files.some(function(x){ return x.video; }) ? '🎬 video' : '📷 photo') : ''; if (m.sys) t = t.replace(/\*/g, '').replace(/^→ /, '🔀 '); return (m.sys ? '' : (m.who ? m.who + ': ' : '')) + (t || f); }
 var CHATSIG = '';
 function chatsDraw(){ if (TAB !== 'chats' || !D.cards) return; loDraw();
   var items = [];
@@ -500,10 +515,21 @@ function retDraw(force){ if (TAB !== 'returns' || !D.cards) return; var cs = D.c
   var sig = RSEG + cs.map(function(c){ return c.id + c.name + c.img + unread(c); }).join(','); if (!force && sig === RETSIG) return; RETSIG = sig;
   $('retlist').innerHTML = cs.length ? cs.map(function(c){ return rowHtml(c, false); }).join('') : '<div class="empty">' + (RSEG === 'RETURNS' ? 'Nothing at the factory · কারখানায় কিছু নেই' : 'Nothing came back yet · এখনো কিছু ফেরত আসেনি') + '</div>';
   document.querySelectorAll('#retlist .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); }); }
-$('retlist').onclick = function(e){ var r = e.target.closest('.cardrow'); if (r) openCard(D.byId[r.dataset.id]); };
+$('retlist').onclick = function(e){ if (Date.now() - SWX < 450) return; var r = e.target.closest('.cardrow'); if (r) openCard(D.byId[r.dataset.id]); };
 $('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; ls('sj_fac_chip', String(cur)); $('q').value = ''; draw(); window.scrollTo(0, 0); var on = document.querySelector('#stages button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' }); };
 $('q').oninput = function(){ if (TAB !== 'cards') setTab('cards'); draw(); };
-$('list').onclick = function(e){ var r = e.target.closest('.cardrow'); if (r) openCard(D.byId[r.dataset.id]); };
+$('list').onclick = function(e){ if (Date.now() - SWX < 450) return; var r = e.target.closest('.cardrow'); if (r) openCard(D.byId[r.dataset.id]); };
+// 20 Oct 2026 (Abbas: "do all"): swipe a card row to the LEFT = Done → next stage, without opening it (same ↩ Undo bar for 5 s)
+var SWX = 0;
+(function(){ var S = null;
+  function down(e){ var r = e.target.closest('.cardrow'); if (!r || (e.pointerType === 'mouse' && e.button)) return; S = { r: r, x: e.clientX, y: e.clientY, dx: 0, on: false }; }
+  function mv(e){ if (!S) return; var dx = e.clientX - S.x, dy = e.clientY - S.y;
+    if (!S.on) { if (Math.abs(dy) > 14) { S = null; return; } if (!(dx < -16 && Math.abs(dx) > Math.abs(dy) * 1.6)) return;
+      var c = D.byId[S.r.dataset.id], nx = c && !c.dm && NEXT[lname(c.l)]; if (!nx || !D.w) { S = null; return; } S.on = true; S.nx = nx; S.r.dataset.nx = '✅ ' + nx; S.r.classList.add('sw'); }
+    S.dx = Math.max(-170, Math.min(0, dx)); S.r.style.transform = 'translateX(' + S.dx + 'px)'; S.r.classList.toggle('go', S.dx < -95); if (e.cancelable) e.preventDefault(); }
+  function up(){ var s0 = S; S = null; if (!s0 || !s0.on) return; SWX = Date.now(); s0.r.style.transform = ''; s0.r.classList.remove('sw', 'go'); if (s0.dx < -95) move(s0.nx, D.byId[s0.r.dataset.id]); }
+  ['list', 'retlist'].forEach(function(id){ var el = $(id); el.addEventListener('pointerdown', down); el.addEventListener('pointermove', mv, { passive: false }); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); });
+})();
 $('msg').onclick = function(){ var L = NET.log.slice(0, 20); alertBox('Last requests · speed', L.map(function(x){ return (x.at.getHours() + ':' + ('0' + x.at.getMinutes()).slice(-2) + ':' + ('0' + x.at.getSeconds()).slice(-2)) + '  ' + x.op + '  ' + (x.ms / 1000).toFixed(1) + ' s  ' + (x.ok ? '✓' : '✗ ' + x.e); }).join('\n')); };
 function alertBox(t, body){ $('tg').hidden = false; $('tg').querySelector('h3').textContent = t; $('tgbody').innerHTML = '<pre style="white-space:pre-wrap;font-size:12.5px;margin:0">' + esc(body) + '</pre>';
   if (/speed/.test(t)) { $('tgbody').insertAdjacentHTML('afterbegin', '<div style="border:1.5px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px;font-size:14px"><b>🚀 Fast lane</b> · ' + (FAST.url ? (fastOn() ? '<span style="color:#2e7d32">ON</span>' + (fastTr() ? ' · chats + cards + photos' : ' · chats only — add TRELLO_TOKEN for cards') : '<span style="color:var(--red)">resting - the relay is used</span>') + '<br><small style="color:var(--mute);word-break:break-all">' + esc(FAST.url) + '</small>' : 'off — chats go through the Google relay') + '<input id="fastu" placeholder="https://sj-fast.NAME.workers.dev" autocomplete="off" style="display:block;width:100%;border:1.5px solid var(--line);border-radius:10px;padding:9px;margin:8px 0 6px;font-size:15px" value="' + esc(FAST.url) + '"><button id="fastgo" style="text-align:center;margin:0">Save link · সেভ</button></div>');
@@ -520,7 +546,7 @@ function vvFit(){ var vv = window.visualViewport, el = $('card'); if (!vv || el.
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', vvFit); window.visualViewport.addEventListener('scroll', vvFit); }
 function openCard(c){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } open = c; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
 function paintCard(){
-  var c = open; $('card').classList.toggle('dm', !!c.dm);
+  mvApply(); var c = open; $('card').classList.toggle('dm', !!c.dm);
   if (c.lo) { $('cnm').innerHTML = '<span class="loph" data-img="' + esc(c.img) + '"></span>🧵 ' + esc(c.title) + '<small>' + esc(c.sub || '') + ' · #' + esc((D.lais || {}).name || 'laisfactory') + '</small>'; var lp = $('cnm').querySelector('.loph'); if (c.img) photo(phc(c), lp); else lp.remove();
     $('cstage').textContent = '#' + ((D.lais || {}).name || 'laisfactory'); $('cstage').onclick = null; $('cstage').style.cursor = ''; $('tcount').textContent = ''; $('thh').textContent = 'LAIS ORDER CHAT · লেইস অর্ডার চ্যাট'; return; }
   if (c.id === 'lais') { $('cnm').innerHTML = '🧵 #' + esc((D.lais || {}).name || 'laisfactory') + '<small>lais factory · only its members</small>'; $('cstage').textContent = '#' + ((D.lais || {}).name || ''); $('cstage').onclick = null; $('cstage').style.cursor = ''; $('tcount').textContent = ''; $('thh').textContent = '#LAISFACTORY · লেইস ফ্যাক্টরি'; return; }
@@ -590,14 +616,14 @@ window.addEventListener('popstate', function(){ if (VIEW.skip) { VIEW.skip = fal
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
 // ---- 13 Oct 2026 (Abbas): edit the card's description/title, copy the card, add a new card ----
 function listSel(sel, def){ sel.innerHTML = D.lists.map(function(l){ return '<option value="' + esc(l[1]) + '"' + (l[1] === def ? ' selected' : '') + '>' + esc(l[0]) + ' · ' + (UR[l[0]] || '') + '</option>'; }).join(''); }
-function needW(){ if (!D.w) { toast('View only — the relay cannot change cards yet'); return false; } return true; }
-$('bedit').onclick = async function(){ if (!open || !needW()) return; var c = open; if (c.desc == null) { var j = await call({ op: 'atts', card: c.id }); if (j.ok) { c.desc = j.desc || ''; c._atts = j.atts || []; c._cover = j.cover || ''; } } if (!open || open.id !== c.id) return; c = open; $('edname').value = c.name; $('eddesc').value = c.desc || ''; $('ed').hidden = false; $('eddesc').focus(); };
+function needW(){ if (!D.w) { toast('View only — the relay cannot change cards yet · এখনো কার্ড বদলানো যাবে না'); return false; } return true; }
+$('bedit').onclick = async function(){ if (!open || !needW()) return; if (MV && MV.id === open.id) mvGo(); var c = open; if (c.desc == null) { var j = await call({ op: 'atts', card: c.id }); if (j.ok) { c.desc = j.desc || ''; c._atts = j.atts || []; c._cover = j.cover || ''; } } if (!open || open.id !== c.id) return; c = open; $('edname').value = c.name; $('eddesc').value = c.desc || ''; $('ed').hidden = false; $('eddesc').focus(); };
 $('edx').onclick = function(){ $('ed').hidden = true; };
 $('edgo').onclick = async function(){ var c = open; if (!c) return; var nm = $('edname').value.trim(), ds = $('eddesc').value; if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
   var r = {}; if (nm !== c.name) r.name = nm; if (ds !== (c.desc || '')) r.desc = ds; if (!Object.keys(r).length) { $('ed').hidden = true; return; }
   this.disabled = true; try { r.op = 'edit'; r.card = c.id; var j = await call(r); if (!j.ok) { toast('✗ ' + j.error); return; }
     if (r.name != null) c.name = nm; if (r.desc != null) c.desc = ds; $('ed').hidden = true; if (open && open.id === c.id) { open.name = c.name; open.desc = c.desc; paintCard(); } draw(true); toast('✓ Saved to Trello · সেভ হয়েছে'); load(false); } finally { this.disabled = false; } };
-$('bcopy').onclick = function(){ if (!open || !needW()) return; $('cpname').value = open.name; listSel($('cpto'), open.l); $('cpkeep').checked = true; $('cp').hidden = false; };
+$('bcopy').onclick = function(){ if (!open || !needW()) return; if (MV && MV.id === open.id) mvGo(); $('cpname').value = open.name; listSel($('cpto'), open.l); $('cpkeep').checked = true; $('cp').hidden = false; };
 $('cpx').onclick = function(){ $('cp').hidden = true; };
 $('cpgo').onclick = async function(){ var c = open; if (!c) return; var nm = $('cpname').value.trim(); if (!nm) { toast('Title cannot be empty · শিরোনাম লিখুন'); return; }
   this.disabled = true; this.textContent = '⏳ Copying… · কপি হচ্ছে'; try { var j = await call({ op: 'copy', card: c.id, name: nm, to: $('cpto').value, keep: $('cpkeep').checked ? 'attachments,labels,customFields,checklists,stickers' : 'labels,customFields' });
@@ -629,17 +655,35 @@ $('tfile').onchange = async function(){                     // 13 Oct 2026 (Abba
   } catch (e) { toast('✗ ' + e.message); }
   finally { b.disabled = false; b.innerHTML = '📷 Add photo<small>ট্রেলোতে ছবি যোগ করুন</small>'; }
 };
-async function move(toName){
-  var c = open, to = lid(toName); if (!c || !to) return;
-  if (!confirm('Move SJ-' + (parse(c.name).no || '') + ' to ' + toName + '?\n' + (UR[toName] || '') + '-এ পাঠাবেন?')) return;
-  var from = c.l; c.l = to; c.pos = -1; toast('✓ Moved to ' + toName + ' · ' + (UR[toName] || '')); paintCard(); draw();   // on screen at once
+// 20 Oct 2026 (Abbas: "do all" - undo instead of "are you sure?"): Done / Move no longer asks first. The card moves on screen at once and an
+// ↩ Undo bar shows for 5 s; the real Trello move (+ comment + chat line) is sent when the 5 s are over - or at once when the app goes to the
+// background, the card is moved again, or another card is moved. Undo inside the 5 s = nothing was sent anywhere.
+var MV = null;
+function move(toName, card){
+  var c = card || open, to = lid(toName); if (!c || !to || c.dm) return;
+  if (!D.w) { toast('View only — cannot move yet · এখনো সরানো যাবে না'); return; }
+  if (MV && MV.id === c.id && Date.now() - MV.at < 1200) return;      // a double tap on Done moves once
+  if (MV) mvGo();
+  MV = { id: c.id, from: c.l, to: to, name: toName, no: parse(c.name).no, at: Date.now(), t: setTimeout(mvGo, 5000) };
+  mvApply(); if (open && open.id === c.id) paintCard(); draw(); undoShow();
+}
+function mvApply(){ if (!MV) return; var c = D.byId && D.byId[MV.id]; if (c) { c.l = MV.to; c.pos = -1; } if (open && open.id === MV.id) { open.l = MV.to; open.pos = -1; } }
+function undoShow(){ var el = $('undo'), m = MV; if (!m) return;
+  el.innerHTML = '<span>✓ ' + (m.no ? 'SJ-' + esc(m.no) + ' ' : '') + '→ <b>' + esc(m.name) + '</b><small>' + esc(UR[m.name] || '') + ' -এ পাঠানো হয়েছে</small></span><button id="undob">↩ Undo · ফেরত</button><i></i>';
+  el.hidden = false; el.classList.remove('run'); void el.offsetWidth; el.classList.add('run'); }
+function mvUndo(){ if (!MV) return; var m = MV; MV = null; clearTimeout(m.t); $('undo').hidden = true;
+  var c = D.byId[m.id]; if (c) c.l = m.from; if (open && open.id === m.id) { open.l = m.from; paintCard(); } draw(); toast('↩ Not moved · সরানো হয়নি'); }
+$('undo').onclick = function(e){ if (e.target.closest('#undob')) mvUndo(); };
+async function mvGo(){ var m = MV; if (!m) return; MV = null; clearTimeout(m.t); $('undo').hidden = true;
   var j = null, mrid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  if (fastTr()) { j = await fast({ op: 'tmove', card: c.id, from: from, to: to, who: WHO, rid: mrid, lists: D.lists, ref: FAST.refs[c.id] || null, topic: LIVE.topic }, true); if (j && !j.ok && !j.moved) j = null; }
-  if (!j) j = await call({ op: 'move', card: c.id, to: to, who: WHO, rid: mrid });   // the relay (no "from": if the worker did move it, this is a no-op)
-  if (!j.ok) { c.l = from; paintCard(); draw(); toast('✗ ' + j.error); if (j.moved) load(false); return; }
+  if (fastTr()) { j = await fast({ op: 'tmove', card: m.id, from: m.from, to: m.to, who: WHO, rid: mrid, lists: D.lists, ref: FAST.refs[m.id] || null, topic: LIVE.topic }, true); if (j && !j.ok && !j.moved) j = null; }
+  if (!j) j = await call({ op: 'move', card: m.id, to: m.to, who: WHO, rid: mrid });   // the relay (no "from": if the worker did move it, this is a no-op)
+  if (!j.ok) { var c = D.byId[m.id]; if (c) c.l = m.from; if (open && open.id === m.id) { open.l = m.from; paintCard(); } draw(); toast('✗ ' + (m.no ? 'SJ-' + m.no + ' ' : '') + j.error); if (j.moved) load(false); return; }
   setTimeout(thPull, 800); setTimeout(function(){ load(false); }, 1200);
 }
-$('bdel').onclick = async function(){ var c = open; if (!c || lname(c.l) !== 'RETURNS BACK') return;
+document.addEventListener('visibilitychange', function(){ if (document.hidden && MV) mvGo(); });
+window.addEventListener('pagehide', function(){ if (MV) mvGo(); });
+$('bdel').onclick = async function(){ var c = open; if (!c || lname(c.l) !== 'RETURNS BACK') return; if (MV && MV.id === c.id) await mvGo();   // a Done still waiting for its 5 s goes first
   if (!confirm('Delete this card? · কার্ডটি মুছে ফেলবেন?\n\nIt is archived in Trello (can be restored from Trello\'s Archive).')) return;
   var b = this; b.disabled = true; b.firstChild.textContent = '⏳ Deleting… ';
   try { var j = await call({ op: 'archive', card: c.id, who: WHO, rid: 'ar' + c.id });
@@ -647,8 +691,8 @@ $('bdel').onclick = async function(){ var c = open; if (!c || lname(c.l) !== 'RE
     D.cards = D.cards.filter(function(x){ return x.id !== c.id; }); delete D.byId[c.id]; delete THC[c.id]; RETSIG = ''; CHATSIG = '';
     toast('🗑 Deleted · মুছে ফেলা হয়েছে'); history.back(); draw(); }
   finally { b.disabled = false; b.firstChild.textContent = '🗑 Delete card'; } };
-$('bdone').onclick = function(){ var nx = NEXT[lname(open.l)]; if (nx) move(nx); };
-$('bmove').onclick = function(){ if (!D.w) { toast('View only — cannot move yet'); return; }
+$('bdone').onclick = function(){ if (!open) return; var nx = NEXT[lname(open.l)]; if (nx) move(nx); };
+$('bmove').onclick = function(){ if (!D.w) { toast('View only — cannot move yet · এখনো সরানো যাবে না'); return; }
   $('mvl').innerHTML = D.lists.map(function(l){ return '<button data-n="' + esc(l[0]) + '"' + (l[1] === open.l ? ' class="here"' : '') + '>' + esc(l[0]) + ' · ' + (UR[l[0]] || '') + (l[1] === open.l ? ' (here)' : '') + '</button>'; }).join('');
   $('mv').hidden = false; };
 $('mvx').onclick = function(){ $('mv').hidden = true; };
@@ -668,7 +712,7 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
 window.__LOOK = LOOK; window.__call = function(o, pw, t){ return call(o, pw, t); };
 function looking(){ return !document.hidden && Date.now() - LOOK.vis > 1500 && Date.now() - LOOK.act < 60000; }
 var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
-function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (document.hidden) return; TH.tick = (TH.tick || 0) + 1; if (LIVE.ok && TH.tick % 3) return; if (!LIVE.ok && fastOn() && TH.tick % 2) return; thPull(); }, 4000); }
+function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); replySet(null); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (document.hidden) return; TH.tick = (TH.tick || 0) + 1; if (LIVE.ok && TH.tick % 3) return; if (!LIVE.ok && fastOn() && TH.tick % 2) return; thPull(); }, 4000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 
 // ===== FAST LANE (16 Oct 2026, Abbas: "you have to think better and do something about this chat .. not flawless at all"). The Google relay
@@ -699,6 +743,7 @@ async function fast(obj, force){
     if (j && j.auth) FAST.down = Date.now() + 600000; if (j && j.notrello) FAST.notr = Date.now() + 600000;              // the password changed: the relay is used until the next sign-in
   } catch(e){ j = null; if (/^t/.test(obj.op)) FAST.notr = Date.now() + 120000; else FAST.down = Date.now() + 20000; FAST.fail = { quick: e.name !== 'AbortError' && Date.now() - t0 < 3000 }; }   // a Trello hiccup never takes the chats off the fast lane
   finally { clearTimeout(tm); if (file) FAST.fb--; }
+  if (j && j.ok) LASTOK = Date.now();
   NET.log.unshift({ op: '🚀' + obj.op, ms: Date.now() - t0, ok: !!(j && j.ok), e: j && !j.ok ? String(j.error || '').slice(0, 60) : j ? '' : 'no answer', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
   return j;
 }
@@ -741,17 +786,23 @@ function noteOf(m){ if (!m || !m.sys) return false; var t = String(m.text || '')
   return !(a.length >= 2 && k.length >= 2 && (a.indexOf(k) === 0 || k.indexOf(a) === 0)); }
 function isMe(m){ if (m.sys) return false; var k = nrm(firstName(WHO)); if (k.length < 2) return false;
   return [m.who].concat(m.wn || []).some(function(n){ n = nrm(n); return n.length >= 2 && (n.indexOf(k) === 0 || k.indexOf(n) === 0); }); }
+// Slack sends & < > as &amp; &lt; &gt; - shown as the real characters (20 Oct 2026: "Fabric &amp; lace" was shown as it came)
+function sdec(t){ return String(t == null ? '' : t).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'); }
+// 20 Oct 2026 (Abbas: "do all" - reply to a message): a reply carries the line it answers as a Slack quote ("> *Name:* text") - shown as a quote box
+function qfmt(t){ var out = '', q = [], fl = function(){ if (q.length) { out += '<div class="q">' + esc(emo(q.join('\n'))) + '</div>'; q = []; } };
+  String(t).replace(/^\n+/, '').split('\n').forEach(function(l){ if (/^>\s?/.test(l)) q.push(l.replace(/^>\s?/, '').replace(/\*/g, '')); else { var hadQ = q.length; fl(); out += (out && !hadQ ? '\n' : '') + esc(emo(l)); } }); fl(); return out; }
+function qstrip(t){ return String(t || '').split('\n').filter(function(l){ return !/^\s*(>|&gt;)/.test(l); }).join('\n').trim(); }
 function bubble(m){
-  var me = isMe(m), cls = m.sys ? 'sys' : me ? 'me' : '', body = esc(emo(m.sys || m.root ? m.text.replace(/\*/g, '') : m.text));
+  var me = isMe(m), cls = m.sys ? 'sys' : me ? 'me' : '', body = qfmt(sdec(m.sys || m.root ? m.text.replace(/\*/g, '') : m.text));
   if (m.root) cls += ' root'; if (/^🚩/.test(m.text)) cls += ' prob';
   (m.files || []).forEach(function(f){
-    if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="img">tap to load photo</div>';
-    else if (f.audio) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="audio" style="height:44px">▶ voice note · ভয়েস নোট</div>';
+    if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="img">📷 …</div>';
+    else if (f.audio) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="audio" style="height:44px">🎤 ⏳ voice note · ভয়েস নোট</div>';
     else if (f.video) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="video" style="height:120px;flex-direction:column"><span style="font-size:28px">🎬</span>video · tap to play · ভিডিও</div>';
     else body += '<div class="fl">📎 ' + esc(f.name) + '</div>';
   });
   var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = DAYN[t.getDay()] + ' ' + t.getDate() + '/' + (t.getMonth() + 1);   // 19 Oct 2026 (Abbas): the day name next to the name - "Mon 19/10 · 18:48"
-  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who"><span class="nm" style="background:' + pcol(m.who) + '">' + esc(m.who || '?') + '</span>' + (m.app ? '' : '<span class="sl">Slack</span>') + (m.pend ? '' : '<span class="wt">' + dd + ' · ' + hh + '</span>') + '</div>') + '<div class="bub"' + (m.sys ? '' : ' style="border-' + (me ? 'right' : 'left') + ':4px solid ' + pcol(m.who) + '"') + '>' + body + (m.pend || m.sys ? '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span>' : '') + '</div></div>';   // 17 Oct 2026 (Abbas): date and time ABOVE the message, with the name
+  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who"><span class="nm" style="background:' + pcol(m.who) + '">' + esc(m.who || '?') + '</span>' + (m.app ? '' : '<span class="sl">Slack</span>') + (m.pend ? '' : '<span class="wt">' + dd + ' · ' + hh + '</span><button class="rp" data-ts="' + esc(m.ts) + '" title="Reply">↩</button>') + '</div>') + '<div class="bub"' + (m.sys ? '' : ' style="border-' + (me ? 'right' : 'left') + ':4px solid ' + pcol(m.who) + '"') + '>' + body + (m.pend || m.sys ? '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span>' : '') + '</div></div>';   // 17 Oct 2026 (Abbas): date and time ABOVE the message, with the name
 }
 function thDedupe(){ var seenTs = {}; TH.msgs = TH.msgs.filter(function(m){ if (m.pend) return true; if (seenTs[m.ts]) return false; seenTs[m.ts] = 1; return true; }); }
 function thDraw(){ thDedupe(); $('thread').innerHTML = TH.msgs.filter(function(m){ return !m.pend; }).map(bubble).join('') + (TH.card ? outBubbles(TH.card.id) : ''); $('tcount').textContent = TH.msgs.length + ' messages';
@@ -784,26 +835,38 @@ function getMedia(id, k, top, pre){
   })();
   return w.p;
 }
-var MIO = window.IntersectionObserver ? new IntersectionObserver(function(es){ es.forEach(function(en){ if (en.isIntersecting) { MIO.unobserve(en.target); loadMedia(en.target, false); } }); }, { rootMargin: '300px' }) : null;
+var MIO = window.IntersectionObserver ? new IntersectionObserver(function(es){ es.forEach(function(en){ if (en.isIntersecting) { MIO.unobserve(en.target); if (en.target.dataset.k === 'audio') { AUQ.push(en.target); auPump(); } else loadMedia(en.target, false); } }); }, { rootMargin: '400px' }) : null;
+// 20 Oct 2026 (Abbas: "do all" - photos and voice notes ready without tapping): photos load as soon as they come near the screen (as before);
+// every voice note near the screen is now fetched (newest first, one at a time) and turned into a real player, so one tap plays it at once.
+// Videos stay tap-to-play (they can be very big), still in full quality.
+var AUQ = [], AURUN = false;
 function autoMedia(){
-  document.querySelectorAll('#thread .fph[data-k="img"]').forEach(function(e){ if (MIO) MIO.observe(e); else loadMedia(e, false); });
-  var au = Array.from(document.querySelectorAll('#thread .fph[data-k="audio"]')).slice(-3).reverse();   // newest voice note first, one at a time
-  (async function(){ for (var i = 0; i < au.length; i++) { var e = au[i]; if (!e.isConnected || MEDIA[e.dataset.f]) { if (MEDIA[e.dataset.f] && e.isConnected && !e.dataset.busy) e.textContent = '▶ voice note · ready · ভয়েস নোট'; continue; }
-    var r = await getMedia(e.dataset.f, 'audio', false, true); if (r.url && e.isConnected && !e.dataset.busy) e.textContent = '▶ voice note · ready · ভয়েস নোট'; } })();
+  document.querySelectorAll('#thread .fph[data-k="img"], #thread .fph[data-k="audio"]').forEach(function(e){ if (MIO) MIO.observe(e); else loadMedia(e, false); });
 }
+async function auPump(){ if (AURUN) return; AURUN = true;
+  try { while (AUQ.length) { AUQ.sort(function(a, b){ return (b.compareDocumentPosition(a) & 4) ? -1 : 1; }); var e = AUQ.shift(); if (!e.isConnected || e.dataset.busy) continue; await loadMedia(e, false); } }
+  finally { AURUN = false; } }
 async function loadMedia(e, tap){
   var id = e.dataset.f, k = e.dataset.k; if (e.dataset.busy) return; e.dataset.busy = '1';
   if (!MEDIA[id]) e.textContent = k === 'video' ? '⏳ loading video…' : k === 'audio' ? '⏳ loading voice note…' : '…';
-  var r = await getMedia(id, k, tap !== false);
+  var r = await getMedia(id, k, tap !== false, tap === false && k === 'audio');
   if (!r.url) { if (r.link) { e.textContent = (r.err === 'file too big' ? 'Video too big for the app — ' : '') + 'open in Slack ↗'; e.dataset.busy = ''; e.onclick = function(ev){ ev.stopPropagation(); window.open(r.link, '_blank'); }; } else { e.textContent = '↻ could not load — tap to try again'; e.dataset.busy = ''; } return; }
   if (!e.isConnected) return;
   if (k === 'img') { var im = document.createElement('img'); im.src = r.url; im.dataset.f = id; im.dataset.n = e.dataset.n || ''; e.replaceWith(im); }
   else if (k === 'video') { var vd = document.createElement('video'); vd.controls = true; vd.playsInline = true; vd.setAttribute('playsinline', ''); vd.src = r.url; vd.style.cssText = 'max-width:230px;max-height:300px;border-radius:10px;display:block;background:#000'; e.replaceWith(vd); vd.after(mshareBtn(id, e.dataset.n)); vd.play().catch(function(){}); }
-  else { var au = document.createElement('audio'); au.controls = true; au.preload = 'auto'; au.src = r.url; e.replaceWith(au); au.after(mshareBtn(id, e.dataset.n)); au.play().catch(function(){}); }
+  else { var au = document.createElement('audio'); au.controls = true; au.preload = 'auto'; au.src = r.url; e.replaceWith(au); au.after(mshareBtn(id, e.dataset.n)); if (tap !== false) au.play().catch(function(){}); }
 }
 function mshareBtn(id, n){ var b = document.createElement('button'); b.className = 'mshare'; b.dataset.f = id; b.dataset.n = n || ''; b.textContent = '⬆️ Share · Save · শেয়ার'; return b;
 }
-$('thread').onclick = function(e){ var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var sh = e.target.closest('.mshare'); if (sh) { var sb = MBLOB[sh.dataset.f]; if (sb) shareFile(sb, sh.dataset.n, toast); else toast('⏳ still loading…'); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f, im.dataset.n); };
+var REPLY = null;
+function replySet(m){ if (!m) { REPLY = null; $('rbar').hidden = true; return; }
+  var f = (m.files || []).length ? (m.files.some(function(x){ return x.audio; }) ? '🎤 voice note' : m.files.some(function(x){ return x.video; }) ? '🎬 video' : '📷 photo') : '';
+  var sn = (sdec(qstrip(m.text)).replace(/\*/g, '').replace(/\s+/g, ' ').trim() || f).slice(0, 90);
+  REPLY = { who: m.who || '?', snip: sn }; $('rbar').hidden = false;
+  $('rbar').innerHTML = '<span>↩ <b style="color:' + pcol(REPLY.who) + '">' + esc(REPLY.who) + '</b> ' + esc(emo(sn)) + '<small>Replying · উত্তর দিচ্ছেন</small></span><button id="rbx">✕</button>';
+  $('txt').focus(); }
+$('rbar').onclick = function(e){ if (e.target.closest('#rbx')) replySet(null); };
+$('thread').onclick = function(e){ var rb = e.target.closest('.rp'); if (rb) { var rm = TH.msgs.filter(function(x){ return x.ts === rb.dataset.ts; })[0]; if (rm) replySet(rm); return; } var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var sh = e.target.closest('.mshare'); if (sh) { var sb = MBLOB[sh.dataset.f]; if (sb) shareFile(sb, sh.dataset.n, toast); else toast('⏳ still loading… · লোড হচ্ছে'); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f, im.dataset.n); };
 async function openBig(src, fid, nm){ var vn = viewOpen(src, null, nm); if (!fid) { viewSet(vn, src, MBLOB[src] || null); return; } var fj = fastOn() ? await fast({ op: 'file', id: fid, top: 1 }) : null; if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size && /^image/.test(fj.blob.type || 'image')) { viewSet(vn, URL.createObjectURL(fj.blob), fj.blob); return; } var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && /^image/.test(j.type || 'image')) viewSet(vn, 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64); }
 
 // ===== RETURNS (16 Oct 2026). First version (a form with design number, pieces, reasons) - Abbas: "I want it more simple … no need to write a
@@ -838,7 +901,7 @@ function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(func
   if (!n) { el.hidden = true; } else { el.hidden = false; el.className = bad.length ? 'bad' : ''; el.innerHTML = (bad.length ? '⚠ ' + n + ' message' + (n > 1 ? 's' : '') + ' not sent yet — ' + (bad[0].tries >= 5 ? 'tap to try again' : 'trying again · tap') : '📤 Sending ' + n + ' message' + (n > 1 ? 's' : '') + '… · পাঠানো হচ্ছে') + '<small>' + esc(OUT.map(function(x){ return x.cname; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' · ')) + (bad.length && bad[0].err ? ' — ' + esc(bad[0].err) : '') + '</small>'; }
   if (TH.card && !$('card').hidden && !playing()) thDraw(); }
 $('outbar').onclick = function(){ var it = OUT[0]; if (!it) return; outRun(true); var c = D.byId[it.card]; if (c) openCard(c); };
-function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 600000 && !((TH.lastMine || 0) * 1000 > x.done - 15000); }); return OUT.concat(SENT.filter(function(x){ return x.card === cid; })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + esc(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
+function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 600000 && !((TH.lastMine || 0) * 1000 > x.done - 15000); }); return OUT.concat(SENT.filter(function(x){ return x.card === cid; })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + qfmt(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
 async function outOne(it){
   if (!it.files.length) { var rf = it.card === 'lais' ? null : it.card === 'dm' ? (D.dm ? [D.dm.ch, ''] : null) : FAST.refs[it.card];
     if (FAST.url && rf && (fastOn() || it.fastTried) && !(it.fastTried && it.tries >= 6)) { it.fastTried = true;
@@ -968,6 +1031,7 @@ async function slackDirect(items, onStep, card){
 function mb(n){ return n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
 async function sendAll(){
   var c = TH.card; if (!c) return; var text = $('txt').value.trim();
+  if (REPLY && (text || PEND.length)) { text = '\n> *' + REPLY.who + ':* ' + REPLY.snip + '\n' + text; replySet(null); }
   if (!PEND.length) { if (!text) return; if (LASTSEND.t === text && LASTSEND.c === c.id && Date.now() - LASTSEND.at < 3000) { $('txt').value = ''; return; } LASTSEND = { t: text, c: c.id, at: Date.now() }; $('txt').value = ''; thSend(text); return; }   // a double tap on Send sends once
   var files = PEND.map(function(x){ return { name: x.name, kind: x.kind, blob: x.blob }; });
   PEND.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); PEND.length = 0; pendDraw(); $('txt').value = '';
@@ -1027,7 +1091,7 @@ $('bell').onclick = async function(){
     + '<b style="display:block;margin-top:10px">3.</b><button id="nton" ' + btn + '>' + (NT.on ? '🔕 Turn off' : '🔔 Turn on for ' + esc(WHO)) + '</button>'
     + (NT.on ? '<button id="nttest" ' + btn + '>🧪 Send a test</button>' : '')
     + '<div style="color:var(--mute);font-size:12.5px;margin-top:10px">Each new message on a card or in the Direct chat, written by someone else, arrives as a notification · tap it to open that chat. ' + (g.events ? 'Slack push is on: about 5 s.' : 'Without Slack push: within about a minute.') + '<br>নতুন মেসেজ এলে ফোনে নোটিফিকেশন আসবে।<br>Keep the topic private — anyone with it could read the alerts.</div>';
-  $('ntcopy').onclick = async function(){ try { await navigator.clipboard.writeText(tp); toast('Copied · কপি হয়েছে'); } catch(e){ toast('Hold on the topic to copy'); } };
+  $('ntcopy').onclick = async function(){ try { await navigator.clipboard.writeText(tp); toast('Copied · কপি হয়েছে'); } catch(e){ toast('Hold on the topic to copy · টপিক চেপে ধরে কপি করুন'); } };
   $('nton').onclick = async function(){ this.disabled = true; var j = await call({ op: 'ntfyset', topic: tp, on: NT.on ? 0 : 1 }); this.disabled = false;
     if (!j.ok) { toast('✗ ' + j.error); return; } NT.on = !!j.on; ls('sj_fac_nt', NT.on ? '1' : null); bellPaint();
     if (NT.on && j.timer && j.timer !== 'ok' && !j.events) toast('On · the 1-minute timer needs Abbas: run setupFacNotify once in Apps Script'); else toast(NT.on ? '✓ Notifications on · চালু' : 'Off · বন্ধ');
@@ -1050,7 +1114,7 @@ $('lgo').onclick = async function(){
   if (!j.ok) { $('lerr').textContent = j.error === 'wrong password' ? 'Wrong password · ভুল পাসওয়ার্ড' : j.error; return; }
   PW = pw; WHO = nm; FAST.k = ''; FAST.down = 0; ls('sj_fac_pw', pw); ls('sj_fac_who', nm); $('who').textContent = nm; $('login').hidden = true; ls('sj_fac_list', null); load(false);
 };
-document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on this phone?')) { ls('sj_fac_pw', null); PW = ''; showLogin(); } };
+document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on this phone? · এই ফোন থেকে বের হবেন?')) { ls('sj_fac_pw', null); PW = ''; showLogin(); } };
 
 // ----- keep fresh: every 30 s while on screen, and when coming back to the app -----
 // 15 Oct 2026 (Abbas: "no catch up ... make the message appear as instant as possible"): a cheap "anything new?" (op ping, no Trello) every 4 s on the
@@ -1065,7 +1129,14 @@ async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now
 // any long loading of the chats"): (a) the "anything new?" check no longer waits behind the card-list refresh; (b) the status line shows the
 // time of the last check ("● Live 16:46:05"); (c) the newest message text is shown right on the home screen; (d) the chats with new messages
 // are fetched in the background, so opening one shows the message at once; (e) every chat seen on this phone is kept on the phone.
-function liveMark(){ var n = new Date(); if (!D.w) return; $('msg').className = 'ok live'; $('msg').textContent = (LIVE.ok ? '⚡ Live ' : '● Live ') + (Date.now() - (LIVE.slk || +ls('sj_fac_slk') || 0) < 6 * 3600000 ? 'S ' : '') + [n.getHours(), n.getMinutes(), n.getSeconds()].map(function(x){ return ('0' + x).slice(-2); }).join(':') + (FAST.url ? (fastOn() ? ' · 🚀 fast' : ' · relay') : ''); }
+// 20 Oct 2026 (Abbas: "do all" - plain words): the status line says "● Up to date 16:46" in green, or "⚠ No internet" in red when nothing has
+// come back for 40 s; tap it for the speed / fast-lane details as before.
+var LASTOK = Date.now();
+function liveMark(){ if (!D.w) return; var n = new Date(), off = !navigator.onLine || Date.now() - LASTOK > 40000;
+  $('msg').className = off ? 'off' : 'ok live';
+  $('msg').textContent = off ? '⚠ No internet · ইন্টারনেট নেই' : '● Up to date ' + ('0' + n.getHours()).slice(-2) + ':' + ('0' + n.getMinutes()).slice(-2) + ' · আপডেট'; }
+setInterval(function(){ if (PW && !document.hidden && $('msg').className !== 'ok' && $('msg').className !== '') liveMark(); }, 5000);
+window.addEventListener('offline', function(){ LASTOK = 0; liveMark(); }); window.addEventListener('online', function(){ ping(true); });
 var PREF = {};
 async function prefetch(){ var ids = Object.keys(D.th || {}).filter(function(id){ var u = D.th[id]; if (!u || !u.n || (open && open.id === id)) return false; var have = THC[id] || []; var top = have.length ? have[have.length - 1].ts : ''; return !(top && +top >= +u.last) && !(PREF[id] && Date.now() - PREF[id] < 8000); }).slice(0, 3);
   for (var i = 0; i < ids.length; i++) { var id = ids[i]; PREF[id] = Date.now(); var have = THC[id] || [], last = have.length ? have[have.length - 1].ts : '';
@@ -1136,7 +1207,7 @@ setInterval(function(){ POLLN++; if (!PW || document.hidden) return; var home = 
 setInterval(function(){ if (!document.hidden && $('card').hidden) checkVer(); }, 300000);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { if (LIVE.topic) liveStart(LIVE.topic, true); ping(true); checkVer(); if (open) thPull(); } });
 window.addEventListener('pageshow', function(){ if (PW) ping(true); });
-function busyWork(){ return OUT.length || PEND.length || SP.length || $('txt').value.trim() || NET.busy > 1 || REC.r || Array.from(document.querySelectorAll('.sheet')).some(function(x){ return !x.hidden; }); }
+function busyWork(){ return MV || OUT.length || PEND.length || SP.length || $('txt').value.trim() || NET.busy > 1 || REC.r || Array.from(document.querySelectorAll('.sheet')).some(function(x){ return !x.hidden; }); }
 async function checkVer(){ if (busyWork()) return; try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
 
