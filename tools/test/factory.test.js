@@ -119,16 +119,24 @@ async function suite(fast, browser) {
       await until(() => page.locator('#work').isVisible(), 8000, 'work box');
       const rows = page.locator('#wkrows .wr'); await until(async () => (await rows.count()) === 19, 8000, '19 workers (the sheet list)');
       ok(!(await page.textContent('#wkrows')).includes('TASLEEM'), 'hand-work names are NOT the workers');
-      const r = page.locator('#wkrows .wr[data-w="Rifat"]'); await r.locator('input').fill('20'); await r.locator('button').click();
+      const r = page.locator('#wkrows .wr[data-w="Rifat"]'); await r.locator('input').fill('20'); await r.locator('button.in').click();
       await until(() => W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && /^👷 IN · Rifat · 20 pcs · Abbas \(factory app\)/.test(a.data.text)), 10000, 'IN comment on Trello');
       await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootB && /WORK.*Rifat ← 20 pcs/.test(m.text || '')), 10000, 'chat line');
-      await until(async () => /⏱/.test(await r.textContent()) && /Done/.test(await r.locator('button').textContent()), 8000, 'timer + Done button');
+      await until(async () => /⏱/.test(await r.textContent()) && (await r.locator('button.out').count()) === 1, 8000, 'timer + Done button');
+      // the 6th colour comes later: more pieces of the same design to the same worker = added to what he has (one timer)
+      await r.locator('input').fill('4'); await r.locator('button.in').click();
+      await until(() => W.trello.actions.filter(a => a.type === 'commentCard' && /^👷 IN · Rifat/.test(a.data.text)).length === 2, 10000, 'second IN comment');
+      await until(async () => /24 pcs given \(20\+4\)/.test(await r.textContent()), 8000, 'row shows 24 pcs (20+4)');
+      // another worker gets the same design at the same time
+      const r2 = page.locator('#wkrows .wr[data-w="Arif"]'); await r2.locator('input').fill('6'); await r2.locator('button.in').click();
+      await until(async () => /6 pcs given/.test(await r2.textContent()), 10000, 'Arif has 6 of the same card');
       W.trello.actions.filter(a => a.type === 'commentCard' && /👷 IN/.test(a.data.text)).forEach(a => a.date = new Date(Date.now() - 26 * 3600000).toISOString()); T.relay.cache.remove('FAC_WK_' + W.cardB.id);   // a day passes
       await page.reload(); await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length); await openCardNo(page, '17841');
       await until(async () => /1 d 2 h/.test(await r.textContent()), 10000, 'timer shows 1 d 2 h');
-      await r.locator('input').fill('18'); await r.locator('button').click();
+      await r.locator('input').fill('18'); await r.locator('button.out').click();
       await until(() => W.trello.actions.some(a => a.type === 'commentCard' && /^👷 OUT · Rifat · 18 pcs · 1 d 2 h · Abbas/.test(a.data.text)), 10000, 'OUT comment');
-      await until(async () => /✓ 18 pcs/.test(await r.textContent()) && /Give/.test(await r.locator('button').textContent()), 8000, 'row shows done');
+      await until(async () => /✓ 18 pcs/.test(await r.textContent()) && (await r.locator('button.out').count()) === 0, 8000, 'row shows done');
+      ok(/6 pcs given/.test(await r2.textContent()), 'Arif still has his 6');
       await page.goBack();
     });
     await test('Workers screen: pieces per day over 30 days', async () => {

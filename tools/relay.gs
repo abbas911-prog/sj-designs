@@ -527,7 +527,8 @@ function facWkParse(acts) {                                    // comments -> { 
   var out = {};
   acts.forEach(function (a) { if (a.type !== 'commentCard') return; var m = String((a.data || {}).text || '').match(WK_RE); if (!m) return;
     var w = m[2].trim().toUpperCase(), t = Date.parse(a.date), L = out[w] = out[w] || [];
-    if (m[1] === 'IN') L.push({ in: t, g: +m[3], by: m[5].trim(), id: a.id });
+    if (m[1] === 'IN') { var oi = null; for (var k = L.length - 1; k >= 0; k--) if (!L[k].out) { oi = L[k]; break; }
+      if (oi) { oi.g += +m[3]; oi.adds = (oi.adds || []).concat([+m[3]]); } else L.push({ in: t, g: +m[3], by: m[5].trim(), id: a.id }); }   // 21 Oct 2026: more pieces of the same design to a worker who still has some = added to his open batch (the 6th colour that came later)
     else { var o = null; for (var i = L.length - 1; i >= 0; i--) if (!L[i].out) { o = L[i]; break; } if (o) { o.out = t; o.d = +m[3]; o.outBy = m[5].trim(); } else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); } });
   return out;
 }
@@ -1166,12 +1167,11 @@ function fac0(reqText, P) {
       var kcard = trApi('get', '/cards/' + kc, { fields: 'idBoard,name' }, wtok); if (kcard.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
       var kacts = facActs(rtok, kc), kb = facWkParse(kacts)[kW.name.toUpperCase()] || [], kopen = kb.filter(function (b) { return !b.out; });
       if (kk === 'OUT' && !kopen.length) return out({ ok: false, error: kW.name + ' has no pieces in hand on this card' });
-      if (kk === 'IN' && kopen.length) return out({ ok: false, error: kW.name + ' still has ' + kopen[0].g + ' pcs in hand - press Done first' });
       var kdur = kk === 'OUT' ? facDur(Date.now() - kopen[0].in) : '', kwms = kk === 'OUT' ? facWorkMs(kopen[0].in, Date.now()) : 0;
       trApi('post', '/cards/' + kc + '/actions/comments', { text: '👷 ' + kk + ' · ' + kW.name + ' · ' + kp + ' pcs' + (kdur ? ' · ' + kdur : '') + ' · ' + kwho + ' (factory app)' }, wtok);
       var ktot = kb.reduce(function (a, b) { return a + (b.out ? b.d : 0); }, 0) + (kk === 'OUT' ? kp : 0);
       facWkField(wtok, kc, kW, kk === 'IN' ? (ktot ? ktot + ' ✓ + ' : '') + kp + ' ⏳' : ktot + ' ✓');
-      try { if (FT) { var kth = facThread(P, FT, kc, rtok, true); if (kth) slackApi(FT, 'chat.postMessage', { channel: kth.ch, thread_ts: kth.ts, text: '→ *WORK* · ' + kwho + ' · ' + kW.name + (kk === 'IN' ? ' ← ' + kp + ' pcs given · পিস দেওয়া হয়েছে' : ' ✓ ' + kp + ' pcs done · ' + facWorkDur(kwms) + ' · ≈' + facRate(kp, kwms) + '/day · পিস হয়ে গেছে') }); } } catch (e) {}
+      try { if (FT) { var kth = facThread(P, FT, kc, rtok, true); if (kth) slackApi(FT, 'chat.postMessage', { channel: kth.ch, thread_ts: kth.ts, text: '→ *WORK* · ' + kwho + ' · ' + kW.name + (kk === 'IN' ? ' ← ' + kp + ' pcs given' + (kk === 'IN' && kopen.length ? ' (now ' + (kopen[0].g + kp) + ' in hand)' : '') + ' · পিস দেওয়া হয়েছে' : ' ✓ ' + kp + ' pcs done · ' + facWorkDur(kwms) + ' · ≈' + facRate(kp, kwms) + '/day · পিস হয়ে গেছে') }); } } catch (e) {}
       CacheService.getScriptCache().remove('FAC_WK_' + kc); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump(); facNudge(P, kc);
       return out({ ok: true });
     }
