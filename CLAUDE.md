@@ -98,7 +98,7 @@ when the right change is clear, do it, test it, commit it and report; ask only w
 - `tools/stock.py` (GitHub job memo-stock: Include & share takes pieces off Trello; op `retbill` puts a return bill's pieces back),
   `tools/catalog/*` (catalogue builder), `.github/workflows/*`.
 - **Tests** in `tests/` (Playwright + a fake relay; no real Slack/Trello/Google is touched):
-  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (22), `node tests/t_ntfy.js` (3, real relay.gs), `node tests/t_bills.js` (6, real relay.gs + fake Sheet: one number series),
+  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (24), `node tests/t_ntfy.js` (3, real relay.gs), `node tests/t_bills.js` (6, real relay.gs + fake Sheet: one number series),
   `node tests/t_sw.js` (5, Home Screen helper), `python3 tests/t_stock.py`.
   Looks: `node tests/shots.js <dir>` screenshots 24 screens (frozen clock, fixed data); `python3 tests/shotdiff.py before after` compares pixel by pixel
   (the bottom-bar badges differ run to run — timing; anything else must be 0). Take a `before` set before any CSS/markup tidy-up.
@@ -123,6 +123,8 @@ Memo rules (his words, short):
 - Every order has one screen: preview with photos, 4 steps with ticks, Make / Continue bill, and two chats —
   📦 #godown (thread under its pick-list post) and 👤 #customer (thread under its memo post).
 - A return line's colour is the card's colour NUMBER (1, 2, 3…), never a name.
+- Two READY cards with one design number: the NEWEST keeps the plain number (same as the catalogue builder / stock job). Every saved key
+  (memo marks, drafts, orders, bills, `d.sold`) carries its Trello card id and follows that CARD (`cardsOf` / `keyRemap`), never the number.
 - Slack returns emoji as shortcodes (`:bust_in_silhouette:`) — parse both forms.
 - Full history: the claude.ai Project "SJTC", docs `SJ STOCK APP (order memo) - START HERE`,
   `SJ STOCK - ORDER SCREEN, CHATS, DRAFTS (20 Oct 2026)`, `SJ STOCK - RETURN BILL (19 Oct 2026)`,
@@ -163,3 +165,4 @@ Memo rules (his words, short):
   production report) are counted over working hours, not the clock. NEEDS: relay deploy.
 - 2026-10-21: memo 2026-10-21c — (Abbas, video: the order list's 2×2 collage was unreadable) the Orders list shows each design as a tile — photo, number, pcs (first 5, then +N), same tiles as the order screen (`ordTileRow(o, mini)`); the collage stays only inside "Complete order".
 - 2026-10-21: memo 2026-10-21d — (Abbas) a PDF shared on WhatsApp carries only its number as the message (`shareText`: "INVOICE INV-0021", "RECEIPT VOUCHER RV-…", memo: "Order memo · name"); the long typed copy stays behind the Copy button and the no-PDF WhatsApp fallback.
+- 2026-10-21: memo 2026-10-21e — (Abbas, video: "same design, the colours changed" from order → bill) marks/prices/godown choices now follow their Trello CARD: `cardsOf()` saved with the work, drafts, orders (`drSnap`), bills (`bsSnap`, `d.sold.card`, order items `card`), remapped on restore and on every live update (`keyRemap`); the plain number goes back to the NEWEST duplicate card (20 Oct flip undone — it moved old orders to the other card). Catalogue: Send link / Copy link appear only when the page AND its preview picture answer on the site (`siteLive`, +8 s), and a shared link is always slightly new (`freshUrl`) so WhatsApp fetches the picture again.

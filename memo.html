@@ -787,10 +787,10 @@ function mkDesigns(cards, roles){
     return { id: c.id, title: c.name, base: p.no || String(c.idShort), no: p.no || String(c.idShort), total: p.total, ncol: p.ncol, sum: p.sum, ok: p.ok, warn: p.warn, photos: photos, colours: colours, pos: c.pos };
   }));
 }
-// two READY cards with the same design number get their own keys. 20 Oct 2026: the OLDEST card keeps the plain number (81016) and a newer one
-// becomes 81016-2 — before, the newest took the plain number, so marks already made on the phone silently moved to the new card.
+// two READY cards with the same design number get their own keys: the NEWEST card keeps the plain number (81016), the older one becomes 81016-2 —
+// the same rule as the catalogue builder and the stock job. Marks never move to the other card: every key follows its CARD (cardsOf / keyRemap).
 function uniq(ds){ var by = {}; ds.forEach(function(d){ (by[d.no] = by[d.no] || []).push(d); });
-  Object.keys(by).forEach(function(no){ var g = by[no]; if (g.length < 2) return; g.sort(function(x, y){ return x.id < y.id ? -1 : 1; }); g.forEach(function(d, i){ if (i) d.no = no + '-' + (i + 1); }); });
+  Object.keys(by).forEach(function(no){ var g = by[no]; if (g.length < 2) return; g.sort(function(x, y){ return x.id < y.id ? 1 : -1; }); g.forEach(function(d, i){ if (i) d.no = no + '-' + (i + 1); }); });
   return ds; }
 
 // ---------- render ----------
@@ -874,18 +874,18 @@ function reapply(){
 var WK = 'sj_work', wkT = null;
 function topNo(){ var best = null; document.querySelectorAll('#feed .design').forEach(function(a){ if (a.hidden) return; var r = a.getBoundingClientRect(); if (r.bottom > 60 && !best) best = a.dataset.no; }); return best; }
 function saveWork(){ clearTimeout(wkT); wkT = null; if (!designs.length) return;
-  var w = { t: Date.now(), state: state, prices: prices, loc: LOC, dl: dlv(), name: $('name').value, q: $('q').value, at: topNo(), open: !$('done').hidden && B.mode !== 'memo' && B.mode !== 'cat' ? B.mode : '', inv: B.inv, rv: B.rv, pv: B.pv, rn: B.rn };
+  var w = { t: Date.now(), state: state, prices: prices, loc: LOC, cards: cardsOf(), dl: dlv(), name: $('name').value, q: $('q').value, at: topNo(), open: !$('done').hidden && B.mode !== 'memo' && B.mode !== 'cat' ? B.mode : '', inv: B.inv, rv: B.rv, pv: B.pv, rn: B.rn };
   try { localStorage.setItem(WK, JSON.stringify(w)); } catch(e){} }
 function saveSoon(){ if (!wkT) wkT = setTimeout(saveWork, 400); }
 function loadWork(){ var w; try { w = JSON.parse(localStorage.getItem(WK) || 'null'); } catch(e){} if (!w) return null;
-  state = w.state || {}; prices = w.prices || {}; LOC = w.loc || {}; if (w.name && !$('name').value.trim()) $('name').value = w.name; if (w.q && !$('q').value.trim()) $('q').value = w.q; if (w.dl) Object.keys(w.dl).forEach(function(k){ if ($('dl_' + k)) $('dl_' + k).value = w.dl[k] || ''; });
+  state = keyRemap(w.state || {}, w.cards); prices = keyRemap(w.prices || {}, w.cards); LOC = keyRemap(w.loc || {}, w.cards); if (w.name && !$('name').value.trim()) $('name').value = w.name; if (w.q && !$('q').value.trim()) $('q').value = w.q; if (w.dl) Object.keys(w.dl).forEach(function(k){ if ($('dl_' + k)) $('dl_' + k).value = w.dl[k] || ''; });
   ['inv', 'rv', 'pv', 'rn'].forEach(function(k){ if (w[k]) B[k] = w[k]; }); return w; }
 ['input', 'change', 'click'].forEach(function(ev){ document.addEventListener(ev, saveSoon); });
 document.addEventListener('visibilitychange', function(){ if (document.hidden) saveWork(); });
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-21d';
+var VER = '2026-10-21e';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -895,6 +895,13 @@ async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (
   if (ne && m && m[1] === VER) ls('sj_memo_etag', ne); } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
 var NOIX = { of: null, m: {} };   // 20 Oct 2026: design by number in one step (it searched the whole list on every call — thousands of times per tap)
+// 21 Oct 2026 (Abbas, video: "the design is the same but the colours changed"): marks, prices and office/godown choices are tied to the Trello CARD,
+// not only to the design number. When a second card with the same number appears (or the plain number moves to a newer card), every saved
+// key follows its card — in the memo, in drafts, in orders and in bills.
+function cardsOf(){ var m = {}; Object.keys(state).concat(Object.keys(prices), Object.keys(LOC)).forEach(function(k){ var no = k.split(':')[0], d = byNo(no); if (d) m[no] = d.id; }); return m; }
+function keyRemap(obj, cards){ if (!cards || !obj) return obj || {}; var out = {}; Object.keys(obj).forEach(function(k){ var p = k.split(':'), no = p[0], id = cards[no], d = byNo(no);
+  if (id && (!d || d.id !== id)) { var d2 = designs.filter(function(x){ return x.id === id; })[0]; if (d2) no = d2.no; } out[no + (p.length > 1 ? ':' + p.slice(1).join(':') : '')] = obj[k]; }); return out; }
+function cardNo(no, card){ if (!card) return no; var d = byNo(no); if (d && d.id === card) return no; var d2 = designs.filter(function(x){ return x.id === card; })[0]; return d2 ? d2.no : no; }
 function byNo(no){ if (NOIX.of !== designs || NOIX.n !== designs.length) { var m = {}; designs.forEach(function(d){ if (!(d.no in m)) m[d.no] = d; }); NOIX = { of: designs, n: designs.length, m: m }; } return Object.prototype.hasOwnProperty.call(NOIX.m, no) ? NOIX.m[no] : undefined; }
 // 9 Oct 2026 (Abbas: "you mentioned S in front of it by yourself"): the -S is only the memo's own key for a SAMPLES card; bills, PDFs and texts print the real design number
 function shown(no){ var d = byNo(no); return d && d.sample ? d.base : no; }
@@ -1456,7 +1463,7 @@ $('dinc').onclick = async function(){
   custAfter('inv', d);
   Object.keys(state).forEach(function(k){ var s = state[k]; if (s && s.all) { var p = k.split(':'); state[k] = { sets: 0, all: false, pcs: lab(s, colPcs(byNo(p[0]), +p[1])).pcs }; } });   // 21 Oct 2026: frozen as sold
   // 21 Oct 2026 (INV-0018 / INV-0021): the bill itself keeps exactly what it sold — every phone and laptop shows these numbers, whatever Trello says later
-  d.sold = colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ return { no: l.no, c: l.c, pcs: l.qty, rate: l.rate }; }); d.soldAt = Date.now(); d.soldBy = me();
+  d.sold = colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ return { no: l.no, card: (byNo(l.no) || {}).id || '', c: l.c, pcs: l.qty, rate: l.rate }; }); d.soldAt = Date.now(); d.soldBy = me();
   if (!d.oid) { var so = ls('sj_oid'); if (so) d.oid = so; }   // the order this bill belongs to
   d.status = 'included'; bsSave(true); drDone('bd');
   if (d.oid && RELAY) ordCall({ op: 'link', id: d.oid, bill: d.ref }).then(function(){ d.linked = d.ref; }).catch(function(){});   // the order's "Continue bill" opens THIS bill
@@ -1484,7 +1491,7 @@ function bsSnap(k){ var d = B[k]; if (!d || !d.ref || k === 'memo' || k === 'cat
   else if (k === 'rn') { c = rnCalc(d); if (!(d.items || []).length) return null; }
   else if (!n2(d.amount) && !(d.name || '').trim()) return null;
   var cols = k === 'inv' ? colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var dz = byNo(l.no); return { no: l.no, base: dz ? dz.base : l.no, card: dz ? dz.id : '', c: l.c, qty: l.qty, rate: l.rate }; }) : [];   // 19 Oct: colour by colour, so a RETURN can be picked from this invoice later
-  return { v: 1, k: k, d: d, state: st, prices: pr, dl: dlv(), lines: lines, cols: cols, total: (k === 'inv' || k === 'rn') ? c.total : n2(d.amount), name: (d.name || $('name').value || '').trim(), date: d.date || today() }; }
+  return { v: 1, k: k, d: d, state: st, prices: pr, cards: cardsOf(), dl: dlv(), lines: lines, cols: cols, total: (k === 'inv' || k === 'rn') ? c.total : n2(d.amount), name: (d.name || $('name').value || '').trim(), date: d.date || today() }; }
 function bsSoon(){ clearTimeout(BS.t); BS.t = setTimeout(function(){ bsSave(false); }, 2500); }
 async function bsSave(force){ if (!RELAY || !token) return; var k = B.mode, snap = bsSnap(k); if (!snap) return;
   var js = JSON.stringify(snap); if (!force && BS.last[snap.d.ref] === js) return; BS.last[snap.d.ref] = js;
@@ -1516,17 +1523,17 @@ async function bsOpen(ref){ var el = $('bsaved'); el.innerHTML = '<div class="ff
   catch(e){ alert('Could not open ' + ref + ' — ' + e.message); bsList(); } }
 function bsRestore(snap){ var k = snap.k;
   if (k === 'inv') {
-    state = snap.state || {}; Object.keys(snap.prices || {}).forEach(function(no){ prices[no] = snap.prices[no]; });
+    state = keyRemap(snap.state || {}, snap.cards); var pr3 = keyRemap(snap.prices || {}, snap.cards); Object.keys(pr3).forEach(function(no){ prices[no] = pr3[no]; });
     var gone = Object.keys(byDesign()).filter(function(no){ return !byNo(no); });
     B.inv = snap.d;                                              // so reapply knows whether this bill already took its pieces (then nothing is cut)
     var sk = STK[stkKey(snap.d.ref)], fixed = [];
-    if (Array.isArray(snap.d.sold) && snap.d.sold.length) {                // 21 Oct 2026: a sold bill shows exactly what it sold, on any device
-      var st2 = {}; snap.d.sold.forEach(function(l){ st2[l.no + ':' + l.c] = { sets: 0, all: false, pcs: l.pcs }; if (l.rate > 0) prices[l.no] = l.rate; });
+    if (Array.isArray(snap.d.sold) && snap.d.sold.length) { var sold2 = snap.d.sold.map(function(l){ return Object.assign({}, l, { no: cardNo(l.no, l.card) }); });                // 21 Oct 2026: a sold bill shows exactly what it sold, on any device
+      var st2 = {}; sold2.forEach(function(l){ st2[l.no + ':' + l.c] = { sets: 0, all: false, pcs: l.pcs }; if (l.rate > 0) prices[l.no] = l.rate; });
       Object.keys(st2).forEach(function(k){ var cur = state[k], d3 = byNo(k.split(':')[0]); if (!d3) return; if (!cur || lab(cur, colPcs(d3, +k.split(':')[1])).pcs !== st2[k].pcs) fixed.push('SJ-' + shown(k.split(':')[0]) + ' colour ' + k.split(':')[1] + ': ' + st2[k].pcs + ' pcs'); });
       Object.keys(state).forEach(function(k){ if (!st2[k]) fixed.push('SJ-' + shown(k.split(':')[0]) + ' colour ' + k.split(':')[1] + ': taken off (not sold)'); });
       state = st2; sk = null; gone = Object.keys(byDesign()).filter(function(no){ return !byNo(no); });
       snap.d.man = snap.d.man || []; gone.forEach(function(no){ if (snap.d.man.some(function(m){ return m.fz === no; })) return;   // sold out since: a typed line with the sold pieces and price
-        var ls3 = snap.d.sold.filter(function(l){ return l.no === no; }), q3 = ls3.reduce(function(a, l){ return a + l.pcs; }, 0);
+        var ls3 = sold2.filter(function(l){ return l.no === no; }), q3 = ls3.reduce(function(a, l){ return a + l.pcs; }, 0);
         snap.d.man.push({ d: 'SJ-' + no.replace(/-S$/, '') + ' · ' + ls3.map(function(l){ return 'C' + l.c + ' ' + l.pcs + ' pcs'; }).join(' · '), q: String(q3), r: String(ls3[0].rate || ''), fz: no }); }); }                // 21 Oct 2026: this phone sent these exact lines to Trello — put them back if the saved copy lost some
     if (snap.d.status === 'included' && sk && sk.op === 'sell' && sk.st === 'ok' && Array.isArray(sk.lines)) sk.lines.forEach(function(l){ var k = l.no + ':' + l.c, d2 = byNo(l.no); if (!d2) return; var cur = state[k] ? lab(state[k], colPcs(d2, l.c)).pcs : 0; if (cur !== l.pcs && l.pcs > 0) { state[k] = { sets: 0, all: false, pcs: l.pcs }; fixed.push('SJ-' + shown(l.no) + ' colour ' + l.c + ': ' + l.pcs + ' pcs'); } });
     reapply();                                                   // paints the rows; designs no longer in READY are taken off (and told)
@@ -1719,7 +1726,7 @@ async function szRun(d, lines){
   var res = await waitJob(id, 'catalog', 30, function(sec){ z.sec = sec; szPaint(); });
   if (!res.ok) { z.st = 'bad'; z.err = res.error || 'not made'; z.res = res; szSave(); szPaint(); return; }
   z.res = res; z.st = 'wait'; szSave(); szPaint();
-  var live = false; for (var i = 0; i < 36 && !live; i++) { try { var r = await fetch(res.page + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); live = r.ok; } catch(e){} if (!live) await sleep(5000); }
+  var live = false; for (var i = 0; i < 36 && !live; i++) { try { live = await siteLive(res); } catch(e){} if (!live) await sleep(5000); }
   z.st = 'ok'; szSave(); szPaint();
   try { var h = JSON.parse(ls('sj_cat_hist') || '[]'); h.unshift({ name: 'SIZES · ' + (z.who || '') + ' · ' + z.ref, country: '', url: res.url, cover: res.cover, page: res.page, t: Date.now(), report: res.report, flags: res.flags, designs: res.designs }); ls('sj_cat_hist', JSON.stringify(h.slice(0, 20))); } catch(e){}
 }
@@ -1734,13 +1741,13 @@ function szPaint(){
   else { el.className = 'stk' + (z.st === 'ok' ? ' ok' : '');
     h = (z.st === 'ok' ? 'Sizes catalogue ready ✓ — press Send link: WhatsApp shows the picture, and tapping it opens the catalogue.' : 'Made ✓ — waiting for the link to go live… <small>about a minute</small>') +
         '<img src="' + GH_RAW + r.cover + '?t=' + (z.t || 0) + '" alt="cover">' +
-        '<div class="btns"><button type="button" class="gold" data-sz="share">Send link · أرسل الرابط</button><button type="button" data-sz="pic">Send picture only</button><button type="button" data-sz="copy">Copy link · نسخ الرابط</button><a href="' + esc(r.url) + '" target="_blank" style="align-self:center;color:var(--gold);font-weight:700">Open page ↗</a></div>' +
+        '<div class="btns">' + (z.st === 'ok' ? '<button type="button" class="gold" data-sz="share">Send link · أرسل الرابط</button>' : '') + '<button type="button" data-sz="pic">Send picture only</button>' + (z.st === 'ok' ? '<button type="button" data-sz="copy">Copy link · نسخ الرابط</button>' : '') + '<a href="' + esc(r.url) + '" target="_blank" style="align-self:center;color:var(--gold);font-weight:700">Open page ↗</a></div>' +
         (r.report || []).map(function(l){ return '<small>' + esc(l) + '</small>'; }).join('') + (r.flags || []).map(function(l){ return '<small style="color:#9a3b1e">' + esc(l) + '</small>'; }).join(''); }
   el.innerHTML = h;
 }
 $('szc').addEventListener('click', async function(e){ var b = e.target.closest('button[data-sz]'); if (!b || !B.inv) return; var z = SZ[stkKey(B.inv.ref)], a = b.dataset.sz;
   if (a === 'make') { var lines = z && z.lines && z.lines.length ? z.lines : ((STK[stkKey(B.inv.ref)] || {}).lines || stkLines()); if (!lines.length) { alert('No designs on this invoice.'); return; } szRun(B.inv, lines); return; }
-  if (!z || !z.res) return; var url = z.res.url;
+  if (!z || !z.res) return; var url = freshUrl(z.res.url);
   if (a === 'copy') { try { await navigator.clipboard.writeText(url); b.textContent = 'Copied ✓'; } catch(e2){ prompt('Copy:', url); } return; }
   if (a === 'share') { try { if (navigator.share) { await navigator.share({ url: url }); return; } } catch(e5){ if (e5 && e5.name === 'AbortError') return; } location.href = 'https://wa.me/?text=' + encodeURIComponent(url); return; }
   try { var blob = await (await fetch(GH_RAW + z.res.cover + '?t=' + Date.now())).blob(); var f = new File([blob], 'SJ-catalogue-' + z.res.cover.replace(/^og-/, ''), { type: 'image/jpeg' });
@@ -2027,20 +2034,25 @@ $('cmake').onclick = async function(){
   if (!res.ok) { cst('bad', 'Catalogue NOT made.<small>' + esc(res.error || '') + '</small>' + (res.report || []).map(function(l){ return '<small>' + esc(l) + '</small>'; }).join('')); return; }
   cst('', 'Made ✓ — waiting for the link to go live…<small>about a minute</small>');
   catShow(res, false);
-  var live = false; for (var i = 0; i < 36 && !live; i++) { try { var r = await fetch(res.page + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); live = r.ok; } catch(e){} if (!live) await sleep(5000); }
+  var live = false; for (var i = 0; i < 36 && !live; i++) { try { live = await siteLive(res); } catch(e){} if (!live) await sleep(5000); }
   cst(live ? 'ok' : '', live ? 'Catalogue ready ✓ — press Send link: WhatsApp shows the picture, and tapping it opens the catalogue.' : 'Made ✓ — the link may need another minute before it opens.');
   var h = []; try { h = JSON.parse(ls('sj_cat_hist') || '[]'); } catch(e){}
   h.unshift({ name: res.name || 'NEW COLLECTION', country: res.country || '', url: res.url, cover: res.cover, page: res.page, t: Date.now(), report: res.report, flags: res.flags, designs: res.designs || CAT.items.map(function(x){ return x.no; }) });
   ls('sj_cat_hist', JSON.stringify(h.slice(0, 20))); catShow(res, true); catHist();
 };
+// 21 Oct 2026 (Abbas: the link pasted right after making the catalogue had no picture): the site publishes new files 1-3 min after the job; a link
+// is offered only once the page AND its preview picture answer, and WhatsApp is given a slightly new link each time (it remembers a link it saw too early).
+async function siteLive(res){ try { var a = await fetch(res.page + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); if (!a.ok) return false;
+  var b = await fetch(res.cover + '?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); if (!b.ok) return false; await sleep(8000); return true; } catch(e){ return false; } }
+function freshUrl(u){ return u + (u.indexOf('?') > 0 ? '&' : '?') + 's=' + Date.now().toString(36); }
 function catShow(res, ready){
   $('cres').innerHTML = '<img src="' + GH_RAW + res.cover + '?t=' + Date.now() + '" alt="cover">' +
-    '<div class="btns"><button type="button" class="gold" data-c="share">Send link · أرسل الرابط</button><button type="button" data-c="pic">Send picture only</button><button type="button" data-c="copy">Copy link · نسخ الرابط</button><a href="' + esc(res.url) + '" target="_blank" style="align-self:center;color:var(--gold);font-weight:700">Open page ↗</a></div>' +
+    '<div class="btns">' + (ready ? '<button type="button" class="gold" data-c="share">Send link · أرسل الرابط</button>' : '') + '<button type="button" data-c="pic">Send picture only</button>' + (ready ? '<button type="button" data-c="copy">Copy link · نسخ الرابط</button>' : '<span style="align-self:center;font-size:13px;color:var(--mute)">Send link / Copy link come when the site has the picture (1–2 min) · انتظر دقيقة</span>') + '<a href="' + esc(res.url) + '" target="_blank" style="align-self:center;color:var(--gold);font-weight:700">Open page ↗</a></div>' +
     '<div style="font-size:13px;word-break:break-all;margin:6px 0"><b>' + esc(res.url) + '</b></div>' +
     '<ul>' + (res.report || []).map(function(l){ return '<li>' + esc(l) + '</li>'; }).join('') + (res.flags || []).map(function(l){ return '<li style="color:#9a3b1e">' + esc(l) + '</li>'; }).join('') + '</ul>';
   $('cres').dataset.url = res.url; $('cres').dataset.cover = res.cover;
 }
-$('cres').addEventListener('click', async function(e){ var b = e.target.closest('button[data-c]'); if (!b) return; var url = $('cres').dataset.url;
+$('cres').addEventListener('click', async function(e){ var b = e.target.closest('button[data-c]'); if (!b) return; var url = freshUrl($('cres').dataset.url);
   if (b.dataset.c === 'copy') { try { await navigator.clipboard.writeText(url); b.textContent = 'Copied ✓'; } catch(e2){ prompt('Copy:', url); } return; }
   if (b.dataset.c === 'share') {      // the link alone: WhatsApp turns it into the picture card, and tapping the picture opens the catalogue
     try { if (navigator.share) { await navigator.share({ url: url }); return; } } catch(e5){ if (e5 && e5.name === 'AbortError') return; }
@@ -2227,7 +2239,7 @@ function liveShow(){ var el = $('cnt'); if (el) el.title = LIVE.t ? 'Live from T
 function liveApply(cards){
   var known = {}; RAW.cards.forEach(function(c){ (c.attachments || []).forEach(function(a){ known[a.id] = 1; }); });
   var fresh = cards.some(function(c){ return (c.attachments || []).some(function(a){ return /^image\//.test(a.mimeType || '') && !known[a.id]; }); });
-  RAW.cards = cards; designs = mkDesigns(RAW.cards, RAW.roles); render();
+  var was = cardsOf(); RAW.cards = cards; designs = mkDesigns(RAW.cards, RAW.roles); state = keyRemap(state, was); prices = keyRemap(prices, was); LOC = keyRemap(LOC, was); render();
   if (fresh && Date.now() - LIVE.kicked > 4 * 60000) { LIVE.kicked = Date.now(); relay('stock', { id: jobId('r'), op: 'refresh', dev: devId(), lines: [] }).catch(function(){}); }
 }
 async function liveSync(){
@@ -2502,7 +2514,7 @@ function ordFromMemo(){
   if (!RELAY) return ''; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) return '';
   var oid = ls('sj_oid'); if (!oid) { oid = 'o' + Date.now().toString(36) + devId(); ls('sj_oid', oid); }
   var items = nos.map(function(no){ var d = byNo(no), ls2 = Object.keys(bd[no]).map(function(c){ return locOf(no, c); }), loc = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm';
-    return { no: shown(no), pcs: designPcs(no), row: rowsFor(no), loc: loc, c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs + (loc === 'm' ? (locOf(no, c) === 'o' ? ' office' : locOf(no, c) === 's' ? ' (' + offPcs(no, c) + ' office / ' + (colTot(no, c) - offPcs(no, c)) + ' godown)' : ' godown') : ''); }).join(', ') }; });
+    return { no: shown(no), card: d ? d.id : '', pcs: designPcs(no), row: rowsFor(no), loc: loc, c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs + (loc === 'm' ? (locOf(no, c) === 'o' ? ' office' : locOf(no, c) === 's' ? ' (' + offPcs(no, c) + ' office / ' + (colTot(no, c) - offPcs(no, c)) + ' godown)' : ' godown') : ''); }).join(', ') }; });
   var allOff = !gdHas();
   var dv = dlv(), dl = [(dv.od || dv.ot) ? 'Office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '', (dv.cd || dv.ct) ? 'Customer/cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : ''].filter(Boolean).join(' · ');
   // 12 Oct 2026: step 1 ticks itself when the pick list is posted to #godown; with nothing to pick, steps 1 and 2 tick themselves ("all in office")
@@ -3552,7 +3564,7 @@ async function ordBill(o, how){
   var sn = null; try { var j = await bsCall({ op: 'get', ref: 'ORD-' + o.id }); if (j.ok) sn = JSON.parse(j.data || '{}'); } catch(e){}
   if (!sn) {                                         // an order from before 20 Oct: rebuild the colours from its lines ("C1 8, C2 4")
     sn = { state: {}, prices: {}, name: o.name || '' };
-    (o.items || []).forEach(function(x){ var d = designs.filter(function(z){ return z.no === x.no || z.base === x.no || shown(z.no) === x.no; })[0]; if (!d) return;
+    (o.items || []).forEach(function(x){ var d = (x.card ? designs.filter(function(z){ return z.id === x.card; })[0] : null) || designs.filter(function(z){ return z.no === x.no || z.base === x.no || shown(z.no) === x.no; })[0]; if (!d) return;
       var re = /C(\d+)\s+(\d+)/g, m; while ((m = re.exec(x.c || ''))) sn.state[d.no + ':' + m[1]] = { pcs: +m[2], sets: 0, all: false };
       if (x.c === 'sample') sn.state[d.no + ':1'] = { pcs: 1, sets: 0, all: false }; }); }
   if (how === 'memo') { if (Object.keys(byDesign()).length && !confirm('Replace what is picked now with this order?')) return; snapApply(sn); ls('sj_oid', o.id); navCloseAll(); $('ok').click(); uiToast('Order opened as memo — change it and send it again'); return; }
@@ -3593,7 +3605,7 @@ window.__sj = { ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: cc
 var DR = { cur: null, list: null };
 try { DR.cur = JSON.parse(ls('sj_draft') || 'null'); } catch(e){ DR.cur = null; }
 function drSnap(type){ var st = {}; Object.keys(state).forEach(function(k){ st[k] = state[k]; }); var pr = {}; Object.keys(byDesign()).forEach(function(no){ if (prices[no] > 0) pr[no] = prices[no]; });
-  return { v: 1, k: type, state: st, prices: pr, loc: LOC, dl: dlv(), name: $('name').value.trim(), q: $('q').value, inv: type === 'bd' ? B.inv : null }; }
+  return { v: 1, k: type, state: st, prices: pr, loc: LOC, cards: cardsOf(), dl: dlv(), name: $('name').value.trim(), q: $('q').value, inv: type === 'bd' ? B.inv : null }; }
 function drWhat(){ var bd = byDesign(), nos = Object.keys(bd); return nos.length + (nos.length === 1 ? ' design · ' : ' designs · ') + nos.reduce(function(a, no){ return a + designPcs(no); }, 0) + ' pcs'; }
 async function drSave(type){ var nos = Object.keys(byDesign()); if (!nos.length) { alert('Pick some colours first · اختر الألوان أولاً'); return; }
   var same = DR.cur && DR.cur.type === type, ref = same ? DR.cur.ref : (type === 'od' ? 'OD-' : 'BD-') + Date.now().toString(36).toUpperCase();
@@ -3620,8 +3632,8 @@ $('drs').addEventListener('click', async function(e){ if (e.target === $('drs'))
   var op = e.target.closest('[data-dro]'); if (op) drOpen(op.dataset.dro); });
 // put a saved selection (draft / order) back: colours, pieces, prices, where it is, delivery, name
 function snapApply(sn){
-  state = {}; Object.keys(sn.state || {}).forEach(function(k){ state[k] = sn.state[k]; }); Object.keys(sn.prices || {}).forEach(function(no){ prices[no] = sn.prices[no]; });
-  LOC = sn.loc || {}; if (sn.name != null) $('name').value = sn.name; if (sn.dl) Object.keys(sn.dl).forEach(function(x){ if ($('dl_' + x)) $('dl_' + x).value = sn.dl[x] || ''; });
+  state = keyRemap(sn.state || {}, sn.cards); var pr2 = keyRemap(sn.prices || {}, sn.cards); Object.keys(pr2).forEach(function(no){ prices[no] = pr2[no]; });
+  LOC = keyRemap(sn.loc || {}, sn.cards); if (sn.name != null) $('name').value = sn.name; if (sn.dl) Object.keys(sn.dl).forEach(function(x){ if ($('dl_' + x)) $('dl_' + x).value = sn.dl[x] || ''; });
   document.querySelectorAll('#feed .row[data-k]').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); if (d && !state[r.dataset.k]) paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); });
   reapply(); refresh(); try { saveWork(); } catch(e){} }
 async function drOpen(ref){ var el = $('drst'); if (el) el.textContent = 'Opening ' + ref + '…';

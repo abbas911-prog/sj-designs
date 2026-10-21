@@ -1,4 +1,4 @@
-// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, employees see balances (no delete), chat colours + bubbles kept, no page re-download, instant tick, included bill keeps its lines, green refused on any device for an included bill, sold bill = what it sold on any device, bill linked to its order, short share text, lag: live update keeps unchanged designs, chats/orders shown from the phone, hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
+// Checks for the fixes of 2026-10-20c/d: duplicate design numbers (oldest card keeps the plain number), long return on 2 pages, employees see balances (no delete), chat colours + bubbles kept, no page re-download, instant tick, included bill keeps its lines, green refused on any device for an included bill, sold bill = what it sold on any device, bill linked to its order, short share text, marks follow their card, lag: live update keeps unchanged designs, chats/orders shown from the phone, hidden owner boxes, Undo then Include gets a new number, 🔔 screen stays, return line from a typed line keeps its number.
 const { chromium } = require('playwright'); const http = require('http'); const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
 const DIR = require('path').join(__dirname, '..'), PW = 'test1234';
 function lock(obj) { const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12), key = crypto.pbkdf2Sync(PW, salt, 1000, 32, 'sha256'); const c = crypto.createCipheriv('aes-256-gcm', key, iv); const ct = Buffer.concat([c.update(JSON.stringify(obj)), c.final(), c.getAuthTag()]); return { salt: salt.toString('base64'), iv: iv.toString('base64'), iter: 1000, ct: ct.toString('base64') }; }
@@ -32,7 +32,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   const out = []; const t = q => pg.$eval(q, e => e.textContent.trim()).catch(() => ''); const shown = q => pg.$eval(q, e => getComputedStyle(e).display !== 'none').catch(() => false);
   out.push(['factory password box hidden on a phone without the owner password', !(await shown('#fpw'))]);
   out.push(['cost/sale boxes hidden in a normal design order', !(await shown('#dorcs'))]);
-  out.push(['same design twice: the older card keeps 55555, the newer is 55555-2', JSON.stringify(await pg.evaluate(() => window.__memo.designs().filter(d => d.base === '55555').map(d => d.id + '=' + d.no).sort())) === JSON.stringify(['a5=55555', 'b5=55555-2'])]);
+  out.push(['same design twice: the newest card keeps 55555, the older is 55555-2', JSON.stringify(await pg.evaluate(() => window.__memo.designs().filter(d => d.base === '55555').map(d => d.id + '=' + d.no).sort())) === JSON.stringify(['a5=55555-2', 'b5=55555'])]);
   out.push(['photo counter counts each photo once', (await pg.evaluate(() => window.__memo.pstat().bad)) <= 1]);
   // Undo then Include → new number, pieces taken under it
   await pg.click('#feed .design .step button:nth-child(3)'); await pg.click('#nav button[data-nv="more"]'); await pg.click('.mgrid button[data-go="bills"]'); await pg.waitForTimeout(300);
@@ -72,10 +72,10 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   out.push(['tick shows at once (Google slow) and stays', quick >= 0 && quick < 900 && !!(await pg.$('#ccbody .ock.on[data-ok="s2"]'))]);
   await pg.unroute(/script\.google\.com/); await pg.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) }));
   // lag fixes: a live update keeps the designs that did not change; chats + orders show at once from the phone while Google is slow
-  await pg.evaluate(() => { document.querySelector('#feed .design[data-no="18634"]').__keep = 1; document.querySelector('#feed .design[data-no="55555"]').__keep = 1; });
+  await pg.evaluate(() => { document.querySelector('#feed .design[data-no="18634"]').__keep = 1; document.querySelector('#feed .design[data-no="55555"]').__keep = 1; document.querySelector('#feed .design[data-no="55555-2"]').__keep = 1; });
   LIVE = cards.map(c => c.id === 'a5' ? Object.assign({}, c, { name: 'SJ-55555 (7) colour = (1) (7)' }) : c);
-  await pg.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); }); await pg.waitForFunction(() => /7 pcs/.test((document.querySelector('#feed .design[data-no="55555"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-  out.push(['live update: unchanged design kept, changed one redrawn', await pg.evaluate(() => document.querySelector('#feed .design[data-no="18634"]').__keep === 1 && !document.querySelector('#feed .design[data-no="55555"]').__keep && /7 pcs/.test(document.querySelector('#feed .design[data-no="55555"]').textContent))]);
+  await pg.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); }); await pg.waitForFunction(() => /7 pcs/.test((document.querySelector('#feed .design[data-no="55555-2"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  out.push(['live update: unchanged design kept, changed one redrawn', await pg.evaluate(() => document.querySelector('#feed .design[data-no="18634"]').__keep === 1 && document.querySelector('#feed .design[data-no="55555"]').__keep === 1 && !document.querySelector('#feed .design[data-no="55555-2"]').__keep && /7 pcs/.test(document.querySelector('#feed .design[data-no="55555-2"]').textContent))]);
   const p3 = await br.newPage({ viewport: { width: 390, height: 844 } }); p3.on('pageerror', e => errs.push(e.message));
   await p3.route(/script\.google\.com/, r => { const b = JSON.parse(r.request().postData() || '{}'); if (b.job === 'cchat' || b.job === 'orders') return; r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(b)) }); });   // Google never answers chats / orders
   await p3.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
@@ -122,6 +122,21 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await p5.$eval('#mode button[data-m="inv"]', e => e.click()); await p5.waitForTimeout(400); await p5.fill('#bform input[data-p]', '100'); await p5.waitForTimeout(900); await p5.click('#dsend'); await p5.waitForTimeout(1500);
   const sh = await p5.evaluate(() => window.__shared);
   out.push(['shared PDFs carry only a short line (memo · name; INVOICE number)', sh.length === 2 && sh[0].files === 1 && sh[0].text === 'Order memo · MAMA' && sh[1].files === 1 && /^INVOICE INV-\d{4}$/.test(sh[1].text)]); await p5.close();
+  // marks follow their CARD: a newer card with the same number appears -> the plain number moves to it, the marks (and a saved order) stay on the old card
+  const p6 = await br.newPage({ viewport: { width: 390, height: 844 } }); p6.on('pageerror', e => errs.push(e.message)); p6.on('dialog', d => d.accept());
+  await p6.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) })); await p6.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
+  await p6.goto(URL0); await p6.evaluate(pw => { localStorage.clear(); localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas'); }, PW); await p6.reload(); await p6.waitForSelector('#feed .design', { timeout: 15000 });
+  await p6.fill('#name', 'MAMA'); await p6.click('#feed .design[data-no="18634"] .step button[data-d="1"]'); await p6.waitForTimeout(300);
+  await p6.$eval('#drbtn', e => e.click()); await p6.waitForSelector('#drs:not([hidden])', { timeout: 8000 }); await p6.click('[data-drs="od"]'); await p6.waitForFunction(() => document.querySelectorAll('[data-dro]').length >= 1, null, { timeout: 8000 }).catch(() => {}); await p6.$eval('#drx', e => e.click()).catch(() => {});
+  const odRef2 = Object.values(BILLS).filter(b => b.type === 'od').map(b => b.ref).pop();
+  LIVE = cards.concat([{ id: 'c9', idShort: 9, list: 'r', name: 'SJ-18634 (8) colour = (1) (8)', attachments: [] }]);
+  await p6.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); }); await p6.waitForSelector('#feed .design[data-no="18634-2"]', { timeout: 8000 }).catch(() => {});
+  const k1 = await p6.evaluate(() => Object.keys(window.__memo.state()));
+  out.push(['live: a newer card takes the plain number, the marks stay on the old card (18634-2)', JSON.stringify(k1) === JSON.stringify(['18634-2:1'])]);
+  await p6.evaluate(() => { window.confirm = () => true; document.querySelector('#clr').click(); }); await p6.waitForTimeout(300);
+  await p6.$eval('#drbtn', e => e.click()); await p6.waitForSelector('[data-dro="' + odRef2 + '"]', { timeout: 8000 }); await p6.click('[data-dro="' + odRef2 + '"]'); await p6.waitForTimeout(1500);
+  const k2 = await p6.evaluate(() => Object.keys(window.__memo.state()));
+  out.push(['a saved order reopened later keeps the colours of the card it was made on', JSON.stringify(k2) === JSON.stringify(['18634-2:1'])]); LIVE = cards; await p6.close();
   // employee phone (catalogue off): Customer balances opens, but no delete / change-opening buttons
   const p2 = await br.newPage({ viewport: { width: 390, height: 844 } }); p2.on('pageerror', e => errs.push(e.message)); p2.on('dialog', d => d.accept());
   await p2.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) })); await p2.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
