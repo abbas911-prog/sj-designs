@@ -1,0 +1,56 @@
+{
+ "ok": true,
+ "page": "ali-1021.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/ali-1021.html?v=1",
+ "cover": "og-ali-1021.jpg",
+ "name": "ALI",
+ "country": "",
+ "designs": [
+  "6668",
+  "31048",
+  "31892",
+  "79246",
+  "12748",
+  "92045",
+  "46209",
+  "86618",
+  "15907"
+ ],
+ "report": [
+  "SJ-6668 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-31048 COMPLETE  5+5+5+5+4 = 24 ✓ (card: 24) → 1 complete sets + 4 pcs",
+  "SJ-31892 SETS  8+4+8+8+8+8 = 44 ✓ (card: 44) → 6 colours",
+  "SJ-79246 SETS  0+4+4+4+4+8+4+4+8+8+8+8 = 64 ✓ (card: 64) → 11 colours",
+  "SJ-12748 SETS  12+8+8+8+8 = 44 ✓ (card: 44) → 5 colours",
+  "SJ-92045 SETS  4+4+4+0+4+0+0+0+4+4 = 24 ✓ (card: 24) → 6 colours",
+  "SJ-46209 SETS  16+16+14+16 = 62 ✓ (card: 62) → 4 colours",
+  "SJ-86618 SETS  12+12+12+12+12+12 = 72 ✓ (card: 72) → 6 colours",
+  "SJ-15907 SETS  8+8+3+16+12+0 = 47 ✓ (card: 47) → 5 colours"
+ ],
+ "flags": [
+  "SJ-6668 has 24 READY cards — used the newest: Sj 6668 (40)  5 colors.                                     (8/8/8/8/8)",
+  "SJ-6668: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-31048: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-31892: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-79246: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-79246: 1 sold-out colour cut out of the photo and the rest renumbered — check the photo.",
+  "SJ-92045: 4 sold-out colours cut out of the photo and the rest renumbered — check the photo.",
+  "SJ-86618 has 2 READY cards — used the newest: Sj = **86618** (72) pcs …color = (6)…(12/12/12/12/12/12) 1 sample",
+  "SJ-86618: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-15907: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-15907: 1 sold-out colour cut out of the photo and the rest renumbered — check the photo."
+ ],
+ "videos": [
+  "12748",
+  "15907",
+  "31048",
+  "31892",
+  "46209",
+  "6668",
+  "79246",
+  "86618",
+  "92045"
+ ],
+ "bytes": 2892945,
+ "id": "cmvib3qa9svqv"
+}
