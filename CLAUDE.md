@@ -13,6 +13,8 @@
 - `tools/test/` — the factory test harness (see rule 5).
 - `memo-sw.js` — SJ Stock's phone helper (service worker, scope = memo.html ONLY): keeps the app page on the phone (opens at once / offline;
   ETag check in the background; `?v=` reloads go network-first). `memo.webmanifest`, `memo-icon-180/512.png` (Home Screen icon).
+- `.nojekyll` — tells GitHub Pages to publish the files as they are (no Jekyll pass over 400 MB of photos/videos): publishes in ~1 min
+  instead of 3-10, so fewer builds get cancelled by the next commit. Never delete it.
 - `facthumbs/` — card cover thumbnails, made every 20 min by `.github/workflows/fac-thumbs.yml` (`tools/facthumbs.py`).
 
 ## Rules (from Abbas)
@@ -167,3 +169,4 @@ Memo rules (his words, short):
 - 2026-10-21: memo 2026-10-21d — (Abbas) a PDF shared on WhatsApp carries only its number as the message (`shareText`: "INVOICE INV-0021", "RECEIPT VOUCHER RV-…", memo: "Order memo · name"); the long typed copy stays behind the Copy button and the no-PDF WhatsApp fallback.
 - 2026-10-21: memo 2026-10-21e — (Abbas, video: "same design, the colours changed" from order → bill) marks/prices/godown choices now follow their Trello CARD: `cardsOf()` saved with the work, drafts, orders (`drSnap`), bills (`bsSnap`, `d.sold.card`, order items `card`), remapped on restore and on every live update (`keyRemap`); the plain number goes back to the NEWEST duplicate card (20 Oct flip undone — it moved old orders to the other card). Catalogue: Send link / Copy link appear only when the page AND its preview picture answer on the site (`siteLive`, +8 s), and a shared link is always slightly new (`freshUrl`) so WhatsApp fetches the picture again.
 - 2026-10-21: memo 2026-10-21f — catalogue "not opening": GitHub Pages cancels a publish when another push lands (sj-1021 went live 11 min after its commit). The app now waits up to 15 min with a clock (was 3) before offering the link; Send/Copy stay hidden until page + picture answer. Repo is 406 MB (vid/ 257 MB) — watch the 1 GB Pages limit.
+- 2026-10-21: `.nojekyll` added — 5 Pages publishes in a row were cancelled (catalogue, photo sync, catalogue…), the Ahmad Al Wasta catalogues of 18:30/18:34 were not on the site 10 min later; a plain-copy publish is much faster.
