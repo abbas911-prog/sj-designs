@@ -1,0 +1,60 @@
+{
+ "id": "smvi7ltlk43ke",
+ "op": "sell",
+ "ref": "INV-0022",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6aaa55c9d48af05e3349d8fa",
+   "no": "18634",
+   "before": "Sj = **(18634)** (96) pcs ....color = (4)...(24/24/24/24)",
+   "after": "Sj = **(18634)** (84) pcs ....color = (4)...(20/20/20/24)",
+   "left": 84,
+   "lines": [
+    "colour 1: 24 → 20 (−4)",
+    "colour 2: 24 → 20 (−4)",
+    "colour 3: 24 → 20 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a840174bb3b472535b50ee2",
+   "no": "71352",
+   "before": "Sj = **(71352)** (60) pcs colour = (5) ,,,,,(12/12/12/12/12)",
+   "after": "Sj = **(71352)** (52) pcs colour = (5) ,,,,,(12/8/12/12/8)",
+   "left": 52,
+   "lines": [
+    "colour 2: 12 → 8 (−4)",
+    "colour 5: 12 → 8 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6aad39e8d8513bbc3dd84ea5",
+   "no": "81016",
+   "before": "Sj = **(81016)** (20) pcs color = (4)....(8/4/4/4)",
+   "after": "Sj = **(81016)** (8) pcs color = (4)....(4/0/0/4)",
+   "left": 8,
+   "lines": [
+    "colour 1: 8 → 4 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "692723a0f3e1d64137bc95fc",
+   "no": "18747",
+   "before": "Sj= 18747 …(29) pcs color = 4 …(7/7/8/7)",
+   "after": "Sj= 18747 …(20) pcs color = 4 …(4/4/8/4)",
+   "left": 20,
+   "lines": [
+    "colour 1: 7 → 4 (−3)",
+    "colour 2: 7 → 4 (−3)",
+    "colour 4: 7 → 4 (−3)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
