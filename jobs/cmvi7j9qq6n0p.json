@@ -1,0 +1,23 @@
+{
+ "ok": true,
+ "page": "ahmad-al-wasta-1021.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/ahmad-al-wasta-1021.html?v=1",
+ "cover": "og-ahmad-al-wasta-1021.jpg",
+ "name": "AHMAD AL WASTA",
+ "country": "LIBYA",
+ "designs": [
+  "48188",
+  "57026"
+ ],
+ "report": [
+  "SJ-48188 SETS  28+15+16+10+16+24+22+18+12+8+13+20+16+12 = 230 ✓ (card: 230) → 14 colours",
+  "SJ-57026 SETS  16+14+16+16+12+16 = 90 ✓ (card: 90) → 6 colours"
+ ],
+ "flags": [],
+ "videos": [
+  "48188",
+  "57026"
+ ],
+ "bytes": 876703,
+ "id": "cmvi7j9qq6n0p"
+}
