@@ -201,3 +201,4 @@ Memo rules (his words, short):
   answer never carries a stale workers list. NEEDS: relay deploy.
 - 2026-10-21 (VER 2026-10-21l) Abbas: the dashboard is reached from a small 👷 Workers icon in the bottom bar (nothing else changed; More →
   Workers still works). Added: "Today · আজ: N pcs done by M workers" line and an amber "⚠ long" on a batch held 2+ work days. NEEDS: relay deploy.
+- 2026-10-21 (VER 2026-10-21m) Abbas: "what does this whole thing mean?" — worker row reads "⏱ 2 h since Wed 21 Oct 21:55 · 4 min work time · 5 pcs · given by Md ibrahimmiah" (month name, 'work time', 'given by'). No relay deploy.
