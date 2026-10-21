@@ -215,7 +215,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-21i';
+var VER = '2026-10-21j';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -602,6 +602,7 @@ function paintCard(){
 // the button becomes ✓ Done (the box then holds the pieces that came back). Every give / done = a Trello comment on the card + a line in its chat
 // (the relay keeps nothing itself - Trello's comments are the record), and the worker's field on the Trello card shows "58 ✓".
 var WKOPEN = {}, WKLIST = /^(CUTTING|IN LINE|IN LINE \(2\)|READY FOR HAND WORK|IN HAND WORK|CAME FROM HAND WORK|IRON\/CHECKING)$/;
+function wkWhen(ms){ var d = new Date(+ms), n = new Date(); return (d.toDateString() === n.toDateString() ? 'today' : DAYN[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1)) + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
 function wkDur(ms){ ms = Math.max(0, ms); var h = Math.floor(ms / 3600000), d = Math.floor(h / 24); return d ? d + ' d' + (h % 24 ? ' ' + (h % 24) + ' h' : '') : h ? h + ' h' : Math.max(1, Math.floor(ms / 60000)) + ' min'; }
 async function workLoad(c){ if (!c || c.dm || c.lo) return; var j = await call({ op: 'work', card: c.id }); if (!j.ok || !open || open.id !== c.id) return; open._wk = j.batches || {}; open._wkAt = Date.now(); if (j.workers && j.workers.length) D.workers = j.workers; workDraw(open); }
 function wkState(c){ var wk = (c && c._wk) || {}, sum = [], busy = 0; Object.keys(wk).forEach(function(w){ var bs = wk[w], o = bs.filter(function(b){ return !b.out; })[0], d = bs.reduce(function(a, b){ return a + (b.out ? b.d : 0); }, 0); if (o) busy++; if (o || d) sum.push(w + ' ' + (o ? o.g + ' ⏳' : d + ' ✓')); }); return { sum: sum, busy: busy }; }
@@ -612,7 +613,7 @@ function workDraw(c){
   var wk = c._wk || {}, now = Date.now(), typed = {};   // what is being typed in a row survives a redraw (the relay's answer, the minute tick)
   $('wkrows').querySelectorAll('.wr').forEach(function(r){ var v = r.querySelector('input').value; if (v) typed[r.dataset.w] = v; });
   $('wkrows').innerHTML = D.workers.map(function(w){ var bs = wk[w.toUpperCase()] || [], o = bs.filter(function(b){ return !b.out; })[0], done = bs.filter(function(b){ return b.out; }), dsum = done.reduce(function(a, b){ return a + b.d; }, 0);
-    var stt = o ? '<span class="st on">⏱ ' + wkDur(now - o.in) + (o.wd ? ' · ' + esc(o.wd) : '') + ' · ' + o.g + ' pcs given' + (o.adds && o.adds.length ? ' (' + [o.g - o.adds.reduce(function(a, b){ return a + b; }, 0)].concat(o.adds).join('+') + ')' : '') + ' · ' + esc(o.by) + '</span>' : done.length ? '<span class="st">✓ ' + dsum + ' pcs · ' + done.map(function(b){ return (b.wd || wkDur(b.out - b.in)) + (b.rate ? ' · ≈' + b.rate + '/day' : ''); }).join(' + ') + '</span>' : '';
+    var stt = o ? '<span class="st on">⏱ ' + wkDur(now - o.in) + ' since ' + wkWhen(o.in) + (o.wd ? ' · ' + esc(o.wd) : '') + ' · ' + o.g + ' pcs' + (o.adds && o.adds.length ? ' (' + [o.g - o.adds.reduce(function(a, b){ return a + b; }, 0)].concat(o.adds).join('+') + ')' : '') + ' · ' + esc(o.by) + '</span>' : done.length ? '<span class="st">' + done.map(function(b){ return '✓ ' + b.d + ' pcs · ' + wkWhen(b.in) + ' → ' + wkWhen(b.out) + ' · ' + (b.wd || wkDur(b.out - b.in)) + (b.rate ? ' · ≈' + b.rate + '/day' : ''); }).join('<br>') + '</span>' : '';
     return '<div class="wr" data-w="' + esc(w) + '"><div><b>' + esc(w) + '</b>' + stt + '</div><input type="number" inputmode="numeric" min="1" placeholder="pcs"><button class="in" data-k="in"' + (D.w ? '' : ' disabled') + '>▶ ' + (o ? 'More · আরও' : 'Give · দিন') + '</button>' + (o ? '<button class="out" data-k="out" data-g="' + o.g + '"' + (D.w ? '' : ' disabled') + '>✓ Done · হয়েছে</button>' : '') + '</div>'; }).join('');
   Object.keys(typed).forEach(function(w){ var r = $('wkrows').querySelector('.wr[data-w="' + w.replace(/"/g, '') + '"] input'); if (r && !r.value) r.value = typed[w]; });
 }

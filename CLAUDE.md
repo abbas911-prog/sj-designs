@@ -189,3 +189,8 @@ Memo rules (his words, short):
 - 2026-10-21 (VER 2026-10-21i) Abbas: "it is buggy" (screenshot: the tab bar in the middle of the screen, empty rows under it) — on iPhone the
   fixed bar follows the keyboard up and Safari left it there after the search box closed. Now: keyboard open on the home screen → bar hidden
   (`body.kb`, `kbFit`); keyboard closed / tab switched → input blurred, page scrolled to the top, bar back. No relay deploy.
+- 2026-10-21 (VER 2026-10-21j) Abbas (SJ-46594: "mention the time in the chat — when he got the work, when we pressed Done, how long he took"):
+  the WORK chat lines now carry the Dubai time: Give = "👷 Rifat ← 5 pcs given · 🕒 Wed 21 Oct 14:05" (+ "now 8 pcs in hand (first 5 on …)");
+  Done = "✓ 7 pcs done of 8 given / 🕒 got … (+3 on …) → back … / ⏱ 1 d 2 h on the clock · 1.1 work days (8 am – 10 pm, Fri 8 – 12) ·
+  ≈ 6 pcs / day" + Bengali. Trello comments get the times too (after "(factory app)", parser untouched). Card rows show "since Tue 21/10
+  14:05" and "got → back". NEEDS: relay deploy.

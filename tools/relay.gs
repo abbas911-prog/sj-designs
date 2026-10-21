@@ -538,6 +538,7 @@ function facWorkMs(a, b) {                                     // ms of working 
 }
 function facRate(pcs, workMs) { return Math.round(pcs / Math.max(0.25, workMs / WORK_DAY_MS)); }   // pieces per work day (14 h); a tiny batch counts as a quarter day at least
 function facWorkDur(ms) { var h = ms / 3600000; return h < 1 ? Math.max(1, Math.round(ms / 60000)) + ' min work' : (h >= 10 ? (Math.round(h / (WORK_TO - WORK_FROM) * 10) / 10) + ' work days' : (Math.round(h * 10) / 10) + ' work h'); }
+function facWhen(ms) { var u = new Date(ms + 4 * 3600000); return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][u.getUTCDay()] + ' ' + facDay(ms) + ' ' + ('0' + u.getUTCHours()).slice(-2) + ':' + ('0' + u.getUTCMinutes()).slice(-2); }   // "Tue 21 Oct 14:05" Dubai
 function facDay(ms) { var u = new Date(ms + 4 * 3600000); return u.getUTCDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][u.getUTCMonth()]; }   // Dubai
 var WK_RE = /^👷 (IN|OUT) · (.+?) · (\d+) pcs(?: · ([^·]+?))? · (.+?) \(factory app\)/;
 function facWkParse(acts) {                                    // comments -> { WORKER: [{in, out, g, d, by, hid}] } (oldest first)
@@ -545,7 +546,7 @@ function facWkParse(acts) {                                    // comments -> { 
   acts.forEach(function (a) { if (a.type !== 'commentCard') return; var m = String((a.data || {}).text || '').match(WK_RE); if (!m) return;
     var w = m[2].trim().toUpperCase(), t = Date.parse(a.date), L = out[w] = out[w] || [];
     if (m[1] === 'IN') { var oi = null; for (var k = L.length - 1; k >= 0; k--) if (!L[k].out) { oi = L[k]; break; }
-      if (oi) { oi.g += +m[3]; oi.adds = (oi.adds || []).concat([+m[3]]); } else L.push({ in: t, g: +m[3], by: m[5].trim(), id: a.id }); }   // 21 Oct 2026: more pieces of the same design to a worker who still has some = added to his open batch (the 6th colour that came later)
+      if (oi) { oi.g += +m[3]; oi.adds = (oi.adds || []).concat([+m[3]]); oi.addT = (oi.addT || []).concat([t]); } else L.push({ in: t, g: +m[3], by: m[5].trim(), id: a.id }); }   // 21 Oct 2026: more pieces of the same design to a worker who still has some = added to his open batch (the 6th colour that came later)
     else { var o = null; for (var i = L.length - 1; i >= 0; i--) if (!L[i].out) { o = L[i]; break; } if (o) { o.out = t; o.d = +m[3]; o.outBy = m[5].trim(); } else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); } });
   return out;
 }
@@ -1191,10 +1192,15 @@ function fac0(reqText, P) {
       var kacts = facActs(rtok, kc), kb = facWkParse(kacts)[kW.name.toUpperCase()] || [], kopen = kb.filter(function (b) { return !b.out; });
       if (kk === 'OUT' && !kopen.length) return out({ ok: false, error: kW.name + ' has no pieces in hand on this card' });
       var kdur = kk === 'OUT' ? facDur(Date.now() - kopen[0].in) : '', kwms = kk === 'OUT' ? facWorkMs(kopen[0].in, Date.now()) : 0;
-      trApi('post', '/cards/' + kc + '/actions/comments', { text: '👷 ' + kk + ' · ' + kW.name + ' · ' + kp + ' pcs' + (kdur ? ' · ' + kdur : '') + ' · ' + kwho + ' (factory app)' }, wtok);
+      trApi('post', '/cards/' + kc + '/actions/comments', { text: '👷 ' + kk + ' · ' + kW.name + ' · ' + kp + ' pcs' + (kdur ? ' · ' + kdur : '') + ' · ' + kwho + ' (factory app) · ' + facWhen(Date.now()) + (kk === 'OUT' ? ' · got ' + facWhen(kopen[0].in) + ' · ' + facWorkDur(kwms) + ' · ≈' + facRate(kp, kwms) + '/day' : '') }, wtok);
       var ktot = kb.reduce(function (a, b) { return a + (b.out ? b.d : 0); }, 0) + (kk === 'OUT' ? kp : 0);
       facWkField(wtok, kc, kW, kk === 'IN' ? (ktot ? ktot + ' ✓ + ' : '') + kp + ' ⏳' : ktot + ' ✓');
-      try { if (FT) { var kth = facThread(P, FT, kc, rtok, true); if (kth) slackApi(FT, 'chat.postMessage', { channel: kth.ch, thread_ts: kth.ts, text: '→ *WORK* · ' + kwho + ' · ' + kW.name + (kk === 'IN' ? ' ← ' + kp + ' pcs given' + (kk === 'IN' && kopen.length ? ' (now ' + (kopen[0].g + kp) + ' in hand)' : '') + ' · পিস দেওয়া হয়েছে' : ' ✓ ' + kp + ' pcs done · ' + facWorkDur(kwms) + ' · ≈' + facRate(kp, kwms) + '/day · পিস হয়ে গেছে') }); } } catch (e) {}
+      // 21 Oct 2026 (Abbas: "mention the time - when the worker got the work, when we pressed Done, how much time he took - flawless and detailed")
+      var know = Date.now(), kgot = kk === 'OUT' ? kopen[0] : null;
+      var kline = kk === 'IN'
+        ? '👷 *' + kW.name + '* ← *' + kp + ' pcs* given · 🕒 ' + facWhen(know) + (kopen.length ? ' · now *' + (kopen[0].g + kp) + ' pcs* in hand (first ' + kopen[0].g + ' on ' + facWhen(kopen[0].in) + ')' : '') + '\n_' + kW.name + ' · ' + kp + ' পিস দেওয়া হয়েছে · ' + facWhen(know) + '_'
+        : '👷 *' + kW.name + '* ✓ *' + kp + ' pcs* done' + (kp !== kgot.g ? ' of ' + kgot.g + ' given' : '') + '\n🕒 got ' + facWhen(kgot.in) + (kgot.addT ? kgot.addT.map(function (t, i) { return ' (+' + kgot.adds[i] + ' on ' + facWhen(t) + ')'; }).join('') : '') + ' → back ' + facWhen(know) + '\n⏱ ' + kdur + ' on the clock · ' + facWorkDur(kwms) + ' (8 am – 10 pm' + (kwms !== know - kgot.in ? ', Fri 8 – 12' : '') + ') · *≈ ' + facRate(kp, kwms) + ' pcs / day*\n_' + kW.name + ' · ' + kp + ' পিস হয়ে গেছে · ' + facWorkDur(kwms) + ' · দিনে ≈ ' + facRate(kp, kwms) + ' পিস_';
+      try { if (FT) { var kth = facThread(P, FT, kc, rtok, true); if (kth) slackApi(FT, 'chat.postMessage', { channel: kth.ch, thread_ts: kth.ts, text: '→ *WORK* · ' + kwho + ' · ' + kline }); } } catch (e) {}
       CacheService.getScriptCache().remove('FAC_WK_' + kc); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump(); facNudge(P, kc);
       return out({ ok: true });
     }
