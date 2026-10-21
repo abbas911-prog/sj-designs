@@ -181,3 +181,6 @@ Memo rules (his words, short):
   box empty = all his pieces came back. Works whatever list the card is in (e.g. still in CUTTING). NEEDS: relay deploy.
 - 2026-10-21 (VER 2026-10-21e) Abbas: #cash and #expenses (ChatGPT workspace) as chats in the Chats tab — Abbas only; the bot joins the
   public channel by itself (a private one: /invite @SJ Orders). NEEDS: relay deploy.
+- 2026-10-21 (VER 2026-10-21g) Abbas: "#cash / #expenses appear and disappear" — the fast-lane card-list refresh rebuilt the data without
+  `rooms`, so they vanished until the next ping; fixed (test: rooms stay through 4 refreshes). The swipe-to-reply of 2026-10-21f was
+  reverted on Abbas's request (the ↩ button stays as it is). No relay deploy needed for this.

@@ -325,7 +325,10 @@ async function suite(fast, browser) {
       await until(async () => /cash in hand 5000/.test(await page.textContent('#thread')), 10000, 'cash line shown');
       await page.fill('#txt', 'noted, thanks'); await page.click('#send');
       await until(() => W.slack.ch.C0CASH00001.msgs.some(m => /noted, thanks/.test(m.text || '') && !m.thread_ts), 10000, 'posted in #cash');
-      await page.goBack(); await page.click('#tabs button[data-t="cards"]');
+      await page.goBack();
+      // the rooms must STAY while the card list refreshes (21 Oct: they vanished for a few seconds after every fast-lane list refresh)
+      for (let i = 0; i < 4; i++) { await page.evaluate(() => window.__f.load(false)); await page.waitForTimeout(400); ok((await page.locator('#xrooms .crow').count()) === 2, 'rooms still there after a list refresh #' + i); }
+      await page.click('#tabs button[data-t="cards"]');
     });
     await test('no page errors', async () => { ok(!T.errors.length, 'no errors:\n' + T.errors.join('\n')); });
   } finally { await T.close(); }

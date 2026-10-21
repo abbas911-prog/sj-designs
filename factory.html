@@ -214,7 +214,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-21e';
+var VER = '2026-10-21g';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -362,7 +362,7 @@ async function load(fresh){
   // (~0.3 s); the relay's slower list (new-message counts, Later, direct chat, settings) is fetched in the background every 5 min
   var j = null;
   if (fastTr() && D.lists && D.lists.length) { var fj = await fast({ op: 'tlist', lists: D.lists, limit: D.limit || {} });
-    if (fj && fj.ok) j = { ok: true, t: fj.t, lists: D.lists, show: D.show, limit: D.limit, cards: fj.cards.concat((D.cards || []).filter(function(c){ return (fj.covered || []).indexOf(c.l) < 0; })), w: D.w, th: D.th, later: D.later, dm: D.dm, lais: D.lais, lo: D.lo, live: LIVE.topic, fast: FAST.url, via: 'fast' };
+    if (fj && fj.ok) j = { ok: true, t: fj.t, lists: D.lists, show: D.show, limit: D.limit, cards: fj.cards.concat((D.cards || []).filter(function(c){ return (fj.covered || []).indexOf(c.l) < 0; })), w: D.w, th: D.th, later: D.later, dm: D.dm, lais: D.lais, rooms: D.rooms, lo: D.lo, live: LIVE.topic, fast: FAST.url, via: 'fast' };
     else if (fj && fj.notrello) FAST.notr = Date.now() + 600000; }
   if (j && (fresh || Date.now() - (FAST.relAt || 0) > 90000)) { FAST.relAt = Date.now(); call({ op: 'list', fresh: !!fresh }).then(function(rj){ if (rj && rj.ok && !LOADING) { relCards(rj); D.th = rj.th || D.th; D.later = rj.later || D.later; if (rj.dm !== undefined) D.dm = rj.dm; if (rj.lais !== undefined) D.lais = rj.lais; if (rj.rooms !== undefined) { D.rooms = rj.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (rj.lo !== undefined) { D.lo = rj.lo || []; loSync(); } if (rj.limit) D.limit = rj.limit; if (rj.lists) D.lists = rj.lists; if (rj.show) D.show = rj.show; D.w = rj.w; if (rj.refs) refsSet(rj.refs, true); if (rj.act) D.act = rj.act; if (rj.fast !== undefined) fastSet(rj.fast); if (rj.live) liveStart(rj.live); CHATSIG = ''; draw(); } }); }
   if (!j) { j = await call({ op: 'list', fresh: !!fresh }); if (j && j.ok) FAST.relAt = Date.now(); }
@@ -1325,7 +1325,7 @@ if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } 
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping };
+window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load };
 })();
 </script>
 </body></html>
