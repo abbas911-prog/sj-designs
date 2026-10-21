@@ -299,6 +299,9 @@ header{backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate
 .odel{margin-top:10px;width:100%;border:1.5px solid #e6c9bd;color:#9a3b1e;background:#fff;border-radius:12px;padding:10px;font:inherit;font-weight:700}
 
 .ohd{position:relative}.opv{float:right;width:58px;height:72px;object-fit:cover;border-radius:10px;margin:0 0 4px 10px;background:#EFE9DF}
+/* 21 Oct 2026 (Abbas, video): the order list shows the designs as readable tiles (photo, number, pcs) instead of a tiny collage */
+.opvt{display:flex;gap:6px;overflow-x:auto;margin:6px 0 4px}.opvt span{flex:none;width:64px;text-align:center}.opvt img,.opvt i{display:block;width:64px;height:80px;object-fit:cover;border-radius:8px;background:#EFE9DF}
+.opvt b{display:block;font-size:11.5px;margin-top:2px;white-space:nowrap}.opvt small{display:block;font-size:10.5px;color:var(--mute)}.opvt em{flex:none;align-self:center;font-style:normal;font-weight:800;color:var(--mute);padding:0 4px}
 .opvbig{display:block;width:100%;border-radius:12px;margin:6px 0 10px;box-shadow:var(--sh)}.opvno{font-size:12px;color:var(--mute);margin:6px 0 10px}
 .osplit{display:block;font-size:12px;font-weight:700;color:#2f6b4f;margin-top:2px}.oloc{font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:6px;color:#fff;background:#9a3b1e}.oloc.o{background:#2f6b4f}.oloc.m{background:#A8864A}
 .gdl{background:#fff;border-radius:12px;padding:10px 12px;margin:8px 0}.gdl:empty{display:none}
@@ -882,7 +885,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-21b';
+var VER = '2026-10-21c';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2456,8 +2459,8 @@ function ordDraw(){
   show.forEach(function(o){
     var stg = ordStage(o), dn = ordDone(o), isOpen = !!ORD.open[o.id], nos = (o.items || []).map(function(x){ return 'SJ-' + x.no; });
     var pvs = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o.id) + '.jpg?v=' + (o.upd || o.created || 0));
-    h += '<div class="ocard' + (dn ? ' done' : '') + '"><button type="button" class="ohd" data-ot="' + esc(o.id) + '"><img class="opv" loading="lazy" alt="" src="' + pvs + '" onerror="this.remove()"><span class="on1"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + '</small></span>' +
-      '<span class="on2">' + esc(nos.slice(0, 4).join(' · ')) + (nos.length > 4 ? ' +' + (nos.length - 4) : '') + ' · ' + (o.pcs || 0) + ' pcs</span>' + ordSplit(o) +
+    h += '<div class="ocard' + (dn ? ' done' : '') + '"><button type="button" class="ohd" data-ot="' + esc(o.id) + '"><span class="on1"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + '</small></span>' +
+      '<span class="on2">' + esc(nos.slice(0, 4).join(' · ')) + (nos.length > 4 ? ' +' + (nos.length - 4) : '') + ' · ' + (o.pcs || 0) + ' pcs</span>' + ordSplit(o) + ordTileRow(o, true) +
       '<span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span>' +
       '<span class="onx">' + (dn ? '✓ Complete · ' + ordWhen(o.done) : 'Next: ' + esc(ordNext(o))) + '</span>' +
       '<span class="ochats">' + (o.gts ? '📦 #godown' + (ordUn(o, 'g') ? ' <i>' + ordUn(o, 'g') + ' new</i>' : '') : '') + (o.cts ? (o.gts ? ' · ' : '') + '👤 #customer' + (ordUn(o, 'c') ? ' <i>' + ordUn(o, 'c') + ' new</i>' : '') : '') + (o.bill ? ' · 🧾 ' + esc(o.bill) : '') + ' › chat</span></button>';
@@ -3512,12 +3515,15 @@ async function ordFind(o){ try { var j = await ccCall({ op: 'findroot', name: o.
 function ordTabs(o){ var w = CC.ch === 'godown' ? 'g' : 'c', ug = ordUn(o, 'g'), uc = ordUn(o, 'c');
   return '<div class="otabs2"><button type="button" data-och="g" class="' + (w === 'g' ? 'on' : '') + '">📦 #godown' + (ug ? ' <i>' + ug + '</i>' : '') + '<small>' + (o.gts ? 'goods from the godown' : 'no chat yet') + '</small></button><button type="button" data-och="c" class="' + (w === 'c' ? 'on' : '') + '">👤 #customer' + (uc ? ' <i>' + uc + '</i>' : '') + '<small>' + (o.cts ? 'talk about this order' : 'not sent yet') + '</small></button></div>'; }
 // 20 Oct 2026 (rule: every order has one screen with a photo preview): customer + one photo tile per design, always at the top
+// one photo tile per design (number + pcs). mini = the Orders list (first 5, then "+N"); full = the order screen (customer line on top)
+function ordTileRow(o, mini){ var all = o.items || [], it = mini ? all.slice(0, 5) : all, cls = mini ? 'opvt' : 'optiles', tag = mini ? 'span' : 'div';
+  return '<' + tag + ' class="' + cls + '">' + it.map(function(x){ var no = String(x.no), key = no.replace(/[^\w-]/g, ''), dz = byNo(no) || byNo(no.replace(/-.*/, '')), p = dz && dz.photos && (dz.photos.filter(function(q){ return q.nums && q.nums.length; })[0] || dz.photos[0]);
+    if (p && !p.blob) getPhoto(p, true).then(function(u){ if (u) document.querySelectorAll('[data-opt="' + key + '"] i').forEach(function(e){ var im = document.createElement('img'); im.src = u; im.alt = 'SJ-' + no; e.replaceWith(im); }); });
+    return '<' + tag + (mini ? '' : ' class="optile"') + ' data-opt="' + esc(key) + '">' + (p && p.blob ? '<img src="' + p.blob + '" alt="SJ-' + esc(no) + '">' : '<i></i>') + '<b>' + (mini ? '' : 'SJ-') + esc(shown(no)) + '</b><small>' + (x.pcs || 0) + ' pcs' + (!mini && x.c ? '<br>' + esc(x.c) : '') + '</small></' + tag + '>'; }).join('') +
+    (mini && all.length > it.length ? '<em>+' + (all.length - it.length) + '</em>' : '') + '</' + tag + '>'; }
 function ordTiles(o){ var it = o.items || [];
   var h = '<div class="ophead"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + ' · ' + it.length + (it.length === 1 ? ' design' : ' designs') + ' · ' + (o.pcs || 0) + ' pcs</small></div>';
-  if (!it.length) return h;
-  return h + '<div class="optiles">' + it.map(function(x){ var no = String(x.no), dz = byNo(no) || byNo(no.replace(/-.*/, '')), p = dz && dz.photos && (dz.photos.filter(function(q){ return q.nums && q.nums.length; })[0] || dz.photos[0]);
-    if (p && !p.blob) getPhoto(p, true).then(function(u){ if (u) document.querySelectorAll('.optile[data-opt="' + no.replace(/[^\w-]/g, '') + '"] i').forEach(function(e){ var im = document.createElement('img'); im.src = u; im.alt = 'SJ-' + no; e.replaceWith(im); }); });
-    return '<div class="optile" data-opt="' + esc(no.replace(/[^\w-]/g, '')) + '">' + (p && p.blob ? '<img src="' + p.blob + '" alt="SJ-' + esc(no) + '">' : '<i></i>') + '<b>SJ-' + esc(shown(no)) + '</b><small>' + (x.pcs || 0) + ' pcs' + (x.c ? '<br>' + esc(x.c) : '') + '</small></div>'; }).join('') + '</div>'; }
+  return it.length ? h + ordTileRow(o, false) : h; }
 function ordPanel(o){ var h = ordTabs(o) + ordTiles(o);
   var stg = ordStage(o), dn = ordDone(o), pvs = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o.id) + '.jpg?v=' + (o.upd || o.created || 0));
   h += '<div class="opanel"><button type="button" class="ophd" data-ofold="1"><span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span><span class="onx">' + (dn ? '✓ Complete' : 'Next: ' + esc(ordNext(o))) + '</span><em>' + (CC.ordOpen ? '▴ hide' : '▾ order & steps') + '</em></button>';

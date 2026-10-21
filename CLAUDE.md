@@ -161,3 +161,4 @@ Memo rules (his words, short):
   from the Google Sheet), not Usman hand-work's; the list is editable in the app (More → Workers → ✏️ Edit). NEEDS: relay deploy.
 - 2026-10-21 (VER 2026-10-21c) Abbas: duty hours 8 am – 10 pm, Friday 8 – 12 — pieces per day (worker rows, Workers screen, chat line,
   production report) are counted over working hours, not the clock. NEEDS: relay deploy.
+- 2026-10-21: memo 2026-10-21c — (Abbas, video: the order list's 2×2 collage was unreadable) the Orders list shows each design as a tile — photo, number, pcs (first 5, then +N), same tiles as the order screen (`ordTileRow(o, mini)`); the collage stays only inside "Complete order".
