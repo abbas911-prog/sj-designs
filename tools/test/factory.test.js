@@ -17,7 +17,7 @@ function world(W) {
 }
 async function home(page) {                                   // back to the Cards tab with nothing open
   if (await page.locator('#card').isVisible()) { await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000, 'card closed'); }
-  await page.evaluate(() => { document.querySelectorAll('.sheet:not([hidden]), #tg:not([hidden])').forEach(x => { x.hidden = true; }); });
+  await page.evaluate(() => { document.querySelectorAll('.sheet:not([hidden]), #tg:not([hidden]), #wks:not([hidden])').forEach(x => { x.hidden = true; }); });
   await page.click('#tabs button[data-t="cards"]'); await page.fill('#q', '');
 }
 async function openCardNo(page, no) {
@@ -145,6 +145,16 @@ async function suite(fast, browser) {
     await test('Workers screen: pieces per day over 30 days', async () => {
       await page.click('#tabs button[data-t="more"]'); await page.click('#bwork');
       await until(async () => /Rifat/.test(await page.textContent('#wksbody')) && /18 pcs/.test(await page.textContent('#wksbody')), 10000, 'Rifat 18 pcs');
+      // the dashboard: Arif still has 6 pcs of SJ-17841 in hand -> green card first, with the design, pieces and since when; tiles add up
+      const body = await page.textContent('#wksbody');
+      ok(/1\s*working/.test(body) && /6\s*pcs in hand/.test(body) && /18\s*pcs done/.test(body), 'tiles: 1 working, 6 in hand, 18 done — ' + body.slice(0, 120));
+      ok(await page.locator('#wksbody .wkc').first().evaluate(e => e.classList.contains('busy') && /Arif/.test(e.textContent) && /SJ-17841/.test(e.textContent) && /6 pcs/.test(e.textContent) && /since/.test(e.textContent)), 'Arif first, with SJ-17841 · 6 pcs · since');
+      await page.click('#wkview button[data-v="d"]');
+      await until(async () => (await page.locator('#wksbody .dgc').count()) === 1, 5000, 'by design: one design in work');
+      ok(await page.locator('#wksbody .dgc').first().evaluate(e => /SJ-17841/.test(e.textContent) && /Arif · 6/.test(e.textContent)), 'SJ-17841 with the Arif chip');
+      await page.click('#wksbody .dgc'); await until(() => page.locator('#card').isVisible(), 5000, 'tapping the design opens its card'); ok(/17841/.test(await page.textContent('#cnm')), 'the right card');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000); await page.click('#tabs button[data-t="more"]'); await page.click('#bwork'); await page.click('#wkview button[data-v="w"]');
+      await until(async () => /Rifat/.test(await page.textContent('#wksbody')), 8000, 'back on the dashboard');
       // pieces per day are counted over working hours (Dubai, Sat-Thu 8 am - 10 pm = 1 day, Fri 8 - 12): same sum as the relay, IN comment time -> OUT time
       const inT = Date.parse(W.trello.actions.find(a => a.type === 'commentCard' && /👷 IN · Rifat/.test(a.data.text)).date), outT = Date.parse(W.trello.actions.find(a => a.type === 'commentCard' && /👷 OUT · Rifat/.test(a.data.text)).date);
       const workMs = (a, b) => { const tz = 4 * 3600000; let t = a + tz, end = b + tz, tot = 0; while (t < end) { const day = Math.floor(t / 86400000) * 86400000, fri = new Date(day).getUTCDay() === 5; tot += Math.max(0, Math.min(end, day + (fri ? 12 : 22) * 3600000) - Math.max(t, day + 8 * 3600000)); t = day + 86400000; } return tot; };

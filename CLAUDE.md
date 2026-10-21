@@ -194,3 +194,8 @@ Memo rules (his words, short):
   Done = "✓ 7 pcs done of 8 given / 🕒 got … (+3 on …) → back … / ⏱ 1 d 2 h on the clock · 1.1 work days (8 am – 10 pm, Fri 8 – 12) ·
   ≈ 6 pcs / day" + Bengali. Trello comments get the times too (after "(factory app)", parser untouched). Card rows show "since Tue 21/10
   14:05" and "got → back". NEEDS: relay deploy.
+- 2026-10-21 (VER 2026-10-21k) Abbas: "a complete dashboard for the workers — which design is with whom, at a glance": More → 👷 Workers is a
+  full screen (`.dash`, `wksDraw`): tiles (working / free / pcs in hand / pcs done), By worker (green dot = busy; each design in hand with
+  photo, pcs, since, running time; done pcs + ≈/day over 7/30/90 d) and By design (each design in work with worker chips); tap = the
+  card; refreshes every 30 s. Relay `workrep` now reads 120 days back and returns `hand` (open batches) per worker; the `work` op's cached
+  answer never carries a stale workers list. NEEDS: relay deploy.

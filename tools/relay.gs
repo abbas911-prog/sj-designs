@@ -1172,8 +1172,9 @@ function fac0(reqText, P) {
     }
     if (req.op === 'work') {                                  // 21 Oct 2026: the workers and their batches on this card (from the Trello comments)
       var wc = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!wc) return out({ ok: false, error: 'bad request' });
-      var wcache = CacheService.getScriptCache(), wh = req.fresh ? null : wcache.get('FAC_WK_' + wc); if (wh) return out(JSON.parse(wh));
-      var wres = { ok: true, workers: facWorkers(P, rtok).map(function (w) { return w.name; }), batches: facWkParse(facActs(rtok, wc)), hours: [WORK_FROM, WORK_TO] };
+      var wcache = CacheService.getScriptCache(), wh = req.fresh ? null : wcache.get('FAC_WK_' + wc), wnames = facWorkers(P, rtok).map(function (w) { return w.name; });   // the list of names is never from the cache (it can be edited any time)
+      if (wh) { var wh0 = JSON.parse(wh); wh0.workers = wnames; return out(wh0); }
+      var wres = { ok: true, workers: wnames, batches: facWkParse(facActs(rtok, wc)), hours: [WORK_FROM, WORK_TO] };
       Object.keys(wres.batches).forEach(function (w) { wres.batches[w].forEach(function (b) { var wm = facWorkMs(b.in, b.out || Date.now()); b.wd = facWorkDur(wm); if (b.out) b.rate = facRate(b.d, wm); }); });
       try { wcache.put('FAC_WK_' + wc, JSON.stringify(wres), 30); } catch (e) {} return out(wres);
     }
@@ -1201,18 +1202,20 @@ function fac0(reqText, P) {
         ? '👷 *' + kW.name + '* ← *' + kp + ' pcs* given · 🕒 ' + facWhen(know) + (kopen.length ? ' · now *' + (kopen[0].g + kp) + ' pcs* in hand (first ' + kopen[0].g + ' on ' + facWhen(kopen[0].in) + ')' : '') + '\n_' + kW.name + ' · ' + kp + ' পিস দেওয়া হয়েছে · ' + facWhen(know) + '_'
         : '👷 *' + kW.name + '* ✓ *' + kp + ' pcs* done' + (kp !== kgot.g ? ' of ' + kgot.g + ' given' : '') + '\n🕒 got ' + facWhen(kgot.in) + (kgot.addT ? kgot.addT.map(function (t, i) { return ' (+' + kgot.adds[i] + ' on ' + facWhen(t) + ')'; }).join('') : '') + ' → back ' + facWhen(know) + '\n⏱ ' + kdur + ' on the clock · ' + facWorkDur(kwms) + ' (8 am – 10 pm' + (kwms !== know - kgot.in ? ', Fri 8 – 12' : '') + ') · *≈ ' + facRate(kp, kwms) + ' pcs / day*\n_' + kW.name + ' · ' + kp + ' পিস হয়ে গেছে · ' + facWorkDur(kwms) + ' · দিনে ≈ ' + facRate(kp, kwms) + ' পিস_';
       try { if (FT) { var kth = facThread(P, FT, kc, rtok, true); if (kth) slackApi(FT, 'chat.postMessage', { channel: kth.ch, thread_ts: kth.ts, text: '→ *WORK* · ' + kwho + ' · ' + kline }); } } catch (e) {}
-      CacheService.getScriptCache().remove('FAC_WK_' + kc); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump(); facNudge(P, kc);
+      CacheService.getScriptCache().remove('FAC_WK_' + kc); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump(); facNudge(P, kc);
       return out({ ok: true });
     }
-    if (req.op === 'workrep') {                               // 21 Oct 2026: every worker's output over the last N days (from the board's comments)
-      var rdays = Math.min(120, Math.max(1, Math.floor(+req.days || 30))), rsince = new Date(Date.now() - rdays * 86400000).toISOString(), rcache = CacheService.getScriptCache(), rk = 'FAC_WKR_' + rdays, rh = req.fresh ? null : rcache.get(rk); if (rh) return out(JSON.parse(rh));
-      var racts = [], rbefore = '';
+    if (req.op === 'workrep') {                               // 21 Oct 2026: every worker's output over the last N days + what each one has IN HAND right now (from the board's comments)
+      var rdays = Math.min(120, Math.max(1, Math.floor(+req.days || 30))), rcache = CacheService.getScriptCache(), rk = 'FAC_WKR_' + rdays, rh = req.fresh ? null : rcache.get(rk); if (rh) return out(JSON.parse(rh));
+      var rsince = new Date(Date.now() - 120 * 86400000).toISOString(), rcut = Date.now() - rdays * 86400000, racts = [], rbefore = '';   // read 120 days back: a batch still in hand may be old
       for (var ri = 0; ri < 5; ri++) { var rq = { filter: 'commentCard', since: rsince, limit: 1000 }; if (rbefore) rq.before = rbefore; var rpage = trApi('get', '/boards/' + FAC.BOARD + '/actions', rq, rtok) || []; racts = racts.concat(rpage); if (rpage.length < 1000) break; rbefore = rpage[rpage.length - 1].id; }
       var byCard = {}; racts.forEach(function (a) { var cid0 = ((a.data || {}).card || {}).id; if (cid0 && WK_RE.test(String((a.data || {}).text || ''))) (byCard[cid0] = byCard[cid0] || { name: (a.data.card || {}).name || '', acts: [] }).acts.push(a); });
-      var rw = {}; facWorkers(P, rtok).forEach(function (w) { rw[w.name.toUpperCase()] = { name: w.name, pcs: 0, ms: 0, batches: 0, open: 0, cards: {} }; });
+      var rw = {}; facWorkers(P, rtok).forEach(function (w) { rw[w.name.toUpperCase()] = { name: w.name, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0 }; });
       Object.keys(byCard).forEach(function (cid0) { var bc = byCard[cid0], wk0 = facWkParse(bc.acts.slice().sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); }));
-        Object.keys(wk0).forEach(function (w) { var r = rw[w] = rw[w] || { name: w, pcs: 0, ms: 0, batches: 0, open: 0, cards: {} }; wk0[w].forEach(function (b) { if (b.out) { r.pcs += b.d; r.ms += facWorkMs(b.in, b.out); r.batches++; r.cards[cid0] = (r.cards[cid0] || 0) + b.d; } else { r.open++; r.cards[cid0] = r.cards[cid0] || 0; } }); }); });
-      var rout = { ok: true, days: rdays, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, pcs: r.pcs, dur: facWorkDur(r.ms), perDay: r.ms ? facRate(r.pcs, r.ms) : 0, batches: r.batches, open: r.open, cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
+        Object.keys(wk0).forEach(function (w) { var r = rw[w] = rw[w] || { name: w, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0 }; wk0[w].forEach(function (b) {
+          if (b.out) { if (b.out < rcut) return; r.pcs += b.d; r.ms += facWorkMs(b.in, b.out); r.batches++; r.cards[cid0] = (r.cards[cid0] || 0) + b.d; if (b.out > r.last) r.last = b.out; }
+          else { r.open++; r.hand.push({ id: cid0, name: bc.name, g: b.g, in: b.in, adds: b.adds || [], by: b.by, wd: facWorkDur(facWorkMs(b.in, Date.now())) }); } }); }); });
+      var rout = { ok: true, t: Date.now(), days: rdays, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, pcs: r.pcs, dur: facWorkDur(r.ms), perDay: r.ms ? facRate(r.pcs, r.ms) : 0, batches: r.batches, open: r.open, last: r.last, hand: r.hand.sort(function (a, b) { return a.in - b.in; }), cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
       try { rcache.put(rk, JSON.stringify(rout), 60); } catch (e) {} return out(rout);
     }
     if (req.op === 'reportauto') {                            // 21 Oct 2026: the app just moved a card to FINISH (fast lane): post the report now if it is not there yet
