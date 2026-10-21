@@ -161,7 +161,7 @@ body.co .toast{bottom:90px}
 </header>
 <main id="home">
   <section data-t="cards"><div id="list"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></section>
-  <section data-t="chats" hidden><div id="outbar" hidden></div><div id="dm" hidden></div><div id="lais" hidden></div><div id="lorders" hidden></div><div id="chats"></div><div id="inbox" hidden></div><div id="later" hidden></div></section>
+  <section data-t="chats" hidden><div id="outbar" hidden></div><div id="dm" hidden></div><div id="lais" hidden></div><div id="xrooms"></div><div id="lorders" hidden></div><div id="chats"></div><div id="inbox" hidden></div><div id="later" hidden></div></section>
   <section data-t="returns" hidden><div id="rets" hidden></div><div class="seg" id="rseg"><button data-r="RETURNS" class="on">At the factory · কারখানায়</button><button data-r="RETURNS BACK">Came back · ফেরত এসেছে</button></div><div id="retlist"></div></section>
   <section data-t="more" hidden>
     <div class="mecard"><div class="mono">AM</div><h1><span id="who"></span><small>Factory · কারখানা</small></h1></div>
@@ -214,7 +214,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-21d';
+var VER = '2026-10-21e';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -325,21 +325,26 @@ var LOADING = false;
 var DMC = { id: 'dm', dm: true, name: 'Direct chat', title: '💬 Direct chat', l: '', pos: -1, f: {}, lb: [] };
 // 18 Oct 2026 (Abbas): "add #laisfactory in this app .. only me and the people in #laisfactory can see the chats" - a second channel chat; the relay sends D.lais only to those people
 var LAISC = { id: 'lais', dm: true, name: '#laisfactory', title: '🧵 #laisfactory', l: '', pos: -2, f: {}, lb: [] };
-function roomCh(c){ var id = c && c.id; return id === 'lais' ? D.lais : id === 'dm' ? D.dm : null; }
-function rooms(){ return [DMC].concat(D.lais ? [LAISC] : []).concat(loList()); }
+// 21 Oct 2026 (Abbas): "#cash and #expenses of the ChatGPT workspace in this app" - more channel chats like the Direct chat; the relay sends
+// D.rooms = [{k, ch, name, title}] only to Abbas, so other phones never see them
+var ROOMC = {};
+function xrooms(){ return (D.rooms || []).map(function(r){ var c = ROOMC[r.k] || (ROOMC[r.k] = { id: r.k, dm: true, xr: true, l: '', pos: -4, f: {}, lb: [] }); c.name = r.title; c.title = r.title; c.ch = r.ch; c.chname = r.name; return c; }); }
+function isXr(id){ return (D.rooms || []).some(function(r){ return r.k === id; }); }
+function roomCh(c){ var id = c && c.id; if (id === 'lais') return D.lais; if (id === 'dm') return D.dm; var r = (D.rooms || []).filter(function(x){ return x.k === id; })[0]; return r ? { ch: r.ch, name: r.name } : null; }
+function rooms(){ return [DMC].concat(D.lais ? [LAISC] : []).concat(xrooms()).concat(loList()); }
 // 18 Oct 2026 (Abbas): "create a list just like the chats - each card has a picture and a chat - for lais factory. When 48188's order goes to
 // lais factory, instantly a card 48188 appears in chats; me and the one in lais factory speak there. Each order is a chat in itself."
 // The relay sends D.lo = every order post in #laisfactory ("Design: SJ-48188 ...", newest first, only to Abbas + its members); each one is a
 // chat = that post's Slack thread. The picture is the cover of the factory card with the same SJ number.
 var LOM = {};
 function loList(){ return (D.lo || []).map(function(o){ return LOM[o.id]; }).filter(Boolean); }
-function roomSub(c){ return c.lo || c.id === 'lais' ? '#' + ((D.lais || {}).name || 'laisfactory') : '#' + ((D.dm || {}).name || ''); }
+function roomSub(c){ return c.xr ? '#' + c.chname : c.lo || c.id === 'lais' ? '#' + ((D.lais || {}).name || 'laisfactory') : '#' + ((D.dm || {}).name || ''); }
 function loSync(){ if (!D.byId) return; var by = {}; (D.cards || []).forEach(function(c){ var n = parse(c.name).no; if (n && c.img && !by[n]) by[n] = c; });
   (D.lo || []).forEach(function(o){ var c = LOM[o.id] || (LOM[o.id] = { id: o.id, lo: true, dm: true, l: '', pos: -3, f: {}, lb: [] }), src = by[String(o.no || '').split('-')[0]] || by[o.no] || null;
     c.no = o.no; c.name = o.no ? 'SJ-' + o.no : 'Order'; c.title = o.no ? 'SJ-' + o.no : '🧵 Order'; c.sub = o.sub || ''; c.ts = o.ts; c.lr = o.lr || ''; c.rc = o.rc || 0; c.src = src; c.img = src ? src.img : '';
     D.byId[o.id] = c; }); }
 function phc(c){ return c && c.lo ? (c.src || c) : c; }          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
-function applyList(j){ D.lists = j.lists; if (j.workers) D.workers = j.workers; D.show = j.show || []; if (j.limit) D.limit = j.limit; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.lais = j.lais || null; D.lo = j.lo || []; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; loSync(); bellPaint(); }
+function applyList(j){ D.lists = j.lists; if (j.workers) D.workers = j.workers; D.show = j.show || []; if (j.limit) D.limit = j.limit; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.lais = j.lais || null; D.rooms = j.rooms || []; D.lo = j.lo || []; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; xrooms().forEach(function(c){ D.byId[c.id] = c; }); loSync(); bellPaint(); }
 function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); if (j.live && PW) liveStart(j.live); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = '⏳ Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · লোড হচ্ছে'; draw(); return true; } catch(e){ return false; } }
 // 18 Oct 2026 (Abbas: "when it's done it has to be in Came back, but it's not there — it's deleted. Why?"): the fast lane does not read the
 // long done-lists (RETURNS BACK, FINISH, SAMPLE DONE, FINISH SAMPLES — Cloudflare's CPU limit); the phone kept them from the relay's list, but the
@@ -347,7 +352,7 @@ function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if
 // Now every relay list replaces the cards of those lists, and a "list changed" ring fetches the relay list on the next refresh.
 function relCards(rj){ var lim = rj.limit || D.limit || {}; if (!rj.cards || !D.cards) return; var keep = D.cards.filter(function(c){ return !lim[c.l]; }), have = {};
   keep.forEach(function(c){ have[c.id] = 1; });
-  D.cards = keep.concat(rj.cards.filter(function(c){ return lim[c.l] && !have[c.id]; })); D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; loSync();
+  D.cards = keep.concat(rj.cards.filter(function(c){ return lim[c.l] && !have[c.id]; })); D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; xrooms().forEach(function(c){ D.byId[c.id] = c; }); loSync();
   if (open && D.byId[open.id] && open !== D.byId[open.id]) { var oc = open; open = D.byId[open.id]; ['_atts', '_cover', 'desc'].forEach(function(k){ if (oc[k] !== undefined) open[k] = oc[k]; }); if (TH.card && TH.card.id === open.id) TH.card = open; }
   RETSIG = ''; try { var sv = JSON.parse(ls('sj_fac_list') || 'null'); if (sv) { sv.cards = D.cards; ls('sj_fac_list', JSON.stringify(sv)); } } catch(e){} }
 async function load(fresh){
@@ -359,7 +364,7 @@ async function load(fresh){
   if (fastTr() && D.lists && D.lists.length) { var fj = await fast({ op: 'tlist', lists: D.lists, limit: D.limit || {} });
     if (fj && fj.ok) j = { ok: true, t: fj.t, lists: D.lists, show: D.show, limit: D.limit, cards: fj.cards.concat((D.cards || []).filter(function(c){ return (fj.covered || []).indexOf(c.l) < 0; })), w: D.w, th: D.th, later: D.later, dm: D.dm, lais: D.lais, lo: D.lo, live: LIVE.topic, fast: FAST.url, via: 'fast' };
     else if (fj && fj.notrello) FAST.notr = Date.now() + 600000; }
-  if (j && (fresh || Date.now() - (FAST.relAt || 0) > 90000)) { FAST.relAt = Date.now(); call({ op: 'list', fresh: !!fresh }).then(function(rj){ if (rj && rj.ok && !LOADING) { relCards(rj); D.th = rj.th || D.th; D.later = rj.later || D.later; if (rj.dm !== undefined) D.dm = rj.dm; if (rj.lais !== undefined) D.lais = rj.lais; if (rj.lo !== undefined) { D.lo = rj.lo || []; loSync(); } if (rj.limit) D.limit = rj.limit; if (rj.lists) D.lists = rj.lists; if (rj.show) D.show = rj.show; D.w = rj.w; if (rj.refs) refsSet(rj.refs, true); if (rj.act) D.act = rj.act; if (rj.fast !== undefined) fastSet(rj.fast); if (rj.live) liveStart(rj.live); CHATSIG = ''; draw(); } }); }
+  if (j && (fresh || Date.now() - (FAST.relAt || 0) > 90000)) { FAST.relAt = Date.now(); call({ op: 'list', fresh: !!fresh }).then(function(rj){ if (rj && rj.ok && !LOADING) { relCards(rj); D.th = rj.th || D.th; D.later = rj.later || D.later; if (rj.dm !== undefined) D.dm = rj.dm; if (rj.lais !== undefined) D.lais = rj.lais; if (rj.rooms !== undefined) { D.rooms = rj.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (rj.lo !== undefined) { D.lo = rj.lo || []; loSync(); } if (rj.limit) D.limit = rj.limit; if (rj.lists) D.lists = rj.lists; if (rj.show) D.show = rj.show; D.w = rj.w; if (rj.refs) refsSet(rj.refs, true); if (rj.act) D.act = rj.act; if (rj.fast !== undefined) fastSet(rj.fast); if (rj.live) liveStart(rj.live); CHATSIG = ''; draw(); } }); }
   if (!j) { j = await call({ op: 'list', fresh: !!fresh }); if (j && j.ok) FAST.relAt = Date.now(); }
   $('rf').classList.remove('spin'); LOADING = 0;
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password · ভুল পাসওয়ার্ড' : '⚠ Could not load · লোড হয়নি'; if (j.error === 'wrong password') showLogin(); return false; }
@@ -377,6 +382,9 @@ $('dm').onclick = function(){ if (D.dm) openCard(DMC); else dmPick(); };
 function laisRow(){ var el = $('lais'); if (!D.lais) { el.hidden = true; return; } var u = unread(LAISC); el.hidden = false;
   el.innerHTML = '<div class="ic">🧵</div><div class="t"><b>#' + esc(D.lais.name) + '</b><small>lais factory · only its members · শুধু সদস্যরা</small></div>' + (u ? '<span class="newb">NEW ' + u + '</span>' : (D.later || {}).lais ? '<span class="pinb">📌 LATER</span>' : '<span style="color:var(--mute);font-size:20px">›</span>'); }
 $('lais').onclick = function(){ if (D.lais) openCard(LAISC); };
+function xroomRows(){ var el = $('xrooms'), cs = xrooms(); if (!cs.length) { el.innerHTML = ''; return; }
+  el.innerHTML = cs.map(function(c){ var u = unread(c); return '<div class="crow xr" data-id="' + esc(c.id) + '" style="margin-bottom:8px"><div class="ic" style="font-size:22px;width:44px;text-align:center">' + esc(c.title.charAt(0)) + '</div><div class="t"><b>' + esc(c.title.slice(2)) + '</b><small>Abbas only · শুধু আব্বাস</small>' + ((D.th[c.id] || {}).tx ? '<em>' + whoLine(D.th[c.id].tx) + '</em>' : '') + '</div><div class="r">' + (u ? '<span class="newb">' + u + '</span>' : (D.later || {})[c.id] ? '<span class="pinb">📌</span>' : '<span style="color:var(--mute);font-size:20px">›</span>') + '</div></div>'; }).join(''); }
+$('xrooms').onclick = function(e){ var r = e.target.closest('.crow'); if (r && D.byId[r.dataset.id]) openCard(D.byId[r.dataset.id]); };
 var LOALL = false, LOSIG = '';
 function loDraw(){ var el = $('lorders'), cs = loList(); if (!D.lais || !cs.length) { el.hidden = true; LOSIG = ''; return; }
   var items = cs.map(function(c){ var t = D.th[c.id], h = THC[c.id], lm = h && h.length ? h[h.length - 1] : null, hT = lm ? +lm.ts : 0, tT = t && t.last ? +t.last : 0,
@@ -440,9 +448,9 @@ var DRAWN = '';
 function draw(force){
   mvApply();
   var sig = cur + '|' + Math.floor(Date.now() / 86400000) + '|' + $('q').value + '|' + D.cards.map(function(c){ return c.id + c.l + c.pos + c.img + c.name + JSON.stringify(c.lb || '') + (D.th[c.id] ? D.th[c.id].n : 0) + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|' + D.w;
-  sig += '|dm' + unread(DMC) + ((D.dm || {}).name || '') + ((D.later || {}).dm ? 'L' : '') + '|lais' + unread(LAISC) + ((D.lais || {}).name || '') + ((D.later || {}).lais ? 'L' : '');
+  sig += '|xr' + xrooms().map(function(c){ return c.id + unread(c) + ((D.th[c.id] || {}).tx || '') + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|dm' + unread(DMC) + ((D.dm || {}).name || '') + ((D.later || {}).dm ? 'L' : '') + '|lais' + unread(LAISC) + ((D.lais || {}).name || '') + ((D.later || {}).lais ? 'L' : '');
   if (!force && sig === DRAWN) { inbox(); chatsDraw(); return; } DRAWN = sig;   // the Chats tab has its own check (newest line / time per chat)
-  dmRow(); laisRow();
+  dmRow(); laisRow(); xroomRows();
   $('stages').innerHTML = CHIPS.map(function(ch, i){ if (/^RETURNS/.test(ch[0])) return ''; var cs0 = D.cards.filter(function(c){ return inChip(c, i); }), n = cs0.length, u = cs0.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0);
     return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i>' + (u ? '<b class="u">' + u + '</b>' : '') + '<small>' + ch[2] + '</small></button>'; }).join('');
   // 20 Oct 2026 (Abbas: "do all"): search by words too - "lace", "red", a worker's name, a label: every word must be on the card (title, labels,
@@ -564,6 +572,7 @@ function paintCard(){
   if (c.lo) { $('cnm').innerHTML = '<span class="loph" data-img="' + esc(c.img) + '"></span>🧵 ' + esc(c.title) + '<small>' + esc(c.sub || '') + ' · #' + esc((D.lais || {}).name || 'laisfactory') + '</small>'; var lp = $('cnm').querySelector('.loph'); if (c.img) photo(phc(c), lp); else lp.remove();
     $('cstage').textContent = '#' + ((D.lais || {}).name || 'laisfactory'); $('cstage').onclick = null; $('cstage').style.cursor = ''; $('tcount').textContent = ''; $('thh').textContent = 'LAIS ORDER CHAT · লেইস অর্ডার চ্যাট'; return; }
   if (c.id === 'lais') { $('cnm').innerHTML = '🧵 #' + esc((D.lais || {}).name || 'laisfactory') + '<small>lais factory · only its members</small>'; $('cstage').textContent = '#' + ((D.lais || {}).name || ''); $('cstage').onclick = null; $('cstage').style.cursor = ''; $('tcount').textContent = ''; $('thh').textContent = '#LAISFACTORY · লেইস ফ্যাক্টরি'; return; }
+  else if (c.xr) { $('cnm').innerHTML = esc(c.title) + '<small>Abbas only · শুধু আব্বাস</small>'; $('cstage').textContent = '#' + esc(c.chname); $('cstage').onclick = null; $('cstage').style.cursor = ''; $('tcount').textContent = ''; $('thh').textContent = esc(c.title.slice(2).toUpperCase()); return; }
   else if (c.dm) { $('cnm').innerHTML = '💬 Direct chat<small>সরাসরি কথা · Abbas ↔ factory</small>'; $('cstage').textContent = '#' + ((D.dm || {}).name || ''); $('cstage').onclick = function(){ dmPick(); }; $('cstage').style.cursor = 'pointer'; $('tcount').textContent = ''; $('thh').textContent = 'DIRECT CHAT · সরাসরি কথা'; return; }
   $('cstage').onclick = null; $('cstage').style.cursor = ''; $('thh').textContent = 'CARD CHAT · কার্ড চ্যাট';
   var p = parse(c.name), ln = lname(c.l), nx = NEXT[ln];
@@ -970,7 +979,7 @@ function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(func
 $('outbar').onclick = function(){ var it = OUT[0]; if (!it) return; outRun(true); var c = D.byId[it.card]; if (c) openCard(c); };
 function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 600000 && !((TH.lastMine || 0) * 1000 > x.done - 15000); }); return OUT.concat(SENT.filter(function(x){ return x.card === cid; })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + qfmt(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
 async function outOne(it){
-  if (!it.files.length) { var rf = it.card === 'lais' ? null : it.card === 'dm' ? (D.dm ? [D.dm.ch, ''] : null) : FAST.refs[it.card];
+  if (!it.files.length) { var rc0 = D.byId[it.card], rf = it.card === 'lais' ? null : (rc0 && rc0.dm) ? (roomCh(rc0) ? [roomCh(rc0).ch, ''] : null) : FAST.refs[it.card];
     if (FAST.url && rf && (fastOn() || it.fastTried) && !(it.fastTried && it.tries >= 6)) { it.fastTried = true;
       var fj = await fast({ op: 'post', ch: rf[0], ts: rf[1] || '', text: it.text, who: it.who, rid: it.id, card: it.card, topic: LIVE.topic }, true);
       if (fj && fj.ok) return fj; if (!fj && !(FAST.fail || {}).quick) return { ok: false, error: 'no answer from the fast lane - trying again' }; }   // no answer after a wait: maybe sent - only the fast lane (once-only id) is asked again; refused at once (offline worker): the relay sends it
@@ -1199,7 +1208,7 @@ if ('serviceWorker' in navigator) { try { wpReg().catch(function(){}); navigator
 $('tgx').onclick = function(){ $('tg').hidden = true; };
 bellPaint();
 // a Telegram link opens the card straight away: factory.html#card=<id>
-function openFromHash(){ var m = (location.hash || '').match(/card=([0-9a-f]{24}|dm|lais|L\d+\.\d+)/); if (!m) return false; var c = D.byId[m[1]]; if (c) { history.replaceState(null, '', location.pathname + location.search); openCard(c); return true; } return false; }
+function openFromHash(){ var m = (location.hash || '').match(/card=([0-9a-f]{24}|dm|lais|cash|exp|L\d+\.\d+)/); if (!m) return false; var c = D.byId[m[1]]; if (c) { history.replaceState(null, '', location.pathname + location.search); openCard(c); return true; } return false; }
 window.addEventListener('hashchange', openFromHash);
 
 // ----- sign in once -----
@@ -1222,7 +1231,7 @@ var PAGAIN = false;
 async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now() - PINGING < 30000) { PAGAIN = true; return; } PINGING = Date.now(); PAGAIN = false;
   var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
-  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.lais !== undefined) D.lais = j.lais; if (j.lo !== undefined) { D.lo = j.lo || []; loSync(); } if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; draw(); alertNew(); liveMark(); prefetch(); }
+  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.lais !== undefined) D.lais = j.lais; if (j.rooms !== undefined) { D.rooms = j.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (j.lo !== undefined) { D.lo = j.lo || []; loSync(); } if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; draw(); alertNew(); liveMark(); prefetch(); }
 // 15 Oct 2026 (Abbas: "you see how long it is taking refreshing? I run a business - when a message comes I want it as instant as possible, without
 // any long loading of the chats"): (a) the "anything new?" check no longer waits behind the card-list refresh; (b) the status line shows the
 // time of the last check ("● Live 16:46:05"); (c) the newest message text is shown right on the home screen; (d) the chats with new messages
@@ -1269,11 +1278,11 @@ function liveNudge(c){ LIVE.t = Date.now();
 // Now Slack itself tells the fast-lane worker the moment a message is written (Slack Event Subscriptions -> worker /slack -> doorbell
 // "s:<channel>:<thread>"); the app maps that to the card, pulls the chat through the fast lane (~0.2 s) and rings at once.
 function liveSlack(s){ var p = s.split(':'), ch = p[0] || '', ts = p[1] || ''; LIVE.slk = Date.now(); try { ls('sj_fac_slk', String(LIVE.slk)); } catch(e){}
-  var cid = D.dm && D.dm.ch === ch ? 'dm' : D.lais && D.lais.ch === ch ? 'lais' : Object.keys(FAST.refs || {}).filter(function(k){ var r = FAST.refs[k]; return r && r[0] === ch && r[1] === ts; })[0];
+  var xr0 = (D.rooms || []).filter(function(r){ return r.ch === ch; })[0], cid = D.dm && D.dm.ch === ch ? 'dm' : D.lais && D.lais.ch === ch ? 'lais' : xr0 ? xr0.k : Object.keys(FAST.refs || {}).filter(function(k){ var r = FAST.refs[k]; return r && r[0] === ch && r[1] === ts; })[0];
   if (open && cid && (open.id === cid || (cid === 'dm' && open.dm))) { TH.force = true; thPull(); }
   else if (cid) liveFetch(cid);
   clearTimeout(LIVE.pt); LIVE.pt = setTimeout(function(){ ping(true); }, 1200); liveMark(); }
-async function liveFetch(cid){ if (!fastOn() || cid === 'lais') return; var room = cid === 'dm' || cid === 'lais', rf = room ? (roomCh({ id: cid }) ? [roomCh({ id: cid }).ch] : null) : FAST.refs[cid]; if (!rf) return;
+async function liveFetch(cid){ if (!fastOn() || cid === 'lais') return; var room = cid === 'dm' || cid === 'lais' || isXr(cid), rf = room ? (roomCh({ id: cid }) ? [roomCh({ id: cid }).ch] : null) : FAST.refs[cid]; if (!rf) return;
   var have = THC[cid] || [], last = have.length ? have[have.length - 1].ts : '';
   var j = await fast(room ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (!j || !j.ok || !j.msgs) return;
   var hv = {}; have.forEach(function(m){ hv[m.ts] = 1; }); var add = j.msgs.filter(function(m){ return /^\d+\.\d+$/.test(m.ts) && !hv[m.ts]; }); if (!add.length) return;

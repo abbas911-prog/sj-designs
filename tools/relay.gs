@@ -203,7 +203,7 @@ function facNotifyScan(P, why) {
       var nk = 'FNOTE_' + nm.toUpperCase().slice(0, 40), noted = JSON.parse(P.getProperty(nk) || '{}'), changed = false;
       Object.keys(un).forEach(function (id) {
         var u = un[id]; if (!u || !u.n || !u.last || +noted[id] >= +u.last) return;
-        var card = byId[id], ttl = id === 'dm' ? '💬 Direct chat' + (dm ? ' #' + dm.name : '') : (card && card.name ? (String(card.name).match(/\d{3,6}/) ? 'SJ-' + String(card.name).match(/\d{3,6}/)[0] : String(card.name).slice(0, 40)) : 'Card chat');
+        var card = byId[id], ttl = id === 'dm' ? '💬 Direct chat' + (dm ? ' #' + dm.name : '') : isXRoom(id) ? FAC_XROOMS.filter(function (x) { return x.k === id; })[0].title : (card && card.name ? (String(card.name).match(/\d{3,6}/) ? 'SJ-' + String(card.name).match(/\d{3,6}/)[0] : String(card.name).slice(0, 40)) : 'Card chat');
         var note = { title: ttl + (u.n > 1 ? ' · ' + u.n + ' new' : ''), msg: u.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/factory.html#card=' + id, tag: id }, took = false;
         if (map[nm] && facNtfy(map[nm], note)) took = true;
         if (wpn.indexOf(nm) >= 0) { try { if (facWpSend(P, nm, note)) took = true; } catch (e) {} }   // 20 Oct 2026: Web Push too
@@ -252,6 +252,7 @@ function facCardOf(P, ev) {                                     // which card (o
   var ch = String(ev.channel || ''), ts = String(ev.thread_ts || ev.ts || ''); if (!ch) return '';
   var dm = JSON.parse(P.getProperty('FAC_DM') || 'null'); if (dm && dm.ch === ch) return 'dm';
   var lr = JSON.parse(P.getProperty('FAC_LAIS2') || 'null'); if (lr && lr.ch === ch) return 'lais';
+  for (var xi = 0; xi < FAC_XROOMS.length; xi++) { var xr = JSON.parse(P.getProperty('FAC_ROOM_' + FAC_XROOMS[xi].k) || 'null'); if (xr && xr.ch === ch) return FAC_XROOMS[xi].k; }
   var all = P.getProperties(), hit = ''; Object.keys(all).some(function (k) { if (k.indexOf('FTH_') === 0 && all[k].indexOf('"' + ts + '"') >= 0) { hit = k.slice(4); return true; } return false; });
   return hit;
 }
@@ -323,7 +324,7 @@ function facFit(rec, keep) {                                  // trim {key: ts} 
 function facSeen(P, who, card, ts) {                           // FSEEN_<who> = { _t0: first use, <cardId>: last ts seen } - shared by every phone that person signs in on
   who = String(who || '').trim(); if (!who || !card) return;
   var k = 'FSEEN_' + who.toUpperCase().slice(0, 40), rec = JSON.parse(P.getProperty(k) || '{}'); if (!rec._t0) rec._t0 = String(Date.now() / 1000);
-  if (!(+rec[card] >= +ts)) { rec[card] = String(ts); rec._v = (rec._v || 0) + 1; if (+rec._t0 < Date.now() / 1000 - 30 * 86400) rec._t0 = String(Date.now() / 1000 - 30 * 86400); facFit(rec, ['_t0', '_v', 'dm', 'lais']); try { P.setProperty(k, JSON.stringify(rec)); } catch (e) { return; } CacheService.getScriptCache().remove('FAC_UN_' + who.toUpperCase().slice(0, 20)); }
+  if (!(+rec[card] >= +ts)) { rec[card] = String(ts); rec._v = (rec._v || 0) + 1; if (+rec._t0 < Date.now() / 1000 - 30 * 86400) rec._t0 = String(Date.now() / 1000 - 30 * 86400); facFit(rec, ['_t0', '_v', 'dm', 'lais', 'cash', 'exp']); try { P.setProperty(k, JSON.stringify(rec)); } catch (e) { return; } CacheService.getScriptCache().remove('FAC_UN_' + who.toUpperCase().slice(0, 20)); }
 }
 // the board list is often > 100 KB (Google's cap per cache value) - so it is cached in 90 KB pieces (13 Oct 2026: 'the app is very laggy' - an uncached list meant a full Trello read on every poll of every phone)
 function bigPut(cache, key, js, ttl) { var o = {}, n = 0; for (var i = 0; i < js.length; i += 90000) o[key + '_' + (n++)] = js.slice(i, i + 90000); o[key + '_N'] = String(n); cache.putAll(o, ttl); }
@@ -352,8 +353,24 @@ function facLais(P, FT) {                                       // #laisfactory 
   if (!j.ok || !j.channel || j.channel.is_member === false) { c.put('FAC_LAIS_TRY', String(j.error || 'not a member'), 120); return null; }
   var d = { ch: j.channel.id, name: j.channel.name || 'laisfactory', ws: 'sjtc' }; P.setProperty('FAC_LAIS2', JSON.stringify(d)); return d;
 }
-function isRoom(k) { return k === 'dm' || k === 'lais'; }
-function facRoom(P, FT, k) { return k === 'dm' ? facDm(P, FT) : k === 'lais' ? facLais(P, FT) : null; }
+// 21 Oct 2026 (Abbas): "#cash and #expenses of the ChatGPT workspace in this app" - two more channel chats like the Direct chat (keys 'cash'
+// and 'exp'), found by name among the factory bot's channels (a public one is joined; a private one needs /invite @SJ Orders first) and
+// remembered in FAC_ROOM_<k>. Money talk: only Abbas (sign-in name Abbas…) gets them - other phones never see that they exist.
+var FAC_XROOMS = [{ k: 'cash', re: /^cash$|^cash[-_ ]/i, title: '💵 #cash' }, { k: 'exp', re: /^expenses?$|^expenses?[-_ ]/i, title: '🧾 #expenses' }];
+function isXRoom(k) { return FAC_XROOMS.some(function (x) { return x.k === k; }); }
+function facOwner(who) { return /^abbas/.test(facWho1(who)); }
+function facXRoom(P, FT, k) {
+  var x = FAC_XROOMS.filter(function (r) { return r.k === k; })[0]; if (!x) return null;
+  var have = P.getProperty('FAC_ROOM_' + k); if (have) return JSON.parse(have); if (!FT) return null;
+  var c = CacheService.getScriptCache(); if (c.get('FAC_ROOM_TRY_' + k)) return null;
+  var hits = facChans(FT).filter(function (ch) { return x.re.test(ch.name); }).sort(function (a, b) { return (b.member ? 1 : 0) - (a.member ? 1 : 0) || a.name.length - b.name.length; }), pick = hits[0];
+  if (!pick) { c.put('FAC_ROOM_TRY_' + k, '1', 300); return null; }
+  if (!pick.member) { var jn = slackApi(FT, 'conversations.join', { channel: pick.id }); if (!jn.ok) { c.put('FAC_ROOM_TRY_' + k, '1', 300); return null; } c.remove('FAC_CHANS'); }
+  var r = { ch: pick.id, name: pick.name }; P.setProperty('FAC_ROOM_' + k, JSON.stringify(r)); return r;
+}
+function facXRoomsFor(P, FT, who) { if (!facOwner(who)) return []; return FAC_XROOMS.map(function (x) { try { var r = facXRoom(P, FT, x.k); return r ? { k: x.k, ch: r.ch, name: r.name, title: x.title } : null; } catch (e) { return null; } }).filter(Boolean); }
+function isRoom(k) { return k === 'dm' || k === 'lais' || isXRoom(k); }
+function facRoom(P, FT, k) { return k === 'dm' ? facDm(P, FT) : k === 'lais' ? facLais(P, FT) : isXRoom(k) ? facXRoom(P, FT, k) : null; }
 function roomTok(P, k, FT) { return k === 'lais' ? P.getProperty('SLACK_BOT_TOKEN') : FT; }   // the token of the workspace a room lives in
 function facWho1(who) { return String(who || '').toLowerCase().split(/[\s._-]+/).map(nrmName).filter(function (w) { return w && !/^(md|mohd|mohammad|mohammed|muhammad|mohammod)$/.test(w); })[0] || ''; }
 function facLaisOk(P, FT, who) {
@@ -615,12 +632,17 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
       (rp.messages || []).forEach(function (m) { if (+m.ts <= seen || m.ts === byCard[cid].ts) return; var mm = facMsg(P, FT, m, byCard[cid].ts); if ((mm.sys && !facNote(mm, who)) || mine(mm)) return; n++; lastOther = m.ts; tx = facLine(mm); });
       var r = { n: n, last: lastOther, tx: tx }; try { cache.put(rk, JSON.stringify(r), 21600); } catch (e) {} if (n) outm[cid] = r;
     });
-  } else Object.keys(lastGood).forEach(function (x) { if (x !== 'dm' && x !== 'lais' && x.charAt(0) !== 'L') outm[x] = lastGood[x]; });
+  } else Object.keys(lastGood).forEach(function (x) { if (x !== 'dm' && x !== 'lais' && !isXRoom(x) && x.charAt(0) !== 'L') outm[x] = lastGood[x]; });
   try { var dm = facDm(P, FT); if (dm) {                      // the direct chat counts too (Abbas 14 Oct: "include those chats notifications in catchup")
     var seenD = Math.max(+(rec.dm || 0), +rec._t0), nd = 0, lastD = '', txD = '';
     facDmMsgs(P, FT, dm, fresh).forEach(function (m) { if (+m.ts <= seenD) return; var md = facMsg(P, FT, m, null); if ((md.sys && !facNote(md, who)) || mine(md)) return; nd++; lastD = m.ts; txD = facLine(md); });
     if (nd) outm.dm = { n: nd, last: lastD, tx: txD };
   } } catch (e) { if (lastGood.dm) outm.dm = lastGood.dm; }
+  facXRoomsFor(P, FT, who).forEach(function (xr) { try {        // #cash / #expenses (Abbas only) count like the direct chat
+    var seenX = Math.max(+(rec[xr.k] || 0), +rec._t0), nx = 0, lastX = '', txX = '';
+    facDmMsgs(P, FT, xr, fresh).forEach(function (m) { if (+m.ts <= seenX) return; var mx = facMsg(P, FT, m, null); if ((mx.sys && !facNote(mx, who)) || mine(mx)) return; nx++; lastX = m.ts; txX = facLine(mx); });
+    if (nx) outm[xr.k] = { n: nx, last: lastX, tx: txX };
+  } catch (e) { if (lastGood[xr.k]) outm[xr.k] = lastGood[xr.k]; } });
   try { var lsr = facLaisFor(P, FT, who); if (lsr) {           // #laisfactory counts too - only for the people who may see it
     var seenL = Math.max(+(rec.lais || 0), +rec._t0), nl = 0, lastL = '', txL = '';
     var LT = P.getProperty('SLACK_BOT_TOKEN'), ltop = facLaisTop(P, LT, lsr, fresh); ltop.forEach(function (m) { if (+m.ts <= seenL) return; var ml = facMsg(P, LT, m, null); if (ml.sys || mine(ml)) return; nl++; lastL = m.ts; txL = facLine(ml); });
@@ -742,7 +764,7 @@ function fac0(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.lo = facLaisOrders(P, who0, false); hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.lo = facLaisOrders(P, who0, false); hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -761,7 +783,7 @@ function fac0(reqText, P) {
       try { bigPut(cache, 'FAC_LIST', JSON.stringify(res), 25); bigPut(cache, 'FAC_LIST_L', JSON.stringify(res), 3600); } catch (e) {}
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
-      try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; } res.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.lo = facLaisOrders(P, who0, false);
+      try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; } res.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.lo = facLaisOrders(P, who0, false);
       res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
       return out(res);
     }
@@ -774,7 +796,7 @@ function fac0(reqText, P) {
       var pdm = null; try { pdm = facDm(P, FTp); } catch (e) {}
       var prs = null; try { prs = facRetSum(P); } catch (e) {}
       var pact; try { pact = facAct(P, FTp, pcards); } catch (e) {}   // 17 Oct 2026: last-line time per chat on every ping, so the Chats tab never shows an older line
-      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, lais: facLaisFor(P, FTp, whp), lo: facLaisOrders(P, whp, false), gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
+      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, lais: facLaisFor(P, FTp, whp), rooms: facXRoomsFor(P, FTp, whp), lo: facLaisOrders(P, whp, false), gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
     }
     if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
       var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });
@@ -829,6 +851,7 @@ function fac0(reqText, P) {
     }
     // ---- STEP 2 (12 Oct 2026): the card chat = the card's Slack #cutting thread, both ways ----
     var FT = P.getProperty('SLACK_FACTORY_TOKEN');
+    if (isXRoom(req.card) && /^(thread|post|up|upurl|seen|later)$/.test(req.op) && !facOwner(req.who)) return out({ ok: false, error: 'only Abbas can see this chat', noaccess: true });
     if (req.op === 'seen') {                                  // 16 Oct 2026: the phone read a chat through the FAST LANE - remember it as seen (no Slack call)
       var sc = isRoom(req.card) || isLaisOrder(req.card) ? req.card : String(req.card || '').replace(/[^0-9a-f]/g, ''), sts = String(req.ts || '');
       if (!sc || !/^\d+\.\d+$/.test(sts)) return out({ ok: false, error: 'bad request' });
@@ -927,7 +950,7 @@ function fac0(reqText, P) {
     if (req.op === 'thread' && isRoom(req.card)) {           // the direct chat (or #laisfactory): the channel's messages (oldest first), only those after req.since when given
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' }); var RTt = roomTok(P, req.card, FT);
       if (req.card === 'lais' && !facLaisOk(P, FT, req.who)) return out({ ok: false, error: 'only Abbas and the people in #laisfactory can see this chat', noaccess: true });
-      var ddm = facRoom(P, FT, req.card); if (!ddm) return out({ ok: false, error: req.card === 'lais' ? '#laisfactory: invite @SJ Memo into the channel in Slack (/invite @SJ Memo)' : 'no direct chat channel chosen yet' });
+      var ddm = facRoom(P, FT, req.card); if (!ddm) return out({ ok: false, error: req.card === 'lais' ? '#laisfactory: invite @SJ Memo into the channel in Slack (/invite @SJ Memo)' : isXRoom(req.card) ? 'no #' + req.card + ' channel the factory bot can see - make it public or /invite @SJ Orders' : 'no direct chat channel chosen yet' });
       if (req.since && !/^\d+\.\d+$/.test(String(req.since))) req.since = '';
       var dms = (req.card === 'lais' ? facLaisTop(P, RTt, ddm, false) : facDmMsgs(P, RTt, ddm, false)).filter(function (m) { return !req.since || +m.ts > +req.since; });
       var dlast = dms.reduce(function (a, m) { return +m.ts > +a ? m.ts : a; }, req.since || '0');

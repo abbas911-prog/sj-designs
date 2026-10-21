@@ -76,6 +76,9 @@ comments per worker over 7/30/90 days (More → Workers). **Production report** 
 (`facStages`, up to the last arrival in READY / READY 2, else FINISH) + the workers; posted ONCE per card (chat line + Trello comment
 "#report") when a card reaches FINISH / FINISH SAMPLES — by `op:move`, by the app after a fast-lane move (`op:reportauto`), or by
 `facTrelloMoves` for moves made in Trello; `op:report` = by hand from the card's ⋯ menu / WORK box (also "so far").
+**#cash / #expenses** (21 Oct 2026): two more channel chats (`FAC_XROOMS`, keys `cash` / `exp`) of the factory (ChatGPT) workspace, found by
+name among the bot's channels (`facXRoom`, joined if public, kept in `FAC_ROOM_<k>`). Only Abbas (`facOwner`: sign-in name Abbas…) gets them
+(`facXRoomsFor` → `D.rooms`); every room op refuses other names (`noaccess`). In the app they behave like the Direct chat (`xrooms()`).
 **Done / Move**: no question; ↩ Undo bar 5 s (`MV`, `mvGo`), sent to Trello after 5 s or when the app goes to the background.
 
 **Returns**: a return IS a card on RETURNS (new via ↩️ sheet = `op:sample` with `kind:'ret'`, chat in #cutting); Done → RETURNS BACK =
@@ -176,3 +179,5 @@ Memo rules (his words, short):
 - 2026-10-21 (VER 2026-10-21d) Abbas's way of working: a worker can hold several designs at once (batches are per card), several workers can
   hold the same design, and ▶ More adds pieces to a worker who still has some of that design (one timer, "24 pcs (20+4)"); ✓ Done with the
   box empty = all his pieces came back. Works whatever list the card is in (e.g. still in CUTTING). NEEDS: relay deploy.
+- 2026-10-21 (VER 2026-10-21e) Abbas: #cash and #expenses (ChatGPT workspace) as chats in the Chats tab — Abbas only; the bot joins the
+  public channel by itself (a private one: /invite @SJ Orders). NEEDS: relay deploy.

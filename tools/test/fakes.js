@@ -19,8 +19,8 @@ function makeWorld() {
     ['IN LINE (2)', '6527c5a3964596815651a97f'], ['IRON/CHECKING', '6527c5a93db4d8b8e91a8be9'], ['READY', '6527c5b13129a9ba37acd3ad'], ['READY 2', '699b35ceb77292db0289c473'],
     ['FINISH', '6527c5b41e630c094b619f5e'], ['FINISH SAMPLES', '68b77a221eef6fbb9a305e0e']];
   W.trello.lists = L.map(([name, id]) => ({ id, name, closed: false }));
-  ['C09S552KD7T:cutting', 'C09T1BGHC6L:samples-discuss', 'C0BP61A2EF8:usmancutting', 'C0BV24ULLBD:samplesneed', 'C0DM0000001:trello-mohammod', 'C05UEHLGK9U:laisfactory']
-    .forEach(x => { const [id, name] = x.split(':'); W.slack.ch[id] = { id, name, msgs: [], member: true, priv: id === 'C05UEHLGK9U' }; });
+  ['C09S552KD7T:cutting', 'C09T1BGHC6L:samples-discuss', 'C0BP61A2EF8:usmancutting', 'C0BV24ULLBD:samplesneed', 'C0DM0000001:trello-mohammod', 'C05UEHLGK9U:laisfactory', 'C0CASH00001:cash', 'C0EXP000001:expenses']
+    .forEach(x => { const [id, name] = x.split(':'); W.slack.ch[id] = { id, name, msgs: [], member: id !== 'C0CASH00001', priv: id === 'C05UEHLGK9U' }; });   // the bot is NOT yet in #cash (it must join)
   return W;
 }
 

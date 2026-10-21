@@ -315,6 +315,18 @@ async function suite(fast, browser) {
       T.relay.cache.remove('FMV_AT'); await page.waitForTimeout(5000);
       ok(W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text)).length === 1, 'still one report');
     });
+    await test('#cash and #expenses: Abbas sees them in Chats, reads and writes; the bot joins #cash by itself', async () => {
+      await home(page); F.postSlack(W, 'C0EXP000001', { text: 'diesel 300', user: 'U1' }); const cm = F.postSlack(W, 'C0CASH00001', { text: 'cash in hand 5000', user: 'U1' });
+      T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now(), event: { type: 'message', channel: 'C0CASH00001', ts: cm.ts } }));   // Slack's push, as in real life
+      await page.click('#tabs button[data-t="chats"]');
+      await until(async () => (await page.locator('#xrooms .crow').count()) === 2, 20000, 'two room rows');
+      ok(W.slack.ch.C0CASH00001.member, 'bot joined #cash');
+      await page.click('#xrooms .crow[data-id="cash"]'); await page.waitForSelector('#card:not([hidden])');
+      await until(async () => /cash in hand 5000/.test(await page.textContent('#thread')), 10000, 'cash line shown');
+      await page.fill('#txt', 'noted, thanks'); await page.click('#send');
+      await until(() => W.slack.ch.C0CASH00001.msgs.some(m => /noted, thanks/.test(m.text || '') && !m.thread_ts), 10000, 'posted in #cash');
+      await page.goBack(); await page.click('#tabs button[data-t="cards"]');
+    });
     await test('no page errors', async () => { ok(!T.errors.length, 'no errors:\n' + T.errors.join('\n')); });
   } finally { await T.close(); }
 }
@@ -347,6 +359,24 @@ async function slowSuite(fast, browser) {
   } finally { await T.close(); }
 }
 
+// ---- a staff phone: no #cash / #expenses ----
+async function staffSuite(browser) {
+  console.log('\n— staff phone (Ibrahim) —');
+  const T = await boot({ browser, who: 'Ibrahim', setup: world });
+  const W = T.W;
+  try {
+    const page = await T.open(); F.postSlack(W, 'C0EXP000001', { text: 'rent 2000', user: 'U2' });
+    await test('#cash / #expenses are not shown and not readable for staff', async () => {
+      await page.click('#tabs button[data-t="chats"]'); await page.waitForTimeout(2500);
+      ok((await page.locator('#xrooms .crow').count()) === 0, 'no room rows');
+      const j = await page.evaluate(() => window.__call({ op: 'thread', card: 'exp' }));
+      ok(!j.ok && j.noaccess, 'relay refuses: ' + JSON.stringify(j));
+      const j2 = await page.evaluate(() => window.__call({ op: 'post', card: 'cash', text: 'hi' }));
+      ok(!j2.ok, 'relay refuses a post too');
+      ok(!T.errors.length, T.errors.join('\n'));
+    });
+  } finally { await T.close(); }
+}
 // ---- Web Push: 🔔 → Turn on, then a Slack message arrives on the phone as a real (encrypted) notification ----
 const crypto = require('crypto');
 async function pushSuite(browser) {
@@ -425,8 +455,8 @@ async function swSuite(browser) {
 const ONLY = process.argv[2];   // e.g. node tools/test/factory.test.js push
 (async () => {
   const browser = await chromium.launch();
-  if (ONLY) { try { await ({ push: pushSuite, sw: swSuite }[ONLY])(browser); } finally { await browser.close(); } const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed'); process.exit(bad.length ? 1 : 0); }
-  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); await pushSuite(browser); await swSuite(browser); } finally { await browser.close(); }
+  if (ONLY) { try { await ({ push: pushSuite, sw: swSuite, staff: staffSuite }[ONLY])(browser); } finally { await browser.close(); } const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed'); process.exit(bad.length ? 1 : 0); }
+  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); await staffSuite(browser); await pushSuite(browser); await swSuite(browser); } finally { await browser.close(); }
   const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed');
   process.exit(bad.length ? 1 : 0);
 })();
