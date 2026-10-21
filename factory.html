@@ -36,8 +36,8 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 .sect{font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--mute);margin:14px 2px 8px}
 #lorders .lon{color:#c62828}#lorders .lomore{width:100%;margin:4px 0 10px;padding:10px;border:1px solid #ddd;border-radius:10px;background:transparent;font-size:14px;color:inherit}.loph{display:inline-block;width:34px;height:34px;border-radius:8px;background:#eee center/cover;vertical-align:middle;margin-right:8px;font-size:0;color:transparent;overflow:hidden}
 /* ---- card rows ---- */
-.cardrow{display:flex;gap:12px;background:var(--card);border-radius:var(--r);padding:10px;margin-bottom:10px;align-items:center;box-shadow:var(--sh);content-visibility:auto;contain-intrinsic-size:112px;cursor:pointer}.cardrow:active{background:#fbf8f2}
-.cardrow{position:relative;touch-action:pan-y;transition:transform .18s;-webkit-user-select:none;user-select:none}.cardrow.sw{transition:none;content-visibility:visible}#list,#retlist{overflow-x:clip}
+.cardrow{display:flex;gap:12px;background:var(--card);border-radius:var(--r);padding:10px;margin-bottom:10px;align-items:center;box-shadow:var(--sh);cursor:pointer}.cardrow:active{background:#fbf8f2}
+.cardrow{position:relative;touch-action:pan-y;transition:transform .18s;-webkit-user-select:none;user-select:none}.cardrow.sw{transition:none}#list,#retlist{overflow-x:clip}
 .cardrow.sw::after{content:attr(data-nx);position:absolute;left:calc(100% + 8px);top:0;bottom:0;width:170px;display:flex;align-items:center;padding-left:14px;border-radius:var(--r);background:#d9efe0;color:#1f8a4c;font-weight:800;font-size:14px;white-space:nowrap}.cardrow.go::after{background:#1f8a4c;color:#fff}
 .ph{width:88px;height:88px;border-radius:14px;background:#efe8db center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
 .cardrow .t{flex:1;min-width:0}.cardrow .no{font-weight:800;font-size:19px;letter-spacing:-.01em}.cardrow .sub{color:var(--mute);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
@@ -53,7 +53,7 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 /* ---- chats tab ---- */
 #outbar{background:#fff8e6;border:1.5px solid #e0a800;border-radius:14px;padding:10px 12px;margin-bottom:10px;font-size:14.5px;font-weight:700;color:#7a5a00}#outbar.bad{background:#fdecef;border-color:var(--red);color:var(--red)}#outbar small{display:block;font-weight:500;color:var(--mute);font-size:12.5px}
 .catch{display:flex;width:100%;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:13px;background:var(--red);color:#fff;font-weight:800;font-size:15px;margin-bottom:10px;box-shadow:0 6px 16px rgba(192,36,63,.25)}
-.crow,#dm{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--r);padding:10px 12px 10px 10px;margin-bottom:8px;box-shadow:var(--sh);cursor:pointer;content-visibility:auto;contain-intrinsic-size:76px}.crow:active,#dm:active{background:#fbf8f2}
+.crow,#dm{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--r);padding:10px 12px 10px 10px;margin-bottom:8px;box-shadow:var(--sh);cursor:pointer}.crow:active,#dm:active{background:#fbf8f2}
 .crow.pin{background:#fffaf0;box-shadow:inset 0 0 0 1.5px #ecd9ad,var(--sh)}
 .crow .ph,#dm .ic{width:54px;height:54px;border-radius:50%;flex:none}#dm .ic{background:#f3e7cf;display:flex;align-items:center;justify-content:center;font-size:24px}
 .crow .t,#dm .t{flex:1;min-width:0}.crow b,#dm b{display:block;font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.crow small,#dm small,#dm em{display:block;color:var(--mute);font-size:12px;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -214,7 +214,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-21g';
+var VER = '2026-10-21h';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }

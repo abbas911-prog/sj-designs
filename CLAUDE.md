@@ -184,3 +184,5 @@ Memo rules (his words, short):
 - 2026-10-21 (VER 2026-10-21g) Abbas: "#cash / #expenses appear and disappear" — the fast-lane card-list refresh rebuilt the data without
   `rooms`, so they vanished until the next ping; fixed (test: rooms stay through 4 refreshes). The swipe-to-reply of 2026-10-21f was
   reverted on Abbas's request (the ↩ button stays as it is). No relay deploy needed for this.
+- 2026-10-21 (VER 2026-10-21h) Abbas, screenshot: blank white rows in the Chats list after scrolling (iOS Safari did not paint rows that
+  were "off-screen" by the browser's own reckoning): `content-visibility:auto` removed from the chat and card rows. No relay deploy.
