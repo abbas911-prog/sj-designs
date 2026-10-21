@@ -112,7 +112,6 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .bub audio{width:220px;height:36px;display:block}.bub .fl{font-size:13px;color:var(--mute)}
 .msg.nw .bub{box-shadow:0 0 0 2.5px #c0392b}.msg.nw .who:after{content:' · NEW';color:#c0392b;font-weight:800}
 .msg.out .bub{opacity:.75}.msg .bub .q{border-left:3px solid #b9a27a;background:rgba(0,0,0,.05);border-radius:6px;padding:4px 8px;margin:0 0 5px;font-size:13px;color:#5a5047;white-space:pre-wrap}
-.msg{touch-action:pan-y;transition:transform .15s;position:relative}.msg.swp{transition:none}.msg.swp::before{content:'↩';position:absolute;left:-34px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:#e9e1d3;color:#8a7f70;display:flex;align-items:center;justify-content:center;font-size:15px}.msg.go::before{background:var(--gold);color:#fff}
 .msg .who .rp{border:0;background:none;color:#a8957a;font-size:15px;padding:0 4px;margin-left:4px;line-height:1}
 #rbar{display:flex;align-items:center;gap:8px;padding:8px 12px 0;font-size:13.5px}#rbar[hidden]{display:none}#rbar span{flex:1;border-left:3px solid var(--gold);background:#f7f3ec;border-radius:8px;padding:6px 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#rbar small{display:block;color:var(--mute);font-size:11px}#rbar button{border:0;background:#f0e9dd;border-radius:999px;width:32px;height:32px;font-size:15px;flex:none}
 .msg.out.bad .bub{box-shadow:0 0 0 2px var(--red);opacity:1}
@@ -215,7 +214,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-21f';
+var VER = '2026-10-21e';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -363,7 +362,7 @@ async function load(fresh){
   // (~0.3 s); the relay's slower list (new-message counts, Later, direct chat, settings) is fetched in the background every 5 min
   var j = null;
   if (fastTr() && D.lists && D.lists.length) { var fj = await fast({ op: 'tlist', lists: D.lists, limit: D.limit || {} });
-    if (fj && fj.ok) j = { ok: true, t: fj.t, lists: D.lists, show: D.show, limit: D.limit, cards: fj.cards.concat((D.cards || []).filter(function(c){ return (fj.covered || []).indexOf(c.l) < 0; })), w: D.w, th: D.th, later: D.later, dm: D.dm, lais: D.lais, rooms: D.rooms, lo: D.lo, live: LIVE.topic, fast: FAST.url, via: 'fast' };
+    if (fj && fj.ok) j = { ok: true, t: fj.t, lists: D.lists, show: D.show, limit: D.limit, cards: fj.cards.concat((D.cards || []).filter(function(c){ return (fj.covered || []).indexOf(c.l) < 0; })), w: D.w, th: D.th, later: D.later, dm: D.dm, lais: D.lais, lo: D.lo, live: LIVE.topic, fast: FAST.url, via: 'fast' };
     else if (fj && fj.notrello) FAST.notr = Date.now() + 600000; }
   if (j && (fresh || Date.now() - (FAST.relAt || 0) > 90000)) { FAST.relAt = Date.now(); call({ op: 'list', fresh: !!fresh }).then(function(rj){ if (rj && rj.ok && !LOADING) { relCards(rj); D.th = rj.th || D.th; D.later = rj.later || D.later; if (rj.dm !== undefined) D.dm = rj.dm; if (rj.lais !== undefined) D.lais = rj.lais; if (rj.rooms !== undefined) { D.rooms = rj.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (rj.lo !== undefined) { D.lo = rj.lo || []; loSync(); } if (rj.limit) D.limit = rj.limit; if (rj.lists) D.lists = rj.lists; if (rj.show) D.show = rj.show; D.w = rj.w; if (rj.refs) refsSet(rj.refs, true); if (rj.act) D.act = rj.act; if (rj.fast !== undefined) fastSet(rj.fast); if (rj.live) liveStart(rj.live); CHATSIG = ''; draw(); } }); }
   if (!j) { j = await call({ op: 'list', fresh: !!fresh }); if (j && j.ok) FAST.relAt = Date.now(); }
@@ -871,8 +870,6 @@ function mrk(h){ return h.replace(/\*([^*\n]{1,80})\*/g, '<b>$1</b>').replace(/(
 function qstrip(t){ return String(t || '').split('\n').filter(function(l){ return !/^\s*(>|&gt;)/.test(l); }).join('\n').trim(); }
 function bubble(m){
   var me = isMe(m), cls = m.sys ? 'sys' : me ? 'me' : '', body = qfmt(sdec(m.sys || m.root ? m.text.replace(/\*/g, '') : m.text));
-  if (m.rt) { var pm = TH.msgs.filter(function(x){ return x.ts === m.rt; })[0]; body = body.replace(/^↳ /, ''); if (pm) { var pf = (pm.files || []).length ? (pm.files.some(function(x){ return x.audio; }) ? '🎤 voice note' : pm.files.some(function(x){ return x.video; }) ? '🎬 video' : '📷 photo') : '';
-    body = '<div class="q"><b style="color:' + pcol(pm.who) + '">' + esc(pm.who || '') + '</b> ' + esc(emo(sdec(qstrip(pm.text)).replace(/\*/g, '').replace(/\s+/g, ' ').trim().slice(0, 90) || pf)) + '</div>' + body; } else body = '↳ ' + body; }
   if (m.root) cls += ' root'; if (/^🚩/.test(m.text)) cls += ' prob';
   (m.files || []).forEach(function(f){
     if (f.img) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="img">📷 …</div>';
@@ -881,7 +878,7 @@ function bubble(m){
     else body += '<div class="fl">📎 ' + esc(f.name) + '</div>';
   });
   var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = DAYN[t.getDay()] + ' ' + t.getDate() + '/' + (t.getMonth() + 1);   // 19 Oct 2026 (Abbas): the day name next to the name - "Mon 19/10 · 18:48"
-  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '" data-ts="' + esc(m.ts) + '">' + (m.sys ? '' : '<div class="who"><span class="nm" style="background:' + pcol(m.who) + '">' + esc(m.who || '?') + '</span>' + (m.app ? '' : '<span class="sl">Slack</span>') + (m.pend ? '' : '<span class="wt">' + dd + ' · ' + hh + '</span><button class="rp" data-ts="' + esc(m.ts) + '" title="Reply">↩</button>') + '</div>') + '<div class="bub"' + (m.sys ? '' : ' style="border-' + (me ? 'right' : 'left') + ':4px solid ' + pcol(m.who) + '"') + '>' + body + (m.pend || m.sys ? '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span>' : '') + '</div></div>';   // 17 Oct 2026 (Abbas): date and time ABOVE the message, with the name
+  return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '">' + (m.sys ? '' : '<div class="who"><span class="nm" style="background:' + pcol(m.who) + '">' + esc(m.who || '?') + '</span>' + (m.app ? '' : '<span class="sl">Slack</span>') + (m.pend ? '' : '<span class="wt">' + dd + ' · ' + hh + '</span><button class="rp" data-ts="' + esc(m.ts) + '" title="Reply">↩</button>') + '</div>') + '<div class="bub"' + (m.sys ? '' : ' style="border-' + (me ? 'right' : 'left') + ':4px solid ' + pcol(m.who) + '"') + '>' + body + (m.pend || m.sys ? '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span>' : '') + '</div></div>';   // 17 Oct 2026 (Abbas): date and time ABOVE the message, with the name
 }
 function thDedupe(){ var seenTs = {}; TH.msgs = TH.msgs.filter(function(m){ if (m.pend) return true; if (seenTs[m.ts]) return false; seenTs[m.ts] = 1; return true; }); }
 function thDraw(){ thDedupe(); $('thread').innerHTML = TH.msgs.filter(function(m){ return !m.pend; }).map(bubble).join('') + (TH.card ? outBubbles(TH.card.id) : ''); $('tcount').textContent = TH.msgs.length + ' messages';
@@ -941,20 +938,10 @@ var REPLY = null;
 function replySet(m){ if (!m) { REPLY = null; $('rbar').hidden = true; return; }
   var f = (m.files || []).length ? (m.files.some(function(x){ return x.audio; }) ? '🎤 voice note' : m.files.some(function(x){ return x.video; }) ? '🎬 video' : '📷 photo') : '';
   var sn = (sdec(qstrip(m.text)).replace(/\*/g, '').replace(/\s+/g, ' ').trim() || f).slice(0, 90);
-  REPLY = { who: m.who || '?', snip: sn, ts: m.ts }; $('rbar').hidden = false;
+  REPLY = { who: m.who || '?', snip: sn }; $('rbar').hidden = false;
   $('rbar').innerHTML = '<span>↩ <b style="color:' + pcol(REPLY.who) + '">' + esc(REPLY.who) + '</b> ' + esc(emo(sn)) + '<small>Replying · উত্তর দিচ্ছেন</small></span><button id="rbx">✕</button>';
   $('txt').focus(); }
 $('rbar').onclick = function(e){ if (e.target.closest('#rbx')) replySet(null); };
-// 21 Oct 2026 (Abbas: "like WhatsApp - swipe a message right to reply to it"): drag a bubble to the right, let go past 56 px = reply bar
-(function(){ var S = null;
-  $('thread').addEventListener('pointerdown', function(e){ var m = e.target.closest('.msg'); if (!m || m.classList.contains('sys') || m.classList.contains('out') || (e.pointerType === 'mouse' && e.button) || e.target.closest('audio, video, button, a')) return; S = { m: m, x: e.clientX, y: e.clientY, dx: 0, on: false }; });
-  $('thread').addEventListener('pointermove', function(e){ if (!S) return; var dx = e.clientX - S.x, dy = e.clientY - S.y;
-    if (!S.on) { if (Math.abs(dy) > 12) { S = null; return; } if (!(dx > 14 && dx > Math.abs(dy) * 1.6)) return; S.on = true; S.m.classList.add('swp'); }
-    S.dx = Math.max(0, Math.min(90, dx)); S.m.style.transform = 'translateX(' + S.dx + 'px)'; S.m.classList.toggle('go', S.dx > 56); if (e.cancelable) e.preventDefault(); }, { passive: false });
-  function up(){ var s0 = S; S = null; if (!s0 || !s0.on) return; s0.m.style.transform = ''; s0.m.classList.remove('swp', 'go');
-    if (s0.dx > 56) { var rm = TH.msgs.filter(function(x){ return x.ts === s0.m.dataset.ts; })[0]; if (rm) { replySet(rm); if (navigator.vibrate) navigator.vibrate(15); } } }
-  $('thread').addEventListener('pointerup', up); $('thread').addEventListener('pointercancel', up);
-})();
 $('thread').onclick = function(e){ var rb = e.target.closest('.rp'); if (rb) { var rm = TH.msgs.filter(function(x){ return x.ts === rb.dataset.ts; })[0]; if (rm) replySet(rm); return; } var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var sh = e.target.closest('.mshare'); if (sh) { var sb = MBLOB[sh.dataset.f]; if (sb) shareFile(sb, sh.dataset.n, toast); else toast('⏳ still loading… · লোড হচ্ছে'); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f, im.dataset.n); };
 async function openBig(src, fid, nm){ var vn = viewOpen(src, null, nm); if (!fid) { viewSet(vn, src, MBLOB[src] || null); return; } var fj = fastOn() ? await fast({ op: 'file', id: fid, top: 1 }) : null; if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size && /^image/.test(fj.blob.type || 'image')) { viewSet(vn, URL.createObjectURL(fj.blob), fj.blob); return; } var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && /^image/.test(j.type || 'image')) viewSet(vn, 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64); }
 
@@ -984,7 +971,7 @@ async function oput(it){ var d = await odb(); if (!d) return; try { d.transactio
 async function odel(id){ var d = await odb(); if (!d) return; try { d.transaction('q', 'readwrite').objectStore('q').delete(id); } catch(e){} }
 async function oload(){ var d = await odb(); if (!d) return; await new Promise(function(ok){ try { var rq = d.transaction('q').objectStore('q').getAll(); rq.onsuccess = function(){ (rq.result || []).forEach(function(it){ if (!OUT.some(function(x){ return x.id === it.id; })) OUT.push(it); }); OUT.sort(function(a, b){ return a.at - b.at; }); ok(); }; rq.onerror = function(){ ok(); }; } catch(e){ ok(); } }); outPaint(); outRun(); }
 function outLabel(it){ return (it.text ? it.text + (it.files.length ? '\n' : '') : '') + it.files.map(function(x){ return x.kind === 'audio' ? '🎤 voice note' : x.kind === 'photo' ? '📷 photo' : x.kind === 'video' ? '🎬 video' : '📎 ' + x.name; }).join(' · '); }
-function outAdd(c, text, files, rt){ var it = { rt: rt || '', id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10), card: c.id, cname: c.dm ? c.title : (parse(c.name).no ? 'SJ-' + parse(c.name).no : String(c.name || '').slice(0, 30)), text: text || '', files: files || [], who: WHO, at: Date.now(), tries: 0, err: '' };
+function outAdd(c, text, files){ var it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10), card: c.id, cname: c.dm ? c.title : (parse(c.name).no ? 'SJ-' + parse(c.name).no : String(c.name || '').slice(0, 30)), text: text || '', files: files || [], who: WHO, at: Date.now(), tries: 0, err: '' };
   OUT.push(it); oput(it); outPaint(); outRun(); return it; }
 function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(function(x){ return x.tries >= 3; });
   if (!n) { el.hidden = true; } else { el.hidden = false; el.className = bad.length ? 'bad' : ''; el.innerHTML = (bad.length ? '⚠ ' + n + ' message' + (n > 1 ? 's' : '') + ' not sent yet — ' + (bad[0].tries >= 5 ? 'tap to try again' : 'trying again · tap') : '📤 Sending ' + n + ' message' + (n > 1 ? 's' : '') + '… · পাঠানো হচ্ছে') + '<small>' + esc(OUT.map(function(x){ return x.cname; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' · ')) + (bad.length && bad[0].err ? ' — ' + esc(bad[0].err) : '') + '</small>'; }
@@ -994,21 +981,21 @@ function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.
 async function outOne(it){
   if (!it.files.length) { var rc0 = D.byId[it.card], rf = it.card === 'lais' ? null : (rc0 && rc0.dm) ? (roomCh(rc0) ? [roomCh(rc0).ch, ''] : null) : FAST.refs[it.card];
     if (FAST.url && rf && (fastOn() || it.fastTried) && !(it.fastTried && it.tries >= 6)) { it.fastTried = true;
-      var fj = await fast({ op: 'post', ch: rf[0], ts: it.rt || rf[1] || '', text: it.text, who: it.who, rid: it.id, card: it.card, topic: LIVE.topic }, true);
+      var fj = await fast({ op: 'post', ch: rf[0], ts: rf[1] || '', text: it.text, who: it.who, rid: it.id, card: it.card, topic: LIVE.topic }, true);
       if (fj && fj.ok) return fj; if (!fj && !(FAST.fail || {}).quick) return { ok: false, error: 'no answer from the fast lane - trying again' }; }   // no answer after a wait: maybe sent - only the fast lane (once-only id) is asked again; refused at once (offline worker): the relay sends it
-    return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id, rt: it.rt || '' }); }
+    return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id }); }
   var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
   if (!it.fids) { try { it.fids = await slackDirect(it.files, null, it.card); oput(it); } catch(e){ it.fids = null; } }      // originals straight to Slack (full quality)
-  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.fset || 0), rt: it.rt || '' }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; it.fset = (it.fset || 0) + 1; oput(it); } }   // 20 Oct 2026: the same once-only id on every retry of the same upload (it used to change each try, so an answer lost on a weak line could post the photos twice)
+  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.fset || 0) }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; it.fset = (it.fset || 0) + 1; oput(it); } }   // 20 Oct 2026: the same once-only id on every retry of the same upload (it used to change each try, so an answer lost on a weak line could post the photos twice)
   if (tot > 18 * 1024 * 1024) return { ok: false, error: 'Slack did not take the upload' };
   var files = []; for (var i = 0; i < it.files.length; i++) files.push({ name: it.files[i].name, b64: await b64of(it.files[i].blob) });
-  return await call({ op: 'up', card: it.card, files: files, text: it.text, who: it.who, rid: it.id + 'b', rt: it.rt || '' });
+  return await call({ op: 'up', card: it.card, files: files, text: it.text, who: it.who, rid: it.id + 'b' });
 }
 async function outRun(now){
   if (OUTRUN || !OUT.length || !PW) return; OUTRUN = true; clearTimeout(OUTT);
   try { while (OUT.length) { var it = OUT[0], j = null; try { j = await outOne(it); } catch(e){ j = { ok: false, error: e.message }; }
       if (j && j.ok) { OUT.shift(); odel(it.id);
-        if (!it.files.length && j.ts) { var real = { ts: j.ts, who: it.who, app: true, text: (it.rt ? '↳ ' : '') + it.text, rt: it.rt || '', files: [] }; THC[it.card] = (THC[it.card] || []).concat([real]); thcSave(); if (TH.card && TH.card.id === it.card && !TH.msgs.some(function(m){ return m.ts === j.ts; })) TH.msgs.push(real); }
+        if (!it.files.length && j.ts) { var real = { ts: j.ts, who: it.who, app: true, text: it.text, files: [] }; THC[it.card] = (THC[it.card] || []).concat([real]); thcSave(); if (TH.card && TH.card.id === it.card && !TH.msgs.some(function(m){ return m.ts === j.ts; })) TH.msgs.push(real); }
         else { it.done = Date.now(); SENT.push(it); }                 // files: shown as "✓ sent" until the chat brings the real message
         outPaint(); if (TH.card && TH.card.id === it.card) { TH.force = true; setTimeout(thPull, 300); setTimeout(function(){ TH.force = true; thPull(); }, 4000); } continue; }
       it.tries++; it.err = String((j && j.error) || 'no answer').slice(0, 80); oput(it); outPaint(); break; } }
@@ -1120,13 +1107,11 @@ async function slackDirect(items, onStep, card){
 function mb(n){ return n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
 async function sendAll(){
   var c = TH.card; if (!c) return; var text = $('txt').value.trim();
-  // 21 Oct 2026 (Abbas: "like WhatsApp"): in a channel chat (Direct, #cash, #expenses, #laisfactory) a reply becomes a Slack thread reply under that
-  // message; inside a card's thread Slack has no deeper level, so there it is quoted ("> *Name:* text")
-  var rt = ''; if (REPLY && (text || PEND.length)) { if (c.dm && /^\d+\.\d+$/.test(String(REPLY.ts || ''))) rt = String(REPLY.ts); else text = '\n> *' + REPLY.who + ':* ' + REPLY.snip + '\n' + text; replySet(null); }
-  if (!PEND.length) { if (!text) return; if (LASTSEND.t === text && LASTSEND.c === c.id && Date.now() - LASTSEND.at < 3000) { $('txt').value = ''; return; } LASTSEND = { t: text, c: c.id, at: Date.now() }; $('txt').value = ''; outAdd(c, text, [], rt); TH.none = false; return; }   // a double tap on Send sends once
+  if (REPLY && (text || PEND.length)) { text = '\n> *' + REPLY.who + ':* ' + REPLY.snip + '\n' + text; replySet(null); }
+  if (!PEND.length) { if (!text) return; if (LASTSEND.t === text && LASTSEND.c === c.id && Date.now() - LASTSEND.at < 3000) { $('txt').value = ''; return; } LASTSEND = { t: text, c: c.id, at: Date.now() }; $('txt').value = ''; thSend(text); return; }   // a double tap on Send sends once
   var files = PEND.map(function(x){ return { name: x.name, kind: x.kind, blob: x.blob }; });
   PEND.forEach(function(x){ if (x.url) URL.revokeObjectURL(x.url); }); PEND.length = 0; pendDraw(); $('txt').value = '';
-  outAdd(c, text, files, rt); TH.none = false;
+  outAdd(c, text, files); TH.none = false;
   var tot = files.reduce(function(a, x){ return a + x.blob.size; }, 0); toast('📤 Sending ' + files.length + ' file' + (files.length > 1 ? 's' : '') + ' · ' + mb(tot) + ' — you can leave this screen · অন্য কাজ করতে পারেন');
 }
 $('send').onclick = sendAll;
@@ -1340,7 +1325,7 @@ if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } 
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load };
+window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping };
 })();
 </script>
 </body></html>

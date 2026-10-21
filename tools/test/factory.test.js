@@ -325,18 +325,7 @@ async function suite(fast, browser) {
       await until(async () => /cash in hand 5000/.test(await page.textContent('#thread')), 10000, 'cash line shown');
       await page.fill('#txt', 'noted, thanks'); await page.click('#send');
       await until(() => W.slack.ch.C0CASH00001.msgs.some(m => /noted, thanks/.test(m.text || '') && !m.thread_ts), 10000, 'posted in #cash');
-      // swipe the first message to the right = reply; in a channel chat the reply goes as a Slack thread reply under that message
-      const bb = page.locator('#thread .msg:not(.out)', { hasText: 'cash in hand 5000' }).first(); await bb.waitFor(); await bb.scrollIntoViewIfNeeded(); await page.waitForTimeout(300); const bx = await bb.boundingBox();
-      await page.mouse.move(bx.x + 20, bx.y + bx.height / 2); await page.mouse.down(); for (let i = 1; i <= 8; i++) await page.mouse.move(bx.x + 20 + i * 12, bx.y + bx.height / 2); await page.mouse.up();
-      await until(() => page.locator('#rbar').isVisible(), 3000, 'reply bar after the swipe'); ok(/cash in hand 5000/.test(await page.textContent('#rbar')), 'replying to that line');
-      await page.fill('#txt', 'how much yesterday?'); await page.click('#send');
-      await until(() => W.slack.ch.C0CASH00001.msgs.some(m => /how much yesterday/.test(m.text || '') && m.thread_ts === cm.ts), 10000, 'Slack thread reply under the message');
-      T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now(), event: { type: 'message', channel: 'C0CASH00001', thread_ts: cm.ts, ts: F.slackTs() } }));
-      await until(async () => (await page.$$eval('#thread .msg:not(.out) .bub .q', q => q.map(x => x.textContent))).some(t => /cash in hand 5000/.test(t)), 15000, 'shown with the quoted message, WhatsApp style');
-      await page.goBack();
-      // the rooms must STAY while the card list refreshes (21 Oct: they vanished for a few seconds after every fast-lane list refresh)
-      for (let i = 0; i < 4; i++) { await page.evaluate(() => { window.__f.D.cards && (window.LOADING = 0); return window.__f.load(false); }); await page.waitForTimeout(400); ok((await page.locator('#xrooms .crow').count()) === 2, 'rooms still there after a list refresh #' + i); }
-      await page.click('#tabs button[data-t="cards"]');
+      await page.goBack(); await page.click('#tabs button[data-t="cards"]');
     });
     await test('no page errors', async () => { ok(!T.errors.length, 'no errors:\n' + T.errors.join('\n')); });
   } finally { await T.close(); }

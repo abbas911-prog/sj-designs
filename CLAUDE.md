@@ -181,8 +181,3 @@ Memo rules (his words, short):
   box empty = all his pieces came back. Works whatever list the card is in (e.g. still in CUTTING). NEEDS: relay deploy.
 - 2026-10-21 (VER 2026-10-21e) Abbas: #cash and #expenses (ChatGPT workspace) as chats in the Chats tab — Abbas only; the bot joins the
   public channel by itself (a private one: /invite @SJ Orders). NEEDS: relay deploy.
-- 2026-10-21 (VER 2026-10-21f) (1) Abbas: "#cash / #expenses appear and disappear" — the fast-lane card-list refresh rebuilt the data
-  without `rooms`, so they vanished until the next ping; fixed (test: rooms stay through 4 refreshes). (2) Abbas: WhatsApp-style
-  swipe-right on a message = reply: in a channel chat (Direct, #cash, #expenses, #laisfactory) the reply is a Slack THREAD reply under
-  that message (`rt` → `thread_ts`; shown with the quoted message), inside a card's thread it is the quote as before. NEEDS: relay deploy
-  + fast-worker.js paste (replies carry `rt`).
