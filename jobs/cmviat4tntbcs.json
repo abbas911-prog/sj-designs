@@ -1,0 +1,19 @@
+{
+ "ok": false,
+ "error": "SJ-6668-2 is not in READY on Trello. (cards with this number: Sj = **(6668)**(40pcs) 5 color, Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     )",
+ "errors": [
+  "SJ-6668-2 is not in READY on Trello. (cards with this number: Sj = **(6668)**(40pcs) 5 color, Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     )"
+ ],
+ "report": [
+  "SJ-6668 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-31048 COMPLETE  5+5+5+5+4 = 24 ✓ (card: 24) → 1 complete sets + 4 pcs",
+  "SJ-31892 SETS  8+4+8+8+8+8 = 44 ✓ (card: 44) → 6 colours",
+  "SJ-79246 SETS  0+4+4+4+4+8+4+4+8+8+8+8 = 64 ✓ (card: 64) → 11 colours",
+  "SJ-12748 SETS  12+8+8+8+8 = 44 ✓ (card: 44) → 5 colours",
+  "SJ-92045 SETS  4+4+4+0+4+0+0+0+4+4 = 24 ✓ (card: 24) → 6 colours",
+  "SJ-46209 SETS  16+16+14+16 = 62 ✓ (card: 62) → 4 colours",
+  "SJ-86618 SETS  12+12+12+12+12+12 = 72 ✓ (card: 72) → 6 colours",
+  "SJ-15907 SETS  8+8+3+16+12+0 = 47 ✓ (card: 47) → 5 colours"
+ ],
+ "id": "cmviat4tntbcs"
+}
