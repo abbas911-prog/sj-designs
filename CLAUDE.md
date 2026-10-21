@@ -186,3 +186,6 @@ Memo rules (his words, short):
   reverted on Abbas's request (the ↩ button stays as it is). No relay deploy needed for this.
 - 2026-10-21 (VER 2026-10-21h) Abbas, screenshot: blank white rows in the Chats list after scrolling (iOS Safari did not paint rows that
   were "off-screen" by the browser's own reckoning): `content-visibility:auto` removed from the chat and card rows. No relay deploy.
+- 2026-10-21 (VER 2026-10-21i) Abbas: "it is buggy" (screenshot: the tab bar in the middle of the screen, empty rows under it) — on iPhone the
+  fixed bar follows the keyboard up and Safari left it there after the search box closed. Now: keyboard open on the home screen → bar hidden
+  (`body.kb`, `kbFit`); keyboard closed / tab switched → input blurred, page scrolled to the top, bar back. No relay deploy.
