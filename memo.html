@@ -885,7 +885,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-21c';
+var VER = '2026-10-21d';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1092,7 +1092,7 @@ $('sendc').onclick = function(){ grpSend('c'); };
 $('send').onclick = async function(){
   if (memoP) await memoP; if (!pdfFile) return;
   ordFromMemo();                                    // 10 Oct 2026: the memo going out starts its order
-  try { if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) { await navigator.share({ files: [pdfFile], text: orderText() }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  try { if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) { await navigator.share({ files: [pdfFile], text: 'Order memo' + ($('name').value.trim() ? ' · ' + $('name').value.trim() : '') }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   var a = document.createElement('a'); a.href = URL.createObjectURL(pdfFile); a.download = pdfFile.name; a.click();
   window.open('https://wa.me/?text=' + encodeURIComponent(orderText()), '_blank');
 };
@@ -1376,6 +1376,8 @@ function drawVoucher(k, d){
   signs(g, H - P - 70, k === 'rv' ? 'RECEIVED BY · المستلم' : 'AUTHORISED SIGNATURE · التوقيع', k === 'rv' ? 'AUTHORISED SIGNATURE · التوقيع' : "RECEIVER'S SIGNATURE · توقيع المستلم");
   return [cv];
 }
+// 21 Oct 2026 (Abbas): a PDF shared on WhatsApp carries only its number as the message — the long typed copy stays for the Copy button
+function shareText(k, d){ return ({ inv: d.vat ? 'TAX INVOICE' : 'INVOICE', rn: d.vat ? 'TAX CREDIT NOTE' : 'SALES RETURN', rv: 'RECEIPT VOUCHER', pv: 'PAYMENT VOUCHER' })[k] + ' ' + d.ref; }
 function docText(k, d){
   var co = coGet(), L = [co.name];
   if (k === 'inv') { var c = invCalc(d); L.push((d.vat ? 'TAX INVOICE ' : 'INVOICE ') + d.ref + '  ' + dmy(d.date), 'Bill to: ' + (d.name || ''), '');
@@ -1422,7 +1424,7 @@ $('dsend').onclick = async function(){
   if (k === 'rv' && !custBefore(k, d)) return;
   await bsNext(k, d);
   clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
-  var f = B.pdf, txt = docText(k, d), done = false;
+  var f = B.pdf, txt = shareText(k, d), done = false;
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); done = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!done) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   if (k === 'rv') custAfter(k, d);      // a receipt counts once it is sent; an invoice (and a return) only on Include & share
@@ -1448,7 +1450,7 @@ $('dinc').onclick = async function(){
   if (!custBefore('inv', d)) return;
   if (!confirm('Include ' + d.ref + ': share it' + (pcs ? ' and take ' + pcs + ' pcs off Trello?' : ' (typed lines only — nothing comes off Trello)?'))) return;
   keepNo('inv', d.ref);
-  var f = B.pdf, txt = docText('inv', d), shared = false;
+  var f = B.pdf, txt = shareText('inv', d), shared = false;
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   custAfter('inv', d);
@@ -1675,7 +1677,7 @@ async function rnInclude(){
   if (!custBefore('rn', d)) return;
   if (!confirm('Return ' + d.ref + ': share it, take ' + amt(c.total) + ' AED off ' + (d.name || 'the customer') + '\'s balance and put ' + c.pcs + ' pcs back on Trello?')) return;
   keepNo('rn', d.ref);
-  var f = B.pdf, txt = docText('rn', d), shared = false;
+  var f = B.pdf, txt = shareText('rn', d), shared = false;
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   d.status = 'included'; bsSave(true);

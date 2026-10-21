@@ -98,7 +98,7 @@ when the right change is clear, do it, test it, commit it and report; ask only w
 - `tools/stock.py` (GitHub job memo-stock: Include & share takes pieces off Trello; op `retbill` puts a return bill's pieces back),
   `tools/catalog/*` (catalogue builder), `.github/workflows/*`.
 - **Tests** in `tests/` (Playwright + a fake relay; no real Slack/Trello/Google is touched):
-  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (21), `node tests/t_ntfy.js` (3, real relay.gs), `node tests/t_bills.js` (6, real relay.gs + fake Sheet: one number series),
+  `node tests/t_shell.js` (32), `node tests/t_ord.js` (32), `node tests/t_rn.js` (13), `node tests/t_fix.js` (22), `node tests/t_ntfy.js` (3, real relay.gs), `node tests/t_bills.js` (6, real relay.gs + fake Sheet: one number series),
   `node tests/t_sw.js` (5, Home Screen helper), `python3 tests/t_stock.py`.
   Looks: `node tests/shots.js <dir>` screenshots 24 screens (frozen clock, fixed data); `python3 tests/shotdiff.py before after` compares pixel by pixel
   (the bottom-bar badges differ run to run — timing; anything else must be 0). Take a `before` set before any CSS/markup tidy-up.
@@ -162,3 +162,4 @@ Memo rules (his words, short):
 - 2026-10-21 (VER 2026-10-21c) Abbas: duty hours 8 am – 10 pm, Friday 8 – 12 — pieces per day (worker rows, Workers screen, chat line,
   production report) are counted over working hours, not the clock. NEEDS: relay deploy.
 - 2026-10-21: memo 2026-10-21c — (Abbas, video: the order list's 2×2 collage was unreadable) the Orders list shows each design as a tile — photo, number, pcs (first 5, then +N), same tiles as the order screen (`ordTileRow(o, mini)`); the collage stays only inside "Complete order".
+- 2026-10-21: memo 2026-10-21d — (Abbas) a PDF shared on WhatsApp carries only its number as the message (`shareText`: "INVOICE INV-0021", "RECEIPT VOUCHER RV-…", memo: "Order memo · name"); the long typed copy stays behind the Copy button and the no-PDF WhatsApp fallback.
