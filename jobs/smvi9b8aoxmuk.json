@@ -1,0 +1,39 @@
+{
+ "id": "smvi9b8aoxmuk",
+ "op": "sell",
+ "ref": "INV-0023",
+ "ok": false,
+ "cards": [
+  {
+   "card": "694f855aebd376f8a66fbe59",
+   "no": "37181",
+   "before": "SJ-37181 ,…(149)… PCS , COLORS = 8,… (236 yarDs)…(31/25/22/27/17/20)_(4/0/3)……() AED",
+   "after": "SJ-37181 ,…(133)… PCS , COLORS = 8,… (236 yarDs)…(27/25/18/23/13/20)_(4/0/3)……() AED",
+   "left": 133,
+   "lines": [
+    "colour 1: 31 → 27 (−4)",
+    "colour 3: 22 → 18 (−4)",
+    "colour 4: 27 → 23 (−4)",
+    "colour 5: 17 → 13 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69271ff893de8005f14636cb",
+   "no": "69176",
+   "err": "card title does not add up (26+0+8+28+9+29+28+14+29+0+0+45 = 216, card says 274) — not changed"
+  },
+  {
+   "card": "6a9ab5b0e254705811653e6d",
+   "no": "58273",
+   "before": "SJ-58273",
+   "after": "SJ-58273",
+   "left": 0,
+   "lines": [
+    "sample: 1 → 0 (−1)"
+   ],
+   "moved": "moved to FINISH (sample sold)"
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
