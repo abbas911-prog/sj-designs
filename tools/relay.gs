@@ -495,7 +495,16 @@ function facTrelloMoves(P, wtok, FT) {
 //     IRON/CHECKING ... until READY". Built from Trello's own move history (so moves made in Trello count too), posted ONCE per card as a chat
 //     line + a Trello comment "#report" - by the app's move, by the 45-s Trello-moves check (worker / Trello moves), or by hand (op "report").
 //     The day-count badge on the cards is untouched.
-function facWorkers(P, tok) { var cf = facCf(tok); return DOX.TEN.map(function (id) { return cf[id] ? { id: id, name: String(cf[id]).trim() } : null; }).filter(Boolean); }
+// 21 Oct 2026 (Abbas: "messed up the worker's names - those are Usman hand-work's people"): the machine workers are the people of the
+// AL MUTAGADED GARMENTS sheet (the "W - Name" tabs), kept here as FAC_WORKERS (changed from the app: More → Workers → ✏️ Edit the list).
+// Until the list is changed from the app, this is the list from the sheet on 21 Oct 2026. A worker who also has a Trello field of the same
+// name gets his pieces written into it; the others simply have no field.
+var FAC_WORKERS_DEFAULT = ['Arif', 'Darmindar', 'Dildar', 'Islam', 'Mamun', 'Mohsin', 'Moshtaq', 'Nahid', 'Ram', 'Rifat', 'Rubindar', 'Sajjad', 'Shadab', 'Shamim', 'Shoab', 'Shohan', 'Shuman', 'Waris', 'Ibraheem'];
+function facWorkers(P, tok) {
+  var names = null; try { names = JSON.parse(P.getProperty('FAC_WORKERS') || 'null'); } catch (e) {} if (!Array.isArray(names) || !names.length) names = FAC_WORKERS_DEFAULT;
+  var byName = {}; try { var cf = facCf(tok); Object.keys(cf).forEach(function (id) { byName[String(cf[id]).trim().toUpperCase()] = id; }); } catch (e) {}
+  return names.map(function (n) { n = String(n).trim().slice(0, 30); return n ? { id: byName[n.toUpperCase()] || '', name: n } : null; }).filter(Boolean);
+}
 function facActs(tok, cid) {                                   // the card's history, oldest first: moves, creation, comments
   var a = trApi('get', '/cards/' + cid + '/actions', { filter: 'updateCard:idList,createCard,copyCard,moveCardToBoard,convertToCardFromCheckItem,commentCard', limit: 1000 }, tok) || [];
   return a.slice().sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); });
@@ -552,7 +561,7 @@ function facReport(P, wtok, FT, cid, force, who) {              // posts the rep
   facBump(); facNudge(P, cid);
   return { ok: true, ts: ts, text: text };
 }
-function facWkField(wtok, cid, w, text) { try { trApi('put', '/cards/' + cid + '/customField/' + w.id + '/item', {}, wtok, { value: { text: String(text).slice(0, 60) } }); } catch (e) {} }
+function facWkField(wtok, cid, w, text) { if (!w.id) return; try { trApi('put', '/cards/' + cid + '/customField/' + w.id + '/item', {}, wtok, { value: { text: String(text).slice(0, 60) } }); } catch (e) {} }
 function nrmName(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
 function facUsers(FT) {                                        // the people of the workspace (no bots, no deleted), for "new direct chat with..."; cached 10 min
   var c = CacheService.getScriptCache(), h = c.get('FAC_USERS'); if (h) return JSON.parse(h);
@@ -702,7 +711,7 @@ function setupFacWatch() {                                     // Abbas runs thi
 }
 // 15 Oct 2026 audit: a phone that lost the answer (LTE, locked screen) retries - for a post / upload / new card that used to do it TWICE.
 // Every action now carries a once-only id (rid): the first answer is kept 10 min and any retry gets that same answer.
-var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report)$/;
+var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report|workers)$/;
 function fac(reqText, P) {
   var rq0 = {}; try { rq0 = JSON.parse(reqText); } catch (e) {}
   var rid = FAC_ONCE.test(rq0.op || '') ? String(rq0.rid || '').replace(/[^\w-]/g, '').slice(0, 40) : '', cR = CacheService.getScriptCache();
@@ -1130,6 +1139,13 @@ function fac0(reqText, P) {
       var wcache = CacheService.getScriptCache(), wh = req.fresh ? null : wcache.get('FAC_WK_' + wc); if (wh) return out(JSON.parse(wh));
       var wres = { ok: true, workers: facWorkers(P, rtok).map(function (w) { return w.name; }), batches: facWkParse(facActs(rtok, wc)) };
       try { wcache.put('FAC_WK_' + wc, JSON.stringify(wres), 30); } catch (e) {} return out(wres);
+    }
+    if (req.op === 'workers') {                               // 21 Oct 2026: the list of machine workers, changed from the app (More → Workers → Edit)
+      var wn = Array.isArray(req.names) ? req.names.map(function (x) { return String(x || '').replace(/[^\w .'\-\u0980-\u09ff]/g, '').trim().slice(0, 30); }).filter(Boolean) : null;
+      if (!wn || !wn.length || wn.length > 40) return out({ ok: false, error: 'give 1 to 40 names' });
+      var wseen = {}; wn = wn.filter(function (x) { var k = x.toUpperCase(); if (wseen[k]) return false; wseen[k] = 1; return true; });
+      P.setProperty('FAC_WORKERS', JSON.stringify(wn)); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']);
+      return out({ ok: true, workers: facWorkers(P, rtok).map(function (w) { return w.name; }) });
     }
     if (req.op === 'workset') {                               // 21 Oct 2026: pieces given to a worker (kind 'in') / pieces back from them (kind 'out')
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });

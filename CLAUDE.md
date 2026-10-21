@@ -63,7 +63,9 @@ per-person topic `FNTFY`, sent by `facNotifyScan` (on Slack events + 1-min timer
 **Web Push** (no extra app, phone must have the app on its Home Screen): 🔔 → Turn on → `wpkey` / `wpset` → `FWP_<NAME>` (≤4 phones).
 `facNotifyScan` sends to both ntfy and Web Push; the relay hands the worker (`op:push`, `op:vapidnew`) the addresses + the VAPID pair
 (`FAC_VAPID`, made once by the worker) because Apps Script cannot do the encryption. Phone notifications need the fast lane on.
-**Work per worker** (21 Oct 2026): the 10 worker fields of the ALM board (`DOX.TEN`, names via `facCf` → `facWorkers`) are the workers.
+**Work per worker** (21 Oct 2026): the machine workers = the "W - Name" people of the AL MUTAGADED GARMENTS Google Sheet (NOT the Trello
+worker fields `DOX.TEN` — those are Usman hand-work's people). Kept on the relay as `FAC_WORKERS` (`facWorkers`; default list in
+`FAC_WORKERS_DEFAULT`), changed from the app: More → Workers → ✏️ Edit the list (`op:workers`).
 Card screen "👷 WORK": one row per worker, pieces box + ▶ Give / ✓ Done. `op:workset` writes a Trello comment ("👷 IN · NAME · 20 pcs · who
 (factory app)" / "👷 OUT · … · 1 d 2 h · …"), a chat line "→ *WORK* · who · NAME ← 20 pcs given", and the worker's Trello field ("18 ✓").
 No script properties: `op:work` reads the batches back from the card's comments (`facActs` → `facWkParse`); `op:workrep` sums the board's
@@ -154,3 +156,5 @@ Memo rules (his words, short):
   ✓ Done stops it (Trello comment + chat line + worker field); More → Workers = pieces, time and ≈ pieces/day per worker over 7/30/90 days.
   (2) production report in the chat when a card reaches FINISH: days in START, CUTTING, IN LINE, hand work, IRON/CHECKING … until READY,
   plus the workers; also by hand (⋯ → Production report). Day-count badge untouched. Slack *bold* shown bold. NEEDS: relay deploy.
+- 2026-10-21 (VER 2026-10-21b) Abbas: "messed up the worker's names" — the WORK box now lists the factory's own people (Arif, Rifat, Nahid …
+  from the Google Sheet), not Usman hand-work's; the list is editable in the app (More → Workers → ✏️ Edit). NEEDS: relay deploy.

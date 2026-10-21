@@ -203,7 +203,8 @@ body.co .toast{bottom:90px}
 <button class="go" id="nsgo">⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন</button><div id="nserr" hidden></div><button class="x" id="nsx">Cancel</button></div></div>
 <div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><label class="usm" id="ncusml"><input type="checkbox" id="ncusm"><span>🧵 <b>USMAN hand work</b> — chat in #usmancutting</span><small>উসমান হ্যান্ড ওয়ার্ক — চ্যাট #usmancutting-এ</small></label><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
 <div class="sheet" id="dms" hidden><div class="in"><h3 id="dmh">💬 Direct chat · which Slack channel? · কোন চ্যানেল</h3><button class="go" id="dmnewb" style="margin:0 0 8px">👤 New direct chat with a person · নতুন সরাসরি চ্যাট</button><input id="dmq" placeholder="Search · খুঁজুন" autocomplete="off"><div id="dml" style="max-height:46vh;overflow:auto"><div class="empty">Loading…</div></div><div id="dmnote" style="font-size:12px;color:var(--mute);margin-top:6px">A private group shows here only when the bot is inside it — in Slack type <b>/invite @SJ Orders</b> in that group, or make a new chat above.</div><button class="x" id="dmx">Cancel</button></div></div>
-<div class="sheet" id="wks" hidden><div class="in"><h3>👷 Workers · কর্মী</h3><div class="seg" id="wkseg"><button data-d="7">7 days · ৭ দিন</button><button data-d="30" class="on">30 days · ৩০ দিন</button><button data-d="90">90 days · ৯০ দিন</button></div><div id="wksbody"><div class="empty">Loading… · লোড হচ্ছে</div></div><button class="x" id="wksx">Close</button></div></div>
+<div class="sheet" id="wks" hidden><div class="in"><h3>👷 Workers · কর্মী</h3><div class="seg" id="wkseg"><button data-d="7">7 days · ৭ দিন</button><button data-d="30" class="on">30 days · ৩০ দিন</button><button data-d="90">90 days · ৯০ দিন</button></div><div id="wksbody"><div class="empty">Loading… · লোড হচ্ছে</div></div><button id="wkedit" style="background:#f0e9dd;text-align:center">✏️ Edit the list of workers · কর্মীর তালিকা বদলান</button><button class="x" id="wksx">Close</button></div></div>
+<div class="sheet" id="wke" hidden><div class="in"><h3>✏️ Workers · কর্মী</h3><p style="margin:0 0 8px;color:var(--mute);font-size:13.5px">One name per line, in the order you want them · প্রতি লাইনে একটি নাম</p><textarea id="wkenames" style="min-height:220px"></textarea><button class="go" id="wkego">Save · সেভ</button><button class="x" id="wkex">Cancel</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
 <div class="sheet" id="cmenu" hidden><div class="in"><h3 id="cmh">Card · কার্ড</h3><button id="bmove">↔ Move to… · অন্য জায়গায়</button><button id="battach">📷 Add photo to Trello · ট্রেলোতে ছবি যোগ করুন</button><button id="bedit">✏️ Edit card · বিবরণ বদলান</button><button id="bcopy">⧉ Copy card · কার্ড কপি করুন</button><button id="bwrep">📊 Production report · উৎপাদন রিপোর্ট</button><button id="btrello">Open in Trello · ট্রেলোতে খুলুন</button><button class="x" id="cmx">Cancel</button></div></div>
@@ -213,7 +214,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-21a';
+var VER = '2026-10-21b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -247,7 +248,7 @@ async function hmacHex(key, msg){
 var NET = { busy: 0, heavy: 0, hi: [], lo: [], log: [] };
 function netPick(q){ for (var i = 0; i < q.length; i++) if (!q[i].h || q[i].top || NET.heavy < 2) return q.splice(i, 1)[0]; return null; }   // big transfers: at most 2 at once, so chat requests always get through
 function netGo(){ while (NET.busy < 4) { var f = netPick(NET.hi) || netPick(NET.lo); if (!f) break; NET.busy++; if (f.h) NET.heavy++; f(); } }
-var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|workset|report)$/;
+var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|workset|report|workers)$/;
 async function call(obj, pw, top){
   if (ONCE.test(obj.op) && !obj.rid) obj.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);   // a retry of the same action is answered once, never done twice
   var heavy = /^(up|attach|sample)$/.test(obj.op) || (obj.op === 'media' && obj.full && !obj.pre);
@@ -622,6 +623,11 @@ async function wksShow(){ $('wks').hidden = false; $('wksbody').innerHTML = '<di
   $('wksbody').innerHTML = ws.length ? ws.map(function(w){ return '<div class="w">' + (w.pcs ? '<span class="pd">≈ ' + w.perDay + ' /day</span>' : '') + '<b>' + esc(w.name) + '</b><small>' + (w.pcs ? w.pcs + ' pcs · ' + w.batches + (w.batches === 1 ? ' batch' : ' batches') + ' · ' + esc(w.dur) : 'nothing finished in ' + j.days + ' days · কিছু শেষ হয়নি') + (w.open ? ' · <b style="color:#c4561a">' + w.open + ' in hand ⏳</b>' : '') + '</small>'
     + (w.cards && w.cards.length ? '<ul>' + w.cards.map(function(c){ var p = parse(c.name); return '<li>' + (p.no ? 'SJ-' + esc(p.no) : esc(c.name.slice(0, 30))) + ' · ' + c.pcs + ' pcs</li>'; }).join('') + '</ul>' : '') + '</div>'; }).join('') : '<div class="empty">No workers · কোনো কর্মী নেই</div>'; }
 $('bwork').onclick = wksShow; $('wksx').onclick = function(){ $('wks').hidden = true; };
+// the list of workers is kept on the relay (shared by every phone); changed here
+$('wkedit').onclick = function(){ $('wkenames').value = (D.workers || []).join('\n'); $('wke').hidden = false; $('wkenames').focus(); };
+$('wkex').onclick = function(){ $('wke').hidden = true; };
+$('wkego').onclick = async function(){ var names = $('wkenames').value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean); if (!names.length) { toast('Write at least one name · অন্তত একটি নাম লিখুন'); return; }
+  this.disabled = true; try { var j = await call({ op: 'workers', names: names }); if (!j.ok) { toast('✗ ' + j.error); return; } D.workers = j.workers || names; $('wke').hidden = true; toast('✓ ' + D.workers.length + ' workers saved · সেভ হয়েছে'); if (open) workDraw(open); wksShow(); } finally { this.disabled = false; } };
 $('wkseg').onclick = function(e){ var b = e.target.closest('button[data-d]'); if (!b) return; WKD = +b.dataset.d; wksShow(); };
 async function attsLoad(c){ var j = fastTr() ? await fast({ op: 'tatts', card: c.id }) : null; if (!j || !j.ok) j = await call({ op: 'atts', card: c.id }); if (!j.ok || !open || open.id !== c.id) return; c = open; c._atts = j.atts || []; c._cover = j.cover || ''; c.desc = j.desc || ''; attsDraw(c); }   // 16 Oct: by id - the card object is replaced on every list refresh, and a dropped answer left the LAST card's photo strip showing (Abbas: SJ-48188 photos on a return card)   // the description is NOT shown on the card (Abbas 13 Oct: keep the custom-field view as before) - it lives in ✏️ Edit card
 function attsDraw(c){

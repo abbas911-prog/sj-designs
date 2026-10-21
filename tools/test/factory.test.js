@@ -117,26 +117,29 @@ async function suite(fast, browser) {
     await test('work: give pieces to a worker, timer runs, Done stops it - Trello comment, field and chat line', async () => {
       await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '17841');
       await until(() => page.locator('#work').isVisible(), 8000, 'work box');
-      const rows = page.locator('#wkrows .wr'); await until(async () => (await rows.count()) === 10, 8000, '10 workers');
-      const r = page.locator('#wkrows .wr[data-w="TASLEEM"]'); await r.locator('input').fill('20'); await r.locator('button').click();
-      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && /^👷 IN · TASLEEM · 20 pcs · Abbas \(factory app\)/.test(a.data.text)), 10000, 'IN comment on Trello');
-      await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootB && /WORK.*TASLEEM ← 20 pcs/.test(m.text || '')), 10000, 'chat line');
-      ok((W.trello.cards[W.cardB.id].customFieldItems.find(x => x.idCustomField === '6a8629369e5acecd9d32161e') || {}).value.text === '20 ⏳', 'Trello field 20 ⏳');
+      const rows = page.locator('#wkrows .wr'); await until(async () => (await rows.count()) === 19, 8000, '19 workers (the sheet list)');
+      ok(!(await page.textContent('#wkrows')).includes('TASLEEM'), 'hand-work names are NOT the workers');
+      const r = page.locator('#wkrows .wr[data-w="Rifat"]'); await r.locator('input').fill('20'); await r.locator('button').click();
+      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && /^👷 IN · Rifat · 20 pcs · Abbas \(factory app\)/.test(a.data.text)), 10000, 'IN comment on Trello');
+      await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootB && /WORK.*Rifat ← 20 pcs/.test(m.text || '')), 10000, 'chat line');
       await until(async () => /⏱/.test(await r.textContent()) && /Done/.test(await r.locator('button').textContent()), 8000, 'timer + Done button');
       W.trello.actions.filter(a => a.type === 'commentCard' && /👷 IN/.test(a.data.text)).forEach(a => a.date = new Date(Date.now() - 26 * 3600000).toISOString()); T.relay.cache.remove('FAC_WK_' + W.cardB.id);   // a day passes
       await page.reload(); await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length); await openCardNo(page, '17841');
       await until(async () => /1 d 2 h/.test(await r.textContent()), 10000, 'timer shows 1 d 2 h');
       await r.locator('input').fill('18'); await r.locator('button').click();
-      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && /^👷 OUT · TASLEEM · 18 pcs · 1 d 2 h · Abbas/.test(a.data.text)), 10000, 'OUT comment');
-      await until(() => (W.trello.cards[W.cardB.id].customFieldItems.find(x => x.idCustomField === '6a8629369e5acecd9d32161e') || {}).value.text === '18 ✓', 8000, 'field 18 ✓');
+      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && /^👷 OUT · Rifat · 18 pcs · 1 d 2 h · Abbas/.test(a.data.text)), 10000, 'OUT comment');
       await until(async () => /✓ 18 pcs/.test(await r.textContent()) && /Give/.test(await r.locator('button').textContent()), 8000, 'row shows done');
       await page.goBack();
     });
     await test('Workers screen: pieces per day over 30 days', async () => {
       await page.click('#tabs button[data-t="more"]'); await page.click('#bwork');
-      await until(async () => /TASLEEM/.test(await page.textContent('#wksbody')) && /18 pcs/.test(await page.textContent('#wksbody')), 10000, 'TASLEEM 18 pcs');
+      await until(async () => /Rifat/.test(await page.textContent('#wksbody')) && /18 pcs/.test(await page.textContent('#wksbody')), 10000, 'Rifat 18 pcs');
       ok(/≈ 17 \/day/.test(await page.textContent('#wksbody')), 'about 17 a day (18 pcs in 1 d 2 h): ' + (await page.textContent('#wksbody')).slice(0, 120));
+      await page.click('#wkedit'); await page.fill('#wkenames', 'Rifat\nArif\nNew Guy'); await page.click('#wkego');
+      await until(() => JSON.stringify(JSON.parse(T.relay.P.FAC_WORKERS || '[]')) === '["Rifat","Arif","New Guy"]', 8000, 'list saved on the relay');
+      await until(async () => /New Guy/.test(await page.textContent('#wksbody')), 8000, 'screen shows the new list');
       await page.click('#wksx'); await page.click('#tabs button[data-t="cards"]');
+      await openCardNo(page, '17841'); await until(async () => (await page.locator('#wkrows .wr').count()) === 3, 8000, 'card shows the 3 workers'); await page.goBack();
     });
     await test('search by words: "fabric" finds the card with that word, numbers as before', async () => {
       await home(page);
