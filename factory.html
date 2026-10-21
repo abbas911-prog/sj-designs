@@ -214,7 +214,7 @@ body.co .toast{bottom:90px}
 
 <script>
 (function(){
-var VER = '2026-10-21b';
+var VER = '2026-10-21c';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -595,7 +595,7 @@ function workDraw(c){
   var wk = c._wk || {}, now = Date.now(), typed = {};   // what is being typed in a row survives a redraw (the relay's answer, the minute tick)
   $('wkrows').querySelectorAll('.wr').forEach(function(r){ var v = r.querySelector('input').value; if (v) typed[r.dataset.w] = v; });
   $('wkrows').innerHTML = D.workers.map(function(w){ var bs = wk[w.toUpperCase()] || [], o = bs.filter(function(b){ return !b.out; })[0], done = bs.filter(function(b){ return b.out; }), dsum = done.reduce(function(a, b){ return a + b.d; }, 0);
-    var stt = o ? '<span class="st on">⏱ ' + wkDur(now - o.in) + ' · ' + o.g + ' pcs given · ' + esc(o.by) + '</span>' : done.length ? '<span class="st">✓ ' + dsum + ' pcs · ' + done.map(function(b){ return wkDur(b.out - b.in); }).join(' + ') + '</span>' : '';
+    var stt = o ? '<span class="st on">⏱ ' + wkDur(now - o.in) + (o.wd ? ' · ' + esc(o.wd) : '') + ' · ' + o.g + ' pcs given · ' + esc(o.by) + '</span>' : done.length ? '<span class="st">✓ ' + dsum + ' pcs · ' + done.map(function(b){ return (b.wd || wkDur(b.out - b.in)) + (b.rate ? ' · ≈' + b.rate + '/day' : ''); }).join(' + ') + '</span>' : '';
     return '<div class="wr" data-w="' + esc(w) + '"><div><b>' + esc(w) + '</b>' + stt + '</div><input type="number" inputmode="numeric" min="1" placeholder="pcs"' + (o ? ' value="' + o.g + '"' : '') + '><button class="' + (o ? 'out' : 'in') + '" data-k="' + (o ? 'out' : 'in') + '"' + (D.w ? '' : ' disabled') + '>' + (o ? '✓ Done · হয়েছে' : '▶ Give · দিন') + '</button></div>'; }).join('');
   Object.keys(typed).forEach(function(w){ var r = $('wkrows').querySelector('.wr[data-w="' + w.replace(/"/g, '') + '"] input'); if (r && !r.value) r.value = typed[w]; });
 }
@@ -620,8 +620,8 @@ var WKD = 30;
 async function wksShow(){ $('wks').hidden = false; $('wksbody').innerHTML = '<div class="empty">Loading… · লোড হচ্ছে</div>'; document.querySelectorAll('#wkseg button').forEach(function(x){ x.classList.toggle('on', +x.dataset.d === WKD); });
   var j = await call({ op: 'workrep', days: WKD }); if (!j.ok) { $('wksbody').innerHTML = '<div class="empty">' + esc(j.error) + '</div>'; return; }
   var ws = (j.workers || []).slice().sort(function(a, b){ return b.pcs - a.pcs || b.open - a.open; });
-  $('wksbody').innerHTML = ws.length ? ws.map(function(w){ return '<div class="w">' + (w.pcs ? '<span class="pd">≈ ' + w.perDay + ' /day</span>' : '') + '<b>' + esc(w.name) + '</b><small>' + (w.pcs ? w.pcs + ' pcs · ' + w.batches + (w.batches === 1 ? ' batch' : ' batches') + ' · ' + esc(w.dur) : 'nothing finished in ' + j.days + ' days · কিছু শেষ হয়নি') + (w.open ? ' · <b style="color:#c4561a">' + w.open + ' in hand ⏳</b>' : '') + '</small>'
-    + (w.cards && w.cards.length ? '<ul>' + w.cards.map(function(c){ var p = parse(c.name); return '<li>' + (p.no ? 'SJ-' + esc(p.no) : esc(c.name.slice(0, 30))) + ' · ' + c.pcs + ' pcs</li>'; }).join('') + '</ul>' : '') + '</div>'; }).join('') : '<div class="empty">No workers · কোনো কর্মী নেই</div>'; }
+  $('wksbody').innerHTML = '<div style="font-size:12.5px;color:var(--mute);margin:-4px 0 8px">Pieces per day = per work day of 8 am – 10 pm (Friday 8 – 12) · দিন = সকাল ৮টা – রাত ১০টা (শুক্রবার ৮ – ১২)</div>' + (ws.length ? ws.map(function(w){ return '<div class="w">' + (w.pcs ? '<span class="pd">≈ ' + w.perDay + ' /day</span>' : '') + '<b>' + esc(w.name) + '</b><small>' + (w.pcs ? w.pcs + ' pcs · ' + w.batches + (w.batches === 1 ? ' batch' : ' batches') + ' · ' + esc(w.dur) : 'nothing finished in ' + j.days + ' days · কিছু শেষ হয়নি') + (w.open ? ' · <b style="color:#c4561a">' + w.open + ' in hand ⏳</b>' : '') + '</small>'
+    + (w.cards && w.cards.length ? '<ul>' + w.cards.map(function(c){ var p = parse(c.name); return '<li>' + (p.no ? 'SJ-' + esc(p.no) : esc(c.name.slice(0, 30))) + ' · ' + c.pcs + ' pcs</li>'; }).join('') + '</ul>' : '') + '</div>'; }).join('') : '<div class="empty">No workers · কোনো কর্মী নেই</div>'); }
 $('bwork').onclick = wksShow; $('wksx').onclick = function(){ $('wks').hidden = true; };
 // the list of workers is kept on the relay (shared by every phone); changed here
 $('wkedit').onclick = function(){ $('wkenames').value = (D.workers || []).join('\n'); $('wke').hidden = false; $('wkenames').focus(); };

@@ -66,6 +66,7 @@ per-person topic `FNTFY`, sent by `facNotifyScan` (on Slack events + 1-min timer
 **Work per worker** (21 Oct 2026): the machine workers = the "W - Name" people of the AL MUTAGADED GARMENTS Google Sheet (NOT the Trello
 worker fields `DOX.TEN` — those are Usman hand-work's people). Kept on the relay as `FAC_WORKERS` (`facWorkers`; default list in
 `FAC_WORKERS_DEFAULT`), changed from the app: More → Workers → ✏️ Edit the list (`op:workers`).
+Pieces per day = per WORK day (`facWorkMs`: Dubai time, Sat–Thu 08:00–22:00 = 14 h = 1 day, Friday 08:00–12:00; nights count 0).
 Card screen "👷 WORK": one row per worker, pieces box + ▶ Give / ✓ Done. `op:workset` writes a Trello comment ("👷 IN · NAME · 20 pcs · who
 (factory app)" / "👷 OUT · … · 1 d 2 h · …"), a chat line "→ *WORK* · who · NAME ← 20 pcs given", and the worker's Trello field ("18 ✓").
 No script properties: `op:work` reads the batches back from the card's comments (`facActs` → `facWkParse`); `op:workrep` sums the board's
@@ -158,3 +159,5 @@ Memo rules (his words, short):
   plus the workers; also by hand (⋯ → Production report). Day-count badge untouched. Slack *bold* shown bold. NEEDS: relay deploy.
 - 2026-10-21 (VER 2026-10-21b) Abbas: "messed up the worker's names" — the WORK box now lists the factory's own people (Arif, Rifat, Nahid …
   from the Google Sheet), not Usman hand-work's; the list is editable in the app (More → Workers → ✏️ Edit). NEEDS: relay deploy.
+- 2026-10-21 (VER 2026-10-21c) Abbas: duty hours 8 am – 10 pm, Friday 8 – 12 — pieces per day (worker rows, Workers screen, chat line,
+  production report) are counted over working hours, not the clock. NEEDS: relay deploy.

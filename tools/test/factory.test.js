@@ -134,7 +134,12 @@ async function suite(fast, browser) {
     await test('Workers screen: pieces per day over 30 days', async () => {
       await page.click('#tabs button[data-t="more"]'); await page.click('#bwork');
       await until(async () => /Rifat/.test(await page.textContent('#wksbody')) && /18 pcs/.test(await page.textContent('#wksbody')), 10000, 'Rifat 18 pcs');
-      ok(/≈ 17 \/day/.test(await page.textContent('#wksbody')), 'about 17 a day (18 pcs in 1 d 2 h): ' + (await page.textContent('#wksbody')).slice(0, 120));
+      // pieces per day are counted over working hours (Dubai, Sat-Thu 8 am - 10 pm = 1 day, Fri 8 - 12): same sum as the relay, IN comment time -> OUT time
+      const inT = Date.parse(W.trello.actions.find(a => a.type === 'commentCard' && /👷 IN · Rifat/.test(a.data.text)).date), outT = Date.parse(W.trello.actions.find(a => a.type === 'commentCard' && /👷 OUT · Rifat/.test(a.data.text)).date);
+      const workMs = (a, b) => { const tz = 4 * 3600000; let t = a + tz, end = b + tz, tot = 0; while (t < end) { const day = Math.floor(t / 86400000) * 86400000, fri = new Date(day).getUTCDay() === 5; tot += Math.max(0, Math.min(end, day + (fri ? 12 : 22) * 3600000) - Math.max(t, day + 8 * 3600000)); t = day + 86400000; } return tot; };
+      const want = Math.round(18 / Math.max(0.25, workMs(inT, outT) / (14 * 3600000)));
+      ok(new RegExp('≈ ' + want + ' /day').test(await page.textContent('#wksbody')), 'rate over working hours: want ' + want + ' — ' + (await page.textContent('#wksbody')).slice(0, 160));
+      ok(/8 am – 10 pm/.test(await page.textContent('#wksbody')), 'says how a day is counted');
       await page.click('#wkedit'); await page.fill('#wkenames', 'Rifat\nArif\nNew Guy'); await page.click('#wkego');
       await until(() => JSON.stringify(JSON.parse(T.relay.P.FAC_WORKERS || '[]')) === '["Rifat","Arif","New Guy"]', 8000, 'list saved on the relay');
       await until(async () => /New Guy/.test(await page.textContent('#wksbody')), 8000, 'screen shows the new list');
