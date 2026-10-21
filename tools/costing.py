@@ -9,7 +9,7 @@ memo and see its cost breakdown (fabric 1, fabric 2, lace 1, lace 2 ... LINK, LI
 - Copies each costed design's first photo to cthumbs/<attachmentId>.jpg (small, for the memo).
 - Publishes costing.enc locked with the OWNER password (GitHub secret OWNER_PASSWORD, typed in by Abbas) - never the shop
   password, because staff know that one. No secret -> nothing is published.
-Runs on GitHub Actions after memo-thumbs (workflow memo-costing). Secrets: TRELLO_TOKEN (read), OWNER_PASSWORD. No AI."""
+Runs on GitHub Actions inside the memo-thumbs workflow (one commit with the photos; 21 Oct 2026). Secrets: TRELLO_TOKEN (read), OWNER_PASSWORD. No AI."""
 import base64, datetime, hashlib, hmac, io, json, os, re, sys, urllib.parse, urllib.request
 
 KEY = os.environ.get('TRELLO_KEY', '83fea3748717dd1e3fe28a15f2371759')

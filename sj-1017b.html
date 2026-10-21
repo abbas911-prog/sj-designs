@@ -758,6 +758,9 @@
   .sh1 svg{width:15px;height:15px;flex:none}
   .sh1 small{font-size:11px;opacity:.9;font-weight:500}
   .sh1[disabled]{opacity:.6}
+  /* 21 Oct 2026 (Abbas: the Share button "stays there" over the order page): the buttons sit at z-index 3, so they painted
+     through the order page and the bottom bar, which had no z-index — those two now sit above the feed */
+  .done,.bar{z-index:10}
   /* videos: the button sits in a strip UNDER the video, never over it — the phone's volume/mute and
      full-screen buttons live in the video's corners (5 Oct 2026: it was covering the volume icon) */
   .shbar{display:flex;justify-content:flex-end;padding:7px 8px;background:#111}
