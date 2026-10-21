@@ -199,3 +199,5 @@ Memo rules (his words, short):
   photo, pcs, since, running time; done pcs + ≈/day over 7/30/90 d) and By design (each design in work with worker chips); tap = the
   card; refreshes every 30 s. Relay `workrep` now reads 120 days back and returns `hand` (open batches) per worker; the `work` op's cached
   answer never carries a stale workers list. NEEDS: relay deploy.
+- 2026-10-21 (VER 2026-10-21l) Abbas: the dashboard is reached from a small 👷 Workers icon in the bottom bar (nothing else changed; More →
+  Workers still works). Added: "Today · আজ: N pcs done by M workers" line and an amber "⚠ long" on a batch held 2+ work days. NEEDS: relay deploy.

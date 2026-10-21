@@ -30,7 +30,7 @@ main{padding:12px 14px calc(var(--tab) + 16px)}
 section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
 #tabs{position:fixed;left:0;right:0;bottom:0;z-index:8;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;align-items:stretch;padding:4px 6px calc(4px + env(safe-area-inset-bottom));height:var(--tab)}
 #tabs button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;font-weight:700;color:var(--mute);position:relative;padding:0;border-radius:12px}
-#tabs button i{font-style:normal;font-size:21px;line-height:1}#tabs button.on{color:var(--gold)}#tabs button.on i{transform:translateY(-1px)}
+#tabs button i{font-style:normal;font-size:21px;line-height:1}#tabs button{font-size:10px;padding-left:0;padding-right:0}#tabs button.on{color:var(--gold)}#tabs button.on i{transform:translateY(-1px)}
 #tabs button b{position:absolute;top:4px;left:calc(50% + 6px);background:var(--red);color:#fff;border-radius:999px;font-size:10.5px;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 4px}#tabs button b:empty{display:none}
 #tabs .plus{flex:0 0 64px}#tabs .plus i{width:46px;height:46px;border-radius:16px;background:var(--gold);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:300;box-shadow:0 6px 16px rgba(168,130,74,.4)}
 .sect{font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--mute);margin:14px 2px 8px}
@@ -182,7 +182,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
     <div style="text-align:center;color:var(--mute);font-size:12px;margin-top:10px" id="verline"></div>
   </section>
 </main>
-<nav id="tabs"><button data-t="cards" class="on"><i>🗂️</i>Cards</button><button data-t="chats"><i>💬</i>Chats<b id="tbchat"></b></button><button class="plus" id="tplus"><i>＋</i></button><button data-t="returns"><i>↩️</i>Returns<b id="tbret"></b></button><button data-t="more"><i>☰</i>More</button></nav>
+<nav id="tabs"><button data-t="cards" class="on"><i>🗂️</i>Cards</button><button data-t="chats"><i>💬</i>Chats<b id="tbchat"></b></button><button class="plus" id="tplus"><i>＋</i></button><button data-t="returns"><i>↩️</i>Returns<b id="tbret"></b></button><button data-t="work" id="twork"><i>👷</i>Workers</button><button data-t="more"><i>☰</i>More</button></nav>
 
 <div id="card" hidden>
   <div class="chd"><button id="back">‹</button><div class="nm" id="cnm"></div><span class="pill" id="cstage"></span><button class="pin" id="bpin" title="Later">📌</button><button class="more" id="bmore" title="More">⋯</button></div>
@@ -227,7 +227,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-21k';
+var VER = '2026-10-21l';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -493,7 +493,8 @@ function rowHtml(c, showStage){ var u = unread(c);
 // the card screen keeps Done + Problem in front and folds Move / Trello / Add photo / Edit / Copy into one ⋯ menu.
 var TAB = ls('sj_fac_tab') || 'cards';
 function setTab(t){ TAB = t; ls('sj_fac_tab', t); document.querySelectorAll('#home > section').forEach(function(x){ x.hidden = x.dataset.t !== t; }); document.querySelectorAll('#tabs button[data-t]').forEach(function(b){ b.classList.toggle('on', b.dataset.t === t); }); $('hcards').hidden = t !== 'cards'; try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(e){} document.body.classList.remove('kb'); window.scrollTo(0, 0); if (t === 'chats') chatsDraw(); if (t === 'returns') retDraw(); }
-$('tabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; if (b.id === 'tplus') { $('plus').hidden = false; return; } if (b.dataset.t === TAB) window.scrollTo({ top: 0, behavior: 'smooth' }); setTab(b.dataset.t); };
+// 21 Oct 2026 (Abbas): the Workers dashboard opens from the 👷 icon in the bar (More → Workers still works too)
+$('tabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; if (b.id === 'tplus') { $('plus').hidden = false; return; } if (b.id === 'twork') { wksShow(); return; } if (b.dataset.t === TAB) window.scrollTo({ top: 0, behavior: 'smooth' }); setTab(b.dataset.t); };
 $('plusx').onclick = function(){ $('plus').hidden = true; };
 $('pcard').onclick = function(){ $('plus').hidden = true; $('badd').click(); };
 $('psample').onclick = function(){ $('plus').hidden = true; $('bstar').click(); };
@@ -656,11 +657,11 @@ function dCard(id, name){ var c = D.byId && D.byId[id], p = parse(name || (c && 
 function dPhoto(el, id){ var c = D.byId && D.byId[id]; if (c && c.img) photo(c, el); else el.textContent = ''; }
 function wksDraw(){ var j = WKR; if (!j) return; var now = Date.now(), ws = (j.workers || []).slice(), el = $('wksbody');
   var busy = ws.filter(function(w){ return w.hand && w.hand.length; }), free = ws.filter(function(w){ return !(w.hand && w.hand.length); }), inhand = busy.reduce(function(a, w){ return a + w.hand.reduce(function(x, h){ return x + h.g; }, 0); }, 0), done = ws.reduce(function(a, w){ return a + w.pcs; }, 0);
-  var tiles = '<div class="dtiles"><div class="dtile g"><b>' + busy.length + '</b><small>working<br>কাজে</small></div><div class="dtile"><b>' + free.length + '</b><small>free<br>ফাঁকা</small></div><div class="dtile a"><b>' + inhand + '</b><small>pcs in hand<br>হাতে পিস</small></div><div class="dtile"><b>' + done + '</b><small>pcs done · ' + j.days + ' d<br>হয়ে গেছে</small></div></div><div style="font-size:11.5px;color:var(--mute);margin:-6px 2px 10px">≈ /day = per work day of 8 am – 10 pm (Friday 8 – 12) · দিন = সকাল ৮টা – রাত ১০টা</div>';
+  var today = ws.reduce(function(a, w){ return a + (w.today || 0); }, 0), tiles = '<div class="dtiles"><div class="dtile g"><b>' + busy.length + '</b><small>working<br>কাজে</small></div><div class="dtile"><b>' + free.length + '</b><small>free<br>ফাঁকা</small></div><div class="dtile a"><b>' + inhand + '</b><small>pcs in hand<br>হাতে পিস</small></div><div class="dtile"><b>' + done + '</b><small>pcs done · ' + j.days + ' d<br>হয়ে গেছে</small></div></div><div style="font-size:12.5px;margin:-4px 2px 4px"><b>Today · আজ:</b> ' + today + ' pcs done' + (j.todayN ? ' by ' + j.todayN + (j.todayN === 1 ? ' worker' : ' workers') : '') + '</div><div style="font-size:11.5px;color:var(--mute);margin:0 2px 10px">≈ /day = per work day of 8 am – 10 pm (Friday 8 – 12) · দিন = সকাল ৮টা – রাত ১০টা</div>';
   if (WKV === 'w') {
     busy.sort(function(a, b){ return a.hand[0].in - b.hand[0].in; }); free.sort(function(a, b){ return b.pcs - a.pcs || (b.last || 0) - (a.last || 0); });
     el.innerHTML = tiles + busy.concat(free).map(function(w){ var hb = (w.hand || []).map(function(h){ var d = dCard(h.id, h.name);
-        return '<div class="hb" data-id="' + esc(h.id) + '"><div class="ph" data-img=""></div><div class="t"><b>' + esc(d.no) + '</b>' + (d.list ? ' <em style="display:inline">' + esc(d.list) + '</em>' : '') + '<small>⏱ ' + dDur(now - h.in) + ' · ' + esc(h.wd || '') + '</small><em>since ' + wkWhen(h.in) + (h.adds && h.adds.length ? ' · +' + h.adds.join(' +') + ' later' : '') + ' · ' + esc(h.by || '') + '</em></div><div class="pc">' + h.g + ' pcs</div></div>'; }).join('');
+        return '<div class="hb" data-id="' + esc(h.id) + '"><div class="ph" data-img=""></div><div class="t"><b>' + esc(d.no) + '</b>' + (d.list ? ' <em style="display:inline">' + esc(d.list) + '</em>' : '') + '<small>⏱ ' + dDur(now - h.in) + ' · ' + esc(h.wd || '') + (parseFloat(h.wd) >= 2 && /work days/.test(h.wd || '') ? ' <span style="color:#c4561a">⚠ long · অনেকদিন</span>' : '') + '</small><em>since ' + wkWhen(h.in) + (h.adds && h.adds.length ? ' · +' + h.adds.join(' +') + ' later' : '') + ' · ' + esc(h.by || '') + '</em></div><div class="pc">' + h.g + ' pcs</div></div>'; }).join('');
       var dn = w.pcs ? '<div class="done"><span class="pd">≈ ' + w.perDay + ' /day</span><b>' + w.pcs + ' pcs</b> done in ' + j.days + ' d · ' + w.batches + (w.batches === 1 ? ' batch' : ' batches') + ' · ' + esc(w.dur) + '</div>' : '<div class="done">nothing finished in ' + j.days + ' days · ' + j.days + ' দিনে কিছু শেষ হয়নি</div>';
       return '<div class="wkc ' + (w.hand && w.hand.length ? 'busy' : 'free') + '"><div class="top"><span class="dot"></span><b>' + esc(w.name) + '</b><small>' + (w.hand && w.hand.length ? w.hand.length + (w.hand.length === 1 ? ' design' : ' designs') + ' in hand · হাতে' : 'free · ফাঁকা') + '</small></div>' + hb + dn + '</div>'; }).join('');
   } else {

@@ -143,8 +143,9 @@ async function suite(fast, browser) {
       await page.goBack();
     });
     await test('Workers screen: pieces per day over 30 days', async () => {
-      await page.click('#tabs button[data-t="more"]'); await page.click('#bwork');
+      await page.click('#twork');                                // the 👷 icon in the bar opens the dashboard
       await until(async () => /Rifat/.test(await page.textContent('#wksbody')) && /18 pcs/.test(await page.textContent('#wksbody')), 10000, 'Rifat 18 pcs');
+      ok(/Today · আজ:\s*18 pcs done by 1 worker/.test(await page.textContent('#wksbody')), 'today line: ' + (await page.textContent('#wksbody')).slice(0, 200));
       // the dashboard: Arif still has 6 pcs of SJ-17841 in hand -> green card first, with the design, pieces and since when; tiles add up
       const body = await page.textContent('#wksbody');
       ok(/1\s*working/.test(body) && /6\s*pcs in hand/.test(body) && /18\s*pcs done/.test(body), 'tiles: 1 working, 6 in hand, 18 done — ' + body.slice(0, 120));
