@@ -1,0 +1,47 @@
+{
+ "id": "smvifvsd2xzkv",
+ "op": "sell",
+ "ref": "INV-0024",
+ "ok": true,
+ "cards": [
+  {
+   "card": "675c2910d38ea79e6a986c07",
+   "no": "5576",
+   "before": "Sj 5576 -(22) pcs….(0/10/4/0/0/8)",
+   "after": "Sj 5576 -(0) pcs….(0/0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 2: 10 → 0 (−10)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 6: 8 → 0 (−8)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "694f86b0b1303dc3e15fdf44",
+   "no": "18925",
+   "before": " SJ**(18925)****(7)pcs___(2/2/3/0/0)",
+   "after": " SJ**(18925)****(0)pcs___(0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 2 → 0 (−2)",
+    "colour 2: 2 → 0 (−2)",
+    "colour 3: 3 → 0 (−3)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6a55f0e79b1c71cc9442879d",
+   "no": "63910",
+   "before": "Sj = **(63910)** (41) pcs ... color = (9) ....(0/0/2/7/4)...(0/1/1/5/8)...(12/0/1)",
+   "after": "Sj = **(63910)** (36) pcs ... color = (9) ....(0/0/2/7/4)...(0/1/1/5/8)...(8/0/0)",
+   "left": 36,
+   "lines": [
+    "colour 11: 12 → 8 (−4)",
+    "colour 13: 1 → 0 (−1)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
