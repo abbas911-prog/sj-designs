@@ -10,7 +10,7 @@ let TSN = 0;
 function slackTs() { TSN = Math.max(TSN + 1, Date.now() * 1000); return Math.floor(TSN / 1e6) + '.' + String(TSN % 1e6).padStart(6, '0'); }   // integer microseconds: never two messages with one ts
 
 function makeWorld() {
-  const W = { trello: { lists: [], cards: {}, cf: [{ id: 'cf1', name: 'FABRIC' }, { id: 'cf2', name: 'USMAN' }], labels: [], actions: [] },
+  const W = { trello: { lists: [], cards: {}, cf: [{ id: 'cf1', name: 'FABRIC' }].concat(['TASLEEM', 'IRFAN ALI', 'HASHIM', 'QADIR', 'SHAHZAIB', 'SALMAAN', 'ZAKIR', 'USMAN', 'Anees', 'SHAWKEEN'].map((n, i) => ({ id: ['6a8629369e5acecd9d32161e', '6a86294212411acfd6b242e8', '6a862961d555a85cfa20f5a6', '6a8629740cfd2fbb02940ccb', '6a86297ea870d5e5d95d9915', '6a86298786371037d218c02b', '6a86298e8af0a7af3f0eabda', '6a862997069f7fc999a3784a', '6a8f0add4dd96589b353d1b6', '6a8f0ae17f378caf885b3e9a'][i], name: n }))), labels: [], actions: [] },
     slack: { ch: {}, users: { U1: { id: 'U1', name: 'ibrahim', real_name: 'Md Ibrahim', profile: { real_name: 'Md Ibrahim', display_name: 'ibrahim' } },
       U2: { id: 'U2', name: 'abbas_911', real_name: 'Abbas', profile: { real_name: 'Abbas', display_name: 'abbas' } } }, files: {} },
     ntfy: [], log: [], slackDelay: 0 };
@@ -28,7 +28,8 @@ function addCard(W, list, name, extra) {
   const id = hexId(Date.now() - ((extra && extra.ageDays) || 0) * 86400000), short = crypto.randomBytes(4).toString('hex');
   const c = Object.assign({ id, name, idList: list, idBoard: '6527c52485d9627f63157296', pos: (Object.keys(W.trello.cards).length + 1) * 1000, shortLink: short, shortUrl: 'https://trello.com/c/' + short,
     idAttachmentCover: '', dateLastActivity: new Date().toISOString(), labels: [], customFieldItems: [], desc: '', closed: false, attachments: [] }, extra || {});
-  delete c.ageDays; W.trello.cards[id] = c; return c;
+  const born = new Date(Date.now() - ((extra && extra.ageDays) || 0) * 86400000).toISOString(); delete c.ageDays; W.trello.cards[id] = c;
+  W.trello.actions.push({ id: hexId(), type: 'createCard', date: born, memberCreator: { fullName: 'Abbas Jamal' }, data: { card: { id, name }, list: { id: list, name: (W.trello.lists.find(l => l.id === list) || {}).name } } }); return c;
 }
 function postSlack(W, ch, m) {                                  // m: {text, user|bot_id, thread_ts, files}
   const C = W.slack.ch[ch]; if (!C) return { ok: false, error: 'channel_not_found' };
@@ -66,13 +67,13 @@ function handle(W, method, url, body, headers) {
 function trello(W, method, p, A, J) {
   const T = W.trello, BOARD = '6527c52485d9627f63157296', seg = p.split('/').filter(Boolean);
   const cardOut = (c, withAtt) => { const o = Object.assign({}, c); if (!withAtt) delete o.attachments; return o; };
-  const act = (type, c, data) => { T.actions.push({ id: hexId(), type, date: new Date().toISOString(), memberCreator: { fullName: A._who || 'App Bot' }, data: Object.assign({ card: { id: c.id, name: c.name } }, data) }); };
+  const act = (type, c, data, date) => { T.actions.push({ id: hexId(), type, date: date || new Date().toISOString(), memberCreator: { fullName: A._who || 'App Bot' }, data: Object.assign({ card: { id: c.id, name: c.name } }, data) }); };
   if (seg[0] === 'boards') {
     if (seg[2] === 'cards') { const cs = Object.values(T.cards).filter(c => !c.closed).sort((a, b) => b.id.localeCompare(a.id)).map(c => { const o = cardOut(c, false); if (A.attachments === 'cover') o.attachments = c.attachments.filter(a => a.id === c.idAttachmentCover).map(a => ({ id: a.id, previews: a.previews, mimeType: a.mimeType })); return o; }); return J(cs); }
     if (seg[2] === 'customFields') return J(T.cf);
     if (seg[2] === 'lists') return J(T.lists);
     if (seg[2] === 'labels') return J(T.labels);
-    if (seg[2] === 'actions') { const since = A.since ? Date.parse(A.since) : 0, f = String(A.filter || '').split(','); return J(T.actions.filter(a => Date.parse(a.date) > since && f.some(x => x.split(':')[0] === a.type)).reverse()); }
+    if (seg[2] === 'actions') { const since = A.since ? Date.parse(A.since) : 0, f = String(A.filter || '').split(','); return J(T.actions.filter(a => Date.parse(a.date) > since && f.some(x => x.split(':')[0] === a.type)).sort((x, y) => Date.parse(y.date) - Date.parse(x.date)).slice(0, +A.limit || 50)); }
   }
   if (seg[0] === 'lists' && seg.length === 1 && method === 'POST') { const l = { id: hexId(), name: A.name, closed: false }; T.lists.push(l); return J(l); }
   if (seg[0] === 'lists' && seg[2] === 'cards') return J(Object.values(T.cards).filter(c => c.idList === seg[1] && !c.closed).sort((a, b) => a.pos - b.pos).map(c => cardOut(c, false)));
@@ -87,6 +88,8 @@ function trello(W, method, p, A, J) {
       if (A.pos === 'top') c.pos = Math.min(0, ...Object.values(T.cards).filter(x => x.idList === c.idList && x !== c).map(x => x.pos)) - 1;
       if (A.name != null) c.name = A.name; if (A.desc != null) c.desc = A.desc; if (A.closed != null) c.closed = A.closed === true || A.closed === 'true';
       c.dateLastActivity = new Date().toISOString(); return J(cardOut(c)); }
+    if (seg[2] === 'actions' && !seg[3] && method === 'GET') { const f = String(A.filter || '').split(','); return J(T.actions.filter(a => a.data && a.data.card && a.data.card.id === c.id && f.some(x => x.split(':')[0] === a.type)).sort((x, y) => Date.parse(y.date) - Date.parse(x.date)).slice(0, +A.limit || 50)); }
+    if (seg[2] === 'customField' && seg[4] === 'item' && method === 'PUT') { const v = (A.value || {}); const it = c.customFieldItems.find(x => x.idCustomField === seg[3]); if (it) it.value = v; else c.customFieldItems.push({ idCustomField: seg[3], value: v }); return J({ ok: true }); }
     if (seg[2] === 'actions' && seg[3] === 'comments') { act('commentCard', c, { text: A.text }); W.log.push(['comment', c.id, A.text]); return J({ id: hexId() }); }
     if (seg[2] === 'attachments' && method === 'POST') { const a = { id: hexId(), name: A.name || 'file', mimeType: 'image/jpeg', bytes: 1000, url: 'https://trello.com/fake/orig/x.jpg', date: new Date().toISOString(), previews: [{ width: 600, url: 'https://trello.com/fake/p/600.jpg' }] }; c.attachments.push(a); if (A.setCover === 'true' || !c.idAttachmentCover) c.idAttachmentCover = a.id; return J(a); }
     if (seg[2] === 'attachments' && seg[3]) { const a = c.attachments.find(x => x.id === seg[3]); return a ? J(a) : { status: 404, body: Buffer.from('no att'), type: 'text/plain' }; }

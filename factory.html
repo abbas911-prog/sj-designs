@@ -90,7 +90,15 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .hero .ttl{padding:10px 12px 0;font-size:13.5px;color:var(--mute)}
 .hero .info{padding:10px 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;font-size:14px;word-break:break-word}
 .hero .info b{display:block;font-size:10.5px;color:var(--mute);font-weight:700;letter-spacing:.06em}
-.act{display:flex;gap:8px;margin:12px 0}.act button{border:0;border-radius:16px;padding:14px 10px;font-weight:800;font-size:16px;color:#fff;line-height:1.15}.act button small{display:block;font-weight:500;font-size:11.5px;opacity:.9;margin-top:2px}
+.act{display:flex;gap:8px;margin:12px 0}
+.work{background:#fff;border-radius:var(--r);box-shadow:var(--sh);margin:0 0 10px;overflow:hidden}.work h3{margin:0;padding:11px 12px;font-size:13px;letter-spacing:.05em;display:flex;align-items:center;gap:8px;cursor:pointer}.work h3 small{font-weight:600;color:var(--mute);letter-spacing:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.work h3 i{font-style:normal;color:var(--mute);font-size:12px}
+.work .wkbody{border-top:1px solid var(--line);padding:4px 8px 8px}.work .wkbody[hidden]{display:none}
+.wr{display:grid;grid-template-columns:1fr 64px 86px;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid #f1ece3}.wr:last-child{border-bottom:0}.wr b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wr .st{display:block;font-size:12px;color:var(--mute);font-weight:500}.wr .st.on{color:#1f8a4c;font-weight:700}.wr .st.hist{color:#8a7f70;font-size:11px}
+.wr input{width:100%;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:10px;padding:9px 6px;font:inherit;font-size:16px;text-align:center;background:#fff}.wr input:disabled{background:#f6f2ea;color:var(--mute)}
+.wr button{border:0;border-radius:10px;padding:9px 4px;font:inherit;font-weight:800;font-size:13px;background:var(--gold2);color:#6e4f1e;white-space:nowrap}.wr button.out{background:#1f8a4c;color:#fff}.wr button:disabled{opacity:.5}
+.work .wkfoot{display:flex;gap:8px;padding:6px 4px 0}.work .wkfoot button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:10px;font:inherit;font-weight:700;font-size:13.5px}
+#wks .w{background:#f7f3ec;border-radius:12px;padding:10px 12px;margin-bottom:8px}#wks .w b{font-size:15px}#wks .w small{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}#wks .w .pd{float:right;font-weight:800;color:#1f8a4c;font-size:15px}#wks .w ul{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:#5a5047}
+#wks .seg{display:flex;gap:6px;margin:0 0 10px}#wks .seg button{flex:1;margin:0;padding:9px;font-size:13.5px;background:#f0e9dd;text-align:center}#wks .seg button.on{background:var(--gold);color:#fff}.act button{border:0;border-radius:16px;padding:14px 10px;font-weight:800;font-size:16px;color:#fff;line-height:1.15}.act button small{display:block;font-weight:500;font-size:11.5px;opacity:.9;margin-top:2px}
 .bdone{flex:1;background:var(--green);font-size:17px;box-shadow:0 6px 16px rgba(31,138,76,.25)}.bdone:disabled{background:#9bb8a6;box-shadow:none}.bprob{flex:0 0 112px;background:var(--red)}.bdel{background:#8a1c1c;box-shadow:0 6px 16px rgba(138,28,28,.25)}.bdel small{display:block;font-size:11px;font-weight:600;opacity:.85}
 .thr{background:#eee6da;border-radius:var(--r);padding:10px;margin-bottom:8px}
 .thr h3{margin:0 0 8px;font-size:12px;color:var(--mute);letter-spacing:.07em;font-weight:800}.thr h3 span{float:right;font-weight:500;letter-spacing:0}
@@ -159,6 +167,7 @@ body.co .toast{bottom:90px}
     <div class="mecard"><div class="mono">AM</div><h1><span id="who"></span><small>Factory · কারখানা</small></h1></div>
     <div class="mlist"><button class="rf" id="bell" hidden><i>🔔</i><span>Notifications<small>নোটিফিকেশন</small></span></button><button class="rf" id="rf"><i>↻</i><span>Refresh the cards<small>আবার লোড করুন</small></span></button><button class="m" id="bspeed"><i>🚀</i><span>Speed · Fast lane<small>গতি</small></span></button><button class="m" id="bslk"><i>⚡</i><span>Instant Slack messages<small>স্ল্যাক মেসেজ সাথে সাথে</small></span></button><button class="m" id="bdmset"><i>💬</i><span>Direct chat channel<small>সরাসরি চ্যাটের চ্যানেল</small></span></button></div>
     <div class="mlist"><button class="rf" id="badd"><i>＋</i><span>New card<small>নতুন কার্ড</small></span></button><button class="rf" id="bstar"><i>⭐</i><span>New sample<small>নতুন স্যাম্পল</small></span></button><button class="m" id="bretm"><i>↩️</i><span>New return<small>নতুন ফেরত</small></span></button></div>
+    <div class="mlist"><button class="m" id="bwork"><i>👷</i><span>Workers · pieces per day<small>কর্মী · দিনে কত পিস</small></span></button></div>
     <div class="mlist"><button class="m" id="bout"><i>👤</i><span>Sign in as someone else<small>অন্য নামে ঢুকুন</small></span></button></div>
     <div style="text-align:center;color:var(--mute);font-size:12px;margin-top:10px" id="verline"></div>
   </section>
@@ -173,6 +182,7 @@ body.co .toast{bottom:90px}
     <div id="viewer" hidden><img id="vimg" alt=""><button id="vx">✕</button><div id="vbar"><button id="vshare">⬆️ Share · Save</button><button id="vcopy">📋 Copy photo</button><div id="vmsg"></div></div></div>
     <div class="act"><button class="bdone" id="bdone">✅ Done → <span id="bnext"></span><small id="bnextar"></small></button><button class="bdone bdel" id="bdel" hidden>🗑 Delete card<small>মুছে ফেলুন</small></button><button class="bprob" id="bprob">🚩<small>Problem · সমস্যা</small></button></div>
     <input type="file" id="tfile" accept="image/*" multiple hidden>
+    <div class="work" id="work" hidden><h3 id="wkh">👷 WORK · কাজ<small id="wksum"></small><i id="wkarr">▾</i></h3><div class="wkbody" id="wkbody" hidden><div id="wkrows"></div><div class="wkfoot"><button id="wkrep">📊 Production report · রিপোর্ট</button></div></div></div>
     <div class="thr"><h3><span id="thh" style="float:none">CARD CHAT · কার্ড চ্যাট</span> <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
   <div class="compw"><div id="rbar" hidden></div><div class="pend" id="pend"></div><div class="chint">🎤 tap to record, tap again to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo &nbsp;·&nbsp; 📎 files</div><div class="comp"><button class="mic" id="mic" title="tap to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Message · মেসেজ"></textarea><button id="send">Send</button></div></div>
@@ -193,16 +203,17 @@ body.co .toast{bottom:90px}
 <button class="go" id="nsgo">⭐ Make the sample card · স্যাম্পল কার্ড তৈরি করুন</button><div id="nserr" hidden></div><button class="x" id="nsx">Cancel</button></div></div>
 <div class="sheet" id="nc" hidden><div class="in"><h3>＋ New card · নতুন কার্ড</h3><input id="ncname" placeholder="Title, e.g. SJ-58429 , 42 PCS · শিরোনাম"><textarea id="ncdesc" placeholder="Description (optional) · বিবরণ"></textarea><label class="usm" id="ncusml"><input type="checkbox" id="ncusm"><span>🧵 <b>USMAN hand work</b> — chat in #usmancutting</span><small>উসমান হ্যান্ড ওয়ার্ক — চ্যাট #usmancutting-এ</small></label><select id="ncto"></select><button class="go" id="ncgo">Add card · কার্ড যোগ করুন</button><button class="x" id="ncx">Cancel</button></div></div>
 <div class="sheet" id="dms" hidden><div class="in"><h3 id="dmh">💬 Direct chat · which Slack channel? · কোন চ্যানেল</h3><button class="go" id="dmnewb" style="margin:0 0 8px">👤 New direct chat with a person · নতুন সরাসরি চ্যাট</button><input id="dmq" placeholder="Search · খুঁজুন" autocomplete="off"><div id="dml" style="max-height:46vh;overflow:auto"><div class="empty">Loading…</div></div><div id="dmnote" style="font-size:12px;color:var(--mute);margin-top:6px">A private group shows here only when the bot is inside it — in Slack type <b>/invite @SJ Orders</b> in that group, or make a new chat above.</div><button class="x" id="dmx">Cancel</button></div></div>
+<div class="sheet" id="wks" hidden><div class="in"><h3>👷 Workers · কর্মী</h3><div class="seg" id="wkseg"><button data-d="7">7 days · ৭ দিন</button><button data-d="30" class="on">30 days · ৩০ দিন</button><button data-d="90">90 days · ৯০ দিন</button></div><div id="wksbody"><div class="empty">Loading… · লোড হচ্ছে</div></div><button class="x" id="wksx">Close</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
-<div class="sheet" id="cmenu" hidden><div class="in"><h3 id="cmh">Card · কার্ড</h3><button id="bmove">↔ Move to… · অন্য জায়গায়</button><button id="battach">📷 Add photo to Trello · ট্রেলোতে ছবি যোগ করুন</button><button id="bedit">✏️ Edit card · বিবরণ বদলান</button><button id="bcopy">⧉ Copy card · কার্ড কপি করুন</button><button id="btrello">Open in Trello · ট্রেলোতে খুলুন</button><button class="x" id="cmx">Cancel</button></div></div>
+<div class="sheet" id="cmenu" hidden><div class="in"><h3 id="cmh">Card · কার্ড</h3><button id="bmove">↔ Move to… · অন্য জায়গায়</button><button id="battach">📷 Add photo to Trello · ট্রেলোতে ছবি যোগ করুন</button><button id="bedit">✏️ Edit card · বিবরণ বদলান</button><button id="bcopy">⧉ Copy card · কার্ড কপি করুন</button><button id="bwrep">📊 Production report · উৎপাদন রিপোর্ট</button><button id="btrello">Open in Trello · ট্রেলোতে খুলুন</button><button class="x" id="cmx">Cancel</button></div></div>
 <div class="sheet" id="plus" hidden><div class="in"><h3>New · নতুন</h3><button id="pcard">＋ New card · নতুন কার্ড</button><button id="psample">⭐ New sample · নতুন স্যাম্পল</button><button id="pret">↩️ New return · নতুন ফেরত</button><button class="x" id="plusx">Cancel</button></div></div>
 <div class="toast" id="toast"></div>
 <div id="undo" hidden></div>
 
 <script>
 (function(){
-var VER = '2026-10-20d';
+var VER = '2026-10-21a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -236,7 +247,7 @@ async function hmacHex(key, msg){
 var NET = { busy: 0, heavy: 0, hi: [], lo: [], log: [] };
 function netPick(q){ for (var i = 0; i < q.length; i++) if (!q[i].h || q[i].top || NET.heavy < 2) return q.splice(i, 1)[0]; return null; }   // big transfers: at most 2 at once, so chat requests always get through
 function netGo(){ while (NET.busy < 4) { var f = netPick(NET.hi) || netPick(NET.lo); if (!f) break; NET.busy++; if (f.h) NET.heavy++; f(); } }
-var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later)$/;
+var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|workset|report)$/;
 async function call(obj, pw, top){
   if (ONCE.test(obj.op) && !obj.rid) obj.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);   // a retry of the same action is answered once, never done twice
   var heavy = /^(up|attach|sample)$/.test(obj.op) || (obj.op === 'media' && obj.full && !obj.pre);
@@ -327,7 +338,7 @@ function loSync(){ if (!D.byId) return; var by = {}; (D.cards || []).forEach(fun
     c.no = o.no; c.name = o.no ? 'SJ-' + o.no : 'Order'; c.title = o.no ? 'SJ-' + o.no : '🧵 Order'; c.sub = o.sub || ''; c.ts = o.ts; c.lr = o.lr || ''; c.rc = o.rc || 0; c.src = src; c.img = src ? src.img : '';
     D.byId[o.id] = c; }); }
 function phc(c){ return c && c.lo ? (c.src || c) : c; }          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
-function applyList(j){ D.lists = j.lists; D.show = j.show || []; if (j.limit) D.limit = j.limit; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.lais = j.lais || null; D.lo = j.lo || []; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; loSync(); bellPaint(); }
+function applyList(j){ D.lists = j.lists; if (j.workers) D.workers = j.workers; D.show = j.show || []; if (j.limit) D.limit = j.limit; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.lais = j.lais || null; D.lo = j.lo || []; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; loSync(); bellPaint(); }
 function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); if (j.live && PW) liveStart(j.live); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = '⏳ Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · লোড হচ্ছে'; draw(); return true; } catch(e){ return false; } }
 // 18 Oct 2026 (Abbas: "when it's done it has to be in Came back, but it's not there — it's deleted. Why?"): the fast lane does not read the
 // long done-lists (RETURNS BACK, FINISH, SAMPLE DONE, FINISH SAMPLES — Cloudflare's CPU limit); the phone kept them from the relay's list, but the
@@ -546,7 +557,7 @@ function cardShow(on){ if (on) { SCY = window.scrollY || 0; document.body.classL
 // iPhone: when the keyboard opens the visible area shrinks and Safari scrolls the page; the card follows the visible area and snaps back when the keyboard closes
 function vvFit(){ var vv = window.visualViewport, el = $('card'); if (!vv || el.hidden) return; var full = Math.abs(vv.height - window.innerHeight) < 2 && vv.offsetTop < 2; el.style.height = full ? '' : vv.height + 'px'; el.style.top = full ? '' : vv.offsetTop + 'px'; if (full) window.scrollTo(0, 0); }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', vvFit); window.visualViewport.addEventListener('scroll', vvFit); }
-function openCard(c){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } open = c; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
+function openCard(c){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } open = c; c._wkAt = 0; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
 function paintCard(){
   mvApply(); var c = open; $('card').classList.toggle('dm', !!c.dm);
   if (c.lo) { $('cnm').innerHTML = '<span class="loph" data-img="' + esc(c.img) + '"></span>🧵 ' + esc(c.title) + '<small>' + esc(c.sub || '') + ' · #' + esc((D.lais || {}).name || 'laisfactory') + '</small>'; var lp = $('cnm').querySelector('.loph'); if (c.img) photo(phc(c), lp); else lp.remove();
@@ -566,7 +577,52 @@ function paintCard(){
   var cb = lname(c.l) === 'RETURNS BACK'; $('bdel').hidden = !cb; $('bdone').hidden = cb; $('bdel').disabled = !D.w;   // 18 Oct 2026: a card in CAME BACK can be deleted
   $('bdone').disabled = !nx || !D.w; $('bnext').textContent = nx || '—'; $('bnextar').textContent = nx ? (UR[nx] || '') + ' -এ পাঠান' : '';
   if (!c._atts) { $('catts').hidden = true; $('catts').innerHTML = ''; attsLoad(c); } else attsDraw(c);
+  workDraw(c); if (!c._wk || Date.now() - (c._wkAt || 0) > 30000) workLoad(c);
 }
+// ===== 21 Oct 2026 (Abbas): "give me the names of all the employees, beside it the number of pieces I put in - when they get the pieces the timer
+// starts, when it goes out we stop it". One row per worker: pieces box + ▶ Give; while the pieces are with them the row shows the running time and
+// the button becomes ✓ Done (the box then holds the pieces that came back). Every give / done = a Trello comment on the card + a line in its chat
+// (the relay keeps nothing itself - Trello's comments are the record), and the worker's field on the Trello card shows "58 ✓".
+var WKOPEN = {}, WKLIST = /^(CUTTING|IN LINE|IN LINE \(2\)|READY FOR HAND WORK|IN HAND WORK|CAME FROM HAND WORK|IRON\/CHECKING)$/;
+function wkDur(ms){ ms = Math.max(0, ms); var h = Math.floor(ms / 3600000), d = Math.floor(h / 24); return d ? d + ' d' + (h % 24 ? ' ' + (h % 24) + ' h' : '') : h ? h + ' h' : Math.max(1, Math.floor(ms / 60000)) + ' min'; }
+async function workLoad(c){ if (!c || c.dm || c.lo) return; var j = await call({ op: 'work', card: c.id }); if (!j.ok || !open || open.id !== c.id) return; open._wk = j.batches || {}; open._wkAt = Date.now(); if (j.workers && j.workers.length) D.workers = j.workers; workDraw(open); }
+function wkState(c){ var wk = (c && c._wk) || {}, sum = [], busy = 0; Object.keys(wk).forEach(function(w){ var bs = wk[w], o = bs.filter(function(b){ return !b.out; })[0], d = bs.reduce(function(a, b){ return a + (b.out ? b.d : 0); }, 0); if (o) busy++; if (o || d) sum.push(w + ' ' + (o ? o.g + ' ⏳' : d + ' ✓')); }); return { sum: sum, busy: busy }; }
+function workDraw(c){
+  var el = $('work'); if (!c || c.dm || c.lo || !(D.workers || []).length) { el.hidden = true; return; } el.hidden = false;
+  var st = wkState(c), ln = lname(c.l), openIt = WKOPEN[c.id] !== undefined ? WKOPEN[c.id] : (st.busy > 0 || WKLIST.test(ln));
+  $('wksum').textContent = st.sum.length ? st.sum.join(' · ') : (c._wk ? 'nobody yet · এখনো কেউ না' : '…'); $('wkarr').textContent = openIt ? '▴' : '▾'; $('wkbody').hidden = !openIt;
+  var wk = c._wk || {}, now = Date.now(), typed = {};   // what is being typed in a row survives a redraw (the relay's answer, the minute tick)
+  $('wkrows').querySelectorAll('.wr').forEach(function(r){ var v = r.querySelector('input').value; if (v) typed[r.dataset.w] = v; });
+  $('wkrows').innerHTML = D.workers.map(function(w){ var bs = wk[w.toUpperCase()] || [], o = bs.filter(function(b){ return !b.out; })[0], done = bs.filter(function(b){ return b.out; }), dsum = done.reduce(function(a, b){ return a + b.d; }, 0);
+    var stt = o ? '<span class="st on">⏱ ' + wkDur(now - o.in) + ' · ' + o.g + ' pcs given · ' + esc(o.by) + '</span>' : done.length ? '<span class="st">✓ ' + dsum + ' pcs · ' + done.map(function(b){ return wkDur(b.out - b.in); }).join(' + ') + '</span>' : '';
+    return '<div class="wr" data-w="' + esc(w) + '"><div><b>' + esc(w) + '</b>' + stt + '</div><input type="number" inputmode="numeric" min="1" placeholder="pcs"' + (o ? ' value="' + o.g + '"' : '') + '><button class="' + (o ? 'out' : 'in') + '" data-k="' + (o ? 'out' : 'in') + '"' + (D.w ? '' : ' disabled') + '>' + (o ? '✓ Done · হয়েছে' : '▶ Give · দিন') + '</button></div>'; }).join('');
+  Object.keys(typed).forEach(function(w){ var r = $('wkrows').querySelector('.wr[data-w="' + w.replace(/"/g, '') + '"] input'); if (r && !r.value) r.value = typed[w]; });
+}
+$('wkh').onclick = function(){ if (!open) return; WKOPEN[open.id] = $('wkbody').hidden; workDraw(open); };
+$('wkrows').onclick = async function(e){ var b = e.target.closest('button[data-k]'); if (!b || !open) return; var row = b.closest('.wr'), w = row.dataset.w, k = b.dataset.k, pcs = Math.floor(+row.querySelector('input').value || 0), c = open;
+  if (!(pcs > 0)) { row.querySelector('input').focus(); toast(k === 'in' ? 'How many pieces? · কত পিস?' : 'How many pieces came back? · কত পিস ফেরত এল?'); return; }
+  b.disabled = true; b.textContent = '⏳';
+  var j = await call({ op: 'workset', card: c.id, worker: w, pcs: pcs, kind: k, who: WHO });
+  if (!j.ok) { toast('✗ ' + j.error); b.disabled = false; workDraw(c); return; }
+  toast(k === 'in' ? '▶ ' + w + ' · ' + pcs + ' pcs · timer started · টাইমার চালু' : '✓ ' + w + ' · ' + pcs + ' pcs done · হয়ে গেছে');
+  var wk = c._wk = c._wk || {}, bs = wk[w.toUpperCase()] = wk[w.toUpperCase()] || [];   // on screen at once; the relay's copy comes right after
+  if (k === 'in') bs.push({ in: Date.now(), g: pcs, by: WHO }); else { var o = bs.filter(function(x){ return !x.out; })[0]; if (o) { o.out = Date.now(); o.d = pcs; } }
+  workDraw(c); setTimeout(function(){ if (open && open.id === c.id) { c._wkAt = 0; workLoad(c); TH.force = true; thPull(); } }, 1500); };
+setInterval(function(){ if (open && !$('card').hidden && !$('wkbody').hidden && !document.activeElement.closest('#wkrows')) workDraw(open); }, 60000);
+// 21 Oct 2026 (Abbas): "when the card finishes give me a complete report in the chat - how many days in START, CUTTING, IN LINE, hand work,
+// IRON/CHECKING … until READY". The relay posts it by itself when a card reaches FINISH; this button asks for it by hand (also "so far").
+async function wkReport(){ var c = open; if (!c || c.dm || c.lo) return; toast('📊 Making the report… · রিপোর্ট তৈরি হচ্ছে'); var j = await call({ op: 'report', card: c.id, who: WHO, rid: 'rp' + c.id + Date.now().toString(36) });
+  if (!j.ok) { toast('✗ ' + j.error); return; } toast('📊 Report posted in the chat · রিপোর্ট চ্যাটে দেওয়া হয়েছে'); TH.force = true; thPull(); setTimeout(function(){ TH.force = true; thPull(); }, 2500); }
+$('wkrep').onclick = wkReport; $('bwrep').onclick = wkReport;
+// More → Workers: every worker's pieces, time and pieces per day over 7 / 30 / 90 days (from the cards' comments)
+var WKD = 30;
+async function wksShow(){ $('wks').hidden = false; $('wksbody').innerHTML = '<div class="empty">Loading… · লোড হচ্ছে</div>'; document.querySelectorAll('#wkseg button').forEach(function(x){ x.classList.toggle('on', +x.dataset.d === WKD); });
+  var j = await call({ op: 'workrep', days: WKD }); if (!j.ok) { $('wksbody').innerHTML = '<div class="empty">' + esc(j.error) + '</div>'; return; }
+  var ws = (j.workers || []).slice().sort(function(a, b){ return b.pcs - a.pcs || b.open - a.open; });
+  $('wksbody').innerHTML = ws.length ? ws.map(function(w){ return '<div class="w">' + (w.pcs ? '<span class="pd">≈ ' + w.perDay + ' /day</span>' : '') + '<b>' + esc(w.name) + '</b><small>' + (w.pcs ? w.pcs + ' pcs · ' + w.batches + (w.batches === 1 ? ' batch' : ' batches') + ' · ' + esc(w.dur) : 'nothing finished in ' + j.days + ' days · কিছু শেষ হয়নি') + (w.open ? ' · <b style="color:#c4561a">' + w.open + ' in hand ⏳</b>' : '') + '</small>'
+    + (w.cards && w.cards.length ? '<ul>' + w.cards.map(function(c){ var p = parse(c.name); return '<li>' + (p.no ? 'SJ-' + esc(p.no) : esc(c.name.slice(0, 30))) + ' · ' + c.pcs + ' pcs</li>'; }).join('') + '</ul>' : '') + '</div>'; }).join('') : '<div class="empty">No workers · কোনো কর্মী নেই</div>'; }
+$('bwork').onclick = wksShow; $('wksx').onclick = function(){ $('wks').hidden = true; };
+$('wkseg').onclick = function(e){ var b = e.target.closest('button[data-d]'); if (!b) return; WKD = +b.dataset.d; wksShow(); };
 async function attsLoad(c){ var j = fastTr() ? await fast({ op: 'tatts', card: c.id }) : null; if (!j || !j.ok) j = await call({ op: 'atts', card: c.id }); if (!j.ok || !open || open.id !== c.id) return; c = open; c._atts = j.atts || []; c._cover = j.cover || ''; c.desc = j.desc || ''; attsDraw(c); }   // 16 Oct: by id - the card object is replaced on every list refresh, and a dropped answer left the LAST card's photo strip showing (Abbas: SJ-48188 photos on a return card)   // the description is NOT shown on the card (Abbas 13 Oct: keep the custom-field view as before) - it lives in ✏️ Edit card
 function attsDraw(c){
   var el = $('catts'), as = c._atts || []; if (!as.length) { el.hidden = true; return; }
@@ -682,6 +738,7 @@ async function mvGo(){ var m = MV; if (!m) return; MV = null; clearTimeout(m.t);
   if (!j) j = await call({ op: 'move', card: m.id, to: m.to, who: WHO, rid: mrid });   // the relay (no "from": if the worker did move it, this is a no-op)
   if (!j.ok) { var c = D.byId[m.id]; if (c) c.l = m.from; if (open && open.id === m.id) { open.l = m.from; paintCard(); } draw(); toast('✗ ' + (m.no ? 'SJ-' + m.no + ' ' : '') + j.error); if (j.moved) load(false); return; }
   setTimeout(thPull, 800); setTimeout(function(){ load(false); }, 1200);
+  if (/^(FINISH|FINISH SAMPLES)$/.test(m.name)) setTimeout(function(){ call({ op: 'reportauto', card: m.id, who: WHO }).then(function(){ if (open && open.id === m.id) { TH.force = true; thPull(); } }); }, 1500);   // 21 Oct 2026: the production report (the relay posts it once)
 }
 document.addEventListener('visibilitychange', function(){ if (document.hidden && MV) mvGo(); });
 window.addEventListener('pagehide', function(){ if (MV) mvGo(); });
@@ -792,7 +849,8 @@ function isMe(m){ if (m.sys) return false; var k = nrm(firstName(WHO)); if (k.le
 function sdec(t){ return String(t == null ? '' : t).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'); }
 // 20 Oct 2026 (Abbas: "do all" - reply to a message): a reply carries the line it answers as a Slack quote ("> *Name:* text") - shown as a quote box
 function qfmt(t){ var out = '', q = [], fl = function(){ if (q.length) { out += '<div class="q">' + esc(emo(q.join('\n'))) + '</div>'; q = []; } };
-  String(t).replace(/^\n+/, '').split('\n').forEach(function(l){ if (/^>\s?/.test(l)) q.push(l.replace(/^>\s?/, '').replace(/\*/g, '')); else { var hadQ = q.length; fl(); out += (out && !hadQ ? '\n' : '') + esc(emo(l)); } }); fl(); return out; }
+  String(t).replace(/^\n+/, '').split('\n').forEach(function(l){ if (/^>\s?/.test(l)) q.push(l.replace(/^>\s?/, '').replace(/\*/g, '')); else { var hadQ = q.length; fl(); out += (out && !hadQ ? '\n' : '') + mrk(esc(emo(l))); } }); fl(); return out; }
+function mrk(h){ return h.replace(/\*([^*\n]{1,80})\*/g, '<b>$1</b>').replace(/(^|\s)_([^_\n]{1,120})_(?=\s|$)/g, '$1<i>$2</i>'); }   // Slack's *bold* and _italic_ (the 📊 report uses them)
 function qstrip(t){ return String(t || '').split('\n').filter(function(l){ return !/^\s*(>|&gt;)/.test(l); }).join('\n').trim(); }
 function bubble(m){
   var me = isMe(m), cls = m.sys ? 'sys' : me ? 'me' : '', body = qfmt(sdec(m.sys || m.root ? m.text.replace(/\*/g, '') : m.text));

@@ -15,7 +15,13 @@ function world(W) {
   for (let i = 1; i <= 60; i++) F.postSlack(W, CUT, { text: 'line ' + i, user: i % 2 ? 'U1' : 'U2', thread_ts: rl.ts });
   F.postSlack(W, DM, { text: 'hello from Ibrahim', user: 'U1' });
 }
+async function home(page) {                                   // back to the Cards tab with nothing open
+  if (await page.locator('#card').isVisible()) { await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000, 'card closed'); }
+  await page.evaluate(() => { document.querySelectorAll('.sheet:not([hidden]), #tg:not([hidden])').forEach(x => { x.hidden = true; }); });
+  await page.click('#tabs button[data-t="cards"]'); await page.fill('#q', '');
+}
 async function openCardNo(page, no) {
+  if (!(await page.locator('#hcards').isVisible())) await page.click('#tabs button[data-t="cards"]');
   const q = page.locator('#q'); await q.fill(no); await page.locator('#list .cardrow').first().click(); await page.waitForSelector('#card:not([hidden])');
 }
 const bubbles = page => page.$$eval('#thread .msg:not(.out) .bub', els => els.map(e => e.textContent));
@@ -108,7 +114,32 @@ async function suite(fast, browser) {
       ok(await page.locator('#card').isHidden(), 'the card did not open');
       await until(() => W.trello.cards[W.cardA.id].idList === '6527c5a93db4d8b8e91a8be9', 9000, 'IRON/CHECKING in Trello');
     });
+    await test('work: give pieces to a worker, timer runs, Done stops it - Trello comment, field and chat line', async () => {
+      await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '17841');
+      await until(() => page.locator('#work').isVisible(), 8000, 'work box');
+      const rows = page.locator('#wkrows .wr'); await until(async () => (await rows.count()) === 10, 8000, '10 workers');
+      const r = page.locator('#wkrows .wr[data-w="TASLEEM"]'); await r.locator('input').fill('20'); await r.locator('button').click();
+      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && /^👷 IN · TASLEEM · 20 pcs · Abbas \(factory app\)/.test(a.data.text)), 10000, 'IN comment on Trello');
+      await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootB && /WORK.*TASLEEM ← 20 pcs/.test(m.text || '')), 10000, 'chat line');
+      ok((W.trello.cards[W.cardB.id].customFieldItems.find(x => x.idCustomField === '6a8629369e5acecd9d32161e') || {}).value.text === '20 ⏳', 'Trello field 20 ⏳');
+      await until(async () => /⏱/.test(await r.textContent()) && /Done/.test(await r.locator('button').textContent()), 8000, 'timer + Done button');
+      W.trello.actions.filter(a => a.type === 'commentCard' && /👷 IN/.test(a.data.text)).forEach(a => a.date = new Date(Date.now() - 26 * 3600000).toISOString()); T.relay.cache.remove('FAC_WK_' + W.cardB.id);   // a day passes
+      await page.reload(); await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length); await openCardNo(page, '17841');
+      await until(async () => /1 d 2 h/.test(await r.textContent()), 10000, 'timer shows 1 d 2 h');
+      await r.locator('input').fill('18'); await r.locator('button').click();
+      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && /^👷 OUT · TASLEEM · 18 pcs · 1 d 2 h · Abbas/.test(a.data.text)), 10000, 'OUT comment');
+      await until(() => (W.trello.cards[W.cardB.id].customFieldItems.find(x => x.idCustomField === '6a8629369e5acecd9d32161e') || {}).value.text === '18 ✓', 8000, 'field 18 ✓');
+      await until(async () => /✓ 18 pcs/.test(await r.textContent()) && /Give/.test(await r.locator('button').textContent()), 8000, 'row shows done');
+      await page.goBack();
+    });
+    await test('Workers screen: pieces per day over 30 days', async () => {
+      await page.click('#tabs button[data-t="more"]'); await page.click('#bwork');
+      await until(async () => /TASLEEM/.test(await page.textContent('#wksbody')) && /18 pcs/.test(await page.textContent('#wksbody')), 10000, 'TASLEEM 18 pcs');
+      ok(/≈ 17 \/day/.test(await page.textContent('#wksbody')), 'about 17 a day (18 pcs in 1 d 2 h): ' + (await page.textContent('#wksbody')).slice(0, 120));
+      await page.click('#wksx'); await page.click('#tabs button[data-t="cards"]');
+    });
     await test('search by words: "fabric" finds the card with that word, numbers as before', async () => {
+      await home(page);
       W.trello.cards[W.cardB.id].name = 'SJ-17841 (12) pcs red lace'; await page.click('#tabs button[data-t="more"]'); await page.click('#rf'); await page.waitForTimeout(1500); await page.click('#tabs button[data-t="cards"]');
       await page.fill('#q', 'LACE red');
       await until(async () => (await page.$$eval('#list .cardrow', r => r.map(x => x.textContent))).join('|').includes('17841'), 4000, 'word match');
@@ -118,7 +149,7 @@ async function suite(fast, browser) {
       await page.fill('#q', '');
     });
     await test('reply to a message: quoted in Slack, shown as a quote box; & shown as &', async () => {
-      await openCardNo(page, '17841');
+      await home(page); await openCardNo(page, '17841');
       F.postSlack(W, CUT, { text: 'fabric &amp; lace are short', user: 'U1', thread_ts: W.rootB });
       T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));
       await until(async () => (await bubbles(page)).some(t => /fabric & lace are short/.test(t)), 15000, '& shown as &');
@@ -135,9 +166,10 @@ async function suite(fast, browser) {
     await test('status line: "Up to date", and "No internet" when the line is down', async () => {
       await until(async () => /Up to date/.test(await page.textContent('#msg')), 15000, 'Up to date');
       T.relayDown = true; T.fastDown = true;
-      await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-      await until(async () => /No internet/.test(await page.textContent('#msg')), 8000, 'No internet');
-      T.relayDown = false; T.fastDown = false;
+      try { await page.waitForTimeout(1500);                       // answers already on their way arrive first
+        await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+        await until(async () => /No internet/.test(await page.textContent('#msg')), 8000, 'No internet');
+      } finally { T.relayDown = false; T.fastDown = false; }
       await page.evaluate(() => window.dispatchEvent(new Event('online')));
       await until(async () => /Up to date/.test(await page.textContent('#msg')), 15000, 'back to Up to date');
     });
@@ -145,7 +177,7 @@ async function suite(fast, browser) {
       await openCardNo(page, '55555');
       await until(async () => (await bubbles(page)).filter(t => /^line \d+/.test(t)).length >= 60, 10000, '60 lines');
       await page.goBack(); await page.waitForTimeout(1200);         // the copy on the phone is saved
-      await page.reload(); await page.waitForSelector('#list .cardrow');
+      await page.reload(); await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length);
       await openCardNo(page, '55555');
       await page.waitForTimeout(3000);
       const n = (await bubbles(page)).filter(t => /^line \d+/.test(t)).length;
@@ -177,7 +209,7 @@ async function suite(fast, browser) {
       await page.click('#tabs button[data-t="cards"]');
     });
     await test('Catch up walks through the new messages, then all caught up', async () => {
-      if (await page.locator('#card').isVisible()) await page.goBack();
+      await home(page);
       F.postSlack(W, CUT, { text: 'catch me 1', user: 'U1', thread_ts: W.rootB });
       F.postSlack(W, CUT, { text: 'catch me 2', user: 'U1', thread_ts: W.rootL });
       T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));
@@ -194,7 +226,7 @@ async function suite(fast, browser) {
       await page.click('#tabs button[data-t="cards"]');
     });
     await test('📌 Later pins a chat on top of Chats and unpins', async () => {
-      await openCardNo(page, '17841'); await page.click('#bpin');
+      await home(page); await openCardNo(page, '17841'); await page.click('#bpin');
       await until(() => Object.keys(JSON.parse(T.relay.P.FLATER_ABBAS || '{}')).includes(W.cardB.id), 8000, 'pinned on the relay');
       await page.goBack(); await page.click('#tabs button[data-t="chats"]');
       await until(async () => (await page.getAttribute('#chats .crow >> nth=0', 'data-id')) === W.cardB.id, 8000, 'pinned first');
@@ -241,6 +273,31 @@ async function suite(fast, browser) {
       await page.waitForTimeout(1500);
       ok(W.slack.ch[CUT].msgs.filter(m => /via relay please/.test(m.text || '')).length === 1, 'once');
       T.fastDown = false; await page.goBack();
+    });
+    await home(page); await test('production report posted once in the chat when a card reaches FINISH', async () => {
+      const D = 86400000, H = 3600000, c = W.cardL, born = Date.parse(W.trello.actions.find(a => a.type === 'createCard' && a.data.card.id === c.id).date);
+      const mv = (from, to, t) => W.trello.actions.push({ id: F.hexId(), type: 'updateCard', date: new Date(t).toISOString(), memberCreator: { fullName: 'Abbas Jamal' }, data: { card: { id: c.id, name: c.name }, listBefore: { name: from }, listAfter: { name: to } } });
+      // the card was born 9 days ago in START, moved through the stages, and is on READY since yesterday
+      W.trello.actions.find(a => a.type === 'createCard' && a.data.card.id === c.id).date = new Date(born - 9 * D).toISOString(); const b0 = born - 9 * D;
+      mv('START', 'CUTTING', b0 + 1 * D + 3 * H); mv('CUTTING', 'IN LINE', b0 + 3 * D); mv('IN LINE', 'IRON/CHECKING', b0 + 7 * D); mv('IRON/CHECKING', 'READY', b0 + 8 * D);
+      W.trello.cards[c.id].idList = '6527c5b13129a9ba37acd3ad'; await page.click('#tabs button[data-t="more"]'); await page.click('#rf'); await page.waitForTimeout(1500); await page.click('#tabs button[data-t="cards"]');
+      await page.click('#stages button[data-i="10"]'); await openCardNo(page, '55555');
+      await page.click('#bdone');                                 // READY → FINISH (Undo bar, then sent)
+      await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootL && /PRODUCTION REPORT/.test(m.text || '')), 15000, 'report in the chat');
+      const rp = W.slack.ch[CUT].msgs.find(m => /PRODUCTION REPORT/.test(m.text || '')).text;
+      ok(/START · 1 d 3 h/.test(rp) && /CUTTING · 1 d 21 h/.test(rp) && /IN LINE · 4 d/.test(rp) && /IRON\/CHECKING · 1 d/.test(rp) && /READY .* · \*8 d\* total/.test(rp) && !/READY · /.test(rp.replace(/→ READY/, '')), 'stages right:\n' + rp);
+      ok(/উৎপাদন রিপোর্ট/.test(rp), 'Bengali line');
+      await until(async () => /PRODUCTION REPORT/.test(await page.textContent('#thread')), 15000, 'shown in the app');
+      ok(W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text)), 'Trello comment #report');
+      await page.goBack();
+    });
+    await test('a card moved to FINISH straight in Trello gets its report too (once)', async () => {
+      const c = W.cardA; W.trello.cards[c.id].idList = '6527c5b41e630c094b619f5e';
+      W.trello.actions.push({ id: F.hexId(), type: 'updateCard', date: new Date(Date.now() - 30000).toISOString(), memberCreator: { fullName: 'Md Ibrahimmiah' }, data: { card: { id: c.id, name: c.name }, listBefore: { name: 'READY' }, listAfter: { name: 'FINISH' } } });
+      T.relay.cache.remove('FMV_AT');
+      await until(() => W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text)).length === 1, 20000, 'report comment');
+      T.relay.cache.remove('FMV_AT'); await page.waitForTimeout(5000);
+      ok(W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text)).length === 1, 'still one report');
     });
     await test('no page errors', async () => { ok(!T.errors.length, 'no errors:\n' + T.errors.join('\n')); });
   } finally { await T.close(); }

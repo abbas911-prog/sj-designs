@@ -469,11 +469,12 @@ function facTrelloMoves(P, wtok, FT) {
   var lock = LockService.getScriptLock(); if (!lock.tryLock(200)) return;
   try {
     var acts = trApi('get', '/boards/' + FAC.BOARD + '/actions', { filter: 'updateCard:idList,commentCard', since: last, limit: 200 }, wtok) || [], cut = Date.now() - 20000, app = {}, newest = last;
-    acts.forEach(function (a) { if (a.type === 'commentCard' && /^→ |\(factory app\)|^SOLD|SOLD SAMPLE/.test(String((a.data || {}).text || ''))) { var cid = ((a.data || {}).card || {}).id; (app[cid] = app[cid] || []).push(Date.parse(a.date)); } });
+    acts.forEach(function (a) { if (a.type === 'commentCard' && /^→ |\(factory app\)|^SOLD|SOLD SAMPLE/.test(String((a.data || {}).text || '')) && !/^(👷|📊)/.test(String((a.data || {}).text || ''))) { var cid = ((a.data || {}).card || {}).id; (app[cid] = app[cid] || []).push(Date.parse(a.date)); } });
     acts.filter(function (a) { return a.type === 'updateCard' && a.data && a.data.listAfter && a.data.card && Date.parse(a.date) < cut; })
       .sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); }).forEach(function (a) {
         if (Date.parse(a.date) > Date.parse(newest)) newest = a.date;
         if (c.get('FMV_D_' + a.id)) return; c.put('FMV_D_' + a.id, '1', 86400);
+        if (/^(FINISH|FINISH SAMPLES)$/.test(String(a.data.listAfter.name || ''))) { try { facReport(P, wtok, FT, a.data.card.id, false); } catch (e) {} }   // 21 Oct 2026: report once, whoever moved it
         var cid = a.data.card.id, t = Date.parse(a.date); if ((app[cid] || []).some(function (d) { return d >= t - 5000 && d <= t + 120000; })) return;   // the app (or the stock job) already wrote it
         var th = P.getProperty('FTH_' + cid); if (!th) return; th = JSON.parse(th);
         var who = String(((a.memberCreator || {}).fullName) || 'Trello').slice(0, 40), to = String(a.data.listAfter.name || '?'), fr = String((a.data.listBefore || {}).name || '');
@@ -483,6 +484,75 @@ function facTrelloMoves(P, wtok, FT) {
     P.setProperty('FMOVE_LAST', newest); if (newest !== last) { bigDrop(c, 'FAC_LIST'); facBump(); }
   } finally { lock.releaseLock(); }
 }
+// ===== 21 Oct 2026 (Abbas): WORK PER WORKER + PRODUCTION REPORT =====
+// (1) "whichever design goes in line: inside the card give me the names of all the employees, beside it the number of pieces I put in; when
+//     they get the pieces the timer starts, when it goes out we stop it - which person made how many pieces a day".
+//     The workers = the 10 worker fields of the ALM board (DOX.TEN: TASLEEM, IRFAN ALI, HASHIM ...). Every "given" / "done" is written as a
+//     Trello comment on the card ("👷 IN · TASLEEM · 20 pcs · Abbas (factory app)" / "👷 OUT · TASLEEM · 18 pcs · 1 d 4 h · ...") - Trello keeps
+//     it for ever, the comment's own date is the time - plus a line in the card chat and the worker's field on the card ("18 ✓"). Nothing is
+//     kept in script properties. The app reads the batches back from the comments (op "work"); "workrep" sums them up per worker over N days.
+// (2) "when the card goes to FINISH give me a complete report in the chat: how many days it stayed in START, CUTTING, IN LINE, hand work,
+//     IRON/CHECKING ... until READY". Built from Trello's own move history (so moves made in Trello count too), posted ONCE per card as a chat
+//     line + a Trello comment "#report" - by the app's move, by the 45-s Trello-moves check (worker / Trello moves), or by hand (op "report").
+//     The day-count badge on the cards is untouched.
+function facWorkers(P, tok) { var cf = facCf(tok); return DOX.TEN.map(function (id) { return cf[id] ? { id: id, name: String(cf[id]).trim() } : null; }).filter(Boolean); }
+function facActs(tok, cid) {                                   // the card's history, oldest first: moves, creation, comments
+  var a = trApi('get', '/cards/' + cid + '/actions', { filter: 'updateCard:idList,createCard,copyCard,moveCardToBoard,convertToCardFromCheckItem,commentCard', limit: 1000 }, tok) || [];
+  return a.slice().sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); });
+}
+function facDur(ms) { ms = Math.max(0, ms); var h = Math.floor(ms / 3600000), d = Math.floor(h / 24); if (d >= 1) return d + ' d' + (h % 24 ? ' ' + (h % 24) + ' h' : ''); if (h >= 1) return h + ' h' + (Math.floor(ms / 60000) % 60 ? ' ' + Math.floor(ms / 60000) % 60 + ' min' : ''); return Math.max(1, Math.floor(ms / 60000)) + ' min'; }
+function facDay(ms) { var u = new Date(ms + 4 * 3600000); return u.getUTCDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][u.getUTCMonth()]; }   // Dubai
+var WK_RE = /^👷 (IN|OUT) · (.+?) · (\d+) pcs(?: · ([^·]+?))? · (.+?) \(factory app\)/;
+function facWkParse(acts) {                                    // comments -> { WORKER: [{in, out, g, d, by, hid}] } (oldest first)
+  var out = {};
+  acts.forEach(function (a) { if (a.type !== 'commentCard') return; var m = String((a.data || {}).text || '').match(WK_RE); if (!m) return;
+    var w = m[2].trim().toUpperCase(), t = Date.parse(a.date), L = out[w] = out[w] || [];
+    if (m[1] === 'IN') L.push({ in: t, g: +m[3], by: m[5].trim(), id: a.id });
+    else { var o = null; for (var i = L.length - 1; i >= 0; i--) if (!L[i].out) { o = L[i]; break; } if (o) { o.out = t; o.d = +m[3]; o.outBy = m[5].trim(); } else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); } });
+  return out;
+}
+function facWkLine(w, b) { var r = b.out ? ' · ' + facDur(b.out - b.in) + (b.out - b.in >= 1800000 ? ' · ≈' + Math.round(b.d / Math.max(0.25, (b.out - b.in) / 86400000)) + '/day' : '') : ' · since ' + facDay(b.in); return w + ' ' + (b.out ? b.d + ' pcs ✓' : b.g + ' pcs ⏳') + r; }
+function facStages(acts, card) {                               // time in each list, from the card's birth to its (last) arrival in READY / READY 2
+  var born = null, cur = null, evs = [];
+  acts.forEach(function (a) { var d = a.data || {};
+    if (/^(createCard|copyCard|moveCardToBoard|convertToCardFromCheckItem)$/.test(a.type)) { if (!born) { born = Date.parse(a.date); cur = (d.list || {}).name || null; } return; }
+    if (a.type === 'updateCard' && d.listAfter) evs.push({ t: Date.parse(a.date), from: (d.listBefore || {}).name || null, to: d.listAfter.name }); });
+  if (!born) born = idTime(card.id); if (evs.length && evs[0].from) cur = evs[0].from;   // Trello's own history wins over the creation note
+  if (!cur) cur = '?';
+  var FIN = /^(FINISH|FINISH SAMPLES)$/, RDY = /^(READY|READY 2)$/, cut = null, fin = null;
+  for (var i = evs.length - 1; i >= 0; i--) if (FIN.test(evs[i].to)) { fin = i; break; }
+  var upto = fin != null ? fin : evs.length;                   // events before the final FINISH count
+  for (var j = upto - 1; j >= 0; j--) if (RDY.test(evs[j].to)) { cut = j; break; }
+  var end = cut != null ? evs[cut].t : fin != null ? evs[fin].t : Date.now(), stop = cut != null ? cut : fin != null ? fin : evs.length;
+  var segs = {}, order = [], t0 = born, list = cur;
+  for (var k = 0; k < stop; k++) { var e = evs[k]; if (e.t > t0) { if (!segs[list]) { segs[list] = { name: list, ms: 0, n: 0 }; order.push(list); } segs[list].ms += e.t - t0; segs[list].n++; } t0 = e.t; list = e.to; }
+  if (end > t0) { if (!segs[list]) { segs[list] = { name: list, ms: 0, n: 0 }; order.push(list); } segs[list].ms += end - t0; segs[list].n++; }
+  var known = FAC.LISTS.map(function (l) { return l[0]; }); order.sort(function (a, b) { var x = known.indexOf(a), y = known.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); });
+  return { born: born, end: end, total: end - born, segs: order.map(function (n) { return segs[n]; }), done: cut != null ? 'READY' : fin != null ? 'FINISH' : '', finished: fin != null };
+}
+function facReportText(card, st, wk) {
+  var p = String(card.name || ''), no = (p.match(/(?:SJ|SH|US)\s*[-=:*#(]*\s*\**\(?\s*(\d{3,6}(?:-[A-Z])?)/i) || p.match(/\b(\d{4,6})\b/) || [])[1] || '', pcs = (p.match(/(\d{1,4})\s*pcs/i) || [])[1] || '';
+  var L = ['📊 *' + (no ? 'SJ-' + no : p.slice(0, 40)) + ' · PRODUCTION REPORT*' + (pcs ? ' · ' + pcs + ' pcs' : '') + (st.done ? '' : ' (so far)')];
+  L.push('🗓 ' + facDay(st.born) + ' → ' + (st.done === 'READY' ? 'READY ' : st.done === 'FINISH' ? 'FINISH ' : 'today ') + facDay(st.end) + ' · *' + facDur(st.total) + '* total');
+  st.segs.forEach(function (g) { L.push('• ' + g.name + ' · ' + facDur(g.ms) + (g.n > 1 ? ' (' + g.n + '×)' : '')); });
+  var ws = Object.keys(wk); if (ws.length) { L.push('👷 *Workers*'); ws.forEach(function (w) { var bs = wk[w], d = 0, ms = 0, open = 0; bs.forEach(function (b) { if (b.out) { d += b.d; ms += b.out - b.in; } else open++; });
+    L.push('   ' + w + ' · ' + d + ' pcs' + (ms ? ' · ' + facDur(ms) + ' · ≈' + Math.round(d / Math.max(0.25, ms / 86400000)) + '/day' : '') + (open ? ' · ' + open + ' batch still in ⏳' : '')); }); }
+  L.push('_উৎপাদন রিপোর্ট · শুরু থেকে ' + (st.done === 'READY' ? 'রেডি' : 'শেষ') + ' পর্যন্ত ' + facDur(st.total) + '_');
+  return L.join('\n');
+}
+function facReport(P, wtok, FT, cid, force, who) {              // posts the report into the card's chat + Trello; once per card unless forced
+  var tok = wtok || P.getProperty('TRELLO'), card = trApi('get', '/cards/' + cid, { fields: 'name,idList,idBoard' }, tok); if (card.idBoard !== FAC.BOARD) return { ok: false, error: 'not an ALM card' };
+  var acts = facActs(tok, cid), have = acts.some(function (a) { return a.type === 'commentCard' && /#report\b/.test(String((a.data || {}).text || '')); });
+  if (have && !force) return { ok: true, already: true };
+  var st = facStages(acts, card), wk = facWkParse(acts), text = facReportText(card, st, wk);
+  if (!st.finished && !force) return { ok: false, error: 'not finished' };
+  var ts = '';
+  if (FT) { try { var th = facThread(P, FT, cid, tok, true); if (th) { var pj = slackApi(FT, 'chat.postMessage', { channel: th.ch, thread_ts: th.ts, text: text }); if (pj.ok) ts = pj.ts; } } catch (e) {} }
+  if (wtok) { try { trApi('post', '/cards/' + cid + '/actions/comments', { text: text.replace(/\*/g, '') + '\n' + (who ? who + ' (factory app) ' : '') + '#report' }, wtok); } catch (e) {} }
+  facBump(); facNudge(P, cid);
+  return { ok: true, ts: ts, text: text };
+}
+function facWkField(wtok, cid, w, text) { try { trApi('put', '/cards/' + cid + '/customField/' + w.id + '/item', {}, wtok, { value: { text: String(text).slice(0, 60) } }); } catch (e) {} }
 function nrmName(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]/g, ''); }
 function facUsers(FT) {                                        // the people of the workspace (no bots, no deleted), for "new direct chat with..."; cached 10 min
   var c = CacheService.getScriptCache(), h = c.get('FAC_USERS'); if (h) return JSON.parse(h);
@@ -632,7 +702,7 @@ function setupFacWatch() {                                     // Abbas runs thi
 }
 // 15 Oct 2026 audit: a phone that lost the answer (LTE, locked screen) retries - for a post / upload / new card that used to do it TWICE.
 // Every action now carries a once-only id (rid): the first answer is kept 10 min and any retry gets that same answer.
-var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset)$/;
+var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report)$/;
 function fac(reqText, P) {
   var rq0 = {}; try { rq0 = JSON.parse(reqText); } catch (e) {}
   var rid = FAC_ONCE.test(rq0.op || '') ? String(rq0.rid || '').replace(/[^\w-]/g, '').slice(0, 40) : '', cR = CacheService.getScriptCache();
@@ -671,7 +741,7 @@ function fac0(reqText, P) {
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
       try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; } res.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.lo = facLaisOrders(P, who0, false);
-      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
+      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
       return out(res);
     }
     if (req.op === 'ping') {                                  // 15 Oct 2026: the cheap "anything new?" every 4 s - no Trello call; the cards come from the cached list
@@ -1052,7 +1122,49 @@ function fac0(reqText, P) {
         try { var mth = P.getProperty('FTH_' + card); if (mth && FT) { mth = JSON.parse(mth); slackApi(FT, 'chat.postMessage', { channel: mth.ch, thread_ts: mth.ts, text: '→ *' + tn + '* · ' + who }); } } catch (e) {}
       }
       bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facNudge(P, 'list:' + card);
+      if (/^(FINISH|FINISH SAMPLES)$/.test(FAC.LISTS.filter(function (l) { return l[1] === to; })[0][0])) { try { facReport(P, wtok, FT, card, false, who); } catch (e) {} }   // 21 Oct 2026: the production report
       return out({ ok: true });
+    }
+    if (req.op === 'work') {                                  // 21 Oct 2026: the workers and their batches on this card (from the Trello comments)
+      var wc = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!wc) return out({ ok: false, error: 'bad request' });
+      var wcache = CacheService.getScriptCache(), wh = req.fresh ? null : wcache.get('FAC_WK_' + wc); if (wh) return out(JSON.parse(wh));
+      var wres = { ok: true, workers: facWorkers(P, rtok).map(function (w) { return w.name; }), batches: facWkParse(facActs(rtok, wc)) };
+      try { wcache.put('FAC_WK_' + wc, JSON.stringify(wres), 30); } catch (e) {} return out(wres);
+    }
+    if (req.op === 'workset') {                               // 21 Oct 2026: pieces given to a worker (kind 'in') / pieces back from them (kind 'out')
+      if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
+      var kc = String(req.card || '').replace(/[^0-9a-f]/g, ''), kw = String(req.worker || '').trim().toUpperCase().slice(0, 40), kp = Math.floor(+req.pcs || 0), kk = req.kind === 'out' ? 'OUT' : 'IN', kwho = String(req.who || '').slice(0, 40) || 'factory';
+      var kW = facWorkers(P, rtok).filter(function (w) { return w.name.toUpperCase() === kw; })[0]; if (!kc || !kW || !(kp > 0 && kp < 100000)) return out({ ok: false, error: 'bad request' });
+      var kcard = trApi('get', '/cards/' + kc, { fields: 'idBoard,name' }, wtok); if (kcard.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
+      var kacts = facActs(rtok, kc), kb = facWkParse(kacts)[kW.name.toUpperCase()] || [], kopen = kb.filter(function (b) { return !b.out; });
+      if (kk === 'OUT' && !kopen.length) return out({ ok: false, error: kW.name + ' has no pieces in hand on this card' });
+      if (kk === 'IN' && kopen.length) return out({ ok: false, error: kW.name + ' still has ' + kopen[0].g + ' pcs in hand - press Done first' });
+      var kdur = kk === 'OUT' ? facDur(Date.now() - kopen[0].in) : '';
+      trApi('post', '/cards/' + kc + '/actions/comments', { text: '👷 ' + kk + ' · ' + kW.name + ' · ' + kp + ' pcs' + (kdur ? ' · ' + kdur : '') + ' · ' + kwho + ' (factory app)' }, wtok);
+      var ktot = kb.reduce(function (a, b) { return a + (b.out ? b.d : 0); }, 0) + (kk === 'OUT' ? kp : 0);
+      facWkField(wtok, kc, kW, kk === 'IN' ? (ktot ? ktot + ' ✓ + ' : '') + kp + ' ⏳' : ktot + ' ✓');
+      try { if (FT) { var kth = facThread(P, FT, kc, rtok, true); if (kth) slackApi(FT, 'chat.postMessage', { channel: kth.ch, thread_ts: kth.ts, text: '→ *WORK* · ' + kwho + ' · ' + kW.name + (kk === 'IN' ? ' ← ' + kp + ' pcs given · পিস দেওয়া হয়েছে' : ' ✓ ' + kp + ' pcs done · ' + kdur + ' · পিস হয়ে গেছে') }); } } catch (e) {}
+      CacheService.getScriptCache().remove('FAC_WK_' + kc); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump(); facNudge(P, kc);
+      return out({ ok: true });
+    }
+    if (req.op === 'workrep') {                               // 21 Oct 2026: every worker's output over the last N days (from the board's comments)
+      var rdays = Math.min(120, Math.max(1, Math.floor(+req.days || 30))), rsince = new Date(Date.now() - rdays * 86400000).toISOString(), rcache = CacheService.getScriptCache(), rk = 'FAC_WKR_' + rdays, rh = req.fresh ? null : rcache.get(rk); if (rh) return out(JSON.parse(rh));
+      var racts = [], rbefore = '';
+      for (var ri = 0; ri < 5; ri++) { var rq = { filter: 'commentCard', since: rsince, limit: 1000 }; if (rbefore) rq.before = rbefore; var rpage = trApi('get', '/boards/' + FAC.BOARD + '/actions', rq, rtok) || []; racts = racts.concat(rpage); if (rpage.length < 1000) break; rbefore = rpage[rpage.length - 1].id; }
+      var byCard = {}; racts.forEach(function (a) { var cid0 = ((a.data || {}).card || {}).id; if (cid0 && WK_RE.test(String((a.data || {}).text || ''))) (byCard[cid0] = byCard[cid0] || { name: (a.data.card || {}).name || '', acts: [] }).acts.push(a); });
+      var rw = {}; facWorkers(P, rtok).forEach(function (w) { rw[w.name.toUpperCase()] = { name: w.name, pcs: 0, ms: 0, batches: 0, open: 0, cards: {} }; });
+      Object.keys(byCard).forEach(function (cid0) { var bc = byCard[cid0], wk0 = facWkParse(bc.acts.slice().sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); }));
+        Object.keys(wk0).forEach(function (w) { var r = rw[w] = rw[w] || { name: w, pcs: 0, ms: 0, batches: 0, open: 0, cards: {} }; wk0[w].forEach(function (b) { if (b.out) { r.pcs += b.d; r.ms += b.out - b.in; r.batches++; r.cards[cid0] = (r.cards[cid0] || 0) + b.d; } else { r.open++; r.cards[cid0] = r.cards[cid0] || 0; } }); }); });
+      var rout = { ok: true, days: rdays, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, pcs: r.pcs, dur: facDur(r.ms), perDay: r.ms ? Math.round(r.pcs / Math.max(0.25, r.ms / 86400000)) : 0, batches: r.batches, open: r.open, cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
+      try { rcache.put(rk, JSON.stringify(rout), 60); } catch (e) {} return out(rout);
+    }
+    if (req.op === 'reportauto') {                            // 21 Oct 2026: the app just moved a card to FINISH (fast lane): post the report now if it is not there yet
+      var pa0 = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!pa0) return out({ ok: false, error: 'bad request' });
+      try { return out(facReport(P, wtok, FT, pa0, false, String(req.who || '').slice(0, 40))); } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 160) }); }
+    }
+    if (req.op === 'report') {                                // 21 Oct 2026: the production report of one card, by hand (also for a card not finished yet: "so far")
+      var pc0 = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!pc0) return out({ ok: false, error: 'bad request' });
+      try { return out(facReport(P, wtok, FT, pc0, true, String(req.who || '').slice(0, 40))); } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 160) }); }
     }
     if (req.op === 'archive') {                               // 18 Oct 2026 (Abbas): "when the card is in CAME BACK, give me an option after that to delete it" - only RETURNS BACK cards;
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });   // archived in Trello (it can be restored from Trello's Archive), never erased

@@ -19,7 +19,7 @@
 1. Push app changes straight to `main` (Pages serves `main`). **Bump `var VER` in factory.html on every change**
    (format `YYYY-MM-DDx`, e.g. `2026-10-20a` → `2026-10-20b`) — phones check it every 5 min (`checkVer`) and reload themselves.
 2. relay.gs: always start from the **newest copy in the repo**, never an old one. List every `function` before and after an
-   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 136 on 20 Oct 2026).
+   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 146 on 21 Oct 2026).
    Abbas deploys it himself (Apps Script editor → paste → Save → Deploy → New version) — tell him when a relay deploy is needed.
    **Never ask him to open Script properties**; any new setting is set from inside the app (an op that stores it, like `fastset`).
 3. **Never put tokens, passwords, costs or prices in any file** — the repo is public. Secrets live only in Script properties /
@@ -63,6 +63,14 @@ per-person topic `FNTFY`, sent by `facNotifyScan` (on Slack events + 1-min timer
 **Web Push** (no extra app, phone must have the app on its Home Screen): 🔔 → Turn on → `wpkey` / `wpset` → `FWP_<NAME>` (≤4 phones).
 `facNotifyScan` sends to both ntfy and Web Push; the relay hands the worker (`op:push`, `op:vapidnew`) the addresses + the VAPID pair
 (`FAC_VAPID`, made once by the worker) because Apps Script cannot do the encryption. Phone notifications need the fast lane on.
+**Work per worker** (21 Oct 2026): the 10 worker fields of the ALM board (`DOX.TEN`, names via `facCf` → `facWorkers`) are the workers.
+Card screen "👷 WORK": one row per worker, pieces box + ▶ Give / ✓ Done. `op:workset` writes a Trello comment ("👷 IN · NAME · 20 pcs · who
+(factory app)" / "👷 OUT · … · 1 d 2 h · …"), a chat line "→ *WORK* · who · NAME ← 20 pcs given", and the worker's Trello field ("18 ✓").
+No script properties: `op:work` reads the batches back from the card's comments (`facActs` → `facWkParse`); `op:workrep` sums the board's
+comments per worker over 7/30/90 days (More → Workers). **Production report** (`facReport`): time per list from Trello's move history
+(`facStages`, up to the last arrival in READY / READY 2, else FINISH) + the workers; posted ONCE per card (chat line + Trello comment
+"#report") when a card reaches FINISH / FINISH SAMPLES — by `op:move`, by the app after a fast-lane move (`op:reportauto`), or by
+`facTrelloMoves` for moves made in Trello; `op:report` = by hand from the card's ⋯ menu / WORK box (also "so far").
 **Done / Move**: no question; ↩ Undo bar 5 s (`MV`, `mvGo`), sent to Trello after 5 s or when the app goes to the background.
 
 **Returns**: a return IS a card on RETURNS (new via ↩️ sheet = `op:sample` with `kind:'ret'`, chat in #cutting); Done → RETURNS BACK =
@@ -142,3 +150,7 @@ Memo rules (his words, short):
 - 2026-10-21: memo 2026-10-20j — (order showed "Continue bill INV-0018" with 4 pcs while INV-0021 was the real 12-pc sale) the green button now stores what the bill sold inside the bill (`d.sold`, saved to BILLS) and every device opening it shows exactly that (sold-out designs become typed lines with the sold pcs/price); the bill is linked to its own order at the green button (`d.oid` / `sj_oid` → `link`) and "Bill made" is ticked on that order, not on whatever order the phone opened last (`ordBillMade(ref, oid)`).
 - 2026-10-21: memo 2026-10-21a — (a) ONE bill-number series for the whole shop: `bsNext` at the green button / Send asks relay `bills` op `next` (lock; reserves the number; the phone's old draft row is cleared) — INV-0018/0021 could never happen again; the phone's counter also jumps past every number in the saved-bills list. NEEDS relay deploy (136 functions, unchanged). (b) Home Screen app: `memo-sw.js` + `memo.webmanifest` + icons — opens at once / offline, ETag background refresh, `checkVer` also 4 s after boot. Tests: t_bills (6), t_sw (5).
 - 2026-10-21: memo 2026-10-21b — tidy-up ("less code, less bugs"): old Trello-direct photo code removed (`auth`, `authHeader`, `apiUrl`, `imgSrcs`, `srcs`, `API`, one-entry retry loop), 7 dead style rules (.gdsh/.gdt), 164 style declarations that could never win (earlier copies of the same selector, 66 rules) — cascade-safe, proven by the screenshot diff (24 screens identical) + every test. Only 2 functions were dead: the code is almost all live.
+- 2026-10-21 (VER 2026-10-21a) Abbas: (1) work per worker on every card — the 10 workers listed with a pieces box, ▶ Give starts the timer,
+  ✓ Done stops it (Trello comment + chat line + worker field); More → Workers = pieces, time and ≈ pieces/day per worker over 7/30/90 days.
+  (2) production report in the chat when a card reaches FINISH: days in START, CUTTING, IN LINE, hand work, IRON/CHECKING … until READY,
+  plus the workers; also by hand (⋯ → Production report). Day-count badge untouched. Slack *bold* shown bold. NEEDS: relay deploy.
