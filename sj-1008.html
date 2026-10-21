@@ -468,34 +468,25 @@
           card(g, P + (WIDE - ww) / 2, y, ww, hh, im, 0, 0, im.naturalWidth, im.naturalHeight, 0, d.rows[0].en, d.rows[0].ar); } });
         return;
       }
-      // the WHOLE dress, head to hem (5 Oct 2026: "it's half cut") — each card shows its dress's full
-      // column fitted inside without cropping, and the card is only as wide as the dress, so rows pack
-      // as many dresses as fit across the page
-      var items = [];
-      d.rows.forEach(function(r){
-        var f = findDress(d.no, r.c); if (!f) return;
-        var iw = f.img.naturalWidth, ih = f.img.naturalHeight;
-        var x0 = f.col[0] * iw, x1 = f.col[1] * iw, pad = (x1 - x0) * 0.02; x0 += pad; x1 -= pad;
-        var cw = x1 - x0, k = Math.min(TW / cw, TH / ih), dw = cw * k, dh = ih * k;
-        var cwid = Math.round(Math.max(Math.min(TW, dw + 16 * S), TW * 0.62));
-        items.push({ r: r, f: f, x0: x0, cw: cw, ih: ih, dw: dw, dh: dh, w: cwid });
-      });
-      var rows = [], cur = [], used = 0;
-      items.forEach(function(it){
-        if (cur.length && used + G + it.w > WIDE){ rows.push(cur); cur = []; used = 0; }
-        used += (cur.length ? G : 0) + it.w; cur.push(it);
-      });
-      if (cur.length) rows.push(cur);
-      rows.forEach(function(row){
-        blocks.push({ h: TH + CAP + Math.round(14 * S), title: title, draw: function(g, y){
-          var xc = P;
-          row.forEach(function(it){
-            card(g, xc, y, it.w, TH, it.f.img, it.x0, 0, it.cw, it.ih, it.r.c, it.r.en, it.r.ar,
-                 [xc + (it.w - it.dw) / 2, y + (TH - it.dh), it.dw, it.dh]);
-            xc += it.w + G;
-          });
-        }});
-      });
+      // 21 Oct 2026 (Abbas: "it's half — I want it to become a proper photo"): the WHOLE line-up photo, the chosen colours clear with their
+      // number and set count under them, the other colours faded — nothing is cut out, so a dress can never come out half
+      var phs = document.querySelectorAll('.design[data-no="' + d.no + '"] .photo'), chosen = {}; d.rows.forEach(function(r){ chosen[r.c] = r; });
+      for (var pi = 0; pi < phs.length; pi++) (function(ph){
+        var o = colsOf(ph); if (!o.nums.some(function(c){ return chosen[c]; })) return;
+        var img = ph.querySelector('img'), iw = img.naturalWidth, ih = img.naturalHeight; if (!iw) return;
+        var pw = WIDE, phh = Math.round(pw * ih / iw), lim = Math.round(760 * S); if (phh > lim){ phh = lim; pw = Math.round(phh * iw / ih); }
+        var x0 = P + (WIDE - pw) / 2, lab = Math.round(96 * S);
+        blocks.push({ h: phh + lab + Math.round(14 * S), title: title, draw: function(g, y){
+          g.drawImage(img, x0, y, pw, phh);
+          o.nums.forEach(function(c, i){ var cx = x0 + o.cols[i][0] * pw, cw = (o.cols[i][1] - o.cols[i][0]) * pw, r = chosen[c];
+            if (!r){ g.fillStyle = 'rgba(244,242,237,0.80)'; g.fillRect(cx, y, cw + 1, phh); return; }
+            var rr = Math.round(19 * S), bx = cx + cw / 2, by = y + phh - rr - Math.round(14 * S);
+            g.fillStyle = '#234C47'; g.beginPath(); g.arc(bx, by, rr, 0, 7); g.fill(); g.strokeStyle = '#FFFFFF'; g.lineWidth = 3; g.stroke();
+            g.fillStyle = '#F3F6F5'; g.font = bpx(22); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(c), bx, by + 1); g.textBaseline = 'alphabetic';
+            en(g, r.en, bx, y + phh + Math.round(38 * S), fit(g, r.en, cw, 22, true), '#1C1A17', 'center');
+            ar(g, r.ar, bx, y + phh + Math.round(76 * S), fit(g, r.ar, cw, 20, false), '#234C47', 'center'); });
+          g.strokeStyle = '#DCD6CA'; g.lineWidth = 2; g.strokeRect(x0 + 1, y + 1, pw - 2, phh - 2); } });
+      })(phs[pi]);
     });
     blocks.push({ h: Math.round((48 + 104) * S), draw: function(g, y){
       var yy = y + Math.round(48 * S), bh = Math.round(104 * S);
