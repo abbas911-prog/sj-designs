@@ -659,7 +659,7 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
 }
 function facDmMsgs(P, FT, dm, fresh) {                         // the direct chat: last 60 channel messages + their thread replies (shown with ↳), oldest first; shared by every phone
   var c = CacheService.getScriptCache(), g = facGen(), k = 'FAC_DMH_' + dm.ch + '_' + g, h = fresh ? null : c.get(k); if (h) return JSON.parse(h);
-  var slim = function (m, rp) { return { ts: m.ts, text: (rp ? '↳ ' : '') + String(m.text || ''), user: m.user, bot_id: m.bot_id, username: m.username, subtype: m.subtype,
+  var slim = function (m, rp) { return { ts: m.ts, text: (rp ? '↳ ' : '') + String(m.text || ''), rt: rp || undefined, user: m.user, bot_id: m.bot_id, username: m.username, subtype: m.subtype,
     files: (m.files || []).map(function (f) { return { id: f.id, name: f.name, mimetype: f.mimetype, size: f.size }; }) }; };
   var outm = [];
   var top; try { top = facDmHist(FT, dm, '', 60); } catch (e) { var lg = c.get('FAC_DMH_' + dm.ch + '_L'); if (lg) return JSON.parse(lg); throw e; }
@@ -667,7 +667,7 @@ function facDmMsgs(P, FT, dm, fresh) {                         // the direct cha
     outm.push(slim(m));
     if (m.reply_count && m.latest_reply) {                     // someone answered inside a thread of the direct chat (Slack's "reply in thread")
       var rk = 'FAC_DMR_' + m.ts + '_' + m.latest_reply, rh = c.get(rk), reps = null;
-      if (rh) reps = JSON.parse(rh); else { var rj = slackApi(FT, 'conversations.replies', { channel: dm.ch, ts: m.ts, limit: 100 }, true); facSlow(rj); if (rj.ok) { reps = (rj.messages || []).filter(function (x) { return x.ts !== m.ts; }).map(function (x) { return slim(x, true); }); try { c.put(rk, JSON.stringify(reps), 21600); } catch (e) {} } }
+      if (rh) reps = JSON.parse(rh); else { var rj = slackApi(FT, 'conversations.replies', { channel: dm.ch, ts: m.ts, limit: 100 }, true); facSlow(rj); if (rj.ok) { reps = (rj.messages || []).filter(function (x) { return x.ts !== m.ts; }).map(function (x) { return slim(x, m.ts); }); try { c.put(rk, JSON.stringify(reps), 21600); } catch (e) {} } }
       (reps || []).forEach(function (x) { outm.push(x); });
     }
   });
@@ -692,7 +692,7 @@ function facMsg(P, FT, m, root) {                             // one Slack messa
     var audio = !video && (/^audio\//.test(mt) || /\.(m4a|opus|ogg|oga|mp3|aac|amr|wav)$/i.test(nm) || (/\.webm$/i.test(nm) && /^voice/i.test(nm)));
     return { id: f.id, name: nm, type: mt, size: f.size || 0, img: /^image\//.test(mt), audio: audio, video: video }; });
   var sys = /^→ \*/.test(text) && m.bot_id;
-  return { ts: m.ts, who: who, wn: wn, app: app, sys: !!sys, root: m.ts === root, text: text.replace(/<(https?:[^|>]+)(\|[^>]*)?>/g, '$1'), files: files };
+  return { ts: m.ts, who: who, wn: wn, app: app, sys: !!sys, root: m.ts === root, rt: m.rt || '', text: text.replace(/<(https?:[^|>]+)(\|[^>]*)?>/g, '$1'), files: files };
 }
 // ---- STEP 3 (12-13 Oct 2026): the buzz. When Abbas writes in a card's thread, the factory phone gets a Telegram message with a link
 // straight to that card. A 1-minute timer (setupFacWatch, run once by Abbas) looks at #cutting; the phone is linked once by sending a
@@ -962,7 +962,8 @@ function fac0(reqText, P) {
       if (req.card === 'lais' && !facLaisOk(P, FT, req.who)) return out({ ok: false, error: 'only Abbas and the people in #laisfactory can write here', noaccess: true });
       var pdm = facRoom(P, FT, req.card), ptx2 = String(req.text || '').slice(0, 3000), pwho2 = String(req.who || '').slice(0, 40) || 'factory';
       if (!pdm) return out({ ok: false, error: 'no direct chat channel chosen yet' }); if (!ptx2.trim()) return out({ ok: false, error: 'bad request' });
-      var pj2 = slackApi(roomTok(P, req.card, FT), 'chat.postMessage', { channel: pdm.ch, text: '*' + pwho2 + ':* ' + ptx2 });
+      var pbody = { channel: pdm.ch, text: '*' + pwho2 + ':* ' + ptx2 }; if (/^\d+\.\d+$/.test(String(req.rt || ''))) pbody.thread_ts = String(req.rt);   // 21 Oct 2026: a reply to one message = a Slack thread reply under it
+      var pj2 = slackApi(roomTok(P, req.card, FT), 'chat.postMessage', pbody);
       if (!pj2.ok) return out({ ok: false, error: 'Slack said ' + pj2.error + (pj2.error === 'not_in_channel' ? ' (invite the bot to #' + pdm.name + ')' : '') });
       try { facSeen(P, pwho2, req.card, pj2.ts); } catch (e) {} facBump(); facNudge(P, req.card);
       return out({ ok: true, ts: pj2.ts });
@@ -1011,7 +1012,7 @@ function fac0(reqText, P) {
       if (pre.length && Array.isArray(req.sizes)) {           // the phone uploaded straight to Slack: make sure every byte arrived before the message is posted
         for (var vi = 0; vi < pre.length; vi++) { var vf = slackApi(UT, 'files.info', { file: pre[vi] }, true), vs = vf.ok ? +((vf.file || {}).size || 0) : -1, want = +req.sizes[vi] || 0;
           if (vf.ok && vs > 0 && want > 0 && vs !== want) return out({ ok: false, error: 'upload incomplete (' + vs + ' of ' + want + ' bytes)', retry: true }); } }
-      var uth = udm ? { ch: udm.ch, ts: ULO ? String(req.card).slice(1) : '' } : facThread(P, FT, uc, rtok, true), fids = pre.slice(), tot = 0;
+      var uth = udm ? { ch: udm.ch, ts: ULO ? String(req.card).slice(1) : (/^\d+\.\d+$/.test(String(req.rt || '')) ? String(req.rt) : '') } : facThread(P, FT, uc, rtok, true), fids = pre.slice(), tot = 0;
       for (var ui = 0; ui < ufs.length; ui++) {
         var un = String(ufs[ui].name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 60), ub = Utilities.base64Decode(String(ufs[ui].b64 || ''));
         tot += ub.length; if (ub.length > 18 * 1024 * 1024 || tot > 40 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 18 MB each, 40 MB together)' });

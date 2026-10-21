@@ -123,7 +123,7 @@ function shape(U, m, root) {                                     // one Slack me
     const audio = !video && (/^audio\//.test(mt) || /\.(m4a|opus|ogg|oga|mp3|aac|amr|wav)$/i.test(nm) || (/\.webm$/i.test(nm) && /^voice/i.test(nm)));
     return { id: f.id, name: nm, type: mt, size: f.size || 0, img: /^image\//.test(mt), audio, video }; });
   const sys = /^→ \*/.test(text) && m.bot_id;
-  return { ts: m.ts, who, wn, app, sys: !!sys, root: m.ts === root, text: text.replace(/<(https?:[^|>]+)(\|[^>]*)?>/g, '$1'), files };
+  return { ts: m.ts, who, wn, app, sys: !!sys, root: m.ts === root, rt: m.rt || '', text: text.replace(/<(https?:[^|>]+)(\|[^>]*)?>/g, '$1'), files };
 }
 const SHOW = m => !m.subtype || m.subtype === 'bot_message' || m.subtype === 'file_share' || m.subtype === 'thread_broadcast';
 
@@ -148,7 +148,7 @@ async function dm(env, q) {                                      // the Direct c
   const threads = top.filter(m => m.reply_count && m.latest_reply && (!since || +m.latest_reply > +since)).slice(0, 8);
   const reps = await Promise.all(threads.map(m => hot('r' + ch + m.ts + m.latest_reply, () => slack(env, 'conversations.replies', { channel: ch, ts: m.ts, limit: 100 }, true))));
   top.forEach(m => out.push(m));
-  reps.forEach((rj, i) => { if (rj.ok) (rj.messages || []).forEach(x => { if (x.ts !== threads[i].ts && SHOW(x)) out.push(Object.assign({}, x, { text: '↳ ' + String(x.text || '') })); }); });
+  reps.forEach((rj, i) => { if (rj.ok) (rj.messages || []).forEach(x => { if (x.ts !== threads[i].ts && SHOW(x)) out.push(Object.assign({}, x, { text: '↳ ' + String(x.text || ''), rt: m.ts })); }); });
   const seen = {}; const msgs = out.filter(m => !since || +m.ts > +since).sort((a, b) => +a.ts - +b.ts).filter(m => seen[m.ts] ? false : (seen[m.ts] = 1)).map(m => shape(U, m, null));
   return { ok: true, ch, msgs };
 }
