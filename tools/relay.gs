@@ -215,7 +215,8 @@ function facNotifyScan(P, why) {
   return sent;
 }
 function facNotifyTick() {                                       // the fallback timer (every minute): when Slack's push is on, only every 5th minute
-  var P = PropertiesService.getScriptProperties(); if (P.getProperty('FAC_EVENTS_ON') && new Date().getMinutes() % 5) return;
+  var P = PropertiesService.getScriptProperties(); try { facDailyTick(P); } catch (e) {}   // 22 Oct 2026: the daily closing report at 10 pm
+  if (P.getProperty('FAC_EVENTS_ON') && new Date().getMinutes() % 5) return;
   try { facNotifyScan(P, 'tick'); } catch (e) {}
 }
 function setupFacNotify() {                                      // Abbas can also run this once from the editor (▶ Run) if the 🔔 screen says the timer could not start
@@ -272,7 +273,7 @@ function facRetSum(P) {                                         // the home-scre
   var r = facRets(P, false), pcs = 0, old = 0; r.forEach(function (x) { if (x.st === 'cancel') return; pcs += x.pcs - x.back; if (!old || x.at < old) old = x.at; });
   return { n: r.filter(function (x) { return x.st !== 'cancel'; }).length, pcs: pcs, old: old };
 }
-function facBump() { CacheService.getScriptCache().put('FAC_GEN', String(Date.now()), 21600); }
+function facBump() { CacheService.getScriptCache().put('FAC_GEN', String(Date.now()), 21600); CacheService.getScriptCache().remove('FAC_LATE'); }
 function facGen() { return CacheService.getScriptCache().get('FAC_GEN') || '0'; }   // bumped by every Slack event: all "what's new" caches start again
 function facTtl(P) { return CacheService.getScriptCache().get('FAC_EV_AT') ? 45 : 10; }   // Slack push seen in the last 15 min -> slower fallback re-scan               // with Slack pushing changes, the fallback re-scan can be slow
 function facHist(P, FT, CH, fresh) {                            // newest 400 top-level messages of a channel, compact {t, rc, lr, l}; shared by every phone
@@ -550,6 +551,81 @@ function facWkParse(acts) {                                    // comments -> { 
     else { var o = null; for (var i = L.length - 1; i >= 0; i--) if (!L[i].out) { o = L[i]; break; } if (o) { o.out = t; o.d = +m[3]; o.outBy = m[5].trim(); } else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); } });
   return out;
 }
+// ===== 22 Oct 2026 (Abbas: "a complete factory app - everything happens here; add new things as options") =====
+// The card SHEET: cut / rejected / packed / to hand work / back from hand work / first piece approved - Trello comments like the work batches
+// ("📋 CUT · 196 pcs · who (factory app)"), read back from the card's comments (op "work" returns them as "sheet"); the due date is Trello's own
+// due field (set from the app, op "sheetset" kind "due"). CUT and PACK = the last number written (a correction wins); REJ / HWOUT / HWIN add up.
+var SH_RE = /^📋 (CUT|REJ|PACK|HWOUT|HWIN|FIRST) · (\d+) pcs · (.+?) \(factory app\)/, SH_KINDS = { cut: 'CUT', rej: 'REJ', pack: 'PACK', hwout: 'HWOUT', hwin: 'HWIN', first: 'FIRST' };
+var SH_LABEL = { cut: ['📐 Cut', 'কাটা হয়েছে'], rej: ['✗ Rejected', 'বাতিল'], pack: ['📦 Packed', 'প্যাক করা'], hwout: ['🧵 To hand work', 'হ্যান্ড ওয়ার্কে গেল'], hwin: ['🧵 Back from hand work', 'হ্যান্ড ওয়ার্ক থেকে ফেরত'], first: ['✅ First piece approved', 'প্রথম পিস ঠিক আছে'] };
+function facSheetParse(acts) {
+  var s = { cut: 0, rej: 0, pack: 0, hwout: 0, hwin: 0, first: null, lines: [] };
+  acts.forEach(function (a) { if (a.type !== 'commentCard') return; var m = String((a.data || {}).text || '').match(SH_RE); if (!m) return; var k = m[1], n = +m[2], t = Date.parse(a.date), by = m[3].trim();
+    if (k === 'CUT') s.cut = n; else if (k === 'PACK') s.pack = n; else if (k === 'REJ') s.rej += n; else if (k === 'HWOUT') s.hwout += n; else if (k === 'HWIN') s.hwin += n; else if (k === 'FIRST') s.first = { t: t, by: by };
+    s.lines.push({ k: k, n: n, t: t, by: by }); });
+  return s;
+}
+function facYmd(ms) { var u = new Date(ms + 4 * 3600000); return u.getUTCFullYear() + '-' + ('0' + (u.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + u.getUTCDate()).slice(-2); }   // the Dubai date, "2026-10-22"
+// Attendance: one small record per day (FAC_ATT_<date> = {NAME: 1 present / 0 absent}), marked by anyone in the app; the week is sent to the dashboard.
+function facAtt(P, ymd) { var r = null; try { r = JSON.parse(P.getProperty('FAC_ATT_' + ymd) || 'null'); } catch (e) {} return r && typeof r === 'object' ? r : {}; }
+function facAttWeek(P) { var o = {}; for (var i = 0; i < 7; i++) { var d = facYmd(Date.now() - i * 86400000); o[d] = facAtt(P, d); } return o; }
+// Materials: a short list (FAC_MAT = [{n: name, q: quantity, u: unit, low: alert level}]) kept by the factory; "low" = q at or under the alert level.
+function facMat(P) { var r = null; try { r = JSON.parse(P.getProperty('FAC_MAT') || 'null'); } catch (e) {} return Array.isArray(r) ? r : []; }
+function facMatLow(P) { return facMat(P).filter(function (m) { return m.low != null && m.low !== '' && +m.q <= +m.low; }); }
+// Piece rates (FAC_RATES = {NAME: rate}) - only Abbas (facOwner) can read or set them; never in the repo, never sent to a staff phone.
+function facRates(P) { var r = null; try { r = JSON.parse(P.getProperty('FAC_RATES') || 'null'); } catch (e) {} return r && typeof r === 'object' ? r : {}; }
+function facLate(P, rtok) {                                     // cards with a due date that is past or within 2 days, not yet READY / FINISH (Trello, cached 60 s)
+  var c = CacheService.getScriptCache(), h = c.get('FAC_LATE'); if (h) return JSON.parse(h);
+  var cards = []; try { cards = (trApi('get', '/boards/' + FAC.BOARD + '/cards', { filter: 'open', limit: 1000, fields: 'name,idList,due' }, rtok) || []).map(function (x) { return { id: x.id, name: x.name, l: x.idList, due: x.due ? String(x.due).slice(0, 10) : '' }; }); } catch (e) {}
+  var done = {}; FAC.LISTS.forEach(function (l) { if (/^(READY|READY 2|FINISH|FINISH SAMPLES|SAMPLE DONE|RETURNS BACK)$/.test(l[0])) done[l[1]] = 1; });
+  var today = Date.parse(facYmd(Date.now()) + 'T00:00:00Z');
+  var late = cards.filter(function (x) { return x.due && !done[x.l]; }).map(function (x) { return { id: x.id, name: x.name, l: x.l, due: x.due, days: Math.round((Date.parse(x.due + 'T00:00:00Z') - today) / 86400000) }; }).filter(function (x) { return x.days <= 2; }).sort(function (a, b) { return a.days - b.days; });
+  try { c.put('FAC_LATE', JSON.stringify(late), 60); } catch (e) {} return late;
+}
+function facWorkRep(P, rtok, rdays) {                            // every worker's output over the last N days + what each has in hand + per-day pieces, attendance, late cards, low stock
+  var rsince = new Date(Date.now() - 120 * 86400000).toISOString(), rcut = Date.now() - rdays * 86400000, rday0 = Math.floor((Date.now() + 4 * 3600000) / 86400000) * 86400000 - 4 * 3600000, racts = [], rbefore = '';   // rday0 = today 00:00 Dubai   // read 120 days back: a batch still in hand may be old
+  for (var ri = 0; ri < 5; ri++) { var rq = { filter: 'commentCard', since: rsince, limit: 1000 }; if (rbefore) rq.before = rbefore; var rpage = trApi('get', '/boards/' + FAC.BOARD + '/actions', rq, rtok) || []; racts = racts.concat(rpage); if (rpage.length < 1000) break; rbefore = rpage[rpage.length - 1].id; }
+  var byCard = {}; racts.forEach(function (a) { var cid0 = ((a.data || {}).card || {}).id; if (cid0 && WK_RE.test(String((a.data || {}).text || ''))) (byCard[cid0] = byCard[cid0] || { name: (a.data.card || {}).name || '', acts: [] }).acts.push(a); });
+  var rw = {}; facWorkers(P, rtok).forEach(function (w) { rw[w.name.toUpperCase()] = { name: w.name, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0, byDay: {} }; });
+  Object.keys(byCard).forEach(function (cid0) { var bc = byCard[cid0], wk0 = facWkParse(bc.acts.slice().sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); }));
+    Object.keys(wk0).forEach(function (w) { var r = rw[w] = rw[w] || { name: w, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0, byDay: {} }; wk0[w].forEach(function (b) {
+      if (b.out) { if (b.out >= rday0) r.today = (r.today || 0) + b.d; if (b.out < rcut) return; r.pcs += b.d; r.ms += facWorkMs(b.in, b.out); r.batches++; r.cards[cid0] = (r.cards[cid0] || 0) + b.d; if (b.out > r.last) r.last = b.out; var dk = facYmd(b.out); r.byDay[dk] = (r.byDay[dk] || 0) + b.d; }
+      else { r.open++; r.hand.push({ id: cid0, name: bc.name, g: b.g, in: b.in, adds: b.adds || [], by: b.by, wd: facWorkDur(facWorkMs(b.in, Date.now())) }); } }); }); });
+  var rout = { ok: true, t: Date.now(), days: rdays, todayN: Object.keys(rw).filter(function (k) { return rw[k].today; }).length, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, today: r.today || 0, pcs: r.pcs, dur: facWorkDur(r.ms), perDay: r.ms ? facRate(r.pcs, r.ms) : 0, batches: r.batches, open: r.open, last: r.last, byDay: r.byDay, hand: r.hand.sort(function (a, b) { return a.in - b.in; }), cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
+  rout.att = facAttWeek(P); rout.today = facYmd(Date.now()); try { rout.late = facLate(P, rtok); } catch (e) { rout.late = []; } rout.low = facMatLow(P).map(function (m) { return { n: m.n, q: m.q, u: m.u || '' }; });
+  return rout;
+}
+// The DAILY CLOSING: at 10 pm Dubai (Friday 12 noon) the relay writes the day into the direct chat - pieces per worker, who has what in hand,
+// attendance, designs moved today, late designs, low stock. Once a day (FAC_DAILY_LAST); off with FAC_DAILY_OFF (More → Factory); "Post now" = op daily.
+function facDailyText(P, rtok, when) {
+  var ymd = facYmd(when), rep = facWorkRep(P, rtok, 7), att = facAtt(P, ymd), names = facWorkers(P, rtok).map(function (w) { return w.name; }), L = [];
+  var sj = function (n) { var m = String(n || '').match(/\d{3,6}/); return m ? 'SJ-' + m[0] : String(n || '').slice(0, 20); };
+  L.push('*📒 DAILY CLOSING · ' + facWhen(when).replace(/ \d\d:\d\d$/, '') + '* · দিনের হিসাব');
+  var did = rep.workers.filter(function (w) { return (w.byDay || {})[ymd]; }).sort(function (a, b) { return b.byDay[ymd] - a.byDay[ymd]; }), tot = did.reduce(function (a, w) { return a + w.byDay[ymd]; }, 0);
+  L.push('👷 *' + tot + ' pcs done today* · আজ হয়েছে' + (did.length ? ' · ' + did.map(function (w) { return w.name + ' ' + w.byDay[ymd]; }).join(' · ') : ' · nobody pressed Done · কেউ Done চাপেনি'));
+  var hand = rep.workers.filter(function (w) { return w.hand && w.hand.length; });
+  if (hand.length) L.push('⏳ *In hand · হাতে:* ' + hand.map(function (w) { return w.name + ' ' + w.hand.map(function (h) { return h.g + ' (' + sj(h.name) + ')'; }).join(' + '); }).join(' · '));
+  var pres = names.filter(function (n) { return att[n.toUpperCase()] === 1; }), abs = names.filter(function (n) { return att[n.toUpperCase()] === 0; });
+  if (pres.length || abs.length) L.push('📅 *Present ' + pres.length + '* · *Absent ' + abs.length + '*' + (abs.length ? ' (' + abs.join(', ') + ')' : '') + ' · উপস্থিত ' + pres.length + ' · অনুপস্থিত ' + abs.length);
+  try { var day0 = new Date(Date.parse(ymd + 'T00:00:00Z') - 4 * 3600000).toISOString(), mv = trApi('get', '/boards/' + FAC.BOARD + '/actions', { filter: 'updateCard:idList', since: day0, limit: 200 }, rtok) || [], byL = {}, seen = {};
+    mv.forEach(function (a) { var d = a.data || {}, c = d.card || {}; if (!d.listAfter || seen[c.id]) return; seen[c.id] = 1; (byL[d.listAfter.name] = byL[d.listAfter.name] || []).push(sj(c.name)); });
+    var ks = Object.keys(byL); if (ks.length) L.push('🔀 *Moved today · আজ সরানো:* ' + ks.map(function (k) { return k + ' ← ' + byL[k].join(', '); }).join(' · ')); } catch (e) {}
+  var late = rep.late || [], over = late.filter(function (x) { return x.days < 0; }), soon = late.filter(function (x) { return x.days >= 0; });
+  if (over.length) L.push('⏰ *Late · দেরি:* ' + over.map(function (x) { return sj(x.name) + ' (' + (-x.days) + ' d)'; }).join(' · '));
+  if (soon.length) L.push('📅 *Due soon · শীঘ্রই:* ' + soon.map(function (x) { return sj(x.name) + ' (' + (x.days === 0 ? 'today' : x.days + ' d'); }).join(' · ') + ')');
+  if (rep.low && rep.low.length) L.push('📦 *Low stock · কম আছে:* ' + rep.low.map(function (m) { return m.n + ' ' + m.q + (m.u ? ' ' + m.u : ''); }).join(' · '));
+  return L.join('\n');
+}
+function facDaily(P, who) {
+  var rtok = P.getProperty('TRELLO') || P.getProperty('TRELLO_W'), FT = P.getProperty('SLACK_FACTORY_TOKEN'), text = facDailyText(P, rtok, Date.now());
+  var dm = FT ? facDm(P, FT) : null, ts = '';
+  if (dm) { var pj = slackApi(FT, 'chat.postMessage', { channel: dm.ch, text: text + (who ? '\n_' + who + ' (factory app)_' : '') }); if (pj.ok) ts = pj.ts; }
+  facBump(); facNudge(P, 'dm'); return { ok: true, text: text, ts: ts, posted: !!ts };
+}
+function facDailyTick(P) {                                       // from the 1-minute timer: after closing time, once per day
+  if (P.getProperty('FAC_DAILY_OFF')) return; var u = new Date(Date.now() + 4 * 3600000), h = u.getUTCHours(), fri = u.getUTCDay() === 5, ymd = facYmd(Date.now());
+  if (h < (fri ? WORK_TO_FRI : WORK_TO) || P.getProperty('FAC_DAILY_LAST') === ymd) return;
+  P.setProperty('FAC_DAILY_LAST', ymd); try { facDaily(P, ''); } catch (e) {}
+}
 function facWkLine(w, b) { var r = b.out ? ' · ' + facWorkDur(facWorkMs(b.in, b.out)) + ' · ≈' + facRate(b.d, facWorkMs(b.in, b.out)) + '/day' : ' · since ' + facDay(b.in); return w + ' ' + (b.out ? b.d + ' pcs ✓' : b.g + ' pcs ⏳') + r; }
 function facStages(acts, card) {                               // time in each list, from the card's birth to its (last) arrival in READY / READY 2
   var born = null, cur = null, evs = [];
@@ -746,7 +822,7 @@ function setupFacWatch() {                                     // Abbas runs thi
 }
 // 15 Oct 2026 audit: a phone that lost the answer (LTE, locked screen) retries - for a post / upload / new card that used to do it TWICE.
 // Every action now carries a once-only id (rid): the first answer is kept 10 min and any retry gets that same answer.
-var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report|workers)$/;
+var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report|workers|sheetset|attset|matset|ratesset|daily)$/;
 function fac(reqText, P) {
   var rq0 = {}; try { rq0 = JSON.parse(reqText); } catch (e) {}
   var rid = FAC_ONCE.test(rq0.op || '') ? String(rq0.rid || '').replace(/[^\w-]/g, '').slice(0, 40) : '', cR = CacheService.getScriptCache();
@@ -769,7 +845,7 @@ function fac0(reqText, P) {
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
-      var cards = trApi('get', '/boards/' + FAC.BOARD + '/cards', { filter: 'open', limit: 1000, fields: 'name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels', customFieldItems: 'true', attachments: 'cover', attachment_fields: 'id,previews,mimeType' }, rtok) || [];
+      var cards = trApi('get', '/boards/' + FAC.BOARD + '/cards', { filter: 'open', limit: 1000, fields: 'name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels,due', customFieldItems: 'true', attachments: 'cover', attachment_fields: 'id,previews,mimeType' }, rtok) || [];
       try { if (!cache.get('FAC_GC') && cards.length > 50) { cache.put('FAC_GC', '1', 86400); var onB = {}; cards.forEach(function (c) { onB[c.id] = 1; }); var allP = P.getProperties();
         Object.keys(allP).forEach(function (k) { if (k.indexOf('FTH_') === 0 && !onB[k.slice(4)]) P.deleteProperty(k); }); } } catch (e) {}   // archived / deleted cards: their chat link is not needed any more
       cards = cards.filter(function (c) { return listIds.indexOf(c.idList) >= 0; });
@@ -778,7 +854,7 @@ function fac0(reqText, P) {
       var outc = cards.map(function (c) {
         var f = {}; (c.customFieldItems || []).forEach(function (it) { var n = cf[it.idCustomField], v = it.value || {}; var x = v.text != null ? v.text : v.number != null ? v.number : v.date || (v.checked === 'true' ? '✓' : null); if (n && x != null && String(x).trim() !== '') f[n] = String(x); });
         var a = (c.attachments || [])[0], img = a && a.previews && a.previews.length ? a.id : '';
-        return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity, lb: (c.labels || []).filter(function (l) { return l.name; }).map(function (l) { return { n: l.name, c: l.color || '' }; }) };
+        return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: img, f: f, at: c.dateLastActivity, due: c.due ? String(c.due).slice(0, 10) : '', lb: (c.labels || []).filter(function (l) { return l.name; }).map(function (l) { return { n: l.name, c: l.color || '' }; }) };
       });
       var res = { ok: true, t: Date.now(), lists: FAC.LISTS, show: listIds, cards: outc, w: !!wtok, th: {}, tg: !!P.getProperty('TG_FACTORY_TOKEN') };
       try { bigPut(cache, 'FAC_LIST', JSON.stringify(res), 25); bigPut(cache, 'FAC_LIST_L', JSON.stringify(res), 3600); } catch (e) {}
@@ -1174,7 +1250,7 @@ function fac0(reqText, P) {
       var wc = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!wc) return out({ ok: false, error: 'bad request' });
       var wcache = CacheService.getScriptCache(), wh = req.fresh ? null : wcache.get('FAC_WK_' + wc), wnames = facWorkers(P, rtok).map(function (w) { return w.name; });   // the list of names is never from the cache (it can be edited any time)
       if (wh) { var wh0 = JSON.parse(wh); wh0.workers = wnames; return out(wh0); }
-      var wres = { ok: true, workers: wnames, batches: facWkParse(facActs(rtok, wc)), hours: [WORK_FROM, WORK_TO] };
+      var wacts = facActs(rtok, wc), wres = { ok: true, workers: wnames, batches: facWkParse(wacts), sheet: facSheetParse(wacts), hours: [WORK_FROM, WORK_TO] };   // 22 Oct 2026: + the card sheet (cut / rejected / packed …)
       Object.keys(wres.batches).forEach(function (w) { wres.batches[w].forEach(function (b) { var wm = facWorkMs(b.in, b.out || Date.now()); b.wd = facWorkDur(wm); if (b.out) b.rate = facRate(b.d, wm); }); });
       try { wcache.put('FAC_WK_' + wc, JSON.stringify(wres), 30); } catch (e) {} return out(wres);
     }
@@ -1207,16 +1283,55 @@ function fac0(reqText, P) {
     }
     if (req.op === 'workrep') {                               // 21 Oct 2026: every worker's output over the last N days + what each one has IN HAND right now (from the board's comments)
       var rdays = Math.min(120, Math.max(1, Math.floor(+req.days || 30))), rcache = CacheService.getScriptCache(), rk = 'FAC_WKR_' + rdays, rh = req.fresh ? null : rcache.get(rk); if (rh) return out(JSON.parse(rh));
-      var rsince = new Date(Date.now() - 120 * 86400000).toISOString(), rcut = Date.now() - rdays * 86400000, rday0 = Math.floor((Date.now() + 4 * 3600000) / 86400000) * 86400000 - 4 * 3600000, racts = [], rbefore = '';   // rday0 = today 00:00 Dubai   // read 120 days back: a batch still in hand may be old
-      for (var ri = 0; ri < 5; ri++) { var rq = { filter: 'commentCard', since: rsince, limit: 1000 }; if (rbefore) rq.before = rbefore; var rpage = trApi('get', '/boards/' + FAC.BOARD + '/actions', rq, rtok) || []; racts = racts.concat(rpage); if (rpage.length < 1000) break; rbefore = rpage[rpage.length - 1].id; }
-      var byCard = {}; racts.forEach(function (a) { var cid0 = ((a.data || {}).card || {}).id; if (cid0 && WK_RE.test(String((a.data || {}).text || ''))) (byCard[cid0] = byCard[cid0] || { name: (a.data.card || {}).name || '', acts: [] }).acts.push(a); });
-      var rw = {}; facWorkers(P, rtok).forEach(function (w) { rw[w.name.toUpperCase()] = { name: w.name, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0 }; });
-      Object.keys(byCard).forEach(function (cid0) { var bc = byCard[cid0], wk0 = facWkParse(bc.acts.slice().sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); }));
-        Object.keys(wk0).forEach(function (w) { var r = rw[w] = rw[w] || { name: w, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0 }; wk0[w].forEach(function (b) {
-          if (b.out) { if (b.out >= rday0) r.today = (r.today || 0) + b.d; if (b.out < rcut) return; r.pcs += b.d; r.ms += facWorkMs(b.in, b.out); r.batches++; r.cards[cid0] = (r.cards[cid0] || 0) + b.d; if (b.out > r.last) r.last = b.out; }
-          else { r.open++; r.hand.push({ id: cid0, name: bc.name, g: b.g, in: b.in, adds: b.adds || [], by: b.by, wd: facWorkDur(facWorkMs(b.in, Date.now())) }); } }); }); });
-      var rout = { ok: true, t: Date.now(), days: rdays, todayN: Object.keys(rw).filter(function (k) { return rw[k].today; }).length, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, today: r.today || 0, pcs: r.pcs, dur: facWorkDur(r.ms), perDay: r.ms ? facRate(r.pcs, r.ms) : 0, batches: r.batches, open: r.open, last: r.last, hand: r.hand.sort(function (a, b) { return a.in - b.in; }), cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
+      var rout = facWorkRep(P, rtok, rdays);
       try { rcache.put(rk, JSON.stringify(rout), 60); } catch (e) {} return out(rout);
+    }
+    if (req.op === 'sheetset') {                              // 22 Oct 2026: the card sheet - cut / rejected / packed / hand work out-in / first piece OK / due date
+      if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
+      var sc0 = String(req.card || '').replace(/[^0-9a-f]/g, ''), sk = String(req.kind || ''), swho = String(req.who || '').slice(0, 40) || 'factory', snow = Date.now();
+      if (!sc0 || !(SH_KINDS[sk] || sk === 'due')) return out({ ok: false, error: 'bad request' });
+      var scard = trApi('get', '/cards/' + sc0, { fields: 'idBoard,name,due' }, wtok); if (scard.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
+      var sdue = scard.due ? String(scard.due).slice(0, 10) : '', sline;
+      if (sk === 'due') { var sd = String(req.due || ''); if (sd && !/^\d{4}-\d\d-\d\d$/.test(sd)) return out({ ok: false, error: 'bad request' });
+        trApi('put', '/cards/' + sc0, {}, wtok, { due: sd ? sd + 'T18:00:00.000Z' : null }); sdue = sd;
+        trApi('post', '/cards/' + sc0 + '/actions/comments', { text: '📋 DUE · ' + (sd || 'none') + ' · ' + swho + ' (factory app) · ' + facWhen(snow) }, wtok);
+        sline = sd ? '📅 *Due ' + facDay(Date.parse(sd + 'T12:00:00Z')) + '* · ডেলিভারি তারিখ' : '📅 Due date removed · তারিখ মুছে ফেলা হয়েছে'; }
+      else { var sn = sk === 'first' ? 1 : Math.floor(+req.pcs || 0); if (!(sn >= 0 && sn < 100000)) return out({ ok: false, error: 'bad request' });
+        trApi('post', '/cards/' + sc0 + '/actions/comments', { text: '📋 ' + SH_KINDS[sk] + ' · ' + sn + ' pcs · ' + swho + ' (factory app) · ' + facWhen(snow) }, wtok);
+        sline = SH_LABEL[sk][0] + (sk === 'first' ? '' : ' *' + sn + ' pcs*') + ' · ' + SH_LABEL[sk][1] + (sk === 'first' ? '' : ' ' + sn + ' পিস'); }
+      try { if (FT) { var sth = facThread(P, FT, sc0, rtok, true); if (sth) slackApi(FT, 'chat.postMessage', { channel: sth.ch, thread_ts: sth.ts, text: '→ *SHEET* · ' + swho + ' · ' + sline + ' · 🕒 ' + facWhen(snow) }); } } catch (e) {}
+      CacheService.getScriptCache().remove('FAC_WK_' + sc0); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90', 'FAC_LATE']); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump(); facNudge(P, sc0);
+      return out({ ok: true, due: sdue, sheet: facSheetParse(facActs(rtok, sc0)) });
+    }
+    if (req.op === 'att') {                                   // 22 Oct 2026: attendance of one day (+ the week), for the Factory screen
+      var ad = /^\d{4}-\d\d-\d\d$/.test(String(req.day || '')) ? String(req.day) : facYmd(Date.now());
+      return out({ ok: true, day: ad, today: facYmd(Date.now()), att: facAtt(P, ad), week: facAttWeek(P), workers: facWorkers(P, rtok).map(function (w) { return w.name; }) });
+    }
+    if (req.op === 'attset') {                                // 22 Oct 2026: mark present (1) / absent (0) / unmarked (null) - anyone in the factory can
+      var ad2 = /^\d{4}-\d\d-\d\d$/.test(String(req.day || '')) ? String(req.day) : facYmd(Date.now()), cur = facAtt(P, ad2), marks = req.att && typeof req.att === 'object' ? req.att : {};
+      Object.keys(marks).slice(0, 60).forEach(function (n) { var k = String(n).trim().toUpperCase().slice(0, 30); if (!k) return; if (marks[n] === 1 || marks[n] === 0) cur[k] = marks[n]; else delete cur[k]; });
+      P.setProperty('FAC_ATT_' + ad2, JSON.stringify(cur)); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']);
+      return out({ ok: true, day: ad2, att: cur });
+    }
+    if (req.op === 'mat') return out({ ok: true, items: facMat(P), low: facMatLow(P) });   // 22 Oct 2026: materials (thread, labels, elastic …)
+    if (req.op === 'matset') {
+      var mi = Array.isArray(req.items) ? req.items.slice(0, 80).map(function (m) { m = m || {}; var n = String(m.n || '').replace(/[<>]/g, '').trim().slice(0, 40); if (!n) return null;
+        return { n: n, q: Math.max(0, Math.round(+m.q || 0)), u: String(m.u || '').trim().slice(0, 12), low: m.low === '' || m.low == null ? null : Math.max(0, Math.round(+m.low || 0)) }; }).filter(Boolean) : null;
+      if (!mi) return out({ ok: false, error: 'bad request' }); P.setProperty('FAC_MAT', JSON.stringify(mi)); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']);
+      return out({ ok: true, items: mi, low: facMatLow(P) });
+    }
+    if (req.op === 'rates' || req.op === 'ratesset') {        // 22 Oct 2026: piece rates - Abbas only (wages = pieces × rate, worked out on his phone)
+      if (!facOwner(req.who)) return out({ ok: false, error: 'only Abbas can see the rates', noaccess: true });
+      if (req.op === 'ratesset') { var rr = {}, rin = req.rates && typeof req.rates === 'object' ? req.rates : {}; Object.keys(rin).slice(0, 60).forEach(function (n) { var k = String(n).trim().toUpperCase().slice(0, 30), v = +rin[n]; if (k && v > 0 && v < 100000) rr[k] = Math.round(v * 100) / 100; }); P.setProperty('FAC_RATES', JSON.stringify(rr)); }
+      return out({ ok: true, rates: facRates(P) });
+    }
+    if (req.op === 'daily') {                                 // 22 Oct 2026: the daily closing report - get / set (on-off) / now (post it now); only Abbas changes or posts
+      if (req.kind === 'get') return out({ ok: true, on: !P.getProperty('FAC_DAILY_OFF'), last: P.getProperty('FAC_DAILY_LAST') || '' });
+      if (!facOwner(req.who)) return out({ ok: false, error: 'only Abbas can do this', noaccess: true });
+      if (req.kind === 'set') { if (req.on) P.deleteProperty('FAC_DAILY_OFF'); else P.setProperty('FAC_DAILY_OFF', '1'); return out({ ok: true, on: !P.getProperty('FAC_DAILY_OFF') }); }
+      if (req.kind === 'now') { try { return out(facDaily(P, String(req.who || '').slice(0, 40))); } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 160) }); } }
+      if (req.kind === 'preview') { try { return out({ ok: true, text: facDailyText(P, rtok, Date.now()) }); } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 160) }); } }
+      return out({ ok: false, error: 'bad request' });
     }
     if (req.op === 'reportauto') {                            // 21 Oct 2026: the app just moved a card to FINISH (fast lane): post the report now if it is not there yet
       var pa0 = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!pa0) return out({ ok: false, error: 'bad request' });

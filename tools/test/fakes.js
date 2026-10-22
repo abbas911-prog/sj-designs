@@ -86,7 +86,7 @@ function trello(W, method, p, A, J) {
     if (seg.length === 2 && method === 'PUT') {
       if (A.idList && A.idList !== c.idList) { const before = T.lists.find(l => l.id === c.idList), after = T.lists.find(l => l.id === A.idList); act('updateCard', c, { listBefore: { name: before && before.name }, listAfter: { name: after && after.name } }); c.idList = A.idList; }
       if (A.pos === 'top') c.pos = Math.min(0, ...Object.values(T.cards).filter(x => x.idList === c.idList && x !== c).map(x => x.pos)) - 1;
-      if (A.name != null) c.name = A.name; if (A.desc != null) c.desc = A.desc; if (A.closed != null) c.closed = A.closed === true || A.closed === 'true';
+      if (A.name != null) c.name = A.name; if (A.desc != null) c.desc = A.desc; if (A.due !== undefined) c.due = A.due || null; if (A.closed != null) c.closed = A.closed === true || A.closed === 'true';
       c.dateLastActivity = new Date().toISOString(); return J(cardOut(c)); }
     if (seg[2] === 'actions' && !seg[3] && method === 'GET') { const f = String(A.filter || '').split(','); return J(T.actions.filter(a => a.data && a.data.card && a.data.card.id === c.id && f.some(x => x.split(':')[0] === a.type)).sort((x, y) => Date.parse(y.date) - Date.parse(x.date)).slice(0, +A.limit || 50)); }
     if (seg[2] === 'customField' && seg[4] === 'item' && method === 'PUT') { const v = (A.value || {}); const it = c.customFieldItems.find(x => x.idCustomField === seg[3]); if (it) it.value = v; else c.customFieldItems.push({ idCustomField: seg[3], value: v }); return J({ ok: true }); }

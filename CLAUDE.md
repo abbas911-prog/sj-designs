@@ -21,7 +21,7 @@
 1. Push app changes straight to `main` (Pages serves `main`). **Bump `var VER` in factory.html on every change**
    (format `YYYY-MM-DDx`, e.g. `2026-10-20a` → `2026-10-20b`) — phones check it every 5 min (`checkVer`) and reload themselves.
 2. relay.gs: always start from the **newest copy in the repo**, never an old one. List every `function` before and after an
-   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 162 on 22 Oct 2026).
+   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 177 on 22 Oct 2026).
    Abbas deploys it himself (Apps Script editor → paste → Save → Deploy → New version) — tell him when a relay deploy is needed.
    **Never ask him to open Script properties**; any new setting is set from inside the app (an op that stores it, like `fastset`).
 3. **Never put tokens, passwords, costs or prices in any file** — the repo is public. Secrets live only in Script properties /
@@ -80,6 +80,16 @@ comments per worker over 7/30/90 days (More → Workers). **Production report** 
 name among the bot's channels (`facXRoom`, joined if public, kept in `FAC_ROOM_<k>`). Only Abbas (`facOwner`: sign-in name Abbas…) gets them
 (`facXRoomsFor` → `D.rooms`); every room op refuses other names (`noaccess`). In the app they behave like the Direct chat (`xrooms()`).
 **Done / Move**: no question; ↩ Undo bar 5 s (`MV`, `mvGo`), sent to Trello after 5 s or when the app goes to the background.
+**Factory extras (22 Oct 2026, all optional — nothing changes if nobody uses them)**: the card **📋 SHEET** (`sheetDraw`, op `sheetset`) = cut /
+rejected / packed / to-from hand work / first piece approved (Trello comments `📋 CUT · 196 pcs · who (factory app)`, parsed by `SH_RE` →
+`facSheetParse`, returned by op `work` as `sheet`) + the **due date** (Trello's own `due`, in the list as `due`; badge `dueHtml` only when set:
+red late / amber ≤ 2 d). WORK box shows a progress bar (card pcs · done · in hand · left · rejected). **Workers dashboard** (`wksDraw`): tiles
+filter (tap), status chips (Working / ⚠ Long / Free / Idle 2+ d), sort (`WKS`), By design = progress bars + chips, Week = pieces per day table
+(`byDay` from `facWorkRep`) with ✗ absent, share. **More → 🏭 Factory** (`#fac`, `facDraw`): attendance per day (`FAC_ATT_<date>`, ops `att`/`attset`,
+anyone), late / due soon (`facLate`), materials (`FAC_MAT`, ops `mat`/`matset`, low alert), wages = pieces × rate (**Abbas only**, `FAC_RATES`,
+ops `rates`/`ratesset`, never in the repo), daily closing (`facDailyText`/`facDaily`: pieces per worker, in hand, attendance, moves, late, low
+stock → posted into the Direct chat at 22:00 Dubai / Friday 12:00 by `facDailyTick` from the 1-min timer, once a day `FAC_DAILY_LAST`; off =
+`FAC_DAILY_OFF`; op `daily` get / set / preview / now).
 
 **Returns**: a return IS a card on RETURNS (new via ↩️ sheet = `op:sample` with `kind:'ret'`, chat in #cutting); Done → RETURNS BACK =
 pieces came back; there it can be deleted (archived). Older record-style returns (`FRT_<n>`, `retlist/retnew/retset`) still in the relay.
@@ -213,6 +223,8 @@ Memo rules (his words, short):
   answer never carries a stale workers list. NEEDS: relay deploy.
 - 2026-10-21 (VER 2026-10-21l) Abbas: the dashboard is reached from a small 👷 Workers icon in the bottom bar (nothing else changed; More →
   Workers still works). Added: "Today · আজ: N pcs done by M workers" line and an amber "⚠ long" on a batch held 2+ work days. NEEDS: relay deploy.
+- 2026-10-22: Abbas: "the app is laggy, no messages, no workers list" — checked from here: the relay was alive (Ibrahim's gives/moves at 08:43–10:17), the site serves the newest version, the owner path costs ≈6 Slack calls per check; could not reach the live relay/site from the container (network policy). Asked for the "Last requests · speed" screenshot (tap the status line). Arif's and Islam's test work history cleared (Trello comments edited to "🧪 test, cleared"; the two test #report comments too, so SJ-46594 still gets its real report at FINISH).
+- 2026-10-22 (VER 2026-10-22a) Abbas: "a complete factory app — redo the workers overview, add the rest as options, change nothing old": Workers dashboard redone (tiles that filter, coloured initials, status chips Working / ⚠ Long / Free / Idle, sort, By design with progress bars done / in hand / left, Week table with ✗ absent + Share); WORK box progress bar; card 📋 SHEET (cut, rejected, packed, to/from hand work, first piece approved, due date → late badge); More → 🏭 Factory: attendance, late / due soon, materials with low alert, wages (Abbas only, rates on the relay), daily closing at 10 pm into the Direct chat (on/off, preview, post now). Tests +4 (sheet, dashboard, Factory screen incl. the 10 pm tick, staff limits). NEEDS: relay deploy (177 functions after the memo chat's direct-chat work).
 - 2026-10-21 (VER 2026-10-21m) Abbas: "what does this whole thing mean?" — worker row reads "⏱ 2 h since Wed 21 Oct 21:55 · 4 min work time · 5 pcs · given by Md ibrahimmiah" (month name, 'work time', 'given by'). No relay deploy.
 - 2026-10-22: memo 2026-10-21g — (Abbas: "a personal dashboard, just like an AI assistant in the app") **Today tab** (first tab, owner phones): counts (new chats, open orders, WhatsApp, blocks done); the running Timo block with ring, start → end, time left, its steps tickable right there, Focus / Open block; Needs you = chats with new lines (tap → that chat), open orders ranked (bill today / ready to send / waiting, tap → order), WhatsApp follow-ups typed by hand (synced through Timo's state); the day as colour blocks start → end. Timo: **Ends** time in the sheet (typed end → length; chip → end), each block row shows its next step, driven from the Today tab by postMessage. Tests: t_today (21); all memo tests green.
 - 2026-10-22: catalogue builder (Abbas, 57026 / 48188 in ahmad-al-wasta-1022 + sz-1022: "it's messed up, half dresses, very confusing"): a sold-out colour was CUT out of the line-up photo by guessed edges and the rest renumbered — 57026 (0/14/16/0/4/8) lost half the gold and half the green dress and the numbers no longer matched. Now `keep_columns` never cuts: the whole photo stays, each 0 dress gets a faded "Sold out · نفذ" veil (`sold_html`, `.photo .sold`) and a greyed number, and every colour keeps the CARD's own number (the order rows, the PDF and the sizes catalogue all use it). Same for the sizes catalogue (`cs` = card numbers). Existing pages are not rebuilt — make the catalogue again from the app. Test: t_cat (12).
