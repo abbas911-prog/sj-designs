@@ -36,4 +36,14 @@ const d1 = call2({ op: 'dmset', who: 'Abbas', ch: 'C0DIRECT001', chk: 'ownerchk-
 ok('owner pastes the channel id → accepted', d1.ok && d1.name === 'sj-direct');
 ok('a wrong id is refused', call2({ op: 'dmset', who: 'Abbas', ch: 'hello', chk: 'ownerchk-32-chars-long-xxxxxxxxxxxx' }).ok === false);
 const l2 = call2({ op: 'list', who: 'Abbas' }); ok('chats then run in that channel', l2.ok && l2.dms.length === 2 && W2.slack.ch['C0DIRECT001'].msgs.length === 2 && !l2.dmerr);
+// Abbas made a private channel "muhammad" with the bot in it (22 Oct 2026): Muhammad's chat lives there, Imran's in #sj-direct
+const W3 = F.makeWorld(), relay3 = F.makeRelay(W3, { MEMO_PASSWORD: PW, SLACK_BOT_TOKEN: 'xoxb-memo-test' });
+W3.slack.ch['C0BP6DSUHSA'] = { id: 'C0BP6DSUHSA', name: 'customer', member: true, msgs: [] }; W3.slack.ch['C08EDKV94SV'] = { id: 'C08EDKV94SV', name: 'godown', member: true, msgs: [] };
+W3.slack.ch['C0MUHAMMAD1'] = { id: 'C0MUHAMMAD1', name: 'muhammad', member: true, priv: true, msgs: [] };
+const call3 = o => { const req = JSON.stringify(Object.assign({ t: Date.now() }, o)); return JSON.parse(relay3.post(JSON.stringify({ job: 'cchat', req, sig: crypto.createHmac('sha256', PW).update(req).digest('hex') }))); };
+const l3 = call3({ op: 'list', who: 'Abbas' });
+ok('channel named after the person is used for him', l3.ok && l3.dms.length === 2 && W3.slack.ch['C0MUHAMMAD1'].msgs.length === 1 && /Abbas ↔ Muhammad/.test(W3.slack.ch['C0MUHAMMAD1'].msgs[0].text));
+const sjd = Object.values(W3.slack.ch).find(c => c.name === 'sj-direct'); ok('the other person falls back to #sj-direct', !!sjd && sjd.msgs.length === 1 && /Imran/.test(sjd.msgs[0].text));
+const p3 = call3({ op: 'post', ch: 'direct', root: l3.dms[0].root, name: 'Muhammad', text: 'Salaam', who: 'Abbas', rid: 'r9' });
+ok('a line to Muhammad lands in his channel', p3.ok && W3.slack.ch['C0MUHAMMAD1'].msgs.length === 2 && call3({ op: 'list', who: 'Muhammad' }).dms[0].un === 1);
 out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); if (!out.every(o => o[1])) { console.log(JSON.stringify({ a, m, i, r, p1, m2, th, a2 }).slice(0, 2500)); process.exit(1); }

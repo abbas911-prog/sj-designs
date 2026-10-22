@@ -35,7 +35,7 @@ function doPost(e) {
     // 15 Oct 2026: Slack's Event Subscriptions point here. The event is only a nudge ("something was written in a channel"): it makes every
     // phone's next poll re-read Slack at once. Nothing in it is trusted or stored, so a fake one can only cause an extra re-read.
     if (b.type === 'url_verification' && b.challenge) return ContentService.createTextOutput(String(b.challenge)).setMimeType(ContentService.MimeType.TEXT);
-    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') facNudge(P, facCardOf(P, evc)); } catch (x) {} try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { var evm = b.event || {}; if (evm.type === 'message' && evm.channel === CC_CH) { var cEE = CacheService.getScriptCache(); cEE.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEE, 'CC_HIST'); var rk = ''; try { var hh = ccHist(P.getProperty('SLACK_BOT_TOKEN'), true).filter(function (m) { return m.ts === (evm.thread_ts || evm.ts); })[0]; rk = hh ? ccKey(ccName(hh.text)) : ''; } catch (x) {} ccNudge(P, rk); if (evm.thread_ts) ccNudge(P, 'O' + evm.thread_ts); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel === GD_CH) { var cEG = CacheService.getScriptCache(); cEG.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEG, 'GD_HIST'); ccNudge(P, 'G' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel && evm.channel === P.getProperty('CC_DM_CH')) { var cED = CacheService.getScriptCache(); cED.put('CC_EV_AT', String(Date.now()), 900); cED.remove('DM_HIST'); ccNudge(P, 'D' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
+    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') facNudge(P, facCardOf(P, evc)); } catch (x) {} try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { var evm = b.event || {}; if (evm.type === 'message' && evm.channel === CC_CH) { var cEE = CacheService.getScriptCache(); cEE.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEE, 'CC_HIST'); var rk = ''; try { var hh = ccHist(P.getProperty('SLACK_BOT_TOKEN'), true).filter(function (m) { return m.ts === (evm.thread_ts || evm.ts); })[0]; rk = hh ? ccKey(ccName(hh.text)) : ''; } catch (x) {} ccNudge(P, rk); if (evm.thread_ts) ccNudge(P, 'O' + evm.thread_ts); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel === GD_CH) { var cEG = CacheService.getScriptCache(); cEG.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEG, 'GD_HIST'); ccNudge(P, 'G' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && dmIsCh(P, evm.channel)) { var cED = CacheService.getScriptCache(); cED.put('CC_EV_AT', String(Date.now()), 900); cED.remove('DM_HIST_' + evm.channel); ccNudge(P, 'D' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
     if (b.job === 'fastchk') {                                // 16 Oct 2026: the FAST LANE worker (Cloudflare) asks "is this phone key right?" - key = sha256("sjfast|" + password)
@@ -1586,17 +1586,28 @@ function dmCh(P, tok) {
   if (!id) { var cj = slackApi(tok, 'conversations.create', { name: DM_NAME, is_private: true }); if (!cj.ok) throw new Error('Slack would not let the bot make #' + DM_NAME + ' (' + cj.error + ')'); id = (cj.channel || {}).id; }
   if (!id) throw new Error('no #' + DM_NAME); P.setProperty('CC_DM_CH', id); return id;
 }
-function dmRoot(P, tok, name) {                                    // the person's thread root in #sj-direct, made once
+function dmChFor(P, tok, name) {                                   // 22 Oct 2026 (Abbas made a private channel "Muhammad" with the bot in it): the person's
+  var k = 'CC_DM_CH_' + ccWhoKey(name), id = P.getProperty(k); if (id) return id;      // own channel wins (set by name, or pasted: op dmset with the name)
+  var slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), cur = '', n = 0;
+  try { do { var j = slackApi(tok, 'conversations.list', { types: 'public_channel,private_channel', exclude_archived: 'true', limit: 200, cursor: cur }, true); if (!j.ok) break;
+    var hit = (j.channels || []).filter(function (c) { var cn = String(c.name || '').toLowerCase(); return cn === slug || cn === 'sj-' + slug || cn === slug + '-direct' || cn === 'direct-' + slug; })[0]; if (hit) { id = hit.id; break; }
+    cur = (j.response_metadata || {}).next_cursor || ''; } while (cur && ++n < 10); } catch (e) {}
+  if (id) { P.setProperty(k, id); return id; }
+  return dmCh(P, tok);                                              // nothing of his own: the shared #sj-direct
+}
+function dmRoot(P, tok, name) {                                    // the person's thread root (in his own channel, else #sj-direct), made once
   var k = 'CC_DM_ROOT_' + ccWhoKey(name), ts = P.getProperty(k); if (ts) return ts;
-  var ch = dmCh(P, tok), pj = slackApi(tok, 'chat.postMessage', { channel: ch, text: '💬 *DIRECT* · Abbas ↔ ' + name }); if (!pj.ok) throw new Error(ccErr(pj.error));
+  var ch = dmChFor(P, tok, name), pj = slackApi(tok, 'chat.postMessage', { channel: ch, text: '💬 *DIRECT* · Abbas ↔ ' + name }); if (!pj.ok) throw new Error(ccErr(pj.error));
   P.setProperty(k, pj.ts); return pj.ts;
 }
-function dmHist(tok, ch, fresh) {                                 // newest 100 top-level posts of #sj-direct (the thread roots), kept 20 s
-  var c = CacheService.getScriptCache(), h = fresh ? null : c.get('DM_HIST'); if (h) return JSON.parse(h);
-  var j = slackApi(tok, 'conversations.history', { channel: ch, limit: 100 }, true); if (!j.ok) throw new Error(ccErr(j.error).replace('#customer', '#' + DM_NAME));
+function dmHist(tok, ch, fresh) {                                 // newest 100 top-level posts of a direct channel (the thread roots), kept 20 s
+  var c = CacheService.getScriptCache(), ck = 'DM_HIST_' + ch, h = fresh ? null : c.get(ck); if (h) return JSON.parse(h);
+  var j = slackApi(tok, 'conversations.history', { channel: ch, limit: 100 }, true); if (!j.ok) throw new Error(ccErr(j.error).replace('#customer', 'the direct channel'));
   var all = (j.messages || []).map(function (m) { return { ts: m.ts, rc: m.reply_count || 0, lr: m.latest_reply || '', text: String(m.text || '').slice(0, 120) }; });
-  try { c.put('DM_HIST', JSON.stringify(all), 20); } catch (e) {} return all;
+  try { c.put(ck, JSON.stringify(all), 20); } catch (e) {} return all;
 }
+function dmDrop(P) { var c = CacheService.getScriptCache(); Object.keys(P.getProperties()).forEach(function (k) { if (k.indexOf('CC_DM_CH') === 0) c.remove('DM_HIST_' + P.getProperty(k)); }); }
+function dmIsCh(P, id) { if (!id) return false; var all = P.getProperties(); return Object.keys(all).some(function (k) { return k.indexOf('CC_DM_CH') === 0 && all[k] === id; }); }
 function dmUnread(P, tok, ch, who, roots, budget, fresh) {        // {'D'+ts: {n, last, tx}} for this person over the given roots
   var out = {}; roots = (roots || []).filter(String).slice(0, 20); if (!roots.length) return out;
   var hist; try { hist = dmHist(tok, ch, fresh); } catch (e) { return out; }
@@ -1612,13 +1623,15 @@ function dmUnread(P, tok, ch, who, roots, budget, fresh) {        // {'D'+ts: {n
 }
 function dmList(P, tok, who, budget, fresh) {                     // the direct chats this person may see, with unread counts
   var names = dmFor(P, who); if (!names.length) return [];
-  var ch = dmCh(P, tok), rows = names.map(function (n) { return { k: '', name: n, root: dmRoot(P, tok, n), un: 0, tx: '', last: '0' }; });
-  rows.forEach(function (r) { r.k = 'D' + r.root; });
-  var hist = []; try { hist = dmHist(tok, ch, fresh); } catch (e) {}
-  rows.forEach(function (r) { var m = hist.filter(function (x) { return x.ts === r.root; })[0]; if (m) r.last = m.lr && +m.lr > +m.ts ? m.lr : m.ts; });
-  var un = dmUnread(P, tok, ch, who, rows.map(function (r) { return r.root; }), budget, fresh);
-  rows.forEach(function (r) { var u = un[r.k]; if (u) { r.un = u.n; r.tx = u.tx; if (+u.last > +r.last) r.last = u.last; } });
-  return rows;
+  var rows = names.map(function (n) { var root = dmRoot(P, tok, n); return { k: 'D' + root, name: n, root: root, ch: dmChFor(P, tok, n), un: 0, tx: '', last: '0' }; });
+  var byCh = {}; rows.forEach(function (r) { (byCh[r.ch] = byCh[r.ch] || []).push(r); });
+  Object.keys(byCh).forEach(function (ch) {
+    var hist = []; try { hist = dmHist(tok, ch, fresh); } catch (e) {}
+    byCh[ch].forEach(function (r) { var m = hist.filter(function (x) { return x.ts === r.root; })[0]; if (m) r.last = m.lr && +m.lr > +m.ts ? m.lr : m.ts; });
+    var un = dmUnread(P, tok, ch, who, byCh[ch].map(function (r) { return r.root; }), budget, fresh);
+    byCh[ch].forEach(function (r) { var u = un[r.k]; if (u) { r.un = u.n; r.tx = u.tx; if (+u.last > +r.last) r.last = u.last; } });
+  });
+  return rows.map(function (r) { return { k: r.k, name: r.name, root: r.root, un: r.un, tx: r.tx, last: r.last }; });
 }
 function ccNotifyScan(P, why) {                                  // phone notifications (ntfy app) for everyone who turned them on
   var map = {}; try { map = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} var names = Object.keys(map); if (!names.length) return 0;
@@ -1676,7 +1689,7 @@ function cchat(reqText, P) {
     if ((req.ch === 'godown' || req.ch === 'direct') && (req.op === 'thread' || req.op === 'seen' || req.op === 'post' || req.op === 'up')) {
       var gr = String(req.root || '').replace(/[^\d.]/g, ''); if (!gr) return out({ ok: false, error: req.ch === 'direct' ? 'no direct chat yet' : 'no #godown post for this order' });
       var isDm = req.ch === 'direct', XCH = GD_CH, XP = 'G';
-      if (isDm) { XP = 'D'; XCH = dmCh(P, tok); var okNames = dmFor(P, who), okRoots = okNames.map(function (n) { return P.getProperty('CC_DM_ROOT_' + ccWhoKey(n)) || ''; }); if (okRoots.indexOf(gr) < 0) return out({ ok: false, error: 'noaccess — this direct chat is not yours' }); }
+      if (isDm) { XP = 'D'; var okNames = dmFor(P, who), okRoots = okNames.map(function (n) { return P.getProperty('CC_DM_ROOT_' + ccWhoKey(n)) || ''; }), di = okRoots.indexOf(gr); if (di < 0) return out({ ok: false, error: 'noaccess — this direct chat is not yours' }); XCH = dmChFor(P, tok, okNames[di]); }
       if (req.op === 'thread') {
         var gh = []; try { gh = isDm ? dmHist(tok, XCH, !!req.fresh) : gdHist(tok, !!req.fresh); } catch (e) {} var gm = gh.filter(function (m) { return m.ts === gr; })[0];
         var GL = chReplies(tok, XCH, gr, gm && gm.lr && !req.fresh ? gm.lr : ''), gms = isDm ? GL.filter(function (x) { return !x.root; }) : GL.map(function (x) { if (x.root) { x.memo = true; x.who = 'Godown pick list'; x.text = String(x.text || '').replace(/^\*GODOWN PICK LIST\*[^\n]*\n?/, ''); } return x; });
@@ -1694,7 +1707,7 @@ function cchat(reqText, P) {
           payload: { files: JSON.stringify(gids.map(function (f) { return { id: f }; })), channel_id: XCH, thread_ts: gr, initial_comment: '*' + who + ':* ' + (gtx || '📎') } }).getContentText());
         if (!gj.ok) return out({ ok: false, error: ccErr(gj.error) }); gres = { ok: true, root: gr, files: gids.length };
       }
-      if (isDm) cR.remove('DM_HIST'); else bigDrop(cR, 'GD_HIST');
+      if (isDm) cR.remove('DM_HIST_' + XCH); else bigDrop(cR, 'GD_HIST');
       var sg3 = ccSeenGet(P, who), nowG = String(Date.now() / 1000 + 2); if (+nowG > +(sg3[XP + gr] || 0)) { sg3[XP + gr] = nowG; ccSeenPut(P, who, sg3); }
       ccNudge(P, XP + gr);
       var grt = JSON.stringify(gres); if (rid) cR.put('CCR_' + rid, grt, 21600); return ContentService.createTextOutput(grt).setMimeType(ContentService.MimeType.JSON);
@@ -1703,8 +1716,11 @@ function cchat(reqText, P) {
       if (!ownerOk(P, req.chk)) return out({ ok: false, error: 'owner only' });
       var dch = String(req.ch || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!/^[CG][A-Z0-9]{8,}$/.test(dch)) return out({ ok: false, error: 'that is not a channel id (it looks like C0ABC12DEF)' });
       var di = slackApi(tok, 'conversations.info', { channel: dch }, true); if (!di.ok) return out({ ok: false, error: ccErr(di.error) + ' — invite @SJ Memo to that channel' });
-      P.setProperty('CC_DM_CH', dch); Object.keys(P.getProperties()).forEach(function (k) { if (k.indexOf('CC_DM_ROOT_') === 0) P.deleteProperty(k); }); CacheService.getScriptCache().remove('DM_HIST');
-      return out({ ok: true, ch: dch, name: (di.channel || {}).name || '' });
+      var pn = String(req.name || '').replace(/[*_\n]/g, '').trim().slice(0, 40), who1 = pn ? dmPeople(P).filter(function (n) { return ccWhoKey(n) === ccWhoKey(pn); })[0] : '';
+      if (pn && !who1) return out({ ok: false, error: 'no person called ' + pn + ' in the direct-chat list' });
+      if (who1) { P.setProperty('CC_DM_CH_' + ccWhoKey(who1), dch); P.deleteProperty('CC_DM_ROOT_' + ccWhoKey(who1)); }
+      else { P.setProperty('CC_DM_CH', dch); Object.keys(P.getProperties()).forEach(function (k) { if (k.indexOf('CC_DM_ROOT_') === 0 && !P.getProperty('CC_DM_CH_' + k.slice(11))) P.deleteProperty(k); }); }
+      dmDrop(P); return out({ ok: true, ch: dch, name: (di.channel || {}).name || '', person: who1 || '' });
     }
     if (req.op === 'dmpeople') {                                // 22 Oct 2026: Abbas edits the list of people with a direct chat (owner check as the vault)
       if (!ownerOk(P, req.chk)) return out({ ok: false, error: 'owner only' });

@@ -915,7 +915,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-22e';
+var VER = '2026-10-22f';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -3396,7 +3396,7 @@ function ccDrawList(){ if (CC.bell) return;   // 20 Oct 2026: the 🔔 setup sta
   var L = ords.concat(custs).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
   L.sort(function(a, b){ var ua = (CC.un[a.k || ccK(a.name)] || {}).n ? 1 : 0, ub = (CC.un[b.k || ccK(b.name)] || {}).n ? 1 : 0; return ub - ua || (+b.last || 0) - (+a.last || 0); });
   var DL = (CC.dms || []).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
-  var hd = ''; if (CC.dmerr && !DL.length) hd += '<div class="stk bad dmfix">Direct chats: ' + esc(CC.dmerr) + (isBoss() ? '<br><br><b>Fix A:</b> api.slack.com/apps → SJ Memo → OAuth &amp; Permissions → Bot Token Scopes → add <b>groups:read</b> + <b>groups:write</b> (and <b>groups:history</b>) → Reinstall to Workspace.<br><b>Fix B:</b> in Slack make a private channel <b>sj-direct</b>, invite <b>@SJ Memo</b>, open its details and copy the Channel ID at the bottom, paste it here:<form id="dmsetf"><input id="dmsetc" placeholder="C0ABC12DEF" autocomplete="off"><button type="submit">Use it</button></form>' : '<br>Abbas: see the Chats tab on your phone.') + '</div>';
+  var hd = ''; if (CC.dmerr && !DL.length) hd += '<div class="stk bad dmfix">Direct chats: ' + esc(CC.dmerr) + (isBoss() ? '<br><br><b>Fix A:</b> api.slack.com/apps → SJ Memo → OAuth &amp; Permissions → Bot Token Scopes → add <b>groups:read</b> + <b>groups:write</b> (and <b>groups:history</b>) → Reinstall to Workspace.<br><b>Fix B:</b> in Slack make a private channel per person (e.g. <b>muhammad</b>) or one <b>sj-direct</b> for all, invite <b>@SJ Memo</b>, open the channel details, copy the Channel ID at the bottom and paste it here (with the person\'s name for a per-person channel):<form id="dmsetf"><input id="dmsetc" placeholder="Muhammad C0ABC12DEF" autocomplete="off"><button type="submit">Use it</button></form>' : '<br>Abbas: see the Chats tab on your phone.') + '</div>';
   if (DL.length) hd += '<div class="bsec top">Direct · مباشر <small>' + (ccK(ccWho()).indexOf('ABBAS') === 0 ? 'you ↔ each person' : 'you ↔ Abbas') + '</small></div>' + DL.map(function(r){ var u = CC.un[r.k]; return '<div class="ccrow' + (u ? ' un' : '') + '" data-n="' + esc(r.name) + '" data-r="' + esc(r.root) + '" data-ch="direct"><div class="av">💬</div><div class="t"><b>' + esc(ccK(ccWho()).indexOf('ABBAS') === 0 ? r.name : 'Abbas') + '</b><small>' + (u && u.tx ? esc(u.tx) : 'direct chat · محادثة مباشرة') + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
   var h = hd + '<div class="ccsrch"><input id="ccq" placeholder="Search customer · ابحث عن عميل" autocomplete="off" value="' + esc(q) + '"></div>';
   var unk = Object.keys(CC.un);
@@ -3412,7 +3412,8 @@ function ccDrawList(){ if (CC.bell) return;   // 20 Oct 2026: the 🔔 setup sta
   var had = document.activeElement && document.activeElement.id === 'ccq'; $('ccbody').innerHTML = h;
   var qi = $('ccq'); qi.oninput = function(){ ccDrawList(); }; if (had) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
   var cb = $('cccatch'); if (cb) cb.onclick = ccCuStart;
-  var df = $('dmsetf'); if (df) df.onsubmit = async function(e){ e.preventDefault(); var ch = $('dmsetc').value.trim(); if (!ch) return; try { var chk = await svChk(); var j = await ccCall({ op: 'dmset', ch: ch, chk: chk }); if (!j.ok) throw new Error(j.error); uiToast('✓ #' + (j.name || 'sj-direct') + ' is the direct-chat channel'); CC.dmerr = ''; ccLoad(true); } catch(e2){ alert('Not set: ' + e2.message); } };
+  var df = $('dmsetf'); if (df) df.onsubmit = async function(e){ e.preventDefault(); var v = $('dmsetc').value.trim(); if (!v) return; var mm = v.match(/^(.*?)\s*([CG][A-Z0-9]{8,})\s*$/i); if (!mm) { alert('Paste the Channel ID (looks like C0ABC12DEF), with the person\'s name in front for a per-person channel.'); return; }
+    try { var chk = await svChk(); var j = await ccCall({ op: 'dmset', ch: mm[2].toUpperCase(), name: mm[1].trim(), chk: chk }); if (!j.ok) throw new Error(j.error); uiToast('✓ #' + (j.name || 'channel') + (j.person ? ' = direct chat with ' + j.person : ' = the direct-chat channel')); CC.dmerr = ''; ccLoad(true); } catch(e2){ alert('Not set: ' + e2.message); } };
 }
 $('ccbody').addEventListener('click', function(e){
   var r = e.target.closest('.ccrow,.ccnr'); if (r && !CC.cur) { if (r.dataset.oid) { CC.from = 'chats'; ordChat(r.dataset.oid); return; } var uu = CC.un[r.dataset.k || ''] || null; if (uu && uu.oid) { CC.from = 'chats'; ordChat(uu.oid, uu.ch === 'godown' ? 'g' : 'c'); return; } ccChat(r.dataset.n, r.dataset.r || '', r.dataset.ch === 'direct' ? 'direct' : ''); return; }
