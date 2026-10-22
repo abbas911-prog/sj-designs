@@ -508,7 +508,10 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
 .tdwa{display:flex;gap:6px;padding:10px 12px;border-top:1px solid #F0EBE3}.tdwa input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:14px;background:var(--bg)}.tdwa input:first-child{flex:.7}.tdwa button{border:0;border-radius:10px;background:var(--gold);color:#fff;font:inherit;font-weight:800;padding:0 14px}
 .tdnote{padding:8px 14px 10px;font-size:12px;color:var(--mute);border-top:1px solid #F0EBE3}
 .tdday{display:flex;flex-direction:column;gap:6px}.tdb{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:stretch}.tdb .tm{font-size:12px;color:var(--mute);text-align:right;padding-top:10px;line-height:1.3}.tdb.cur .tm{color:#B4302E;font-weight:800}
-.tdb button{border:0;border-radius:12px;padding:10px 12px;text-align:left;font:inherit;color:#1D1A2B}.tdb button b{display:block;font-size:14px}.tdb button small{font-size:12px}.tdb.done button{opacity:.6}.tdb.done button b{text-decoration:line-through}.tdb.cur button{outline:2px solid #234C47;outline-offset:-2px}
+.tdbk{border-radius:12px;color:#1D1A2B;overflow:hidden}.tdbh{display:flex;align-items:stretch}.tdbh button{border:0;background:none;padding:10px 12px;text-align:left;font:inherit;color:inherit;flex:1;min-width:0}.tdbh button b{display:block;font-size:14px}.tdbh button small{font-size:12px}.tdbh .tdx{flex:none;width:44px;font-size:18px;text-align:center;transition:transform .15s}.tdbh .tdx.on{transform:rotate(180deg)}.tdb.done .tdbk{opacity:.6}.tdb.done .tdbh b{text-decoration:line-through}.tdb.cur .tdbk{outline:2px solid #234C47;outline-offset:-2px}
+.tdxs{display:flex;flex-direction:column;padding:0 8px 6px}.tdxs button{display:flex;align-items:center;gap:10px;border:0;background:none;color:inherit;font:inherit;font-size:14px;text-align:left;padding:7px 4px;width:100%}.tdxs button i{width:22px;height:22px;border-radius:50%;border:2px solid rgba(29,26,43,.45);box-sizing:border-box;flex:none;font-style:normal;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:rgba(255,255,255,.35)}.tdxs button.on i{background:#1D1A2B;border-color:#1D1A2B;color:#fff}.tdxs button.on span{opacity:.6;text-decoration:line-through}.tdxs button.cur span{font-weight:700}
+.tdmenu{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}.tdmenu[hidden]{display:none}.tdmenu button{border:1px solid var(--line);background:#fff;border-radius:14px;padding:12px 14px;text-align:left;font:inherit;font-weight:800;font-size:15px;color:var(--ink)}.tdmenu button small{display:block;font-weight:500;font-size:12.5px;color:var(--mute);margin-top:2px}
+.tdquick{display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-bottom:12px}.tdquick[hidden]{display:none}.tdquick input{border:1px solid var(--line);border-radius:12px;padding:11px 12px;font:inherit;font-size:15px;background:#fff;min-width:0}.tdquick button{border:0;border-radius:12px;background:var(--gold);color:#fff;font:inherit;font-weight:800;padding:0 14px}.tdquick #tdqx{background:#fff;color:var(--mute);border:1px solid var(--line)}.tdquick small{grid-column:1/-1;font-size:12px;color:var(--mute);line-height:1.4}
 .tdempty{padding:14px;text-align:center;color:var(--mute);font-size:13.5px}
 #more[hidden]{display:none}
 #more{position:fixed;inset:0;z-index:50;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -626,7 +629,7 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
 <div id="cccomp" hidden><button type="button" id="ccmic" title="voice note">🎤</button><label title="photo / video">📷<input type="file" id="cccam" accept="image/*,video/*" capture="environment" hidden></label><label title="files, photos, videos">📎<input type="file" id="ccfile" accept="image/*,video/*,audio/*,.pdf" multiple hidden></label><button type="button" id="ccpaste" title="paste">📋</button><textarea id="cctxt" rows="1" placeholder="Write… · اكتب"></textarea><button type="button" id="ccsend">Send</button></div></div>
 <nav id="nav"><button type="button" data-nv="today" id="nvtoday" hidden><em>◉</em>Today<i id="nvt"></i></button><button type="button" data-nv="stock" class="on"><em>🧵</em>Stock</button><button type="button" data-nv="memo"><em>🧾</em>Memo<i id="nvm"></i></button><button type="button" data-nv="chats"><em>💬</em>Chats<i id="nvc"></i></button><button type="button" data-nv="orders"><em>📦</em>Orders<i id="nvo"></i></button><button type="button" data-nv="more"><em>☰</em>More</button></nav>
 <div id="timo" hidden></div><button type="button" id="timoopen" hidden>Timo</button>
-<div id="today" hidden><div class="in"><div class="hd"><b id="tdtitle">TODAY · اليوم</b><span><button type="button" class="pl" id="tdnew" aria-label="New block · كتلة جديدة">+</button></span></div><div id="tdbody"></div></div></div>
+<div id="today" hidden><div class="in"><div class="hd"><b id="tdtitle">TODAY · اليوم</b><span><button type="button" class="pl" id="tdnew" aria-label="Add · أضف">+</button></span></div><div id="tdmenu" class="tdmenu" hidden><button type="button" id="tdaddB">▦ Block · كتلة<small>a time in the day, with its steps</small></button><button type="button" id="tdaddT">✓ Task · مهمة<small>one line → a step inside a block</small></button></div><form id="tdquick" class="tdquick" hidden><input id="tdqt" placeholder="Call Usman #T1 tomorrow" autocomplete="off" maxlength="200"><button type="submit">Add</button><button type="button" id="tdqx" aria-label="Close">✕</button><small>#T1 = 1st block of that day · #factory = block by name · tomorrow / Fri / 25 Oct = the day · 20 min = timer · no block → To-do</small></form><div id="tdbody"></div></div></div>
 <div id="more" hidden><div class="in"><div class="hd"><b>MORE · المزيد</b><button type="button" id="morex">Close</button></div><div id="morebody"></div></div></div>
 <div id="toast" hidden></div>
 <div id="bar" class="empty"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="drbtn" type="button">Memo<small>drafts</small></button><button id="ok" type="button" disabled>OK</button></div></div>
@@ -911,7 +914,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-21g';
+var VER = '2026-10-22a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -3697,13 +3700,13 @@ function openTimo(){ if (!isBoss()) { uiToast('Timo is on owner phones only'); r
   if (w.firstChild) { try { w.firstChild.contentWindow.postMessage({ timo: 'refresh' }, '*'); } catch(e){} } else tdEnsure();   // one frame, made by tdEnsure (Today tab shares it)
   w.hidden = false; }
 $('timoopen').onclick = openTimo;
-window.addEventListener('message', function(e){ if (!e.data) return; if (e.data.timo === 'close') { $('timo').hidden = true; if (!$('today').hidden) tdDraw(); } if (e.data.timo === 'state' && !$('today').hidden) tdDraw(); });
+window.addEventListener('message', function(e){ if (!e.data) return; if (e.data.timo === 'close') { $('timo').hidden = true; if (!$('today').hidden) tdDraw(); } if (e.data.timo === 'state' && !$('today').hidden) tdDraw(); if (e.data.timo === 'toast' && e.data.text) uiToast(e.data.text); });
 // ===== TODAY tab (21 Oct 2026, Abbas: "a personal dashboard, just like an AI assistant in the app ... at that specific time which is going on,
 // I can have all the tasks in front of me"). Owner phones only (isBoss). Reads Timo's day straight from this phone (timo-state in localStorage,
 // kept in sync by timo.html through the relay); every change (tick a step, done, WhatsApp follow-ups) goes to the hidden Timo frame, which
 // owns the data and syncs it - one owner, no two copies. Chats = CC.un (the unread box), orders = ORD.list, WhatsApp = S.wa typed by hand
 // (a normal WhatsApp number cannot be read by any app; the Business API can come later).
-var TD = { timer: null, tick: null, now: null };
+var TD = { timer: null, tick: null, now: null, x: {} };   // x = blocks whose steps are opened in the day list
 function tdState(){ try { var j = JSON.parse(localStorage.getItem('timo-state') || 'null'); if (j && typeof j === 'object') return j; } catch(e){} return { acts: [], done: {}, checks: {}, wa: [] }; }
 function tdK(d){ d = d || new Date(); return d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1) + '-' + (d.getDate() < 10 ? '0' : '') + d.getDate(); }
 function tdOccurs(a, k){ if ((a.skip || []).indexOf(k) >= 0) return false; if (!a.repeat || a.repeat === 'none') return a.date === k; if (k < a.date) return false;
@@ -3713,7 +3716,7 @@ function tdNowMin(){ var d = new Date(); return d.getHours() * 60 + d.getMinutes
 function tdT(m){ m = ((Math.round(m) % 1440) + 1440) % 1440; var h = Math.floor(m / 60), mm = m % 60, ap = h < 12 ? ' am' : ' pm'; h = h % 12 || 12; return h + ':' + (mm < 10 ? '0' : '') + mm + ap; }
 function tdD(m){ m = Math.max(0, Math.round(m)); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : ''); }
 function tdS(sec){ sec = Math.max(0, Math.round(sec)); var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60; return (h ? h + ':' + (m < 10 ? '0' : '') + m : m) + ':' + (x < 10 ? '0' : '') + x; }
-function tdDay(S, k){ return (S.acts || []).filter(function(a){ return tdOccurs(a, k); }).sort(function(x, y){ return x.start - y.start; }); }
+function tdDay(S, k){ return (S.acts || []).filter(function(a){ return tdOccurs(a, k); }).map(function(a){ var o = (S.over || {})[a.id + '@' + k]; return o && o.items ? Object.assign({}, a, { items: o.items }) : a; }).sort(function(x, y){ return x.start - y.start; }); }   // 22 Oct 2026: a repeating block may have its own steps on one day (Timo S.over)
 function tdEnsure(){ var w = $('timo'); if (!w.firstChild) { w.innerHTML = '<iframe src="timo.html?v=' + VER + '" title="Timo" allow="screen-wake-lock; autoplay"></iframe>'; TD.q = []; TD.ready = false;
     w.firstChild.addEventListener('load', function(){ TD.ready = true; var f = w.firstChild; (TD.q || []).forEach(function(m){ try { f.contentWindow.postMessage(m, '*'); } catch(e){} }); TD.q = []; }); } return w.firstChild; }
 function tdSend(m){ var f = tdEnsure(); m.timo = 'op'; if (TD.ready) { try { f.contentWindow.postMessage(m, '*'); } catch(e){} } else (TD.q = TD.q || []).push(m); }
@@ -3766,16 +3769,24 @@ function tdDraw(){ TD.sig = tdSig();
   h += '<div class="tdsec"><b>The day · اليوم</b><small>' + (list.length ? done + ' of ' + list.length + ' done' : '') + '</small></div><div class="tdday">';
   if (!list.length) h += '<div class="tdempty">Nothing planned yet · tap + above</div>';
   list.forEach(function(a){ var dn = isDone(a), isCur = cur && cur.id === a.id, tk = ticks(a), ci = a.items.findIndex(function(_, j){ return tk.indexOf(j) < 0; });
-    h += '<div class="tdb' + (dn ? ' done' : '') + (isCur ? ' cur' : '') + '"><div class="tm">' + tdT(a.start).replace(' ', '&nbsp;') + '<br>' + tdT(a.start + a.dur).replace(' ', '&nbsp;') + '</div><button type="button" style="background:' + (TDCOL[a.color] || '#E2DED6') + '" data-tdopen="' + esc(a.id) + '"><b>' + esc(a.icon || '') + ' ' + esc(a.title) + (isCur ? ' · now' : '') + '</b><small>' + tdD(a.dur) + (a.items.length ? ' · ☑ ' + tk.length + '/' + a.items.length + (!dn && ci >= 0 ? ' · ▸ ' + esc(a.items[ci].t) : '') : '') + (dn ? ' · done ✓' : '') + '</small></button></div>'; });
+    var open = a.items.length && TD.x[a.id];
+    h += '<div class="tdb' + (dn ? ' done' : '') + (isCur ? ' cur' : '') + '"><div class="tm">' + tdT(a.start).replace(' ', '&nbsp;') + '<br>' + tdT(a.start + a.dur).replace(' ', '&nbsp;') + '</div><div class="tdbk" style="background:' + (TDCOL[a.color] || '#E2DED6') + '"><div class="tdbh"><button type="button" data-tdopen="' + esc(a.id) + '"><b>' + esc(a.icon || '') + ' ' + esc(a.title) + (isCur ? ' · now' : '') + '</b><small>' + tdD(a.dur) + (a.items.length ? ' · ☑ ' + tk.length + '/' + a.items.length + (!dn && ci >= 0 && !open ? ' · ▸ ' + esc(a.items[ci].t) : '') : '') + (dn ? ' · done ✓' : '') + '</small></button>' + (a.items.length ? '<button type="button" class="tdx' + (open ? ' on' : '') + '" data-tdx="' + esc(a.id) + '" aria-label="Show steps">▾</button>' : '') + '</div>' +
+      (open ? '<div class="tdxs">' + a.items.map(function(st, i){ var on = tk.indexOf(i) >= 0; return '<button type="button" class="' + (on ? 'on' : '') + (i === ci ? ' cur' : '') + '" data-tdxst="' + esc(a.id) + ':' + i + '"><i>' + (on ? '✓' : '') + '</i><span>' + esc(st.t) + (st.m ? ' · ' + st.m + ' min' : '') + '</span></button>'; }).join('') + '</div>' : '') + '</div></div>'; });
   h += '</div>';
   $('tdbody').innerHTML = h;
 }
-$('tdnew').onclick = function(){ tdSend({ op: 'new' }); tdShowTimo(); };
+$('tdnew').onclick = function(){ var m = $('tdmenu'); m.hidden = !m.hidden; $('tdquick').hidden = true; };   // 22 Oct 2026: + = Block or Task
+$('tdaddB').onclick = function(){ $('tdmenu').hidden = true; tdSend({ op: 'new' }); tdShowTimo(); };
+$('tdaddT').onclick = function(){ $('tdmenu').hidden = true; $('tdquick').hidden = false; $('tdqt').focus(); };
+$('tdqx').onclick = function(){ $('tdquick').hidden = true; };
+$('tdquick').addEventListener('submit', function(e){ e.preventDefault(); var t = $('tdqt').value.trim(); if (!t) return; tdSend({ op: 'task', text: t }); $('tdqt').value = ''; $('tdquick').hidden = true; });
 $('tdbody').onclick = function(e){
   var go = e.target.closest('[data-tdgo]'); if (go) { var t = go.dataset.tdgo; if (t === 'chats' || t === 'orders') { navGo(t); return; } var el = $(t === 'wa' ? 'tdwa' : 'tdbody'); if (t === 'day') el = $('tdbody').querySelector('.tdday'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   var b = e.target.closest('button'); if (!b) return;
   if (b.id === 'tdnew2') { $('tdnew').click(); return; }
   if (b.dataset.tdstep != null && TD.now) { tdSend({ op: 'step', id: TD.now.id, i: +b.dataset.tdstep }); b.classList.toggle('on'); return; }
+  if (b.dataset.tdx) { TD.x[b.dataset.tdx] = !TD.x[b.dataset.tdx]; tdDraw(); return; }
+  if (b.dataset.tdxst) { var px = b.dataset.tdxst.split(':'); tdSend({ op: 'step', id: px[0], i: +px[1] }); b.classList.toggle('on'); return; }
   if (b.dataset.tdfocus) { tdSend({ op: 'focus', id: b.dataset.tdfocus }); tdShowTimo(); return; }
   if (b.dataset.tdopen) { tdSend({ op: 'open', id: b.dataset.tdopen }); tdShowTimo(); return; }
   if (b.dataset.tdchat) { var key = b.dataset.tdchat, u = CC.un[key]; if (!u) return; navCloseAll(); $('cc').hidden = false; CC.touched = Date.now(); if (u.oid) { CC.from = 'today'; ordChat(u.oid, u.ch === 'godown' ? 'g' : 'c'); } else ccChat(u.name, u.root || ''); navSync(); return; }

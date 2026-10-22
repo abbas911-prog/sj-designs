@@ -91,6 +91,12 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:10p
 .chk.on{background:var(--on-pastel);border-color:var(--on-pastel);color:#fff}
 .blk.done{opacity:.5} .blk.done .bt b{text-decoration:line-through}
 .blk.cur{outline:2px solid var(--on-pastel);outline-offset:-2px}
+.blk .rt{display:flex;align-items:center;gap:8px}
+.xar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:rgba(255,255,255,.35);transition:transform .15s}.xar.on{transform:rotate(180deg)}
+.xsteps{border-radius:var(--r-md);padding:6px 10px;display:flex;flex-direction:column;gap:2px;color:var(--on-pastel)}
+.xs{display:flex;align-items:center;gap:10px;background:none;color:inherit;text-align:left;padding:7px 2px;font-size:14px;width:100%}.xs i{width:22px;height:22px;border-radius:50%;border:2px solid rgba(29,26,43,.45);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800;flex:none;background:rgba(255,255,255,.35)}.xs.on i{background:var(--on-pastel);border-color:var(--on-pastel);color:#fff}.xs.on span{opacity:.6;text-decoration:line-through}.xs.cur span{font-weight:700}
+.askbox{border-radius:24px 24px 0 0}.askbtns{display:flex;flex-direction:column;gap:10px}.askbtns .btn{padding:14px 16px;border-radius:16px;font-size:16px;text-align:left}.askbtns .btn small{display:block;font-weight:500;font-size:12.5px;opacity:.8;margin-top:2px}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.4;margin:-6px 0 14px}
 .ex{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:1px 6px;border-radius:6px;background:rgba(29,26,43,.12);margin-left:6px;vertical-align:2px}
 .gap{grid-column:2;font-size:12.5px;color:var(--muted);padding:2px 12px;border-left:2px dashed var(--line);margin-left:20px}
 .nowline{grid-column:1/-1;display:flex;align-items:center;gap:8px;color:var(--now);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -227,6 +233,7 @@ nav.tabs .in{max-width:560px;margin:0 auto;display:flex;gap:6px;align-items:cent
 </div></nav>
 <div id="layer"></div>
 <div id="layer2"></div>
+<div id="layer3"></div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -254,13 +261,14 @@ const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorag
 
 /* ---------- state ---------- */
 let S=blank();
-function blank(){return{acts:[],todos:[],done:{},checks:{},stepAt:{},days:{},wa:[],at:0}}   // wa = WhatsApp follow-ups (21 Oct 2026, SJ Stock Today tab)
+function blank(){return{acts:[],todos:[],done:{},checks:{},stepAt:{},days:{},wa:[],over:{},at:0}}   // over = "id@day" -> {items}: this day's own steps of a repeating block (22 Oct 2026)   // wa = WhatsApp follow-ups (21 Oct 2026, SJ Stock Today tab)
 function norm(d){
   const s=Object.assign(blank(),d||{});
   const items=a=>(a||[]).map(x=>typeof x==="string"?{t:x,m:0}:{t:String(x.t||""),m:+x.m||0}).filter(x=>x.t);
   s.acts=(s.acts||[]).map(a=>Object.assign({},a,{items:items(a.items),notes:a.notes||"",skip:a.skip||[]}));
   s.todos=(s.todos||[]).map(t=>Object.assign({dur:30,notes:""},t,{items:items(t.items)}));
   s.wa=(s.wa||[]).filter(x=>x&&x.id);
+  s.over=s.over||{}; for(const k of Object.keys(s.over)) s.over[k]={items:items(s.over[k]&&s.over[k].items)};
   return s;
 }
 let sel=todayK(), tab="today", view="day";
@@ -323,7 +331,7 @@ async function boot(){
 }
 function prune(){
   const cut=addDays(todayK(),-120);
-  for(const m of [S.done,S.checks,S.stepAt]) for(const k of Object.keys(m)){const d=k.split("@")[1];if(d&&d<cut)delete m[k]}
+  for(const m of [S.done,S.checks,S.stepAt,S.over]) for(const k of Object.keys(m)){const d=k.split("@")[1];if(d&&d<cut)delete m[k]}
   for(const k of Object.keys(S.days)) if(k<cut)delete S.days[k];
 }
 
@@ -338,11 +346,26 @@ function occurs(a,k){
   if(a.repeat==="weekly")return wd===dateOf(a.date).getDay();
   return false;
 }
-const dayActs=k=>S.acts.filter(a=>occurs(a,k)).sort((x,y)=>x.start-y.start);
 const dk=(id,k)=>id+"@"+k;
+const itemsOn=(a,k)=>{const o=S.over[dk(a.id,k)];return o&&o.items?o.items:a.items};   // the steps of block a on day k
+const actOn=(a,k)=>a?Object.assign({},a,{items:itemsOn(a,k)}):a;
+const dayActs=k=>S.acts.filter(a=>occurs(a,k)).map(a=>actOn(a,k)).sort((x,y)=>x.start-y.start);
 const isDone=(id,k)=>!!S.done[dk(id,k)];
 const stepsOn=(id,k)=>S.checks[dk(id,k)]||[];
 const findAct=id=>S.acts.find(a=>a.id===id);
+const findActOn=(id,k)=>actOn(findAct(id),k);
+// changing the steps of a block on day k: a repeating block asks "only this day / every day" (Abbas, 22 Oct 2026 - like Tiimo)
+async function editItems(a,k,fn){
+  const key=dk(a.id,k); let target;
+  if(a.repeat==="none"||!a.repeat) target=a.items;
+  else if(S.over[key]) target=S.over[key].items;
+  else{const only=await ask2("This block repeats. Change the steps…","Only this day","Every day"); if(only===null)return false;
+    if(only){S.over[key]={items:JSON.parse(JSON.stringify(a.items))};target=S.over[key].items} else target=a.items}
+  fn(target,target!==a.items); changed(); return true;
+}
+function ask2(q,A,B){return new Promise(res=>{const L=$("layer3");
+  L.innerHTML=`<div class="scrim" id="ask"><div class="sheet askbox"><h4>${esc(q)}</h4><div class="askbtns"><button class="btn pri" type="button" id="askA">${esc(A)}</button><button class="btn" type="button" id="askB">${esc(B)}</button><button class="btn" type="button" id="askX">Cancel</button></div></div></div>`;
+  const done=v=>{L.innerHTML="";res(v)}; $("askA").onclick=()=>done(true); $("askB").onclick=()=>done(false); $("askX").onclick=()=>done(null); $("ask").onclick=e=>{if(e.target.id==="ask")done(null)};})}
 const running=(a,k)=>k===todayK()&&nowMin()>=a.start&&nowMin()<a.start+a.dur;
 function curStep(a,k){const on=stepsOn(a.id,k);const i=a.items.findIndex((_,j)=>!on.includes(j));return i}
 function stepLeft(a,k){ // seconds left on the current step's own timer, or null
@@ -400,7 +423,9 @@ function todayHTML(){
     if(!lineDone&&n<a.start){tl+=`<div class="row"><div class="nowline">${fmtT(Math.floor(n))}</div></div>`;lineDone=true}
     if(prevEnd!==null&&a.start-prevEnd>=15) tl+=`<div class="row"><div></div><div class="gap">${fmtD(a.start-prevEnd)} free</div></div>`;
     const dn=isDone(a.id,sel), on=stepsOn(a.id,sel).length, it=a.items.length, cur=running(a,sel)&&!dn;
-    tl+=`<div class="row"><div class="tm">${fmtT(a.start)}</div><button class="blk ${dn?"done":""} ${cur?"cur":""}" style="background:var(--p-${a.color})" data-open="${a.id}" type="button"><span class="bi">${esc(a.icon)}</span><span class="bt"><b>${esc(a.title)}${a.ex?'<span class="ex">example</span>':""}</b><small>${fmtT(a.start)}–${fmtT(a.start+a.dur)} · ${fmtD(a.dur)}${it?` · ☑ ${on}/${it}`:""}${a.repeat&&a.repeat!=="none"?" · ↻":""}${a.notes?" · ✎":""}</small>${it&&!dn&&curStep(a,sel)>=0?`<small class="nx">▸ ${esc(a.items[curStep(a,sel)].t)}</small>`:""}${it?`<span class="bar"><i style="width:${Math.round(on/it*100)}%"></i></span>`:""}</span><span class="chk ${dn?"on":""}" data-done="${a.id}" role="button" aria-label="Mark done">${dn?"✓":""}</span></button></div>`;
+    tl+=`<div class="row"><div class="tm">${fmtT(a.start)}</div><button class="blk ${dn?"done":""} ${cur?"cur":""}" style="background:var(--p-${a.color})" data-open="${a.id}" type="button"><span class="bi">${esc(a.icon)}</span><span class="bt"><b>${esc(a.title)}${a.ex?'<span class="ex">example</span>':""}</b><small>${fmtT(a.start)}–${fmtT(a.start+a.dur)} · ${fmtD(a.dur)}${it?` · ☑ ${on}/${it}`:""}${a.repeat&&a.repeat!=="none"?" · ↻":""}${a.notes?" · ✎":""}</small>${it&&!dn&&curStep(a,sel)>=0?`<small class="nx">▸ ${esc(a.items[curStep(a,sel)].t)}</small>`:""}${it?`<span class="bar"><i style="width:${Math.round(on/it*100)}%"></i></span>`:""}</span><span class="rt">${it?`<span class="xar ${XO.has(a.id)?"on":""}" data-x="${a.id}" role="button" aria-label="Show steps">▾</span>`:""}<span class="chk ${dn?"on":""}" data-done="${a.id}" role="button" aria-label="Mark done">${dn?"✓":""}</span></span></button></div>`;
+    if(it&&XO.has(a.id)){const tk=stepsOn(a.id,sel),ci=curStep(a,sel);   // 22 Oct 2026 (Abbas): the steps open under the block, tickable right here
+      tl+=`<div class="row"><div></div><div class="xsteps" style="background:var(--p-${a.color})">${a.items.map((st,i)=>`<button type="button" class="xs ${tk.includes(i)?"on":""} ${i===ci?"cur":""}" data-xst="${a.id}:${i}"><i>${tk.includes(i)?"✓":""}</i><span>${esc(st.t)}${st.m?` · ${st.m} min`:""}</span></button>`).join("")}</div></div>`}
     prevEnd=Math.max(prevEnd??0,a.start+a.dur);
   });
   if(!lineDone)tl+=`<div class="row"><div class="nowline">${fmtT(Math.floor(n))}</div></div>`;
@@ -448,19 +473,21 @@ setInterval(()=>{if(tab==="today"&&!document.querySelector(".scrim"))render()},6
 /* ---------- actions ---------- */
 function toggleDone(id,k){const key=dk(id,k);if(S.done[key])delete S.done[key];else{S.done[key]=true;const a=findAct(id);if(a&&running(a,k))toast("Nice work ✓")}changed();rerender()}
 function toggleStep(id,k,i){
-  const key=dk(id,k),a=findAct(id),arr=new Set(S.checks[key]||[]);
+  const key=dk(id,k),a=findActOn(id,k),arr=new Set(S.checks[key]||[]);
   if(arr.has(i))arr.delete(i);else{arr.add(i);S.stepAt[key]=Date.now();}
   S.checks[key]=[...arr];
   if(a&&a.items.length&&arr.size===a.items.length&&!S.done[key]){S.done[key]=true;toast("All steps done ✓")}
   changed();rerender();
 }
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-day],[data-wday],[data-done],[data-open],[data-focus],[data-tdone],[data-tplan],[data-tdel],[data-topen],[data-act],[data-v]");
+  const t=e.target.closest("[data-day],[data-wday],[data-done],[data-open],[data-focus],[data-tdone],[data-tplan],[data-tdel],[data-topen],[data-act],[data-v],[data-x],[data-xst]");
   if(!t||t.closest("#layer")||t.closest("#layer2"))return;
   if(t.dataset.v){view=t.dataset.v;render();return}
   if(t.dataset.day){sel=t.dataset.day;render();return}
   if(t.dataset.wday){sel=t.dataset.wday;view="day";render();return}
   if(t.dataset.done){e.stopPropagation();toggleDone(t.dataset.done,sel);return}
+  if(t.dataset.x){e.stopPropagation();if(XO.has(t.dataset.x))XO.delete(t.dataset.x);else XO.add(t.dataset.x);render();return}
+  if(t.dataset.xst){const [id,i]=t.dataset.xst.split(":");toggleStep(id,sel,+i);return}
   if(t.dataset.focus){e.stopPropagation();openFocus(t.dataset.focus);return}
   if(t.dataset.open){openTask(t.dataset.open);return}
   if(t.dataset.tdone){const x=S.todos.find(q=>q.id===t.dataset.tdone);x.done=!x.done;changed();render();return}
@@ -472,7 +499,51 @@ document.addEventListener("click",e=>{
 });
 $("t-today").onclick=()=>{tab="today";render()};
 $("t-todo").onclick=()=>{tab="todo";render()};
-$("fab").onclick=()=>tab==="todo"?openTodo(null):openSheet(null);
+$("fab").onclick=()=>tab==="todo"?openTodo(null):openAddMenu();
+// 22 Oct 2026 (Abbas): "+" = Block or Task. A task is one typed line, like Todoist: "Call Usman #T1 tomorrow 20 min" → a step inside the
+// first block (#T1) of tomorrow; "#factory" = the block whose name starts with "factory"; no date = today; no block found → the To-do list.
+function openAddMenu(){const L=$("layer2");
+  L.innerHTML=`<div class="scrim" id="scrim"><div class="sheet askbox"><h4>Add · أضف</h4><div class="askbtns">
+    <button class="btn pri" type="button" id="addB">▦ Block · كتلة<small>a time in the day, with its steps</small></button>
+    <button class="btn" type="button" id="addT">✓ Task · مهمة<small>one line → a step inside a block: "Call Usman #T1 tomorrow"</small></button></div></div></div>`;
+  $("addB").onclick=()=>{L.innerHTML="";openSheet(null)}; $("addT").onclick=()=>openQuick();
+  L.onclick=e=>{if(e.target.id==="scrim")L.innerHTML=""};}
+function openQuick(){const L=$("layer2");
+  L.innerHTML=`<div class="scrim" id="scrim"><form class="sheet" id="quickf"><h4>Task · مهمة</h4>
+    <div class="fld"><input id="q-text" placeholder="Call Usman #T1 tomorrow" autocomplete="off"></div>
+    <p class="hint">#T1 = the 1st block of that day · #T2 = the 2nd … · #factory = the block named Factory… · "tomorrow", "Fri", "25 Oct" = the day (no day = today) · "20 min" = a timer. No block found → To-do list.</p>
+    <div class="sheetbar"><span></span><div style="display:flex;gap:8px"><button type="button" class="btn" id="q-cancel">Cancel</button><button type="submit" class="btn pri">Add</button></div></div></form></div>`;
+  $("q-cancel").onclick=()=>{L.innerHTML=""}; L.onclick=e=>{if(e.target.id==="scrim")L.innerHTML=""};
+  L.onsubmit=e=>{e.preventDefault();const r=quickTask($("q-text").value);if(!r.ok){$("q-text").focus();return}L.innerHTML="";toast(r.msg);render()};
+  setTimeout(()=>$("q-text")?.focus(),50);}
+const MONTHS=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"], WDAYS=["sun","mon","tue","wed","thu","fri","sat"];
+function parseQuick(text){
+  let t=" "+String(text||"").trim()+" ", k=todayK(), m, tag=null, mins=0; const Y=new Date().getFullYear();
+  const mk=(y,mo,d)=>y+"-"+pad(mo)+"-"+pad(d);
+  if((m=/\s(\d{4})-(\d{1,2})-(\d{1,2})\s/.exec(t))){k=mk(+m[1],+m[2],+m[3]);t=t.replace(m[0]," ")}
+  else if((m=/\s(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?\s/.exec(t))){let y=m[3]?+m[3]:Y;if(y<100)y+=2000;k=mk(y,+m[2],+m[1]);t=t.replace(m[0]," ")}
+  else if((m=/\s(\d{1,2})\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s/i.exec(t))){k=mk(Y,MONTHS.indexOf(m[2].toLowerCase())+1,+m[1]);t=t.replace(m[0]," ")}
+  else if((m=/\s(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*(\d{1,2})\s/i.exec(t))){k=mk(Y,MONTHS.indexOf(m[1].toLowerCase())+1,+m[2]);t=t.replace(m[0]," ")}
+  else if((m=/\s(tomorrow|tmr|tmrw)\s/i.exec(t))){k=addDays(todayK(),1);t=t.replace(m[0]," ")}
+  else if((m=/\s(today|tonight)\s/i.exec(t))){t=t.replace(m[0]," ")}
+  else if((m=/\s(sun|mon|tue|wed|thu|fri|sat)[a-z]*\s/i.exec(t))){const w=WDAYS.indexOf(m[1].toLowerCase().slice(0,3)),d=new Date();let n=(w-d.getDay()+7)%7;k=addDays(todayK(),n);t=t.replace(m[0]," ")}
+  if((m=/#(\S+)/.exec(t))){tag=m[1];t=t.replace(m[0]," ")}
+  if((m=/\s(\d{1,3})\s*min(?:s|utes)?\s/i.exec(t))){mins=+m[1];t=t.replace(m[0]," ")}
+  return {k,tag,mins,text:t.replace(/\s+/g," ").trim()};
+}
+function quickTask(text){
+  const q=parseQuick(text); if(!q.text)return{ok:false,msg:"Type the task first"};
+  const list=dayActs(q.k), dayName=q.k===todayK()?"today":dateOf(q.k).toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+  let a=null;
+  if(q.tag){const n=/^t?(\d+)$/i.exec(q.tag); if(n)a=list[+n[1]-1]||null;
+    else{const lo=q.tag.toLowerCase();a=list.find(x=>x.title.toLowerCase().startsWith(lo))||list.find(x=>x.title.toLowerCase().includes(lo))||null}}
+  if(!a){S.todos.unshift({id:uid(),title:q.text,icon:"⭐",dur:q.mins||30,items:[],notes:"",done:false});changed();
+    return{ok:true,msg:(q.tag?"No block #"+q.tag+" on "+dayName+" — ":"No #block given — ")+"put in To-do"}}
+  const base=findAct(a.id), key=dk(a.id,q.k);
+  if(base.repeat!=="none"&&!S.over[key])S.over[key]={items:JSON.parse(JSON.stringify(base.items))};   // only that day, never every day
+  (S.over[key]?S.over[key].items:base.items).push({t:q.text,m:q.mins});
+  changed(); return{ok:true,msg:"Added to "+a.icon+" "+a.title+" · "+dayName};
+}
 $("back").onclick=()=>{try{window.parent.postMessage({timo:"close"},"*")}catch(e){}};
 document.addEventListener("submit",e=>{
   if(e.target.id!=="todoform")return;e.preventDefault();
@@ -482,6 +553,7 @@ document.addEventListener("submit",e=>{
 
 /* ---------- task screen: tap any block ---------- */
 const OPEN={task:null,focus:null};
+const XO=new Set();   // blocks whose steps are opened in the day list
 function openTask(id){OPEN.task={id,k:sel};drawTask()}
 function closeTask(){OPEN.task=null;$("layer").innerHTML="";render()}
 function taskState(a,k){
@@ -495,7 +567,7 @@ function taskState(a,k){
 }
 function stepOpts(v){return STEPMIN.map(m=>`<option value="${m}" ${m===v?"selected":""}>${m?m+" min":"no timer"}</option>`).join("")}
 function drawTask(){
-  const {id,k}=OPEN.task, a=findAct(id); if(!a)return closeTask();
+  const {id,k}=OPEN.task, a=findActOn(id,k); if(!a)return closeTask();
   const on=stepsOn(id,k), ci=curStep(a,k), st=taskState(a,k), dn=isDone(id,k), sl=stepLeft(a,k);
   const rep=(REPEATS.find(r=>r[0]===a.repeat)||REPEATS[0])[1], keepY=$("task")?$("task").scrollTop:0;
   const tot=a.items.reduce((s,x)=>s+(x.m||0),0);
@@ -522,15 +594,19 @@ function drawTask(){
   $("tfocus").onclick=()=>openFocus(a.id,k);
   $("tdone").onclick=()=>toggleDone(a.id,k);
   L.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>toggleStep(a.id,k,+b.dataset.st));
-  L.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{const i=+b.dataset.rm;a.items.splice(i,1);
-    for(const key of Object.keys(S.checks))if(key.startsWith(a.id+"@"))S.checks[key]=S.checks[key].filter(x=>x!==i).map(x=>x>i?x-1:x);changed();drawTask()});
-  $("addstep").onsubmit=e=>{e.preventDefault();const v=$("ns").value.trim();if(!v)return;a.items.push({t:v,m:+$("nsm").value||0});changed();drawTask();$("ns").focus()};
-  let nt=null;$("tnotes").oninput=e=>{a.notes=e.target.value;clearTimeout(nt);nt=setTimeout(changed,600)};
+  const base=findAct(id);
+  L.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{const i=+b.dataset.rm;
+    const ok=await editItems(base,k,(items,thisDayOnly)=>{items.splice(i,1);
+      for(const key of Object.keys(S.checks)){if(!key.startsWith(a.id+"@"))continue;if(thisDayOnly?key!==dk(a.id,k):S.over[key])continue;S.checks[key]=S.checks[key].filter(x=>x!==i).map(x=>x>i?x-1:x)}});
+    if(ok)drawTask()});
+  $("addstep").onsubmit=async e=>{e.preventDefault();const v=$("ns").value.trim();if(!v)return;const m=+$("nsm").value||0;
+    const ok=await editItems(base,k,items=>items.push({t:v,m}));if(ok){drawTask();$("ns").focus()}};
+  let nt=null;$("tnotes").oninput=e=>{base.notes=e.target.value;clearTimeout(nt);nt=setTimeout(changed,600)};
   L.querySelectorAll("[data-mv]").forEach(b=>b.onclick=()=>moveAct(a,k,b.dataset.mv));
   if($("tskip"))$("tskip").onclick=()=>{a.skip=[...(a.skip||[]),k];changed();closeTask();toast("Skipped for this day")};
   const del=$("tdel");del.onclick=()=>{if(del.dataset.sure){S.acts=S.acts.filter(x=>x.id!==a.id);changed();closeTask();toast("Deleted")}else{del.dataset.sure=1;del.textContent="Tap again to delete"}};
 }
-function tickTask(){const {id,k}=OPEN.task,a=findAct(id);if(!a)return;const el=$("tLeft");if(el)el.textContent=fmtS(leftSecs(a));const s=$("tStep"),sl=stepLeft(a,k);if(s&&sl!==null)s.textContent=sl>=0?fmtS(sl):"+"+fmtS(-sl);
+function tickTask(){const {id,k}=OPEN.task,a=findActOn(id,k);if(!a)return;const el=$("tLeft");if(el)el.textContent=fmtS(leftSecs(a));const s=$("tStep"),sl=stepLeft(a,k);if(s&&sl!==null)s.textContent=sl>=0?fmtS(sl):"+"+fmtS(-sl);
   if(running(a,k)&&!el&&!isDone(id,k))drawTask();}
 function moveAct(a,k,how){
   let start=a.start,date=k;
@@ -559,6 +635,7 @@ function nextFreeStart(k){
 }
 function openSheet(a,pre){
   const isNew=!a;
+  if(a)a=actOn(a,sel);   // the sheet shows this day's steps
   const f=a?JSON.parse(JSON.stringify(a)):{id:uid(),title:pre?.title||"",icon:pre?.icon||"☀️",color:pre?.color||"lilac",start:nextFreeStart(sel),dur:pre?.dur||30,repeat:"none",date:sel,items:pre?.items?JSON.parse(JSON.stringify(pre.items)):[],notes:pre?.notes||"",skip:[]};
   const L=$("layer2");
   const draw=()=>{
@@ -594,12 +671,18 @@ function openSheet(a,pre){
     if(b.id==="f-add"){grab();if(f._new.trim())f.items.push({t:f._new.trim(),m:f._newm});draw();$("f-new").focus();return}
     if(b.id==="f-cancel")return close();
   };
-  L.onsubmit=e=>{
+  L.onsubmit=async e=>{
     e.preventDefault();grab();
     if(f._new.trim())f.items.push({t:f._new.trim(),m:f._newm});
     f.items=f.items.map(s=>({t:s.t.trim(),m:s.m})).filter(s=>s.t);
     if(!f.title.trim()){$("f-title").focus();return}
-    const o={id:f.id,title:f.title.trim(),icon:f.icon,color:f.color,start:f.start,dur:f.dur,repeat:f.repeat,date:isNew?sel:f.date,items:f.items,notes:f.notes,skip:f.skip||[]};
+    const was=a?findAct(a.id):null, key=a?dk(a.id,sel):"";
+    let items=f.items, over=null;
+    if(was&&was.repeat!=="none"&&JSON.stringify(f.items)!==JSON.stringify(itemsOn(was,sel))){   // steps changed on a repeating block
+      const only=S.over[key]?true:await ask2("This block repeats. Change the steps…","Only this day","Every day"); if(only===null)return;
+      if(only){over=f.items;items=was.items} }
+    const o={id:f.id,title:f.title.trim(),icon:f.icon,color:f.color,start:f.start,dur:f.dur,repeat:f.repeat,date:isNew?sel:f.date,items,notes:f.notes,skip:f.skip||[]};
+    if(over)S.over[key]={items:over}; else if(was&&S.over[key]&&f.repeat==="none")delete S.over[key];
     if(isNew)S.acts.push(o);else S.acts=S.acts.map(x=>x.id===o.id?o:x);
     if(pre?.fromTodo){S.todos=S.todos.filter(q=>q.id!==pre.fromTodo);tab="today";view="day";toast("Planned for "+fmtT(o.start))}
     changed();close();
@@ -646,7 +729,7 @@ function openTodo(t){
 /* ---------- focus mode: the activity ring + the current step's own timer ---------- */
 let lock=null;
 async function openFocus(id,k){
-  k=k||sel; const a=findAct(id); if(!a)return;
+  k=k||sel; const a=findActOn(id,k); if(!a)return;
   const key=dk(id,k);
   if(a.items.length&&!S.stepAt[key]){S.stepAt[key]=Date.now();changed()}
   OPEN.focus={id,k,t0:running(a,k)?null:Date.now()};
@@ -656,7 +739,7 @@ async function openFocus(id,k){
 function closeFocus(){OPEN.focus=null;$("layer2").innerHTML="";try{lock?.release()}catch(e){}lock=null;if(OPEN.task)drawTask();render()}
 function focusLeft(a){const F=OPEN.focus;return F.t0?(F.t0+a.dur*60000-Date.now())/1000:leftSecs(a)}
 function drawFocus(){
-  const F=OPEN.focus,a=findAct(F.id); if(!a)return closeFocus();
+  const F=OPEN.focus,a=findActOn(F.id,F.k); if(!a)return closeFocus();
   const k=F.k, on=stepsOn(a.id,k), ci=curStep(a,k), sl=stepLeft(a,k), dn=isDone(a.id,k), left=focusLeft(a);
   $("layer2").innerHTML=`<div class="focus" style="background:var(--p-${a.color})">
     <div class="big">${ringSVG(left/(a.dur*60),"var(--on-pastel)","rgba(255,255,255,.55)",6)}<div class="c"><div>${esc(a.icon)}</div><b id="fLeft">${fmtS(left)}</b></div></div>
@@ -669,7 +752,7 @@ function drawFocus(){
   $("fdone").onclick=()=>{const was=dn;toggleDone(a.id,k);if(!was)closeFocus()};
   if($("fnext"))$("fnext").onclick=()=>{toggleStep(a.id,k,ci);if(ci<a.items.length-1)chime()};
 }
-function tickFocus(){const F=OPEN.focus,a=findAct(F.id);if(!a)return;const l=focusLeft(a),el=$("fLeft");if(el)el.textContent=l>=0?fmtS(l):"+"+fmtS(-l);
+function tickFocus(){const F=OPEN.focus,a=findActOn(F.id,F.k);if(!a)return;const l=focusLeft(a),el=$("fLeft");if(el)el.textContent=l>=0?fmtS(l):"+"+fmtS(-l);
   const arc=document.querySelector(".focus .arc");if(arc)arc.setAttribute("stroke-dashoffset",2*Math.PI*45*(1-Math.max(0,Math.min(1,l/(a.dur*60)))));
   const sl=stepLeft(a,F.k),se=$("fStep");if(se&&sl!==null){se.textContent=sl>=0?fmtS(sl)+" left":"+"+fmtS(-sl)+" over";const key="s"+dk(a.id,F.k)+curStep(a,F.k);if(sl<=0&&sl>-1.5&&!rung.has(key)){rung.add(key);chime();toast("Step time is up")}}}
 
@@ -708,6 +791,7 @@ window.addEventListener("message",e=>{const m=e.data||{};if(m.timo==="refresh")r
   else if(m.op==="open"){sel=k;tab="today";view="day";render();openTask(m.id)}
   else if(m.op==="focus"){sel=k;tab="today";view="day";render();openFocus(m.id,k)}
   else if(m.op==="new"){sel=todayK();tab="today";view="day";render();openSheet(null)}
+  else if(m.op==="task"){const r=quickTask(m.text||"");render();try{window.parent.postMessage({timo:"toast",text:r.msg},"*")}catch(e){}}
   else if(m.op==="wa"){S.wa=S.wa||[];
     if(m.add&&(m.add.name||m.add.text))S.wa.unshift({id:uid(),name:String(m.add.name||"").slice(0,60),text:String(m.add.text||"").slice(0,300),at:Date.now(),done:false});
     if(m.done)S.wa=S.wa.map(x=>x.id===m.done?Object.assign({},x,{done:!x.done,doneAt:Date.now()}):x);

@@ -23,7 +23,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await pg.route(/script\.google\.com/, async (route) => { const b = JSON.parse(route.request().postData() || '{}'); route.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(b)) }); });
   await pg.route(/ntfy\.sh|fonts\.g/, r => r.abort());
   const d = new Date(), nowMin = d.getHours() * 60 + d.getMinutes(), K = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  const S = { acts: [{ id: 'a1', title: 'Factory visit', icon: '🏭', color: 'mint', start: Math.max(0, nowMin - 10), dur: 60, repeat: 'none', date: K, items: [{ t: 'Check cutting', m: 0 }, { t: 'Give pcs to Arif', m: 20 }], notes: '', skip: [] },
+  const S = { acts: [{ id: 'a1', title: 'Factory visit', icon: '🏭', color: 'mint', start: Math.max(0, nowMin - 10), dur: 60, repeat: 'daily', date: K, items: [{ t: 'Check cutting', m: 0 }, { t: 'Give pcs to Arif', m: 20 }, { t: 'Photos of sample', m: 10 }], notes: '', skip: [] },
     { id: 'a2', title: 'Bills', icon: '🧾', color: 'butter', start: Math.min(1380, nowMin + 120), dur: 45, repeat: 'none', date: K, items: [], notes: '', skip: [] }], todos: [], done: {}, checks: {}, stepAt: {}, days: {}, wa: [], at: Date.now() };
   // staff phone first: no Today tab
   await pg.goto(URL0); await pg.evaluate(pw => { localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas'); }, PW); await pg.reload(); await pg.waitForSelector('#feed .design', { timeout: 15000 });
@@ -40,7 +40,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await pg.waitForFunction(() => document.querySelectorAll('#tdbody [data-tdchat]').length === 1, null, { timeout: 8000 }).catch(() => {});
   out.push(['Now card = the running block', (await t('.tdnow h2')).indexOf('Factory visit') >= 0]);
   out.push(['start → end shown', /→/.test(await t('.tdnow .sub')) && /left/.test(await t('.tdnow .sub'))]);
-  out.push(['steps on the Now card', (await pg.$$eval('.tdst button', L => L.length)) === 2]);
+  out.push(['steps on the Now card', (await pg.$$eval('.tdst button', L => L.length)) === 3]);
   out.push(['chat with news listed', (await pg.$$eval('[data-tdchat]', L => L.length)) === 1 && (await t('[data-tdchat] .t small')).indexOf('new designs') >= 0]);
   out.push(['open orders listed, done one not', (await pg.$$eval('[data-tdord]', L => L.map(e => e.textContent))).join('|').indexOf('Old done') < 0 && (await pg.$$eval('[data-tdord]', L => L.length)) === 2]);
   out.push(['packed order = bill today, first', (await t('[data-tdord] .tag')) === 'bill today' && (await t('[data-tdord] .t b')).indexOf('Matiullah') >= 0]);
@@ -77,6 +77,39 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   out.push(['block row shows its next step', (await fr.$eval('.blk .nx', e => e.textContent)).indexOf('Give pcs') >= 0]);
   await fr.click('#tx'); await fr.click('#back'); await pg.waitForTimeout(200);
   out.push(['back → Today redrawn with 90 min', await vis('#today') && (await t('.tdnow .sub')).indexOf('→') >= 0 && (await pg.$eval('.tdb.cur small', e => e.textContent)).indexOf('1 h 30') >= 0]);
+  // 22 Oct 2026: steps under every block of the day, tickable there
+  await pg.click('[data-tdx="a1"]'); await pg.waitForTimeout(200);
+  out.push(['arrow opens the steps under the block', (await pg.$$eval('.tdxs button', L => L.length)) === 3]);
+  await pg.click('[data-tdxst="a1:1"]');
+  await pg.waitForFunction(() => { try { const s = JSON.parse(localStorage.getItem('timo-state')); return (s.checks[Object.keys(s.checks)[0]] || []).indexOf(1) >= 0; } catch (e) { return false; } }, null, { timeout: 8000 }).catch(() => {});
+  const st3 = await pg.evaluate(() => JSON.parse(localStorage.getItem('timo-state')));
+  out.push(['step ticked from the day list', (st3.checks['a1@' + K] || []).indexOf(1) >= 0]);
+  // + → Task: "Call Usman #T1 tomorrow" → a step inside tomorrow's first block only (the block repeats daily)
+  await pg.click('#tdnew'); await pg.waitForSelector('#tdmenu:not([hidden])'); await pg.click('#tdaddT'); await pg.waitForSelector('#tdquick:not([hidden])');
+  await pg.fill('#tdqt', 'Call Usman #T1 tomorrow 15 min'); await pg.click('#tdquick button[type="submit"]');
+  const K2 = (() => { const x = new Date(d); x.setDate(x.getDate() + 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); })();
+  await pg.waitForFunction(k2 => { try { const s = JSON.parse(localStorage.getItem('timo-state')); return !!(s.over && s.over['a1@' + k2]); } catch (e) { return false; } }, K2, { timeout: 8000 }).catch(() => {});
+  const st4 = await pg.evaluate(() => JSON.parse(localStorage.getItem('timo-state')));
+  const ov = st4.over && st4.over['a1@' + K2];
+  out.push(['task landed in tomorrow\'s block only (4 steps there, 3 today)', !!ov && ov.items.length === 4 && ov.items[3].t === 'Call Usman' && ov.items[3].m === 15 && st4.acts[0].items.length === 3]);
+  out.push(['toast names the block', (await t('#toast')).indexOf('Factory visit') >= 0]);
+  // no #block → To-do list
+  await pg.click('#tdnew'); await pg.click('#tdaddT'); await pg.fill('#tdqt', 'Buy thread'); await pg.click('#tdquick button[type="submit"]');
+  await pg.waitForFunction(() => { try { return JSON.parse(localStorage.getItem('timo-state')).todos.length === 1; } catch (e) { return false; } }, null, { timeout: 8000 }).catch(() => {});
+  out.push(['line without #block goes to To-do', (await pg.evaluate(() => JSON.parse(localStorage.getItem('timo-state')).todos.map(x => x.title))).join() === 'Buy thread']);
+  // Timo itself: adding a step on a repeating block asks "Only this day / Every day"
+  await pg.click('.tdnow [data-tdopen]'); await pg.waitForSelector('#timo:not([hidden])'); await fr.waitForSelector('#task h2', { timeout: 8000 });
+  await fr.fill('#ns', 'Photos'); await fr.click('#addstep button[type="submit"]'); await fr.waitForSelector('#askA', { timeout: 5000 }).catch(() => {});
+  out.push(['Timo asks only this day / every day', !!(await fr.$('#askA')) && (await fr.$eval('#askA', e => e.textContent)) === 'Only this day']);
+  await fr.click('#askA'); await fr.waitForTimeout(300);
+  const st5 = await pg.evaluate(() => JSON.parse(localStorage.getItem('timo-state')));
+  out.push(['"Only this day": 4 steps today, the series keeps 3', (st5.over['a1@' + K] || { items: [] }).items.length === 4 && st5.acts[0].items.length === 3 && (await fr.$$eval('.step', L => L.length)) === 4]);
+  await fr.click('#tx'); await fr.waitForTimeout(200);
+  await fr.click('[data-x="a1"]'); await fr.waitForTimeout(200);
+  out.push(['Timo day list: arrow shows the 4 steps of this day', (await fr.$$eval('.xsteps .xs', L => L.length)) === 4]);
+  await fr.click('[data-xst="a1:3"]'); await fr.waitForTimeout(300);
+  out.push(['tick from the Timo list', (await pg.evaluate(() => JSON.parse(localStorage.getItem('timo-state')).checks))['a1@' + K].indexOf(3) >= 0]);
+  await fr.click('#back');
   out.push(['no page errors', errs.length === 0]); if (errs.length) console.log(errs);
   let fail = 0; out.forEach(([n, ok]) => { if (!ok) fail++; console.log((ok ? 'ok   ' : 'FAIL ') + n); });
   console.log(`\n${out.length - fail} passed, ${fail} failed`); await br.close(); srv.close(); process.exit(fail ? 1 : 0);
