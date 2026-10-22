@@ -17,7 +17,7 @@ function world(W) {
 }
 async function home(page) {                                   // back to the Cards tab with nothing open
   if (await page.locator('#card').isVisible()) { await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000, 'card closed'); }
-  await page.evaluate(() => { document.querySelectorAll('.sheet:not([hidden]), #tg:not([hidden]), #wks:not([hidden]), #fac:not([hidden])').forEach(x => { x.hidden = true; }); });
+  await page.evaluate(() => { document.querySelectorAll('.sheet:not([hidden]), #tg:not([hidden]), #wks:not([hidden]), #fac:not([hidden]), #mon:not([hidden])').forEach(x => { x.hidden = true; }); });
   await page.click('#tabs button[data-t="cards"]'); await page.fill('#q', '');
 }
 async function openCardNo(page, no) {
@@ -212,10 +212,26 @@ async function suite(fast, browser) {
     await test('Factory screen: attendance, materials with a low alert, wages (Abbas), daily closing preview + post + the 10 pm tick', async () => {
       await home(page);
       await page.click('#tabs button[data-t="more"]'); await page.click('#bfac'); await until(async () => /ATTENDANCE/.test(await page.textContent('#facbody')) && (await page.locator('#fs-att .ar').count()) === 3, 10000, 'attendance rows');
-      await page.locator('#fs-att .ar[data-n="Rifat"] button.p').click(); await page.locator('#fs-att .ar[data-n="Arif"] button.x').click();
+      await page.locator('#fs-att .ar[data-n="Rifat"] button.in').click(); await page.locator('#fs-att .ar[data-n="Arif"] button.x').click();
       const today = new Date(Date.now() + 4 * 3600000).toISOString().slice(0, 10);
-      await until(() => { try { const a = JSON.parse(T.relay.P['FAC_ATT_' + today] || '{}'); return a.RIFAT === 1 && a.ARIF === 0; } catch (e) { return false; } }, 8000, 'attendance saved on the relay');
-      ok(/1 present · 1 absent/.test(await page.textContent('#fs-att h3')), 'header counts: ' + (await page.textContent('#fs-att h3')));
+      await until(() => { try { const a = JSON.parse(T.relay.P['FAC_ATT_' + today] || '{}'); return a.RIFAT && a.RIFAT.in > 0 && a.ARIF && a.ARIF.a === 1; } catch (e) { return false; } }, 8000, 'clock-in and absent saved on the relay');
+      await until(async () => /1 in · 1 absent/.test(await page.textContent('#fs-att .dsub')), 5000, 'header counts');
+      await until(async () => /in \d\d:\d\d/.test(await page.textContent('#fs-att .ar[data-n="Rifat"]')) && (await page.locator('#fs-att .ar[data-n="Rifat"] button.outb').count()) === 1, 5000, 'Rifat row: in time + Out button');
+      await page.locator('#fs-att .ar[data-n="Rifat"] button.outb').click(); await until(async () => /→ out \d\d:\d\d/.test(await page.textContent('#fs-att .ar[data-n="Rifat"]')), 8000, 'out time shown');
+      // yesterday, corrected by Abbas with typed times: in 08:30 = 15 min late, out 18:00 = 9.5 h
+      const yd = new Date(Date.now() - 86400000 + 4 * 3600000).toISOString().slice(0, 10);
+      let ja = await page.evaluate(d => window.__call({ op: 'attset', day: d, name: 'Rifat', kind: 'in', at: '08:30' }), yd); ok(ja.ok && ja.att.RIFAT.late === 30, 'late 30 min (08:30, counted from 08:00): ' + JSON.stringify(ja));
+      ja = await page.evaluate(d => window.__call({ op: 'attset', day: d, name: 'Rifat', kind: 'out', at: '18:00' }), yd); ok(ja.ok && ja.att.RIFAT.out - ja.att.RIFAT.in === 9.5 * 3600000, 'out 18:00');
+      ok(!(await page.evaluate(d => window.__call({ op: 'attset', day: d, name: 'Rifat', kind: 'in', at: '9h' }), yd)).ok, 'a bad time is refused');
+      await page.click('#monbtn'); await until(async () => /Rifat/.test(await page.textContent('#monbody')) && (await page.locator('#monbody tr[data-w="Rifat"]').count()) === 1, 10000, 'month screen');
+      const mrt = (await page.locator('#monbody tr[data-w="Rifat"]').textContent()).replace(/\s+/g, ''); ok(/Rifat20[12]·\d+min/.test(mrt), 'Rifat: 2 days, 0 absent, late once (yesterday) or twice (today too, if the test runs after 08:15 Dubai): ' + mrt);
+      const art = (await page.locator('#monbody tr[data-w="Arif"]').textContent()).replace(/\s+/g, ''); ok(/Arif010/.test(art), 'Arif: 0 days, 1 absent: ' + art);
+      await page.click('#saledit'); await until(() => page.locator('#sale').isVisible(), 3000); await page.fill('#saletxt', 'Rifat 3000\nArif 3000'); await page.click('#salego');
+      await until(async () => /2900/.test(await page.locator('#monbody tr[data-w="Arif"]').textContent()), 8000, 'Arif pay = 3000 − 1 × 100 = 2900');
+      ok(/30003000$/.test((await page.locator('#monbody tr[data-w="Rifat"]').textContent()).replace(/\s+/g, '')), 'Rifat pay 3000');
+      ok(T.relay.P.FAC_SAL === '{"RIFAT":3000,"ARIF":3000}', 'salaries on the relay only: ' + T.relay.P.FAC_SAL);
+      await page.click('#monbody tr[data-w="Rifat"]'); await until(async () => /in 08:30 ⏰ late 30 min → out 18:00 · 9.5 h/.test(await page.textContent('#mondays')), 5000, 'his day list');
+      await page.click('#monx');
       await page.click('#matedit'); await until(() => page.locator('#mate').isVisible(), 3000); const mr = page.locator('#materows .mrow').first();
       await mr.locator('input[data-f="n"]').fill('Thread black'); await mr.locator('input[data-f="q"]').fill('2'); await mr.locator('input[data-f="u"]').fill('cones'); await mr.locator('input[data-f="low"]').fill('5'); await page.click('#matego');
       await until(async () => /⚠ Thread black/.test(await page.textContent('#fs-mat')), 8000, 'low material shown'); ok(/"n":"Thread black"/.test(T.relay.P.FAC_MAT || ''), 'saved on the relay');
@@ -468,9 +484,12 @@ async function staffSuite(browser) {
       const body = await page.textContent('#facbody'); ok(!/WAGES/.test(body) && !/Post now/.test(body), 'no wages, no Post now');
       ok(!(await page.evaluate(() => window.__call({ op: 'rates' }))).ok, 'rates refused');
       ok(!(await page.evaluate(() => window.__call({ op: 'daily', kind: 'now' }))).ok, 'daily post refused');
-      await page.locator('#fs-att .ar[data-n="Rifat"] button.p').click();
+      await page.locator('#fs-att .ar[data-n="Rifat"] button.in').click();
       const today = new Date(Date.now() + 4 * 3600000).toISOString().slice(0, 10);
-      await until(() => { try { return JSON.parse(T.relay.P['FAC_ATT_' + today] || '{}').RIFAT === 1; } catch (e) { return false; } }, 8000, 'staff can mark attendance');
+      await until(() => { try { return JSON.parse(T.relay.P['FAC_ATT_' + today] || '{}').RIFAT.in > 0; } catch (e) { return false; } }, 8000, 'staff can clock a worker in');
+      ok(!(await page.evaluate(() => window.__call({ op: 'attset', name: 'Rifat', kind: 'in', at: '08:00' }))).ok, 'staff cannot type a time');
+      ok(!(await page.evaluate(() => window.__call({ op: 'sal' }))).ok, 'salaries refused');
+      await page.click('#monbtn'); await until(async () => /Rifat/.test(await page.textContent('#monbody')), 8000, 'month screen'); ok(!/salary|pay/.test(await page.textContent('#monbody table')), 'no salary columns for staff'); await page.click('#monx');
       await page.click('#facx'); ok(!T.errors.length, T.errors.join('\n'));
     });
   } finally { await T.close(); }

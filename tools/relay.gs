@@ -566,8 +566,30 @@ function facSheetParse(acts) {
 }
 function facYmd(ms) { var u = new Date(ms + 4 * 3600000); return u.getUTCFullYear() + '-' + ('0' + (u.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + u.getUTCDate()).slice(-2); }   // the Dubai date, "2026-10-22"
 // Attendance: one small record per day (FAC_ATT_<date> = {NAME: 1 present / 0 absent}), marked by anyone in the app; the week is sent to the dashboard.
-function facAtt(P, ymd) { var r = null; try { r = JSON.parse(P.getProperty('FAC_ATT_' + ymd) || 'null'); } catch (e) {} return r && typeof r === 'object' ? r : {}; }
+// 22 Oct 2026 (Abbas: "whenever a worker comes in we click his name = logged in as working; when he leaves we press again; at the end of the
+// month I give the salaries and we see what to pay"): FAC_ATT_<date> = {NAME: rec}; rec = {in: ms, out: ms, late: minutes late} (clocked),
+// {p: 1} (present, no times - the old ✓), {a: 1} (absent). Shift = 08:00 - 22:00 Dubai, Friday 08:00 - 12:00; "late" = in after 08:00 + 15 min.
+var ATT_GRACE_MIN = 15;
+function facAtt(P, ymd) { var r = null; try { r = JSON.parse(P.getProperty('FAC_ATT_' + ymd) || 'null'); } catch (e) {} if (!r || typeof r !== 'object') return {}; Object.keys(r).forEach(function (k) { r[k] = facAttRec(r[k]); if (!r[k]) delete r[k]; }); return r; }
+function facAttRec(v) { return v && typeof v === 'object' ? v : v === 1 ? { p: 1 } : v === 0 ? { a: 1 } : null; }
 function facAttWeek(P) { var o = {}; for (var i = 0; i < 7; i++) { var d = facYmd(Date.now() - i * 86400000); o[d] = facAtt(P, d); } return o; }
+function facShift(ymd) { var day0 = Date.parse(ymd + 'T00:00:00Z') - 4 * 3600000, fri = new Date(day0 + 4 * 3600000).getUTCDay() === 5; return { start: day0 + WORK_FROM * 3600000, end: day0 + (fri ? WORK_TO_FRI : WORK_TO) * 3600000, fri: fri, day0: day0 }; }
+function facAtMs(ymd, hhmm) { var m = String(hhmm || '').match(/^(\d{1,2}):(\d\d)$/); if (!m) return 0; return facShift(ymd).day0 + (+m[1]) * 3600000 + (+m[2]) * 60000; }   // "08:05" on that day (Dubai) -> ms
+function facAttHours(rec, ymd) {                                  // hours on the clock for one record; a missing OUT counts until the shift end (or now), flagged
+  if (!rec || !rec.in) return { h: 0, open: false, noOut: false }; var sh = facShift(ymd), now = Date.now(), out = rec.out || Math.min(now, sh.end), open = !rec.out && now < sh.end;
+  return { h: Math.max(0, out - rec.in) / 3600000, open: open, noOut: !rec.out && !open };
+}
+function facAttMonth(P, ym, names) {                               // one month, every worker: days present / absent / late, hours, missing OUTs, per-day records
+  var all = P.getProperties(), days = {}, today = facYmd(Date.now());
+  Object.keys(all).forEach(function (k) { if (k.indexOf('FAC_ATT_' + ym) === 0) { var d = k.slice(8); if (d <= today) try { var r = JSON.parse(all[k]); Object.keys(r).forEach(function (n) { r[n] = facAttRec(r[n]); if (!r[n]) delete r[n]; }); days[d] = r; } catch (e) {} } });
+  var W = {}; names.forEach(function (n) { W[n.toUpperCase()] = { name: n, present: 0, absent: 0, late: 0, lateMin: 0, hours: 0, noOut: 0, days: {} }; });
+  Object.keys(days).sort().forEach(function (d) { Object.keys(days[d]).forEach(function (k) { var w = W[k] = W[k] || { name: k, present: 0, absent: 0, late: 0, lateMin: 0, hours: 0, noOut: 0, days: {} }, r = days[d][k];
+    if (r.a) { w.absent++; w.days[d] = { a: 1 }; return; } w.present++; var hh = facAttHours(r, d); w.hours += hh.h; if (hh.noOut) w.noOut++; if (r.late) { w.late++; w.lateMin += r.late; }
+    w.days[d] = { in: r.in || 0, out: r.out || 0, late: r.late || 0, h: Math.round(hh.h * 10) / 10, noOut: hh.noOut, p: r.p || 0 }; }); });
+  var y = +ym.slice(0, 4), mo = +ym.slice(5, 7), dim = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  return { ok: true, ym: ym, daysInMonth: dim, daysSoFar: ym === today.slice(0, 7) ? +today.slice(8, 10) : (ym < today.slice(0, 7) ? dim : 0), workers: Object.keys(W).map(function (k) { var w = W[k]; w.hours = Math.round(w.hours * 10) / 10; return w; }) };
+}
+function facSal(P) { var r = null; try { r = JSON.parse(P.getProperty('FAC_SAL') || 'null'); } catch (e) {} return r && typeof r === 'object' ? r : {}; }   // monthly salaries - Abbas only, never in the repo
 // Materials: a short list (FAC_MAT = [{n: name, q: quantity, u: unit, low: alert level}]) kept by the factory; "low" = q at or under the alert level.
 function facMat(P) { var r = null; try { r = JSON.parse(P.getProperty('FAC_MAT') || 'null'); } catch (e) {} return Array.isArray(r) ? r : []; }
 function facMatLow(P) { return facMat(P).filter(function (m) { return m.low != null && m.low !== '' && +m.q <= +m.low; }); }
@@ -604,8 +626,9 @@ function facDailyText(P, rtok, when) {
   L.push('👷 *' + tot + ' pcs done today* · আজ হয়েছে' + (did.length ? ' · ' + did.map(function (w) { return w.name + ' ' + w.byDay[ymd]; }).join(' · ') : ' · nobody pressed Done · কেউ Done চাপেনি'));
   var hand = rep.workers.filter(function (w) { return w.hand && w.hand.length; });
   if (hand.length) L.push('⏳ *In hand · হাতে:* ' + hand.map(function (w) { return w.name + ' ' + w.hand.map(function (h) { return h.g + ' (' + sj(h.name) + ')'; }).join(' + '); }).join(' · '));
-  var pres = names.filter(function (n) { return att[n.toUpperCase()] === 1; }), abs = names.filter(function (n) { return att[n.toUpperCase()] === 0; });
-  if (pres.length || abs.length) L.push('📅 *Present ' + pres.length + '* · *Absent ' + abs.length + '*' + (abs.length ? ' (' + abs.join(', ') + ')' : '') + ' · উপস্থিত ' + pres.length + ' · অনুপস্থিত ' + abs.length);
+  var pres = names.filter(function (n) { var r = att[n.toUpperCase()]; return r && !r.a; }), abs = names.filter(function (n) { var r = att[n.toUpperCase()]; return r && r.a; }), lateL = names.filter(function (n) { var r = att[n.toUpperCase()]; return r && r.late; });
+  if (pres.length || abs.length) L.push('📅 *Present ' + pres.length + '* · *Absent ' + abs.length + '*' + (abs.length ? ' (' + abs.join(', ') + ')' : '') + (lateL.length ? ' · ⏰ late: ' + lateL.map(function (n) { return n + ' ' + att[n.toUpperCase()].late + ' min'; }).join(', ') : '') + ' · উপস্থিত ' + pres.length + ' · অনুপস্থিত ' + abs.length);
+  var noOut = names.filter(function (n) { var r = att[n.toUpperCase()]; return r && r.in && !r.out; }); if (noOut.length) L.push('⏱ *No Out yet · আউট হয়নি:* ' + noOut.join(', '));
   try { var day0 = new Date(Date.parse(ymd + 'T00:00:00Z') - 4 * 3600000).toISOString(), mv = trApi('get', '/boards/' + FAC.BOARD + '/actions', { filter: 'updateCard:idList', since: day0, limit: 200 }, rtok) || [], byL = {}, seen = {};
     mv.forEach(function (a) { var d = a.data || {}, c = d.card || {}; if (!d.listAfter || seen[c.id]) return; seen[c.id] = 1; (byL[d.listAfter.name] = byL[d.listAfter.name] || []).push(sj(c.name)); });
     var ks = Object.keys(byL); if (ks.length) L.push('🔀 *Moved today · আজ সরানো:* ' + ks.map(function (k) { return k + ' ← ' + byL[k].join(', '); }).join(' · ')); } catch (e) {}
@@ -822,7 +845,7 @@ function setupFacWatch() {                                     // Abbas runs thi
 }
 // 15 Oct 2026 audit: a phone that lost the answer (LTE, locked screen) retries - for a post / upload / new card that used to do it TWICE.
 // Every action now carries a once-only id (rid): the first answer is kept 10 min and any retry gets that same answer.
-var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report|workers|sheetset|attset|matset|ratesset|daily)$/;
+var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report|workers|sheetset|attset|matset|ratesset|salset|daily)$/;
 function fac(reqText, P) {
   var rq0 = {}; try { rq0 = JSON.parse(reqText); } catch (e) {}
   var rid = FAC_ONCE.test(rq0.op || '') ? String(rq0.rid || '').replace(/[^\w-]/g, '').slice(0, 40) : '', cR = CacheService.getScriptCache();
@@ -1307,11 +1330,28 @@ function fac0(reqText, P) {
       var ad = /^\d{4}-\d\d-\d\d$/.test(String(req.day || '')) ? String(req.day) : facYmd(Date.now());
       return out({ ok: true, day: ad, today: facYmd(Date.now()), att: facAtt(P, ad), week: facAttWeek(P), workers: facWorkers(P, rtok).map(function (w) { return w.name; }) });
     }
-    if (req.op === 'attset') {                                // 22 Oct 2026: mark present (1) / absent (0) / unmarked (null) - anyone in the factory can
-      var ad2 = /^\d{4}-\d\d-\d\d$/.test(String(req.day || '')) ? String(req.day) : facYmd(Date.now()), cur = facAtt(P, ad2), marks = req.att && typeof req.att === 'object' ? req.att : {};
-      Object.keys(marks).slice(0, 60).forEach(function (n) { var k = String(n).trim().toUpperCase().slice(0, 30); if (!k) return; if (marks[n] === 1 || marks[n] === 0) cur[k] = marks[n]; else delete cur[k]; });
+    if (req.op === 'attset') {                                // 22 Oct 2026: the clock - kind in / out / absent / present / clear, one worker; 'at' = "HH:MM" to correct a time (Abbas only)
+      var ad2 = /^\d{4}-\d\d-\d\d$/.test(String(req.day || '')) ? String(req.day) : facYmd(Date.now()), cur = facAtt(P, ad2), an = String(req.name || '').trim().toUpperCase().slice(0, 30), ak = String(req.kind || ''), anow = Date.now();
+      if (ad2 > facYmd(anow)) return out({ ok: false, error: 'not a future day' });
+      if (req.att && typeof req.att === 'object' && !an) { Object.keys(req.att).slice(0, 60).forEach(function (n) { var k = String(n).trim().toUpperCase().slice(0, 30); if (!k) return; var v = req.att[n]; if (v === 1) cur[k] = { p: 1 }; else if (v === 0) cur[k] = { a: 1 }; else delete cur[k]; }); }   // the first version's ✓ / ✗ marks
+      else { if (!an || !/^(in|out|absent|present|clear)$/.test(ak)) return out({ ok: false, error: 'bad request' });
+        var at = req.at ? facAtMs(ad2, req.at) : 0; if (req.at && (!at || !facOwner(req.who))) return out({ ok: false, error: req.at && !at ? 'time must be HH:MM' : 'only Abbas can change a time', noaccess: !at ? false : true });
+        if (ad2 !== facYmd(anow) && !at && ak !== 'absent' && ak !== 'present' && ak !== 'clear') return out({ ok: false, error: 'for an earlier day type the time (HH:MM)' });
+        var r = cur[an] && !cur[an].a ? cur[an] : {}, sh = facShift(ad2);
+        if (ak === 'in') { r = { in: at || anow }; var lm = Math.floor((r.in - sh.start) / 60000); if (lm > ATT_GRACE_MIN) r.late = lm; if (cur[an] && cur[an].out) r.out = cur[an].out; cur[an] = r; }
+        else if (ak === 'out') { if (!r.in) return out({ ok: false, error: 'press In first' }); r.out = at || anow; if (r.out < r.in) return out({ ok: false, error: 'out before in' }); cur[an] = r; }
+        else if (ak === 'absent') cur[an] = { a: 1 }; else if (ak === 'present') cur[an] = { p: 1 }; else delete cur[an]; }
       P.setProperty('FAC_ATT_' + ad2, JSON.stringify(cur)); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']);
       return out({ ok: true, day: ad2, att: cur });
+    }
+    if (req.op === 'attmonth') {                              // 22 Oct 2026: the month - days, late, hours per worker (+ salaries and the pay estimate for Abbas)
+      var ym = /^\d{4}-\d\d$/.test(String(req.ym || '')) ? String(req.ym) : facYmd(Date.now()).slice(0, 7), mres = facAttMonth(P, ym, facWorkers(P, rtok).map(function (w) { return w.name; }));
+      if (facOwner(req.who)) mres.sal = facSal(P); return out(mres);
+    }
+    if (req.op === 'sal' || req.op === 'salset') {            // 22 Oct 2026: monthly salaries - Abbas only (pay = salary − absent days × salary / 30, shown on his phone)
+      if (!facOwner(req.who)) return out({ ok: false, error: 'only Abbas can see the salaries', noaccess: true });
+      if (req.op === 'salset') { var ss = {}, sin = req.sal && typeof req.sal === 'object' ? req.sal : {}; Object.keys(sin).slice(0, 60).forEach(function (n) { var k = String(n).trim().toUpperCase().slice(0, 30), v = +sin[n]; if (k && v > 0 && v < 10000000) ss[k] = Math.round(v); }); P.setProperty('FAC_SAL', JSON.stringify(ss)); }
+      return out({ ok: true, sal: facSal(P) });
     }
     if (req.op === 'mat') return out({ ok: true, items: facMat(P), low: facMatLow(P) });   // 22 Oct 2026: materials (thread, labels, elastic …)
     if (req.op === 'matset') {
