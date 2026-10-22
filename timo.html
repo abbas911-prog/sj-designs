@@ -97,6 +97,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:10p
 .xs{display:flex;align-items:center;gap:10px;background:none;color:inherit;text-align:left;padding:7px 2px;font-size:14px;width:100%}.xs i{width:22px;height:22px;border-radius:50%;border:2px solid rgba(29,26,43,.45);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800;flex:none;background:rgba(255,255,255,.35)}.xs.on i{background:var(--on-pastel);border-color:var(--on-pastel);color:#fff}.xs.on span{opacity:.6;text-decoration:line-through}.xs.cur span{font-weight:700}
 .askbox{border-radius:24px 24px 0 0}.askbtns{display:flex;flex-direction:column;gap:10px}.askbtns .btn{padding:14px 16px;border-radius:16px;font-size:16px;text-align:left}.askbtns .btn small{display:block;font-weight:500;font-size:12.5px;opacity:.8;margin-top:2px}
 .hint{font-size:12.5px;color:var(--muted);line-height:1.4;margin:-6px 0 14px}
+.pblks{margin:12px 0 16px;max-height:44vh;overflow:auto}.pblk{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:var(--r-md);color:var(--on-pastel);text-align:left;width:100%}.pblk .bi{font-size:22px}.pblk .go{font-size:22px;opacity:.6}
 .ex{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:1px 6px;border-radius:6px;background:rgba(29,26,43,.12);margin-left:6px;vertical-align:2px}
 .gap{grid-column:2;font-size:12.5px;color:var(--muted);padding:2px 12px;border-left:2px dashed var(--line);margin-left:20px}
 .nowline{grid-column:1/-1;display:flex;align-items:center;gap:8px;color:var(--now);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -445,7 +446,7 @@ function todoHTML(){
   const open=S.todos.filter(t=>!t.done),closed=S.todos.filter(t=>t.done);
   let h=`<div class="sec"><h3>To-do</h3><span>${open.length} open</span></div>
   <form class="addrow" id="todoform"><input id="todoin" placeholder="Add something to do…" autocomplete="off"><button class="btn pri" type="submit">Add</button></form><div class="tl" style="margin-top:12px">`;
-  if(!S.todos.length) h+=`<div class="emptyday"><b>Your to-do list is clear</b>Jot things here without a time. Tap one to add steps, then <b>Plan</b> drops it into your day.</div>`;
+  if(!S.todos.length) h+=`<div class="emptyday"><b>Your to-do list is clear</b>Jot things here without a time. Tap one and choose which block, on which day, it goes into.</div>`;
   [...open,...closed].forEach(t=>{const it=t.items.length;h+=`<div class="todo ${t.done?"done":""}"><button class="chk ${t.done?"on":""}" data-tdone="${t.id}" type="button" aria-label="Done">${t.done?"✓":""}</button><span class="ti">${esc(t.icon||"⭐")}</span><button class="tt" data-topen="${t.id}" type="button">${esc(t.title)}<small>${fmtD(t.dur||30)}${it?` · ${it} step${it>1?"s":""}`:""}</small></button>${t.done?`<button class="plan" data-tdel="${t.id}" type="button">Remove</button>`:`<button class="plan" data-tplan="${t.id}" type="button">Plan</button>`}</div>`});
   return h+"</div>";
 }
@@ -492,7 +493,7 @@ document.addEventListener("click",e=>{
   if(t.dataset.open){openTask(t.dataset.open);return}
   if(t.dataset.tdone){const x=S.todos.find(q=>q.id===t.dataset.tdone);x.done=!x.done;changed();render();return}
   if(t.dataset.tdel){S.todos=S.todos.filter(q=>q.id!==t.dataset.tdel);changed();render();return}
-  if(t.dataset.topen){openTodo(S.todos.find(q=>q.id===t.dataset.topen));return}
+  if(t.dataset.topen){openPlace(S.todos.find(q=>q.id===t.dataset.topen));return}
   if(t.dataset.tplan){planTodo(S.todos.find(q=>q.id===t.dataset.tplan));return}
   if(t.dataset.act==="review"){openReview(sel);return}
   if(t.dataset.act==="clearex"){const ids=new Set(S.acts.filter(a=>a.ex).map(a=>a.id));S.acts=S.acts.filter(a=>!a.ex);S.todos=S.todos.filter(q=>!q.ex);for(const m of [S.done,S.checks,S.stepAt])for(const k of Object.keys(m))if(ids.has(k.split("@")[0]))delete m[k];changed();render();return}
@@ -689,6 +690,34 @@ function openSheet(a,pre){
   };
   L.onkeydown=e=>{if(e.key==="Enter"&&e.target.id==="f-new"){e.preventDefault();$("f-add").click()}};
   if(isNew&&!pre)setTimeout(()=>$("f-title")?.focus(),50);
+}
+
+/* ---------- a to-do → a step inside a block (Abbas, 22 Oct 2026: "when I click on it, give me options: which block on which day") ---------- */
+function openPlace(t){
+  if(!t)return; let day=todayK(); const L=$("layer2");
+  const draw=()=>{
+    const list=dayActs(day), today=todayK();
+    let days="";for(let i=0;i<7;i++){const k=addDays(today,i),x=dateOf(k);days+=`<button class="day ${k===day?"sel":""}" data-pd="${k}" type="button"><small>${i===0?"today":x.toLocaleDateString(undefined,{weekday:"short"})}</small><b>${x.getDate()}</b></button>`}
+    const blocks=list.length?list.map((a,i)=>`<button class="pblk" type="button" data-pb="${a.id}" style="background:var(--p-${a.color})"><span class="bi">${esc(a.icon)}</span><span class="bt"><b>${esc(a.title)}</b><small>#T${i+1} · ${fmtT(a.start)}–${fmtT(a.start+a.dur)}${a.items.length?` · ${a.items.length} step${a.items.length>1?"s":""}`:""}</small></span><span class="go">›</span></button>`).join("")
+      :`<div class="emptyday"><b>Nothing planned on this day</b>Pick another day, or make a new block from it.</div>`;
+    L.innerHTML=`<div class="scrim" id="scrim"><div class="sheet">
+      <h4>${esc(t.icon||"⭐")} ${esc(t.title)}</h4><p class="hint">Where does it go? Pick the day, then the block — it becomes a step inside that block, on that day only.</p>
+      <div class="days" style="margin-top:0">${days}</div>
+      <div class="tl pblks">${blocks}</div>
+      <div class="sheetbar"><div style="display:flex;gap:8px"><button type="button" class="btn" id="p-edit">Edit</button><button type="button" class="btn" id="p-new">New block from it</button></div><button type="button" class="btn" id="p-cancel">Cancel</button></div>
+    </div></div>`;
+    $("p-cancel").onclick=()=>{L.innerHTML=""}; $("p-edit").onclick=()=>openTodo(t); $("p-new").onclick=()=>planTodo(t);
+    L.querySelectorAll("[data-pd]").forEach(b=>b.onclick=()=>{day=b.dataset.pd;draw()});
+    L.querySelectorAll("[data-pb]").forEach(b=>b.onclick=()=>{
+      const a=findAct(b.dataset.pb), key=dk(a.id,day);
+      if(a.repeat!=="none"&&!S.over[key])S.over[key]={items:JSON.parse(JSON.stringify(a.items))};   // that day only, never every day
+      const into=S.over[key]?S.over[key].items:a.items;
+      into.push({t:t.title,m:0}); (t.items||[]).forEach(s=>into.push({t:s.t,m:s.m||0}));          // its own steps come along
+      S.todos=S.todos.filter(q=>q.id!==t.id); changed(); L.innerHTML="";
+      toast("→ "+a.icon+" "+a.title+" · "+(day===todayK()?"today":dateOf(day).toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"})));
+      sel=day;tab="today";view="day";render();});
+  };
+  draw(); L.onclick=e=>{if(e.target.id==="scrim")L.innerHTML=""};
 }
 
 /* ---------- to-do details ---------- */

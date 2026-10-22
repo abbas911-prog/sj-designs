@@ -109,6 +109,12 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   out.push(['Timo day list: arrow shows the 4 steps of this day', (await fr.$$eval('.xsteps .xs', L => L.length)) === 4]);
   await fr.click('[data-xst="a1:3"]'); await fr.waitForTimeout(300);
   out.push(['tick from the Timo list', (await pg.evaluate(() => JSON.parse(localStorage.getItem('timo-state')).checks))['a1@' + K].indexOf(3) >= 0]);
+  // 22 Oct 2026: a to-do tapped → pick the day and the block → it becomes a step there (that day only)
+  await fr.click('#t-todo'); await fr.waitForSelector('[data-topen]'); await fr.click('[data-topen]'); await fr.waitForSelector('[data-pb]');
+  out.push(['to-do tap: day strip + blocks of the day', (await fr.$$eval('[data-pd]', L => L.length)) === 7 && (await fr.$$eval('[data-pb]', L => L.length)) === 2]);
+  await fr.click('[data-pd]:nth-child(2)'); await fr.waitForTimeout(150); await fr.click('[data-pb="a1"]'); await fr.waitForTimeout(400);
+  const st6 = await pg.evaluate(() => JSON.parse(localStorage.getItem('timo-state')));
+  out.push(['"Buy thread" is now a step of tomorrow\'s block, to-do gone', st6.todos.length === 0 && (st6.over['a1@' + K2] || { items: [] }).items.some(x => x.t === 'Buy thread') && st6.acts[0].items.length === 3]);
   await fr.click('#back');
   out.push(['no page errors', errs.length === 0]); if (errs.length) console.log(errs);
   let fail = 0; out.forEach(([n, ok]) => { if (!ok) fail++; console.log((ok ? 'ok   ' : 'FAIL ') + n); });
