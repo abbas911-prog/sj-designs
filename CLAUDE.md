@@ -21,7 +21,7 @@
 1. Push app changes straight to `main` (Pages serves `main`). **Bump `var VER` in factory.html on every change**
    (format `YYYY-MM-DDx`, e.g. `2026-10-20a` → `2026-10-20b`) — phones check it every 5 min (`checkVer`) and reload themselves.
 2. relay.gs: always start from the **newest copy in the repo**, never an old one. List every `function` before and after an
-   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 146 on 21 Oct 2026).
+   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 162 on 22 Oct 2026).
    Abbas deploys it himself (Apps Script editor → paste → Save → Deploy → New version) — tell him when a relay deploy is needed.
    **Never ask him to open Script properties**; any new setting is set from inside the app (an op that stores it, like `fastset`).
 3. **Never put tokens, passwords, costs or prices in any file** — the repo is public. Secrets live only in Script properties /
@@ -106,6 +106,12 @@ when the right change is clear, do it, test it, commit it and report; ask only w
   (Timo `itemsOn/actOn/editItems`, asks "Only this day / Every day"); a quick task line ("Call Usman #T1 tomorrow 20 min", `parseQuick/quickTask`)
   becomes a step of that block on that day only. Test: `node tests/t_today.js` (30).
 - relay jobs used by the apps: live, orders, vault, slackpdf/slackpdf2, dorder, cust, cash, cchat, bills, timo, fac, fastchk.
+- **Direct chats** (22 Oct 2026): Abbas ↔ one person each, in SJ Stock's Chats tab ("Direct · مباشر"). Relay `cchat`: private Slack channel
+  `#sj-direct` (found by name or made by the relay, id in `CC_DM_CH`), one thread root per person (`CC_DM_ROOT_<NAME>`), the chat = its replies;
+  people = `CC_DM_PEOPLE` (default Muhammad, Imran; op `dmpeople`, owner `chk`). `list/ping` answer carries `dms` (only the chats this `who`
+  may see: Abbas = all, a person = his own by first name); `thread/seen/post/up` with `ch:'direct'` share the #godown branch (`XCH/XP`);
+  unread keys `D<root>`; ntfy notification + deep link `memo.html#dm=NAME`. Tests: `node tests/t_dm.js` (11, real relay.gs + fake Slack),
+  `node tests/t_dmapp.js` (8, the app).
 - `tools/stock.py` (GitHub job memo-stock: Include & share takes pieces off Trello; op `retbill` puts a return bill's pieces back),
   `tools/catalog/*` (catalogue builder), `.github/workflows/*`.
 - **Tests** in `tests/` (Playwright + a fake relay; no real Slack/Trello/Google is touched):
@@ -214,3 +220,4 @@ Memo rules (his words, short):
 - 2026-10-22: (Abbas: "it's been 23 minutes and it's still going on") the catalogue job sat in its first step: `apt-get install fonts-noto-core` on the GitHub runner hung (today's apt mirror), the builder never started. Now the Arabic font for the cover picture is in the repo (`tools/catalog/fonts/NotoNaskhArabic-Regular.ttf`, @font-face in `og_cover`), no font download at all, and the Tools step has `timeout-minutes: 4` so a hang fails fast and the app says so. Normal run ≈ 1–3 min.
 - 2026-10-22: memo 2026-10-22a + Timo (Abbas, four asks): (1) a repeating block asks "Only this day / Every day" when its steps change (task screen add/remove, Edit sheet) — `S.over` keeps that day's own steps; (2) every block row in Timo has a ▾ arrow: its steps open under it and tick there (`XO`, `[data-x]/[data-xst]`); (3) the Today tab does the same for every block of the day (`TD.x`, `[data-tdx]/[data-tdxst]`), the Now card already ticked; (4) + = Block or Task, in Timo and on the Today tab: a task is one typed line — `#T1` = first block of that day, `#name` = block by name, a date word (tomorrow, Fri, 25 Oct, 25/10), "20 min" = timer; lands as a step inside that block on that day only (never every day); no block → To-do. Tests: t_today 30, all memo tests green. No relay deploy.
 - 2026-10-22: Timo (Abbas): tap a to-do → "Where does it go?" sheet (`openPlace`): 7-day strip + that day's blocks (#T1, time, steps); tap a block → the to-do (and its own steps) become steps of that block on that day only (per-day `S.over` on a repeating block), the to-do leaves the list; Edit / New block from it stay as buttons. Test: t_today 32. No app version bump needed (timo.html only, loaded with ?v= of the memo VER — bumped to 2026-10-22b so phones fetch the new Timo).
+- 2026-10-22: memo 2026-10-22c + relay (Abbas: "a direct chat between me and Muhammad, and me and Imran, in this app"): **Direct chats** in the Chats tab — the relay makes a private Slack channel #sj-direct with one thread per person; Abbas's phone lists Muhammad and Imran, each person's phone lists only "Abbas" (by the name set on the phone, first name); new lines show in the New-messages box, the badge, the Today tab and as ntfy notifications (💬 Name · direct); photos / voice notes work like every other chat. Nobody else can read them (relay refuses). More people later: relay op `dmpeople` (owner). NEEDS: relay deploy (162 functions). Tests: t_dm (11, real relay), t_dmapp (8); factory harness 66/66; all memo tests green.

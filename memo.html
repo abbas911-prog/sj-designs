@@ -914,7 +914,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-22b';
+var VER = '2026-10-22c';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -3333,7 +3333,7 @@ function ccCall(o, tries){ o.t = Date.now(); o.who = ccWho(); return relayJson('
 function ccK(n){ return String(n || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
 // 18 Oct 2026 (Abbas: "if an order is sent to customer, right away you have to open a chat for that here, for that specific order"): a chat is
 // either ONE ORDER (its #customer post = the thread, key 'O' + ts) or a customer's general chat (key = the name). CC.root holds the order's ts.
-function ccCurK(){ return CC.ch === 'godown' ? 'G' + CC.root : CC.root ? 'O' + CC.root : ccK(CC.cur); }
+function ccCurK(){ return CC.ch === 'godown' ? 'G' + CC.root : CC.ch === 'direct' ? 'D' + CC.root : CC.root ? 'O' + CC.root : ccK(CC.cur); }
 function ccDay(ts){ var d = new Date(+ts * 1000); return d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; }
 function ccIsCur(it){ return CC.cur === it.name && (CC.root || '') === (it.root || '') && (CC.ch || '') === (it.ch || ''); }
 function ccWhen(ts){ var d = new Date(+ts * 1000), n = new Date(), h = d.getHours(), m = d.getMinutes(), hm = ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' am' : ' pm'); return d.toDateString() === n.toDateString() ? hm : d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' · ' + hm; }
@@ -3347,11 +3347,13 @@ var ccAudio = null; function ccBeep(){ try { if (!ccAudio) return; var o = ccAud
 document.addEventListener('touchstart', function(){ try { if (!ccAudio) ccAudio = new (window.AudioContext || window.webkitAudioContext)(); if (ccAudio.state === 'suspended') ccAudio.resume(); } catch(e){} }, { passive: true, once: false });
 document.addEventListener('click', function(){ try { if (!ccAudio) ccAudio = new (window.AudioContext || window.webkitAudioContext)(); if (ccAudio.state === 'suspended') ccAudio.resume(); } catch(e){} }, { passive: true });
 function ccApply(j){ var un = {}, tot = 0; (j.customers || []).concat(j.orders || []).forEach(function(c){ var k = c.k || ccK(c.name); if (c.un) { un[k] = { n: c.un, tx: c.tx || '', name: c.name, last: c.last, root: c.ts || '' }; tot += c.un; } });
+  if (Array.isArray(j.dms)) { CC.dms = j.dms; j.dms.forEach(function(r){ if (r.un) { un[r.k] = { n: r.un, tx: r.tx || '', name: r.name, last: r.last, root: r.root, ch: 'direct' }; tot += r.un; } }); }   // 22 Oct 2026: direct chats (Abbas ↔ a person)
   Object.keys(j.gun || {}).forEach(function(k){ var u = j.gun[k], o = ordByTs(k.slice(1)); un[k] = { n: u.n, tx: u.tx || '', name: o ? (o.name || 'order') : 'order', last: u.last, root: k.slice(1), ch: 'godown', oid: o ? o.id : '' }; tot += u.n; });
   Object.keys(un).forEach(function(k){ if (k.charAt(0) === 'O') { var o2 = (ORD.list || []).filter(function(x){ return x.cts === k.slice(1); })[0]; if (o2) un[k].oid = o2.id; } });
   if (CC.cur && un[ccCurK()] && ccLooking()) { delete un[ccCurK()]; tot = Object.keys(un).reduce(function(s, k){ return s + un[k].n; }, 0); }
   var was = CC.tot; CC.un = un; CC.tot = tot; CC.list = j.customers || []; if (j.orders) CC.orders = j.orders; cKeep('sj_c_list', function(){ return { c: CC.list, o: CC.orders }; }); CC.err = ''; CC.nt = !!j.nt; CC.ev = !!j.ev;
   if (j.live && j.live !== CC.live) { CC.live = j.live; ccLiveStart(); }
+  if (CC.openDm) ccOpenDmIfAsked();
   ccBadge(); if (tot > was && was >= 0 && CC.lastPoll) { ccBeep(); if (CC.cur && un[ccCurK()]) {} else uiToast('💬 ' + tot + ' new message' + (tot > 1 ? 's' : '')); if (!$('ords').hidden) ordDraw(); }
   CC.lastPoll = Date.now(); clearTimeout(PF.t); PF.t = setTimeout(ccPrefetch, 900);
   if (!$('cc').hidden && !CC.cur) ccDrawList(); else if (!$('cc').hidden && CC.ord) { var tb = document.querySelector('.otabs2'); if (tb) { var tmp = document.createElement('div'); tmp.innerHTML = ordTabs(CC.ord); tb.replaceWith(tmp.firstChild); } } }
@@ -3360,7 +3362,7 @@ var PF = { busy: false, done: {}, t: null };
 async function ccPrefetch(){ if (PF.busy || !token || !RELAY || document.hidden) return; var want = [], lastOf = function(k){ var m = CC.mc[k]; return m && m.length ? +m[m.length - 1].ts : 0; };
   (CC.list || []).forEach(function(c){ var k = ccK(c.name); if (+c.last > lastOf(k)) want.push({ k: k, un: c.un, last: +c.last, req: { name: c.name } }); });
   (CC.orders || []).forEach(function(o){ var k = 'O' + o.ts; if (+o.last > lastOf(k)) want.push({ k: k, un: o.un, last: +o.last, req: { name: o.name || 'order', root: o.ts } }); });
-  Object.keys(CC.un || {}).forEach(function(k){ var u = CC.un[k]; if (k.charAt(0) === 'G' && +u.last > lastOf(k)) want.push({ k: k, un: u.n, last: +u.last, req: { name: u.name || 'order', root: k.slice(1), ch: 'godown' } }); });
+  Object.keys(CC.un || {}).forEach(function(k){ var u = CC.un[k]; if (k.charAt(0) === 'D' && +u.last > lastOf(k)) want.push({ k: k, un: u.n, last: +u.last, req: { name: u.name, root: k.slice(1), ch: 'direct' } }); if (k.charAt(0) === 'G' && +u.last > lastOf(k)) want.push({ k: k, un: u.n, last: +u.last, req: { name: u.name || 'order', root: k.slice(1), ch: 'godown' } }); });
   want = want.filter(function(w){ return w.k !== ccCurK() && (PF.done[w.k] || 0) < w.last; }).sort(function(a, b){ return (b.un ? 1 : 0) - (a.un ? 1 : 0) || b.last - a.last; }).slice(0, 3);
   if (!want.length) return; PF.busy = true;
   try { for (var i = 0; i < want.length; i++) { var w = want[i]; PF.done[w.k] = w.last;
@@ -3394,8 +3396,10 @@ function ccDrawList(){ if (CC.bell) return;   // 20 Oct 2026: the 🔔 setup sta
   L.sort(function(a, b){ var ua = (CC.un[a.k || ccK(a.name)] || {}).n ? 1 : 0, ub = (CC.un[b.k || ccK(b.name)] || {}).n ? 1 : 0; return ub - ua || (+b.last || 0) - (+a.last || 0); });
   var h = '<div class="ccsrch"><input id="ccq" placeholder="Search customer · ابحث عن عميل" autocomplete="off" value="' + esc(q) + '"></div>';
   var unk = Object.keys(CC.un);
-  if (unk.length && !qq) { h += '<div class="ccnew"><div class="ccnh"><b>💬 New messages · ' + CC.tot + '</b><button type="button" id="cccatch">⚡ Catch up</button></div>' + unk.map(function(k){ var u = CC.un[k]; return '<div class="ccnr" data-k="' + esc(k) + '" data-n="' + esc(u.name) + '" data-r="' + esc(u.root || '') + '"><span class="n">' + (u.ch === 'godown' ? '📦 ' : u.root ? '📄 ' : '') + esc(u.name) + (u.ch === 'godown' ? ' · godown' : '') + '</span><span class="x">' + esc(u.tx || 'new message') + '</span><i>NEW ' + u.n + '</i></div>'; }).join('') + '</div>'; }
+  if (unk.length && !qq) { h += '<div class="ccnew"><div class="ccnh"><b>💬 New messages · ' + CC.tot + '</b><button type="button" id="cccatch">⚡ Catch up</button></div>' + unk.map(function(k){ var u = CC.un[k]; return '<div class="ccnr" data-k="' + esc(k) + '" data-n="' + esc(u.name) + '" data-r="' + esc(u.root || '') + '"' + (u.ch === 'direct' ? ' data-ch="direct"' : '') + '><span class="n">' + (u.ch === 'godown' ? '📦 ' : u.ch === 'direct' ? '💬 ' : u.root ? '📄 ' : '') + esc(u.ch === 'direct' && ccK(ccWho()).indexOf('ABBAS') !== 0 ? 'Abbas' : u.name) + (u.ch === 'godown' ? ' · godown' : u.ch === 'direct' ? ' · direct' : '') + '</span><span class="x">' + esc(u.tx || 'new message') + '</span><i>NEW ' + u.n + '</i></div>'; }).join('') + '</div>'; }
   if (qq && !custs.some(function(r){ return ccK(r.name) === qq; })) h += '<div class="ccrow" data-n="' + esc(q.trim()) + '" data-r=""><div class="av">＋</div><div class="t"><b>' + esc(q.trim()) + '</b><small>new general chat with this customer · محادثة جديدة</small></div></div>';
+  var DL = (CC.dms || []).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
+  if (DL.length) h += '<div class="bsec">Direct · مباشر <small>' + (ccK(ccWho()).indexOf('ABBAS') === 0 ? 'you ↔ each person' : 'you ↔ Abbas') + '</small></div>' + DL.map(function(r){ var u = CC.un[r.k]; return '<div class="ccrow' + (u ? ' un' : '') + '" data-n="' + esc(r.name) + '" data-r="' + esc(r.root) + '" data-ch="direct"><div class="av">💬</div><div class="t"><b>' + esc(ccK(ccWho()).indexOf('ABBAS') === 0 ? r.name : 'Abbas') + '</b><small>' + (u && u.tx ? esc(u.tx) : 'direct chat · محادثة مباشرة') + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
   var OL = (ORD.list || []).filter(function(o){ return (o.gts || o.cts) && (!qq || ccK(o.name).indexOf(qq) >= 0); }).slice(0, 40);
   if (OL.length) { h += '<div class="bsec">Orders · الطلبات <small>#godown + #customer chat of each order</small></div>' + OL.map(function(o){ var n = ordUn(o, 'g') + ordUn(o, 'c'), u = (o.gts && CC.un['G' + o.gts]) || (o.cts && CC.un['O' + o.cts]);
       return '<div class="ccrow ord' + (n ? ' un' : '') + '" data-oid="' + esc(o.id) + '"><div class="av">📦</div><div class="t"><b>' + esc(o.name || 'No name') + ' <small class="od">' + ordWhen(o.created) + '</small></b><small>' + (u && u.tx ? esc(u.tx) : esc((o.items || []).map(function(x){ return 'SJ-' + x.no; }).slice(0, 4).join(' · ')) + ' · ' + (o.pcs || 0) + ' pcs') + '</small></div><span class="tm">' + (ordDone(o) ? '✓' : 'step ' + ordStage(o) + '/4') + (n ? '<i>' + n + '</i>' : '') + '</span></div>'; }).join('') + '<div class="bsec">Other chats · محادثات أخرى</div>'; }
@@ -3408,16 +3412,16 @@ function ccDrawList(){ if (CC.bell) return;   // 20 Oct 2026: the 🔔 setup sta
   var cb = $('cccatch'); if (cb) cb.onclick = ccCuStart;
 }
 $('ccbody').addEventListener('click', function(e){
-  var r = e.target.closest('.ccrow,.ccnr'); if (r && !CC.cur) { if (r.dataset.oid) { CC.from = 'chats'; ordChat(r.dataset.oid); return; } var uu = CC.un[r.dataset.k || ''] || null; if (uu && uu.oid) { CC.from = 'chats'; ordChat(uu.oid, uu.ch === 'godown' ? 'g' : 'c'); return; } ccChat(r.dataset.n, r.dataset.r || ''); return; }
+  var r = e.target.closest('.ccrow,.ccnr'); if (r && !CC.cur) { if (r.dataset.oid) { CC.from = 'chats'; ordChat(r.dataset.oid); return; } var uu = CC.un[r.dataset.k || ''] || null; if (uu && uu.oid) { CC.from = 'chats'; ordChat(uu.oid, uu.ch === 'godown' ? 'g' : 'c'); return; } ccChat(r.dataset.n, r.dataset.r || '', r.dataset.ch === 'direct' ? 'direct' : ''); return; }
   var f = e.target.closest('[data-f]'); if (f) ccOpenFile(f.dataset.f, f.dataset.nm, f);
 });
 // ---- catch up: walk through every customer with new messages, one after another
 function ccCuStart(){ var ks = Object.keys(CC.un); if (!ks.length) return; CC.cu = { names: ks.map(function(k){ return { name: CC.un[k].name, root: CC.un[k].root || '', ch: CC.un[k].ch || '', oid: CC.un[k].oid || '' }; }), i: 0 }; ccCuShow(); }
-function ccCuShow(){ var c = CC.cu; if (!c) return; if (c.i >= c.names.length) { ccCuEnd(); return; } $('cccu').hidden = false; $('cccu').innerHTML = '<span>⚡ Catch up ' + (c.i + 1) + ' / ' + c.names.length + '</span><button type="button" id="ccnext">' + (c.i + 1 < c.names.length ? 'Next ›' : 'Finish ✓') + '</button>'; $('ccnext').onclick = function(){ c.i++; ccCuShow(); }; var ci = c.names[c.i]; if (ci.oid) ordChat(ci.oid, ci.ch === 'godown' ? 'g' : 'c', true); else ccChat(ci.name, ci.root); }
+function ccCuShow(){ var c = CC.cu; if (!c) return; if (c.i >= c.names.length) { ccCuEnd(); return; } $('cccu').hidden = false; $('cccu').innerHTML = '<span>⚡ Catch up ' + (c.i + 1) + ' / ' + c.names.length + '</span><button type="button" id="ccnext">' + (c.i + 1 < c.names.length ? 'Next ›' : 'Finish ✓') + '</button>'; $('ccnext').onclick = function(){ c.i++; ccCuShow(); }; var ci = c.names[c.i]; if (ci.oid) ordChat(ci.oid, ci.ch === 'godown' ? 'g' : 'c', true); else ccChat(ci.name, ci.root, ci.ch === 'direct' ? 'direct' : ''); }
 function ccCuEnd(){ CC.cu = null; $('cccu').hidden = true; ccList(); }
 // ---- one customer
-function ccChat(name, root, ch){ CC.bell = false; if (!ch) { CC.ord = null; $('cc').classList.remove('isord'); } CC.ch = ch || ''; CC.cur = name; CC.root = root || ''; CC.msgs = []; CC.sig = ''; CC.drawn = false; CC.touched = Date.now(); var oo = CC.root ? (CC.orders || []).filter(function(x){ return x.ts === CC.root; })[0] : null;
-  $('cct').innerHTML = esc(name) + '<small>' + (CC.ord ? '📦 order of ' + ordWhen(CC.ord.created) + ' · ' + (CC.ch === 'godown' ? '#godown' : '#customer') : CC.root ? '📄 order of ' + ccDay(CC.root) + ((oo && oo.head) ? ' · ' + esc(oo.head) : '') : 'general chat · #customer') + (CC.es ? ' · ⚡ live' : '') + '</small>';
+function ccChat(name, root, ch){ CC.bell = false; if (!ch || ch === 'direct') { CC.ord = null; $('cc').classList.remove('isord'); } CC.ch = ch || ''; CC.cur = name; CC.root = root || ''; CC.msgs = []; CC.sig = ''; CC.drawn = false; CC.touched = Date.now(); var oo = CC.root ? (CC.orders || []).filter(function(x){ return x.ts === CC.root; })[0] : null;
+  $('cct').innerHTML = (CC.ch === 'direct' ? '💬 ' + esc(ccK(ccWho()).indexOf('ABBAS') === 0 ? name : 'Abbas') : esc(name)) + '<small>' + (CC.ch === 'direct' ? 'direct chat · only you two see it' : CC.ord ? '📦 order of ' + ordWhen(CC.ord.created) + ' · ' + (CC.ch === 'godown' ? '#godown' : '#customer') : CC.root ? '📄 order of ' + ccDay(CC.root) + ((oo && oo.head) ? ' · ' + esc(oo.head) : '') : 'general chat · #customer') + (CC.es ? ' · ⚡ live' : '') + '</small>';
   $('cccomp').hidden = CC.ord && !CC.root; ccPend(); var mk = ccCurK(), mc = CC.mc[mk]; if (mc) { CC.msgs = mc.slice(); CC.sig = JSON.stringify(mc.map(function(m){ return m.ts; })); }
   if (CC.ord || mc) ccDraw(); else $('ccbody').innerHTML = '<div class="ffempty">Loading… · جارٍ التحميل</div>'; if (CC.root || !CC.ord) ccPull(false); clearInterval(CC.timer); CC.timer = setInterval(function(){ if (!document.hidden && CC.cur) ccPull(false); }, CC.es ? 15000 : 6000); }
 async function ccPull(fresh){ var name = CC.cur, root = CC.root, ch = CC.ch, ck = ccCurK(); if (!name) return; if (CC.busyK === ck) { CC.again = true; return; } if (CC.ord && !root) return; CC.busyK = ck; var look = ccLooking();   // 20 Oct 2026: only the SAME chat waits; another chat is read at once
@@ -3524,6 +3528,9 @@ function ccBellOpen(){ CC.bell = true; if (!me()) askMe(); $('cc').hidden = fals
   $('bellon').onclick = async function(){ $('bellst').textContent = 'Turning on…'; try { var j = await ccCall({ op: 'ntfyset', topic: tp }); if (!j.ok) throw new Error(j.error); CC.nt = true; $('bellst').textContent = '✓ On. Now press "Send a test" — a notification should arrive in ntfy.'; } catch(e){ $('bellst').textContent = 'Not on: ' + e.message; } };
   $('belltest').onclick = async function(){ $('bellst').textContent = 'Sending…'; try { var j = await ccCall({ op: 'ntfytest' }); $('bellst').textContent = j.ok ? '✓ Test sent — check ntfy.' : 'Not sent: ' + (j.error || 'ntfy did not answer'); } catch(e){ $('bellst').textContent = 'Not sent: ' + e.message; } };
   $('belloff').onclick = async function(){ try { var j = await ccCall({ op: 'ntfyoff' }); CC.nt = false; $('bellst').textContent = j.ok ? 'Off.' : 'Not changed: ' + j.error; } catch(e){ $('bellst').textContent = e.message; } }; }
+// ---- deep link from a notification: memo.html#dm=NAME (direct chat) — opened once the chat list has arrived
+(function(){ var m = location.hash.match(/^#dm=([^&]*)/); if (!m) return; CC.openDm = decodeURIComponent(m[1] || ''); history.replaceState(null, '', location.pathname + location.search); })();
+function ccOpenDmIfAsked(){ if (!CC.openDm || !CC.dms) return; var nm = CC.openDm, r = CC.dms.filter(function(x){ return ccK(x.name) === ccK(nm); })[0]; CC.openDm = ''; if (!r) return; navCloseAll(); $('cc').hidden = false; CC.touched = Date.now(); ccChat(r.name, r.root, 'direct'); navSync(); }
 // ---- deep link from a notification: memo.html#chat=NAME
 (function(){ var mo = location.hash.match(/^#ord=([^&]*)(?:&c=([gc]))?/); if (mo) { var oid = decodeURIComponent(mo[1] || ''), w = mo[2] || 'g'; history.replaceState(null, '', location.pathname + location.search); setTimeout(function(){ if (token && oid) ordChat(oid, w); }, 1200); } })();
 (function(){ var m = location.hash.match(/^#chat=([^&]*)(?:&o=([\d.]+))?/); if (m) { var nm = decodeURIComponent(m[1] || ''), ro = m[2] || ''; history.replaceState(null, '', location.pathname + location.search); setTimeout(function(){ if (!token) return; $('cc').hidden = false; if (nm || ro) { ccList(); ccChat(nm || 'order', ro); } else ccList(); }, 900); } })();
@@ -3747,7 +3754,7 @@ function tdDraw(){ TD.sig = tdSig();
   // chats with new lines (the same box the Chats tab shows)
   h += '<div class="tdbox"><div class="h"><em>💬</em><span>Chats · ' + (CC.tot ? CC.tot + ' new' : 'nothing new') + '</span><small data-tdgo="chats">Chats tab ›</small></div>';
   if (!unk.length) h += '<div class="tdempty">No new messages · لا رسائل جديدة</div>';
-  else h += unk.slice(0, 6).map(function(key){ var u = CC.un[key]; return '<button type="button" class="tdr" data-tdchat="' + esc(key) + '"><div class="av">' + (u.ch === 'godown' ? '📦' : esc((u.name || '?').charAt(0).toUpperCase())) + '</div><div class="t"><b>' + esc(u.name) + (u.ch === 'godown' ? ' · godown' : u.root ? ' · order' : '') + '</b><small>' + esc(u.tx || 'new message') + '</small></div><span class="n">' + u.n + ' new</span></button>'; }).join('') + (unk.length > 6 ? '<div class="tdnote">+ ' + (unk.length - 6) + ' more in the Chats tab</div>' : '');
+  else h += unk.slice(0, 6).map(function(key){ var u = CC.un[key]; return '<button type="button" class="tdr" data-tdchat="' + esc(key) + '"><div class="av">' + (u.ch === 'godown' ? '📦' : u.ch === 'direct' ? '💬' : esc((u.name || '?').charAt(0).toUpperCase())) + '</div><div class="t"><b>' + esc(u.name) + (u.ch === 'godown' ? ' · godown' : u.ch === 'direct' ? ' · direct' : u.root ? ' · order' : '') + '</b><small>' + esc(u.tx || 'new message') + '</small></div><span class="n">' + u.n + ' new</span></button>'; }).join('') + (unk.length > 6 ? '<div class="tdnote">+ ' + (unk.length - 6) + ' more in the Chats tab</div>' : '');
   h += '</div>';
   // open orders, the most urgent first: bill still to make → send → waiting for the godown
   var rank = function(o){ var st = o.steps || {}; return st.s3 && !st.bill ? 0 : st.bill && !st.sent ? 1 : 2; };
@@ -3789,7 +3796,7 @@ $('tdbody').onclick = function(e){
   if (b.dataset.tdxst) { var px = b.dataset.tdxst.split(':'); tdSend({ op: 'step', id: px[0], i: +px[1] }); b.classList.toggle('on'); return; }
   if (b.dataset.tdfocus) { tdSend({ op: 'focus', id: b.dataset.tdfocus }); tdShowTimo(); return; }
   if (b.dataset.tdopen) { tdSend({ op: 'open', id: b.dataset.tdopen }); tdShowTimo(); return; }
-  if (b.dataset.tdchat) { var key = b.dataset.tdchat, u = CC.un[key]; if (!u) return; navCloseAll(); $('cc').hidden = false; CC.touched = Date.now(); if (u.oid) { CC.from = 'today'; ordChat(u.oid, u.ch === 'godown' ? 'g' : 'c'); } else ccChat(u.name, u.root || ''); navSync(); return; }
+  if (b.dataset.tdchat) { var key = b.dataset.tdchat, u = CC.un[key]; if (!u) return; navCloseAll(); $('cc').hidden = false; CC.touched = Date.now(); if (u.oid) { CC.from = 'today'; ordChat(u.oid, u.ch === 'godown' ? 'g' : 'c'); } else ccChat(u.name, u.root || '', u.ch === 'direct' ? 'direct' : ''); navSync(); return; }
   if (b.dataset.tdord) { var o = (ORD.list || []).filter(function(x){ return x.id === b.dataset.tdord; })[0]; if (o) { ccOpenOrder(o); navSync(); } return; }
   if (b.dataset.tdwa) { tdSend({ op: 'wa', done: b.dataset.tdwa }); b.classList.toggle('on'); return; }
 };

@@ -109,6 +109,7 @@ function slack(W, m, A, J) {
     case 'conversations.members': return J({ ok: true, members: Object.keys(S.users) });
     case 'conversations.list': return J({ ok: true, channels: Object.values(S.ch).map(c => ({ id: c.id, name: c.name, is_member: c.member, is_private: c.priv })) });
     case 'conversations.join': if (C) C.member = true; return J({ ok: !!C });
+    case 'conversations.create': { const id = 'C' + crypto.randomBytes(5).toString('hex').toUpperCase(); S.ch[id] = { id, name: A.name, member: true, priv: !!A.is_private, msgs: [] }; return J({ ok: true, channel: { id, name: A.name } }); }
     case 'users.list': return J({ ok: true, members: Object.values(S.users) });
     case 'users.info': return S.users[A.user] ? J({ ok: true, user: S.users[A.user] }) : J({ ok: false, error: 'user_not_found' });
     case 'chat.postMessage': { if (!C) return J({ ok: false, error: 'channel_not_found' }); const r = postSlack(W, C.id, { text: A.text, bot_id: 'B1', username: 'SJ Orders', thread_ts: A.thread_ts || undefined }); return J({ ok: true, ts: r.ts, channel: C.id }); }

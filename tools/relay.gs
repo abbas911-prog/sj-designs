@@ -35,7 +35,7 @@ function doPost(e) {
     // 15 Oct 2026: Slack's Event Subscriptions point here. The event is only a nudge ("something was written in a channel"): it makes every
     // phone's next poll re-read Slack at once. Nothing in it is trusted or stored, so a fake one can only cause an extra re-read.
     if (b.type === 'url_verification' && b.challenge) return ContentService.createTextOutput(String(b.challenge)).setMimeType(ContentService.MimeType.TEXT);
-    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') facNudge(P, facCardOf(P, evc)); } catch (x) {} try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { var evm = b.event || {}; if (evm.type === 'message' && evm.channel === CC_CH) { var cEE = CacheService.getScriptCache(); cEE.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEE, 'CC_HIST'); var rk = ''; try { var hh = ccHist(P.getProperty('SLACK_BOT_TOKEN'), true).filter(function (m) { return m.ts === (evm.thread_ts || evm.ts); })[0]; rk = hh ? ccKey(ccName(hh.text)) : ''; } catch (x) {} ccNudge(P, rk); if (evm.thread_ts) ccNudge(P, 'O' + evm.thread_ts); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel === GD_CH) { var cEG = CacheService.getScriptCache(); cEG.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEG, 'GD_HIST'); ccNudge(P, 'G' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
+    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') facNudge(P, facCardOf(P, evc)); } catch (x) {} try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { var evm = b.event || {}; if (evm.type === 'message' && evm.channel === CC_CH) { var cEE = CacheService.getScriptCache(); cEE.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEE, 'CC_HIST'); var rk = ''; try { var hh = ccHist(P.getProperty('SLACK_BOT_TOKEN'), true).filter(function (m) { return m.ts === (evm.thread_ts || evm.ts); })[0]; rk = hh ? ccKey(ccName(hh.text)) : ''; } catch (x) {} ccNudge(P, rk); if (evm.thread_ts) ccNudge(P, 'O' + evm.thread_ts); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel === GD_CH) { var cEG = CacheService.getScriptCache(); cEG.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEG, 'GD_HIST'); ccNudge(P, 'G' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel && evm.channel === P.getProperty('CC_DM_CH')) { var cED = CacheService.getScriptCache(); cED.put('CC_EV_AT', String(Date.now()), 900); cED.remove('DM_HIST'); ccNudge(P, 'D' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
     if (b.job === 'fastchk') {                                // 16 Oct 2026: the FAST LANE worker (Cloudflare) asks "is this phone key right?" - key = sha256("sjfast|" + password)
@@ -1570,6 +1570,56 @@ function gdUnread(P, tok, who, roots, budget, fresh) {           // {'G'+ts: {n,
 function gdOrders(P) {                                           // open orders that have a #godown chat: {ts: {oid, name}}
   var all = P.getProperties(), r = {}; Object.keys(all).forEach(function (k) { if (k.indexOf('ORD_') !== 0) return; try { var o = JSON.parse(all[k]); if (o.gts && !o.del && !o.done) r[o.gts] = { oid: o.id, name: o.name || 'order' }; } catch (e) {} }); return r;
 }
+// ---------- DIRECT CHATS (22 Oct 2026, Abbas: "a direct chat between me and Muhammad, and me and Imran, in this app") ----------
+// One private Slack channel #sj-direct (found by name among the bot's channels, else made by the relay), one thread per person
+// ("💬 *DIRECT* · Abbas ↔ Muhammad"); the chat = that thread's replies. Abbas sees every person's chat; a person sees only his own
+// (first name of `who` = the name in the list). People = CC_DM_PEOPLE (default Muhammad, Imran), changed from the app (op dmpeople, owner only).
+var DM_NAME = 'sj-direct', DM_DEFAULT = ['Muhammad', 'Imran'];
+function dmPeople(P) { var L = []; try { L = JSON.parse(P.getProperty('CC_DM_PEOPLE') || '[]'); } catch (e) { L = []; } if (!Array.isArray(L) || !L.length) L = DM_DEFAULT.slice(); return L.map(function (x) { return String(x || '').replace(/[*_\n]/g, '').trim().slice(0, 40); }).filter(String).slice(0, 20); }
+function dmIsAbbas(who) { return /^ABBAS/.test(ccWhoKey(who)); }
+function dmFor(P, who) { var all = dmPeople(P); if (dmIsAbbas(who)) return all; return all.filter(function (n) { return ccMine({ who: n }, who); }); }
+function dmCh(P, tok) {
+  var id = P.getProperty('CC_DM_CH'); if (id) return id;
+  var cur = '', n = 0;
+  do { var j = slackApi(tok, 'conversations.list', { types: 'public_channel,private_channel', exclude_archived: 'true', limit: 200, cursor: cur }, true); if (!j.ok) break;
+    var hit = (j.channels || []).filter(function (c) { return c.name === DM_NAME; })[0]; if (hit) { id = hit.id; break; } cur = (j.response_metadata || {}).next_cursor || ''; } while (cur && ++n < 10);
+  if (!id) { var cj = slackApi(tok, 'conversations.create', { name: DM_NAME, is_private: true }); if (!cj.ok) throw new Error('Slack would not make #' + DM_NAME + ' (' + cj.error + ') — make a private channel #' + DM_NAME + ' and invite @SJ Memo'); id = (cj.channel || {}).id; }
+  if (!id) throw new Error('no #' + DM_NAME); P.setProperty('CC_DM_CH', id); return id;
+}
+function dmRoot(P, tok, name) {                                    // the person's thread root in #sj-direct, made once
+  var k = 'CC_DM_ROOT_' + ccWhoKey(name), ts = P.getProperty(k); if (ts) return ts;
+  var ch = dmCh(P, tok), pj = slackApi(tok, 'chat.postMessage', { channel: ch, text: '💬 *DIRECT* · Abbas ↔ ' + name }); if (!pj.ok) throw new Error(ccErr(pj.error));
+  P.setProperty(k, pj.ts); return pj.ts;
+}
+function dmHist(tok, ch, fresh) {                                 // newest 100 top-level posts of #sj-direct (the thread roots), kept 20 s
+  var c = CacheService.getScriptCache(), h = fresh ? null : c.get('DM_HIST'); if (h) return JSON.parse(h);
+  var j = slackApi(tok, 'conversations.history', { channel: ch, limit: 100 }, true); if (!j.ok) throw new Error(ccErr(j.error).replace('#customer', '#' + DM_NAME));
+  var all = (j.messages || []).map(function (m) { return { ts: m.ts, rc: m.reply_count || 0, lr: m.latest_reply || '', text: String(m.text || '').slice(0, 120) }; });
+  try { c.put('DM_HIST', JSON.stringify(all), 20); } catch (e) {} return all;
+}
+function dmUnread(P, tok, ch, who, roots, budget, fresh) {        // {'D'+ts: {n, last, tx}} for this person over the given roots
+  var out = {}; roots = (roots || []).filter(String).slice(0, 20); if (!roots.length) return out;
+  var hist; try { hist = dmHist(tok, ch, fresh); } catch (e) { return out; }
+  var seen = ccSeenGet(P, who), t0 = +seen._t0 || 0, reads = 0, c = CacheService.getScriptCache();
+  hist.filter(function (m) { return m.rc && roots.indexOf(m.ts) >= 0; }).forEach(function (m) {
+    var k = 'D' + m.ts, mark = Math.max(+(seen[k] || 0), t0); if (+(m.lr || 0) <= mark) return;
+    var ck = 'DM_UN_' + ccWhoKey(who) + '_' + m.ts + '_' + m.lr + '_' + String(mark).slice(0, 15), cached = c.get(ck); if (cached) { var o = JSON.parse(cached); if (o.n) out[k] = o; return; }
+    if (reads >= budget) return; reads++;
+    var L; try { L = chReplies(tok, ch, m.ts, m.lr); } catch (e) { return; }
+    var n = 0, last = '', tx = ''; L.forEach(function (x) { if (x.root || +x.ts <= mark || ccMine(x, who)) return; n++; if (+x.ts > +last) { last = x.ts; tx = ccLine(x, x); } });
+    var res = { n: n, last: last, tx: tx }; try { c.put(ck, JSON.stringify(res), 600); } catch (e) {} if (n) out[k] = res; });
+  return out;
+}
+function dmList(P, tok, who, budget, fresh) {                     // the direct chats this person may see, with unread counts
+  var names = dmFor(P, who); if (!names.length) return [];
+  var ch = dmCh(P, tok), rows = names.map(function (n) { return { k: '', name: n, root: dmRoot(P, tok, n), un: 0, tx: '', last: '0' }; });
+  rows.forEach(function (r) { r.k = 'D' + r.root; });
+  var hist = []; try { hist = dmHist(tok, ch, fresh); } catch (e) {}
+  rows.forEach(function (r) { var m = hist.filter(function (x) { return x.ts === r.root; })[0]; if (m) r.last = m.lr && +m.lr > +m.ts ? m.lr : m.ts; });
+  var un = dmUnread(P, tok, ch, who, rows.map(function (r) { return r.root; }), budget, fresh);
+  rows.forEach(function (r) { var u = un[r.k]; if (u) { r.un = u.n; r.tx = u.tx; if (+u.last > +r.last) r.last = u.last; } });
+  return rows;
+}
 function ccNotifyScan(P, why) {                                  // phone notifications (ntfy app) for everyone who turned them on
   var map = {}; try { map = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} var names = Object.keys(map); if (!names.length) return 0;
   var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return 0;
@@ -1580,6 +1630,9 @@ function ccNotifyScan(P, why) {                                  // phone notifi
       var un = ccUnread(P, tok, hist, nm, 6), nk = 'CCNOTE_' + ccWhoKey(nm), noted = {}; try { noted = JSON.parse(P.getProperty(nk) || '{}'); } catch (e) {} var changed = false;
       Object.keys(un).forEach(function (k) { var u = un[k]; if (!u.n || !u.last || +(noted[k] || 0) >= +u.last) return;
         if (facNtfy(map[nm], { title: (u.root ? '📄 ' : '👤 ') + (u.name || k) + (u.n > 1 ? ' · ' + u.n + ' new' : ''), msg: u.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#chat=' + encodeURIComponent(u.name || k) + (u.root ? '&o=' + u.root : '') })) { sent++; noted[k] = u.last; changed = true; } });
+      try { var dl = dmList(P, tok, nm, 3, why === 'event');
+        dl.forEach(function (r) { if (!r.un) return; var kk = r.k, lastD = r.last; if (+(noted[kk] || 0) >= +lastD) return;
+          if (facNtfy(map[nm], { title: '💬 ' + (dmIsAbbas(nm) ? r.name : 'Abbas') + ' · direct' + (r.un > 1 ? ' · ' + r.un + ' new' : ''), msg: r.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#dm=' + encodeURIComponent(r.name) })) { sent++; noted[kk] = lastD; changed = true; } }); } catch (e) {}
       try { var go = gdOrders(P), gu = gdUnread(P, tok, nm, Object.keys(go), 4, why === 'event');
         Object.keys(gu).forEach(function (k) { var u = gu[k], o2 = go[k.slice(1)] || {}; if (!u.n || !u.last || +(noted[k] || 0) >= +u.last) return;
           if (facNtfy(map[nm], { title: '📦 ' + (o2.name || 'order') + ' · godown' + (u.n > 1 ? ' · ' + u.n + ' new' : ''), msg: u.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#ord=' + encodeURIComponent(o2.oid || '') + '&c=g' })) { sent++; noted[k] = u.last; changed = true; } }); } catch (e) {}
@@ -1617,31 +1670,39 @@ function cchat(reqText, P) {
       ords.sort(function (a, b) { return +b.last - +a.last; });
       if (!cR.get('CC_NSCAN')) { cR.put('CC_NSCAN', '1', 60); try { ccNotifyScan(P, 'poll'); } catch (e) {} }   // fallback when Slack's push is not pointed at the relay
       var gun = {}; try { gun = gdUnread(P, tok, who, req.groots || Object.keys(gdOrders(P)), req.op === 'ping' ? 4 : 8, !!req.fresh); } catch (e) {}
-      var ev = cR.get('CC_EV_AT'); return out({ ok: true, gun: gun, customers: Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return +b.last - +a.last; }), orders: ords.slice(0, 150), live: ccLive(P), nt: !!ntf[ccWhoKey(who)], ev: !!ev });
+      var dms = []; try { dms = dmList(P, tok, who, req.op === 'ping' ? 2 : 4, !!req.fresh); } catch (e) { dms = []; }
+      var ev = cR.get('CC_EV_AT'); return out({ ok: true, dms: dms, gun: gun, customers: Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return +b.last - +a.last; }), orders: ords.slice(0, 150), live: ccLive(P), nt: !!ntf[ccWhoKey(who)], ev: !!ev });
     }
-    if (req.ch === 'godown' && (req.op === 'thread' || req.op === 'seen' || req.op === 'post' || req.op === 'up')) {
-      var gr = String(req.root || '').replace(/[^\d.]/g, ''); if (!gr) return out({ ok: false, error: 'no #godown post for this order' });
+    if ((req.ch === 'godown' || req.ch === 'direct') && (req.op === 'thread' || req.op === 'seen' || req.op === 'post' || req.op === 'up')) {
+      var gr = String(req.root || '').replace(/[^\d.]/g, ''); if (!gr) return out({ ok: false, error: req.ch === 'direct' ? 'no direct chat yet' : 'no #godown post for this order' });
+      var isDm = req.ch === 'direct', XCH = GD_CH, XP = 'G';
+      if (isDm) { XP = 'D'; XCH = dmCh(P, tok); var okNames = dmFor(P, who), okRoots = okNames.map(function (n) { return P.getProperty('CC_DM_ROOT_' + ccWhoKey(n)) || ''; }); if (okRoots.indexOf(gr) < 0) return out({ ok: false, error: 'noaccess — this direct chat is not yours' }); }
       if (req.op === 'thread') {
-        var gh = []; try { gh = gdHist(tok, !!req.fresh); } catch (e) {} var gm = gh.filter(function (m) { return m.ts === gr; })[0];
-        var GL = chReplies(tok, GD_CH, gr, gm && gm.lr && !req.fresh ? gm.lr : ''), gms = GL.map(function (x) { if (x.root) { x.memo = true; x.who = 'Godown pick list'; x.text = String(x.text || '').replace(/^\*GODOWN PICK LIST\*[^\n]*\n?/, ''); } return x; });
-        if (req.look && gms.length) { var sg = ccSeenGet(P, who), tg = gms[gms.length - 1].ts; if (+tg > +(sg['G' + gr] || 0)) { sg['G' + gr] = tg; ccSeenPut(P, who, sg); } }
+        var gh = []; try { gh = isDm ? dmHist(tok, XCH, !!req.fresh) : gdHist(tok, !!req.fresh); } catch (e) {} var gm = gh.filter(function (m) { return m.ts === gr; })[0];
+        var GL = chReplies(tok, XCH, gr, gm && gm.lr && !req.fresh ? gm.lr : ''), gms = isDm ? GL.filter(function (x) { return !x.root; }) : GL.map(function (x) { if (x.root) { x.memo = true; x.who = 'Godown pick list'; x.text = String(x.text || '').replace(/^\*GODOWN PICK LIST\*[^\n]*\n?/, ''); } return x; });
+        if (req.look && gms.length) { var sg = ccSeenGet(P, who), tg = gms[gms.length - 1].ts; if (+tg > +(sg[XP + gr] || 0)) { sg[XP + gr] = tg; ccSeenPut(P, who, sg); } }
         return out({ ok: true, root: gr, msgs: gms });
       }
-      if (req.op === 'seen') { var sg2 = ccSeenGet(P, who), tg2 = String(req.ts || (Date.now() / 1000)); if (+tg2 > +(sg2['G' + gr] || 0)) { sg2['G' + gr] = tg2; ccSeenPut(P, who, sg2); } return out({ ok: true }); }
+      if (req.op === 'seen') { var sg2 = ccSeenGet(P, who), tg2 = String(req.ts || (Date.now() / 1000)); if (+tg2 > +(sg2[XP + gr] || 0)) { sg2[XP + gr] = tg2; ccSeenPut(P, who, sg2); } return out({ ok: true }); }
       var gtx = String(req.text || '').slice(0, 3000), gres;
-      if (req.op === 'post') { if (!gtx.trim()) return out({ ok: false, error: 'empty' }); var gp = slackApi(tok, 'chat.postMessage', { channel: GD_CH, thread_ts: gr, text: '*' + who + ':* ' + gtx }); if (!gp.ok) return out({ ok: false, error: ccErr(gp.error) }); gres = { ok: true, ts: gp.ts, root: gr }; }
+      if (req.op === 'post') { if (!gtx.trim()) return out({ ok: false, error: 'empty' }); var gp = slackApi(tok, 'chat.postMessage', { channel: XCH, thread_ts: gr, text: '*' + who + ':* ' + gtx }); if (!gp.ok) return out({ ok: false, error: ccErr(gp.error) }); gres = { ok: true, ts: gp.ts, root: gr }; }
       else {
         var gfs = Array.isArray(req.files) ? req.files.slice(0, 10) : [], gids = [], gtot = 0;
         for (var gi = 0; gi < gfs.length; gi++) { var gb = Utilities.base64Decode(String(gfs[gi].b64 || '')); gtot += gb.length; if (gb.length > 18000000 || gtot > 40000000) return out({ ok: false, error: 'files too big (18 MB each, 40 MB together)' }); gids.push(slackUp(tok, String(gfs[gi].name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80), gb)); }
         if (!gids.length) return out({ ok: false, error: 'no file' });
         var gj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
-          payload: { files: JSON.stringify(gids.map(function (f) { return { id: f }; })), channel_id: GD_CH, thread_ts: gr, initial_comment: '*' + who + ':* ' + (gtx || '📎') } }).getContentText());
+          payload: { files: JSON.stringify(gids.map(function (f) { return { id: f }; })), channel_id: XCH, thread_ts: gr, initial_comment: '*' + who + ':* ' + (gtx || '📎') } }).getContentText());
         if (!gj.ok) return out({ ok: false, error: ccErr(gj.error) }); gres = { ok: true, root: gr, files: gids.length };
       }
-      bigDrop(cR, 'GD_HIST');
-      var sg3 = ccSeenGet(P, who), nowG = String(Date.now() / 1000 + 2); if (+nowG > +(sg3['G' + gr] || 0)) { sg3['G' + gr] = nowG; ccSeenPut(P, who, sg3); }
-      ccNudge(P, 'G' + gr);
+      if (isDm) cR.remove('DM_HIST'); else bigDrop(cR, 'GD_HIST');
+      var sg3 = ccSeenGet(P, who), nowG = String(Date.now() / 1000 + 2); if (+nowG > +(sg3[XP + gr] || 0)) { sg3[XP + gr] = nowG; ccSeenPut(P, who, sg3); }
+      ccNudge(P, XP + gr);
       var grt = JSON.stringify(gres); if (rid) cR.put('CCR_' + rid, grt, 21600); return ContentService.createTextOutput(grt).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (req.op === 'dmpeople') {                                // 22 Oct 2026: Abbas edits the list of people with a direct chat (owner check as the vault)
+      if (!ownerOk(P, req.chk)) return out({ ok: false, error: 'owner only' });
+      if (Array.isArray(req.people)) P.setProperty('CC_DM_PEOPLE', JSON.stringify(req.people.map(function (x) { return String(x || '').replace(/[*_\n]/g, '').trim().slice(0, 40); }).filter(String).slice(0, 20)));
+      return out({ ok: true, people: dmPeople(P) });
     }
     if (req.op === 'findroot') {                                  // 20 Oct 2026: an order sent before its posts were remembered - find its pick-list post in #godown and its memo post in #customer
       var fk = ccKey(String(req.name || '').replace(/[*_]/g, ' ')) || 'NO NAME', at = (+req.at || Date.now()) / 1000, best = function (list, re) {
