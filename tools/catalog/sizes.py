@@ -9,7 +9,7 @@ option — a customer might want 2 medium, 3 large · include the video · a tic
 Input (from memo.html on Include & share, tick on): REQ = {"id","kind":"sizes","ref","cust","items":[{"card","no","c","pcs"}]}
   card = Trello card id, c = colour position in the card title (same numbering as the stock job), pcs = pieces on the invoice.
 The card is read BY ID, so it is found even after the stock job has moved it to FINISH.
-Page: only the colours on the invoice can be chosen (the others stay in the photo, faded; every colour keeps the card's number - 22 Oct 2026), the card video,
+Page: only the colours on the invoice (the others cut out of the photo; every colour keeps the card's number - 22 Oct 2026), the card video,
 under each colour its piece count and one number box per size. Send order = one PDF (reopen link inside). Share on every
 photo/video. Cover og-<page>.jpg with SJ TRADING. Rule Eight is lifted here by his own words ("with the quantity").
 """
@@ -89,12 +89,11 @@ def build_sizes(req):
             mask = [billed[i] for i in g]
             if not any(mask): continue
             im, kept, cols = B.keep_columns(B.photo(a), mask)
-            nums, sold = [], []
-            for i, q in zip(g, kept):
-                nums.append(i + 1)                                   # the card's own colour number (22 Oct 2026)
-                if q > 0: pcs.append(q); cs.append(i + 1)
-                else: sold.append(i + 1)
-            photos.append((im, nums, cols, sold))
+            if cols is None: cols = [(i / len(kept), (i + 1) / len(kept)) for i in range(len(kept))]
+            nums = []
+            for i, q in zip(g, mask):
+                if q > 0: pcs.append(q); cs.append(i + 1); nums.append(i + 1)   # the card's own colour number (22 Oct 2026)
+            photos.append((im, nums, cols))
         sizes, why = sizes_of(card['name'])
         vids = [a for a in att if str(a.get('mimeType', '')).startswith('video/')]
         vid = bool(vids) and B.video(no, vids[0])
@@ -127,11 +126,11 @@ def render(stem, designs):
     arts, data = [], []
     for d in designs:
         k = d['key']; ph_html = []; dd = {'key': k, 'no': d['no'], 'sizes': d['sizes'], 'pcs': d['pcs'], 'cs': d['cs'], 'photos': []}
-        for im, nums, cols, sold in d['photos']:
+        for im, nums, cols in d['photos']:
             src, w, h = img_src(im)
             gtc = ' '.join('%.4ffr' % (r - l) for l, r in cols)
-            ph_html.append('<div class="photo"><img src="%s" alt="Design %s" width="%d" height="%d">%s<div class="nums" style="grid-template-columns:%s">%s</div></div>'
-                           % (src, d['no'], w, h, B.sold_html(cols, nums, sold), gtc, ''.join(('<span class="out">%d</span>' if x in sold else '<span>%d</span>') % x for x in nums)))
+            ph_html.append('<div class="photo"><img src="%s" alt="Design %s" width="%d" height="%d"><div class="nums" style="grid-template-columns:%s">%s</div></div>'
+                           % (src, d['no'], w, h, gtc, ''.join('<span>%d</span>' % x for x in nums)))
             dd['photos'].append({'nums': nums, 'cols': [[round(l, 4), round(r, 4)] for l, r in cols], 'w': w, 'h': h})
         n_s = len(d['sizes'])
         rows = []

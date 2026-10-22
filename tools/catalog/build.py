@@ -7,8 +7,9 @@ The same customer page the chat runs built (sj-1005b, sj-1005, sj-1003, ahmad-li
   * customer name (+ country) at the top, nothing else written across the top (Rule Ten)
   * per design SETS or COMPLETE, page can mix them, designs in the order given (Rules Twelve, Sixteen)
   * newest READY card for a design number; photos JAMAL first (Rule Two), newest photo = first colour group (Rule One)
-  * the sum is run and must match the card, or nothing is built (Rule Three); a 0 colour stays IN the photo, faded + "sold out",
-    and every colour keeps the card's own number (22 Oct 2026, Abbas: cutting left half dresses and confused the numbering)
+  * the sum is run and must match the card, or nothing is built (Rule Three); a 0 colour is CUT OUT of the photo and the rest joined
+    into one clean photo; every colour keeps the card's own number (22 Oct 2026, Abbas: "cut it so perfectly and keep the numbers so
+    perfectly that I don't need to come back to this problem again") — the cutter is find_cuts below, checked on 114 real line-ups
   * chips by Rule Four (leftover rides on the top chip), pre-rendered in the HTML (Rule Five)
   * the card video under the photos, re-encoded to ~4-6 MB, served from vid/<no>.mp4 (Rule Eleven)
   * no prices, no piece counts on the page (Rule Eight); Send order = one PDF (Seven-A); Share button on every photo/video
@@ -62,65 +63,125 @@ def role(a):
     n = a.get('name', '').lower()
     return 'cover' if n.startswith('file_') or 'chatgpt' in n else 'lineup'
 
-# ---------- cutting a sold-out (0) dress out of the photo (Rule Three; same edge finder as the sj-1003 run) ----------
-def dress_runs(im, band=(0.30, 0.85)):
-    """Columns where a dress stands: pixels in the middle band that differ from the wall colour (median of the top strip)."""
-    W, H = im.size
-    sm = im.convert('RGB').resize((800, max(1, int(800 * H / W))))
-    a = np.asarray(sm, dtype=np.float32); h, w = a.shape[:2]
-    bg = np.median(a[:max(2, int(h * 0.06))].reshape(-1, 3), axis=0)
-    px = a[int(h * band[0]):int(h * band[1])]
-    dist = np.linalg.norm(px - bg, axis=2)
-    score = (dist > 30).mean(axis=0)
-    score = np.convolve(score, np.ones(7) / 7, 'same')
-    on = score > max(0.15, float(score.max()) * 0.3)
-    runs, i = [], 0
-    while i < w:
-        if on[i]:
-            j = i
-            while j < w and on[j]: j += 1
-            runs.append([i, j]); i = j
-        else: i += 1
-    merged = []
-    for r in runs:
-        if merged and r[0] - merged[-1][1] < w * 0.02: merged[-1][1] = r[1]
-        else: merged.append(r)
-    merged = [r for r in merged if r[1] - r[0] >= w * 0.05]
-    return merged, w
+# ---------- cutting a sold-out (0) dress out of the photo (22 Oct 2026: the colour-change cutter) ----------
+# Where each dress stands: every column of the dress band gets a colour (mean Lab of its non-wall pixels) and a weight (how much dress
+# is in it); the n-1 cuts are the ones that make each of the n column groups as ONE colour as possible (exact dynamic programme), each
+# group between 0.45 and 1.75 of the average width; then a cut snaps to the emptiest column close by (a real wall gap). A shop photo
+# (other dresses hanging behind, no clean wall) also leans on "the dresses hang evenly spaced". Checked by eye on 114 real line-ups
+# (studio JAMAL photos + shop photos) before it went live; tests/t_cat.js keeps one real photo as a guard.
+def _lab(a):
+    # sRGB (0-255) -> CIE Lab, vectorised; a: (..., 3) float32
+    c = a / 255.0
+    c = np.where(c > 0.04045, ((c + 0.055) / 1.055) ** 2.4, c / 12.92)
+    M = np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]], dtype=np.float32)
+    xyz = c @ M.T
+    xyz /= np.array([0.95047, 1.0, 1.08883], dtype=np.float32)
+    f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116)
+    L = 116 * f[..., 1] - 16; A = 500 * (f[..., 0] - f[..., 1]); B = 200 * (f[..., 1] - f[..., 2])
+    return np.stack([L, A, B], axis=-1)
 
-def find_bounds_grad(im, n, band=(0.45, 0.80), search=0.30):
+def column_profile(im, width=800):
+    """Per column: wgt = how much DRESS stands in it (0..1), col = mean Lab colour of the dress pixels, plus w. A dress fills both the
+    chest band and the skirt band; a vase or a bunch of flowers at the side fills only one, so wgt = the smaller of the two."""
     W, H = im.size
-    a = np.asarray(im.resize((800, max(1, int(800 * H / W)))), dtype=np.float32)
-    h, w = a.shape[0], a.shape[1]
-    col = a[int(h * band[0]):int(h * band[1])].mean(axis=0)
-    d = np.linalg.norm(col[4:] - col[:-4], axis=1); d = np.pad(d, (2, 2)); d = np.convolve(d, np.ones(9) / 9, 'same')
-    span, out = w / n, []
+    sm = im.convert('RGB').resize((width, max(1, int(width * H / W))))
+    a = np.asarray(sm, dtype=np.float32); h, w = a.shape[:2]
+    lab = _lab(a)
+    top = lab[:max(2, int(h * 0.05))].reshape(-1, 3)
+    bg = np.median(np.concatenate([top, lab[:, :max(2, int(w * 0.02))].reshape(-1, 3), lab[:, -max(2, int(w * 0.02)):].reshape(-1, 3)]), axis=0)
+    clean = bg[0] > 70 and np.hypot(bg[1], bg[2]) < 14 and (np.linalg.norm(top - bg, axis=1) < 12).mean() > 0.5   # a real wall (studio)
+    if clean:
+        up = lab[int(h * 0.25):int(h * 0.50)]; low = lab[int(h * 0.55):int(h * 0.86)]
+        on_u = np.linalg.norm(up - bg, axis=2) > 16.0; on_l = np.linalg.norm(low - bg, axis=2) > 16.0
+        wgt = np.minimum(on_u.mean(axis=0), on_l.mean(axis=0))
+        px = lab[int(h * 0.25):int(h * 0.86)]; on = np.linalg.norm(px - bg, axis=2) > 16.0
+        cnt = on.sum(axis=0); col = np.where(on[..., None], px, 0).sum(axis=0) / np.maximum(cnt, 1)[:, None]
+        col = np.where(cnt[:, None] > 0, col, bg)
+    else:                                                       # shop photo, other dresses behind: the skirts, every column counts the same
+        px = lab[int(h * 0.50):int(h * 0.88)]
+        wgt = np.ones(w, dtype=np.float32); col = px.mean(axis=0)
+    return wgt, col, w, clean
+
+def find_cuts(im, n, lo=0.45, hi=1.75):
+    W = im.size[0]
+    if n <= 1: return [0.0, float(W)]
+    frac, col, w, clean = column_profile(im)
+    wgt = np.clip(frac, 0, 1) ** 2 + 1e-3                        # a half-filled column (sleeve, hair) counts less
+    # trim: the line-up's left/right edge = first/last column where a dress really stands (a vase or flowers never pass 0.3)
+    xs = np.where(frac > 0.3)[0]
+    left, right = (max(0, int(xs[0]) - 2), min(w, int(xs[-1]) + 3)) if len(xs) else (0, w)
+    avg = (right - left) / n
+    wmin, wmax = max(4, int(avg * lo)), int(avg * hi) + 1
+    # cumulative sums for the within-group colour spread: cost(a,b) = sum w|c|^2 - |sum w c|^2 / sum w
+    wc = wgt[:, None] * col; wc2 = (wgt * (col * col).sum(axis=1))
+    C1 = np.concatenate([[0.0], np.cumsum(wgt)]); C2 = np.vstack([np.zeros((1, 3)), np.cumsum(wc, axis=0)]); C3 = np.concatenate([[0.0], np.cumsum(wc2)])
+    def colour_cost(a, b):                                      # a, b arrays of equal length, a < b
+        sw = C1[b] - C1[a]; s = C2[b] - C2[a]; s2 = C3[b] - C3[a]
+        return s2 - (s * s).sum(axis=1) / np.maximum(sw, 1e-6)
+    # a shop photo (other dresses hanging behind) also leans on "the dresses hang evenly spaced": a width far from the average costs
+    eq = np.array([left + round(avg * i) for i in range(n + 1)]); base = float(colour_cost(eq[:-1], eq[1:]).sum()) / n
+    mu = (0.0 if clean else 0.8) * base
+    def cost(a, b): return colour_cost(a, b) + mu * (((b - a) - avg) / avg) ** 2
+    INF = 1e18
+    best = np.full((n + 1, w + 1), INF); arg = np.zeros((n + 1, w + 1), dtype=np.int32)
+    best[0][left] = 0.0
+    for k in range(1, n + 1):
+        for b in range(left + k * wmin, right + 1):
+            a_lo, a_hi = max(left, b - wmax), b - wmin
+            if a_hi < a_lo: continue
+            A = np.arange(a_lo, a_hi + 1)
+            prev = best[k - 1][A]
+            ok = prev < INF
+            if not ok.any(): continue
+            tot = prev + cost(A, np.full_like(A, b))
+            i = int(np.argmin(tot)); best[k][b] = tot[i]; arg[k][b] = A[i]
+    # the last group must end at the right edge
+    b = right
+    if best[n][b] >= INF:                                       # no feasible split (odd photo): equal spans
+        return [W * i / n for i in range(n + 1)]
+    cuts = [b]
+    for k in range(n, 0, -1): b = int(arg[k][b]); cuts.append(b)
+    cuts = cuts[::-1]                                           # left ... right, n+1 values
+    # snap each inner cut to the emptiest column nearby (a real wall gap), if that column is clearly emptier
+    span = int(avg * 0.08)
     for i in range(1, n):
-        g = span * i; lo, hi = int(g - span * search), int(g + span * search)
-        out.append((lo + int(np.argmax(d[lo:hi]))) * W / w)
-    return [0.0] + out + [float(W)]
+        c = cuts[i]; lo_, hi_ = max(cuts[i - 1] + 2, c - span), min(cuts[i + 1] - 2, c + span)
+        if hi_ <= lo_: continue
+        seg = frac[lo_:hi_]; j = int(np.argmin(seg))
+        if clean and seg[j] < 0.35 and seg[j] < frac[c] * 0.8: cuts[i] = lo_ + j
+    cuts[0] = 0; cuts[-1] = w                                   # the dress edges keep the full picture width
+    return [c * W / w for c in cuts]
 
 def find_bounds(im, n):
-    """17 Oct 2026 (sj-1017c, SJ-92045 came out with columns 0.33/0.22/0.33/0.12 and a half dress). Where to cut a lineup photo into its n dresses. 1) the wall-gap finder when it sees exactly n dresses; 2) the old gradient finder
-    when its columns are sane (each 0.6-1.5x the average); 3) equal spans. Returns (bounds, how)."""
-    W = im.size[0]
-    runs, w = dress_runs(im)
-    if len(runs) == n:
-        cuts = [0.0] + [((runs[i][1] + runs[i + 1][0]) / 2) * W / w for i in range(n - 1)] + [float(W)]
-        return cuts
-    b = find_bounds_grad(im, n)
-    widths = [b[i + 1] - b[i] for i in range(n)]; avg = W / n
-    if all(0.6 * avg <= x <= 1.5 * avg for x in widths): return b
-    return [W * i / n for i in range(n + 1)]
+    """n+1 x positions (pixels): left edge of dress 1 ... right edge of dress n."""
+    try: return find_cuts(im, n)
+    except Exception as e:
+        print('find_cuts failed (%s) - equal spans' % e, file=sys.stderr)
+        W = im.size[0]; return [W * i / n for i in range(n + 1)]
 
-def keep_columns(im, pcs):
-    """22 Oct 2026 (Abbas, 57026 / 48188: "it's messed up ... half dresses"): the photo is NEVER cut any more. pcs = pieces per dress
-    left->right. Returns (the whole image, pcs unchanged, one column (left, right) fraction per dress). A 0 dress is drawn faded by the
-    page (the column fractions say where), with its number greyed - so the numbers always match the dresses and the card."""
+def keep_columns(im, pcs, feather=0.012):
+    """pcs = pieces per dress left->right. Returns (the photo with the 0 dresses cut out and the rest joined, kept pcs, column
+    fractions of the kept dresses in the new photo). The joins are feathered over ~1% of the width so no hard seam shows."""
     n = len(pcs)
-    if n <= 1: return im, pcs, [(0.0, 1.0)] * n
-    b = find_bounds(im, n); W = float(im.width)
-    return im, list(pcs), [(b[i] / W, b[i + 1] / W) for i in range(n)]
+    if all(p > 0 for p in pcs): return im, list(pcs), None
+    b = find_bounds(im, n)
+    parts = [(int(round(b[i])), int(round(b[i + 1]))) for i in range(n) if pcs[i] > 0]
+    if not parts: return im, [], None
+    a = np.asarray(im.convert('RGB'), dtype=np.float32); H = a.shape[0]
+    f = max(2, int(im.width * feather))
+    pieces = [a[:, l:r] for l, r in parts]
+    out = pieces[0]; cols = [(0, out.shape[1])]
+    for pc in pieces[1:]:
+        k = min(f, out.shape[1] // 4, pc.shape[1] // 4)
+        if k >= 2:
+            t = np.linspace(0, 1, k, dtype=np.float32)[None, :, None]
+            seam = out[:, -k:] * (1 - t) + pc[:, :k] * t
+            x0 = out.shape[1] - k
+            out = np.concatenate([out[:, :-k], seam, pc[:, k:]], axis=1); cols.append((x0, x0 + pc.shape[1]))
+        else:
+            x0 = out.shape[1]; out = np.concatenate([out, pc], axis=1); cols.append((x0, x0 + pc.shape[1]))
+    W = out.shape[1]
+    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)), [p for p in pcs if p > 0], [(l / W, r / W) for l, r in cols]
 
 # ---------- page text (same as build6 / sj-1005b) ----------
 AR_D = '٠١٢٣٤٥٦٧٨٩'
@@ -187,20 +248,19 @@ def build(req):
         for a, g in zip(pick, groups):
             if not any(g): c += len(g); cut.append(len(g)); continue           # a whole photo of sold-out colours: left out, numbers still move on
             im, kept, cols = keep_columns(photo(a), g)
-            nums, sold = [], []
-            for q in kept:
-                c += 1; nums.append(c)
-                if q > 0: PCSS[no][c] = q
-                else: sold.append(c)
-            if sold: cut.append(len(sold))
-            PHOTOS[no].append((im, nums, cols, sold))
+            nums = []
+            for q in g:
+                c += 1
+                if q > 0: PCSS[no][c] = q; nums.append(c)          # the card's own colour number stays on the dress
+            if len(kept) < len(g): cut.append(len(g) - len(kept))
+            PHOTOS[no].append((im, nums, cols))
         if mode == 'C':
             TOT[no], COLS[no] = sum(PCSS[no].values()), len(PCSS[no])
             u = COLS[no] * 4
             report.append('SJ-%s COMPLETE  %s → %d complete sets%s' % (no, line, TOT[no] // u, (' + %d pcs' % (TOT[no] % u)) if TOT[no] % u else ''))
         else:
             report.append('SJ-%s SETS  %s → %d colours' % (no, line, len(PCSS[no])))
-        if cut: flags.append('SJ-%s: %d sold-out colour%s shown faded on the photo (numbers stay as on the card).' % (no, sum(cut), '' if sum(cut) == 1 else 's'))
+        if cut: flags.append('SJ-%s: %d sold-out colour%s cut out of the photo (numbers stay as on the card) — check the photo.' % (no, sum(cut), '' if sum(cut) == 1 else 's'))
         vids = [a for a in att if str(a.get('mimeType', '')).startswith('video/')]
         if vids and video(no, vids[0]): VIDS[no] = 1
     if errors: return {'ok': False, 'error': ' '.join(errors), 'errors': errors, 'report': report}
@@ -249,24 +309,17 @@ def video(no, a):
         print('video', no, 'failed:', e)
         return os.path.exists('vid/%s.mp4' % no)
 
-def sold_html(cols, nums, sold):
-    """The faded 'sold out' veil over each 0 dress (22 Oct 2026). cols = one (left, right) fraction per dress."""
-    out = []
-    for (l, r), c in zip(cols, nums):
-        if c in sold: out.append('<i class="sold" style="left:%.2f%%;width:%.2f%%"><b>Sold out<small>نفذ</small></b></i>' % (l * 100, (r - l) * 100))
-    return ''.join(out)
-
-def img_tag(im, nums, no, cols=None, sold=()):
+def img_tag(im, nums, no, cols=None):
     if im.width > 1200: im = im.resize((1200, round(im.height * 1200 / im.width)), Image.LANCZOS)
     b = io.BytesIO(); im.save(b, 'JPEG', quality=82, optimize=True, progressive=True)
     d = base64.b64encode(b.getvalue()).decode(); n = len(nums)
-    cells = ''.join(('<span class="out">%d</span>' if x in sold else '<span>%d</span>') % x for x in nums)
+    cells = ''.join('<span>%d</span>' % x for x in nums)
     if cols:
         gtc = ' '.join('%.4ffr' % (r - l) for l, r in cols); cattr = ' data-cols="%s"' % ';'.join('%.4f,%.4f' % (l, r) for l, r in cols)
     else:
-        cols = [(i / n, (i + 1) / n) for i in range(n)]; gtc = 'repeat(%d,1fr)' % n; cattr = ''
-    return ('<div class="photo" data-nums="%s" data-n="%d"%s><img src="data:image/jpeg;base64,%s" alt="Design %s" width="%d" height="%d">%s\n'
-            '        <div class="nums" style="grid-template-columns:%s">%s</div></div>' % (','.join(map(str, nums)), n, cattr, d, no, im.width, im.height, sold_html(cols, nums, sold), gtc, cells))
+        gtc = 'repeat(%d,1fr)' % n; cattr = ''
+    return ('<div class="photo" data-nums="%s" data-n="%d"%s><img src="data:image/jpeg;base64,%s" alt="Design %s" width="%d" height="%d">\n'
+            '        <div class="nums" style="grid-template-columns:%s">%s</div></div>' % (','.join(map(str, nums)), n, cattr, d, no, im.width, im.height, gtc, cells))
 
 # ---------- TRY-ON BUTTONS (12 Oct 2026, Abbas: "two processes — one where a customer takes a photo and tries on different dresses,
 # the second the video live part … I need both set up in the HTML"). Two buttons under the design's video. They appear only when the
@@ -312,7 +365,7 @@ def render(PAGE, CUSTOMER, CUSTOMER_SUB, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, V
     arts = []
     for no in ORDER:
         C = MODE[no] == 'C'
-        photos = ''.join('      ' + img_tag(im, nums, no, cols, sold) + '\n' for im, nums, cols, sold in PHOTOS[no])
+        photos = ''.join('      ' + img_tag(im, nums, no, cols) + '\n' for im, nums, cols in PHOTOS[no])
         vid = ('      <div class="vid"><video src="vid/%s.mp4" controls playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture></video></div>\n' % no) if no in VIDS else ''
         if C:
             head = ('      <div class="head"><div><div class="lbl">Design</div><div class="no">%s</div></div>'
