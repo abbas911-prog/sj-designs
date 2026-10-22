@@ -83,6 +83,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:10p
 .bi{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.55);display:grid;place-items:center;font-size:22px}
 .bt{min-width:0}
 .bt b{display:block;font-weight:700;font-size:15px;overflow-wrap:anywhere}
+.bt .nx{display:block;color:var(--on-pastel);opacity:.85;font-size:12.5px;margin-top:2px;overflow-wrap:anywhere}
 .bt small{font-size:12.5px;opacity:.78;font-variant-numeric:tabular-nums}
 .bar{height:4px;border-radius:4px;background:rgba(29,26,43,.12);margin-top:6px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--on-pastel);border-radius:4px}
@@ -253,19 +254,20 @@ const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorag
 
 /* ---------- state ---------- */
 let S=blank();
-function blank(){return{acts:[],todos:[],done:{},checks:{},stepAt:{},days:{},at:0}}
+function blank(){return{acts:[],todos:[],done:{},checks:{},stepAt:{},days:{},wa:[],at:0}}   // wa = WhatsApp follow-ups (21 Oct 2026, SJ Stock Today tab)
 function norm(d){
   const s=Object.assign(blank(),d||{});
   const items=a=>(a||[]).map(x=>typeof x==="string"?{t:x,m:0}:{t:String(x.t||""),m:+x.m||0}).filter(x=>x.t);
   s.acts=(s.acts||[]).map(a=>Object.assign({},a,{items:items(a.items),notes:a.notes||"",skip:a.skip||[]}));
   s.todos=(s.todos||[]).map(t=>Object.assign({dur:30,notes:""},t,{items:items(t.items)}));
+  s.wa=(s.wa||[]).filter(x=>x&&x.id);
   return s;
 }
 let sel=todayK(), tab="today", view="day";
 const IN_FRAME=window.parent!==window;
 const LS="timo-state";
 function local(){try{const j=localStorage.getItem(LS);if(j)return JSON.parse(j)}catch(e){}return null}
-function keepLocal(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+function keepLocal(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){} if(IN_FRAME){try{window.parent.postMessage({timo:"state"},"*")}catch(e){}}}
 
 /* ---------- sync: SJ Stock relay (owner phones) · artifact store · this device ---------- */
 const RELAY='https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';
@@ -398,7 +400,7 @@ function todayHTML(){
     if(!lineDone&&n<a.start){tl+=`<div class="row"><div class="nowline">${fmtT(Math.floor(n))}</div></div>`;lineDone=true}
     if(prevEnd!==null&&a.start-prevEnd>=15) tl+=`<div class="row"><div></div><div class="gap">${fmtD(a.start-prevEnd)} free</div></div>`;
     const dn=isDone(a.id,sel), on=stepsOn(a.id,sel).length, it=a.items.length, cur=running(a,sel)&&!dn;
-    tl+=`<div class="row"><div class="tm">${fmtT(a.start)}</div><button class="blk ${dn?"done":""} ${cur?"cur":""}" style="background:var(--p-${a.color})" data-open="${a.id}" type="button"><span class="bi">${esc(a.icon)}</span><span class="bt"><b>${esc(a.title)}${a.ex?'<span class="ex">example</span>':""}</b><small>${fmtT(a.start)}–${fmtT(a.start+a.dur)} · ${fmtD(a.dur)}${it?` · ☑ ${on}/${it}`:""}${a.repeat&&a.repeat!=="none"?" · ↻":""}${a.notes?" · ✎":""}</small>${it?`<span class="bar"><i style="width:${Math.round(on/it*100)}%"></i></span>`:""}</span><span class="chk ${dn?"on":""}" data-done="${a.id}" role="button" aria-label="Mark done">${dn?"✓":""}</span></button></div>`;
+    tl+=`<div class="row"><div class="tm">${fmtT(a.start)}</div><button class="blk ${dn?"done":""} ${cur?"cur":""}" style="background:var(--p-${a.color})" data-open="${a.id}" type="button"><span class="bi">${esc(a.icon)}</span><span class="bt"><b>${esc(a.title)}${a.ex?'<span class="ex">example</span>':""}</b><small>${fmtT(a.start)}–${fmtT(a.start+a.dur)} · ${fmtD(a.dur)}${it?` · ☑ ${on}/${it}`:""}${a.repeat&&a.repeat!=="none"?" · ↻":""}${a.notes?" · ✎":""}</small>${it&&!dn&&curStep(a,sel)>=0?`<small class="nx">▸ ${esc(a.items[curStep(a,sel)].t)}</small>`:""}${it?`<span class="bar"><i style="width:${Math.round(on/it*100)}%"></i></span>`:""}</span><span class="chk ${dn?"on":""}" data-done="${a.id}" role="button" aria-label="Mark done">${dn?"✓":""}</span></button></div>`;
     prevEnd=Math.max(prevEnd??0,a.start+a.dur);
   });
   if(!lineDone)tl+=`<div class="row"><div class="nowline">${fmtT(Math.floor(n))}</div></div>`;
@@ -566,14 +568,19 @@ function openSheet(a,pre){
       <div class="fld"><div class="l">Icon</div><div class="icons">${ICONS.map(i=>`<button type="button" data-ic="${i}" class="${i===f.icon?"on":""}">${i}</button>`).join("")}</div></div>
       <div class="fld"><div class="l">Colour</div><div class="sw">${COLORS.map(c=>`<button type="button" data-co="${c}" class="${c===f.color?"on":""}" style="background:var(--p-${c})" aria-label="${c}"></button>`).join("")}</div></div>
       <div class="two"><div class="fld"><label for="f-start">Starts</label><input id="f-start" type="time" value="${pad(Math.floor(f.start/60))}:${pad(f.start%60)}"></div>
-      <div class="fld"><label for="f-rep">Repeat</label><select id="f-rep">${REPEATS.map(([v,l])=>`<option value="${v}" ${v===f.repeat?"selected":""}>${l}</option>`).join("")}</select></div></div>
-      <div class="fld"><div class="l">How long</div><div class="chips">${DURS.map(d=>`<button type="button" data-du="${d}" class="${d===f.dur?"on":""}">${fmtD(d)}</button>`).join("")}</div></div>
+      <div class="fld"><label for="f-end">Ends</label><input id="f-end" type="time" value="${tHM(f.start+f.dur)}"></div></div>
+      <div class="fld"><div class="l">How long · ${fmtD(f.dur)}</div><div class="chips">${DURS.map(d=>`<button type="button" data-du="${d}" class="${d===f.dur?"on":""}">${fmtD(d)}</button>`).join("")}</div></div>
+      <div class="fld"><label for="f-rep">Repeat</label><select id="f-rep">${REPEATS.map(([v,l])=>`<option value="${v}" ${v===f.repeat?"selected":""}>${l}</option>`).join("")}</select></div>
       <div class="fld"><div class="l">Steps · each can have its own timer</div><div class="cl">${f.items.map((s,i)=>`<div class="it"><input id="f-it${i}" data-it="${i}" value="${esc(s.t)}"><select data-im="${i}" aria-label="Step timer">${stepOpts(s.m)}</select><button type="button" class="btn" data-rm="${i}" aria-label="Remove step">✕</button></div>`).join("")}<div class="it"><input id="f-new" placeholder="Add a step…" autocomplete="off"><select id="f-newm" aria-label="Step timer">${stepOpts(0)}</select><button type="button" class="btn" id="f-add">Add</button></div></div></div>
       <div class="fld"><label for="f-notes">Notes</label><textarea id="f-notes" placeholder="Optional">${esc(f.notes)}</textarea></div>
       <div class="sheetbar"><span></span><div style="display:flex;gap:8px"><button type="button" class="btn" id="f-cancel">Cancel</button><button type="submit" class="btn pri">Save</button></div></div>
     </form></div>`;
   };
-  const grab=()=>{f.title=$("f-title").value;const[hh,mm]=($("f-start").value||"09:00").split(":").map(Number);f.start=hh*60+mm;f.repeat=$("f-rep").value;f.notes=$("f-notes").value;
+  const tHM=m=>{m=((m%1440)+1440)%1440;return pad(Math.floor(m/60))+":"+pad(m%60)};
+  const grab=()=>{f.title=$("f-title").value;const[hh,mm]=($("f-start").value||"09:00").split(":").map(Number);const wasEnd=tHM(f.start+f.dur);f.start=hh*60+mm;
+    // 21 Oct 2026 (Abbas): an END time too - typed end → length follows; a length chip → end follows
+    const ev=$("f-end").value;if(ev&&ev!==wasEnd){const[eh,em]=ev.split(":").map(Number);let d=eh*60+em-f.start;if(d<=0)d+=1440;f.dur=Math.max(5,Math.min(1440,d))}
+    f.repeat=$("f-rep").value;f.notes=$("f-notes").value;
     f.items=[...L.querySelectorAll("[data-it]")].map((x,i)=>({t:x.value,m:+(L.querySelector(`[data-im="${i}"]`)||{}).value||0}));f._new=$("f-new").value;f._newm=+$("f-newm").value||0};
   draw();
   const close=()=>{L.innerHTML="";if(OPEN.task)drawTask();render()};
@@ -694,7 +701,19 @@ function openReview(k){
   };
 }
 
-window.addEventListener("message",e=>{if(e.data&&e.data.timo==="refresh")pull()});
+window.addEventListener("message",e=>{const m=e.data||{};if(m.timo==="refresh")return pull();if(m.timo!=="op")return;   // 21 Oct 2026: SJ Stock's Today tab drives Timo
+  const k=m.k||todayK();
+  if(m.op==="step")toggleStep(m.id,k,+m.i);
+  else if(m.op==="done")toggleDone(m.id,k);
+  else if(m.op==="open"){sel=k;tab="today";view="day";render();openTask(m.id)}
+  else if(m.op==="focus"){sel=k;tab="today";view="day";render();openFocus(m.id,k)}
+  else if(m.op==="new"){sel=todayK();tab="today";view="day";render();openSheet(null)}
+  else if(m.op==="wa"){S.wa=S.wa||[];
+    if(m.add&&(m.add.name||m.add.text))S.wa.unshift({id:uid(),name:String(m.add.name||"").slice(0,60),text:String(m.add.text||"").slice(0,300),at:Date.now(),done:false});
+    if(m.done)S.wa=S.wa.map(x=>x.id===m.done?Object.assign({},x,{done:!x.done,doneAt:Date.now()}):x);
+    if(m.rm)S.wa=S.wa.filter(x=>x.id!==m.rm);
+    S.wa=S.wa.filter(x=>!x.done||Date.now()-(x.doneAt||0)<7*864e5);changed();render()}
+});
 boot();
 })();
 </script>

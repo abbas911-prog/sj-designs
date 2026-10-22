@@ -99,6 +99,10 @@ when the right change is clear, do it, test it, commit it and report; ask only w
 
 - `memo.html` — **SJ Stock app** (the order memo), https://abbas911-prog.github.io/sj-designs/memo.html. **Bump its `var VER`
   on every change** (same `YYYY-MM-DDx` format). `timo.html` — Timo planner (owner phones, opened inside SJ Stock).
+  **Today tab** (owner phones, `isBoss`): `tdDraw` in memo.html reads Timo's day from `localStorage['timo-state']` (same origin) and sends every
+  change (`tdSend` → postMessage `{timo:'op', op:step|done|open|focus|new|wa}`) to the hidden Timo iframe (`tdEnsure`, one frame shared with
+  More → Timo), which owns the data and syncs it (relay job `timo`); Timo posts `{timo:'state'}` after every save → redraw. WhatsApp
+  follow-ups = `S.wa` typed by hand (no API for a normal number). Test: `node tests/t_today.js` (21).
 - relay jobs used by the apps: live, orders, vault, slackpdf/slackpdf2, dorder, cust, cash, cchat, bills, timo, fac, fastchk.
 - `tools/stock.py` (GitHub job memo-stock: Include & share takes pieces off Trello; op `retbill` puts a return bill's pieces back),
   `tools/catalog/*` (catalogue builder), `.github/workflows/*`.
@@ -202,3 +206,4 @@ Memo rules (his words, short):
 - 2026-10-21 (VER 2026-10-21l) Abbas: the dashboard is reached from a small 👷 Workers icon in the bottom bar (nothing else changed; More →
   Workers still works). Added: "Today · আজ: N pcs done by M workers" line and an amber "⚠ long" on a batch held 2+ work days. NEEDS: relay deploy.
 - 2026-10-21 (VER 2026-10-21m) Abbas: "what does this whole thing mean?" — worker row reads "⏱ 2 h since Wed 21 Oct 21:55 · 4 min work time · 5 pcs · given by Md ibrahimmiah" (month name, 'work time', 'given by'). No relay deploy.
+- 2026-10-22: memo 2026-10-21g — (Abbas: "a personal dashboard, just like an AI assistant in the app") **Today tab** (first tab, owner phones): counts (new chats, open orders, WhatsApp, blocks done); the running Timo block with ring, start → end, time left, its steps tickable right there, Focus / Open block; Needs you = chats with new lines (tap → that chat), open orders ranked (bill today / ready to send / waiting, tap → order), WhatsApp follow-ups typed by hand (synced through Timo's state); the day as colour blocks start → end. Timo: **Ends** time in the sheet (typed end → length; chip → end), each block row shows its next step, driven from the Today tab by postMessage. Tests: t_today (21); all memo tests green.

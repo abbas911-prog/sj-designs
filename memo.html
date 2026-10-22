@@ -478,13 +478,38 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
 #done{bottom:var(--navh);padding-bottom:24px;z-index:10}
 #done .in{padding-bottom:20px}
 #cc{bottom:var(--navh)}
-#mysheet .in,#ff .in,#ords .in,#dor .in,#sv .in,#cb .in,#cash .in,#more .in{padding-bottom:calc(var(--navh) + 20px)}
+#mysheet .in,#ff .in,#ords .in,#dor .in,#sv .in,#cb .in,#cash .in,#more .in,#today .in{padding-bottom:calc(var(--navh) + 20px)}
 #mode{position:sticky;top:0;z-index:2;box-shadow:0 6px 14px -8px rgba(40,30,15,.25)}
 /* more sheet */
 #timo[hidden]{display:none}
 #timo{position:fixed;inset:0;z-index:85;background:#F5F4FA}
 @media (prefers-color-scheme:dark){#timo{background:#13111B}}
 #timo iframe{border:0;width:100%;height:100%;display:block}
+/* TODAY tab (21 Oct 2026, Abbas: "a personal dashboard ... all the tasks in front of me") - owner phones only */
+#today[hidden]{display:none}
+#today{position:fixed;inset:0;z-index:55;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
+#today .in{background:var(--bg);width:100%;max-width:720px;border-radius:24px 24px 0 0;padding:16px 12px calc(var(--navh) + 20px);max-height:94vh;max-height:94dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#today .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#today .hd b{letter-spacing:.14em;color:var(--mute);font-size:13px}#today .hd button{border:0;background:none;font:inherit;font-size:15px;color:var(--gold);font-weight:700;margin-left:12px}
+#today .hd .pl{width:40px;height:40px;border-radius:13px;background:#fff;border:1px solid var(--line);font-size:24px;color:var(--ink);margin:0;display:flex;align-items:center;justify-content:center}
+.tdk{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.tdk button{border:1px solid var(--line);background:#fff;border-radius:14px;padding:10px 4px;text-align:center;font:inherit;color:var(--ink)}.tdk b{display:block;font-size:22px;line-height:1.1}.tdk small{font-size:11px;color:var(--mute)}
+.tdnow{background:#234C47;color:#F3F6F5;border-radius:22px;padding:16px;margin-bottom:12px}.tdnow.free{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.tdnow .h2{display:flex;gap:14px;align-items:center}.tdnow .ring{position:relative;width:64px;height:64px;flex:none}.tdnow .ring svg{width:64px;height:64px;transform:rotate(-90deg);display:block}.tdnow .ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px}
+.tdnow .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.8}.tdnow h2{margin:2px 0;font-size:20px;line-height:1.15}.tdnow .sub{font-size:13px;opacity:.85}
+.tdst{display:flex;flex-direction:column;gap:4px;margin:12px 0 4px}.tdst button{display:flex;align-items:center;gap:10px;border:0;background:none;color:inherit;font:inherit;font-size:14px;text-align:left;padding:5px 0;width:100%}.tdst button i{width:22px;height:22px;border-radius:50%;border:2px solid currentColor;box-sizing:border-box;flex:none;font-style:normal;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}.tdst button.on i{background:#F3F6F5;color:#234C47;border-color:#F3F6F5}.tdst button.on span{opacity:.7;text-decoration:line-through}
+.tdnow .acts{display:flex;gap:8px;margin-top:10px}.tdnow .acts button{flex:1;border:0;border-radius:12px;padding:12px;font:inherit;font-weight:800;font-size:15px}.tdnow .acts .pri{background:#F3F6F5;color:#234C47}.tdnow .acts .sec{background:rgba(255,255,255,.14);color:#F3F6F5}.tdnow.free .acts .pri{background:#234C47;color:#F3F6F5}.tdnow.free .acts .sec{background:var(--goldbg);color:var(--gold)}
+.tdsec{display:flex;align-items:baseline;justify-content:space-between;margin:14px 2px 8px}.tdsec b{font-size:16px}.tdsec small{color:var(--mute);font-size:12px}
+.tdbox{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:10px}
+.tdbox .h{display:flex;align-items:center;gap:10px;padding:12px 14px;font-weight:800;border-bottom:1px solid var(--line)}.tdbox .h span{flex:1}.tdbox .h small{font-weight:700;color:var(--gold);font-size:12px}.tdbox .h em{font-style:normal;font-size:18px}
+.tdr{display:flex;align-items:center;gap:10px;padding:10px 14px;border:0;border-top:1px solid #F0EBE3;width:100%;background:none;font:inherit;color:inherit;text-align:left}.tdr:first-of-type{border-top:0}
+.tdr .t{flex:1;min-width:0}.tdr .t b{display:block;font-size:14px}.tdr .t small{display:block;font-size:12.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tdr .n{font-size:11px;font-weight:800;color:#B4302E;flex:none}.tdr .tag{font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px;flex:none}.tag.g{color:#234C47;background:#E3F1EC}.tag.y{color:#7D5A11;background:#FBEFD9}.tag.r{color:#B4302E;background:#FBE4E2}
+.tdr .av{width:28px;height:28px;border-radius:50%;background:var(--goldbg);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex:none}
+.tdr i.chk{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box;flex:none;font-style:normal;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}.tdr.on i.chk{background:#234C47;border-color:#234C47}.tdr.on .t b{text-decoration:line-through;color:var(--mute)}
+.tdwa{display:flex;gap:6px;padding:10px 12px;border-top:1px solid #F0EBE3}.tdwa input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:14px;background:var(--bg)}.tdwa input:first-child{flex:.7}.tdwa button{border:0;border-radius:10px;background:var(--gold);color:#fff;font:inherit;font-weight:800;padding:0 14px}
+.tdnote{padding:8px 14px 10px;font-size:12px;color:var(--mute);border-top:1px solid #F0EBE3}
+.tdday{display:flex;flex-direction:column;gap:6px}.tdb{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:stretch}.tdb .tm{font-size:12px;color:var(--mute);text-align:right;padding-top:10px;line-height:1.3}.tdb.cur .tm{color:#B4302E;font-weight:800}
+.tdb button{border:0;border-radius:12px;padding:10px 12px;text-align:left;font:inherit;color:#1D1A2B}.tdb button b{display:block;font-size:14px}.tdb button small{font-size:12px}.tdb.done button{opacity:.6}.tdb.done button b{text-decoration:line-through}.tdb.cur button{outline:2px solid #234C47;outline-offset:-2px}
+.tdempty{padding:14px;text-align:center;color:var(--mute);font-size:13.5px}
 #more[hidden]{display:none}
 #more{position:fixed;inset:0;z-index:50;background:rgba(28,26,23,.45);display:flex;align-items:flex-end;justify-content:center}
 #more .in{background:var(--bg);width:100%;max-width:720px;border-radius:24px 24px 0 0;padding:16px 14px;max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -599,8 +624,9 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
 <div id="ords" hidden><div class="in"><div class="hd"><b>ORDERS · الطلبات</b><span><button type="button" id="ordre">↻</button><button type="button" id="ordx">Close</button></span></div><div class="otabs"><button type="button" data-o="open" class="on">Open</button><button type="button" data-o="done">Complete</button></div><div id="ordbody"></div></div></div>
 <div id="cc" hidden><div class="chd"><button type="button" id="ccback">‹ Back</button><b id="cct">Customers · العملاء</b><button type="button" id="ccbell" title="Notifications">🔔</button><button type="button" id="ccre">↻</button></div><div id="cccu" hidden></div><div id="ccbody"></div><div id="ccpend"></div>
 <div id="cccomp" hidden><button type="button" id="ccmic" title="voice note">🎤</button><label title="photo / video">📷<input type="file" id="cccam" accept="image/*,video/*" capture="environment" hidden></label><label title="files, photos, videos">📎<input type="file" id="ccfile" accept="image/*,video/*,audio/*,.pdf" multiple hidden></label><button type="button" id="ccpaste" title="paste">📋</button><textarea id="cctxt" rows="1" placeholder="Write… · اكتب"></textarea><button type="button" id="ccsend">Send</button></div></div>
-<nav id="nav"><button type="button" data-nv="stock" class="on"><em>🧵</em>Stock</button><button type="button" data-nv="memo"><em>🧾</em>Memo<i id="nvm"></i></button><button type="button" data-nv="chats"><em>💬</em>Chats<i id="nvc"></i></button><button type="button" data-nv="orders"><em>📦</em>Orders<i id="nvo"></i></button><button type="button" data-nv="more"><em>☰</em>More</button></nav>
+<nav id="nav"><button type="button" data-nv="today" id="nvtoday" hidden><em>◉</em>Today<i id="nvt"></i></button><button type="button" data-nv="stock" class="on"><em>🧵</em>Stock</button><button type="button" data-nv="memo"><em>🧾</em>Memo<i id="nvm"></i></button><button type="button" data-nv="chats"><em>💬</em>Chats<i id="nvc"></i></button><button type="button" data-nv="orders"><em>📦</em>Orders<i id="nvo"></i></button><button type="button" data-nv="more"><em>☰</em>More</button></nav>
 <div id="timo" hidden></div><button type="button" id="timoopen" hidden>Timo</button>
+<div id="today" hidden><div class="in"><div class="hd"><b id="tdtitle">TODAY · اليوم</b><span><button type="button" class="pl" id="tdnew" aria-label="New block · كتلة جديدة">+</button></span></div><div id="tdbody"></div></div></div>
 <div id="more" hidden><div class="in"><div class="hd"><b>MORE · المزيد</b><button type="button" id="morex">Close</button></div><div id="morebody"></div></div></div>
 <div id="toast" hidden></div>
 <div id="bar" class="empty"><div class="in"><div id="sum">Nothing selected yet<span class="ar">لم تختر شيئًا بعد</span></div><button id="clr" type="button" hidden>clear</button><button id="ordbtn" type="button">Orders<small>الطلبات</small><i id="ordn"></i></button><button id="bills" type="button">Bills<small>فواتير</small></button><button id="drbtn" type="button">Memo<small>drafts</small></button><button id="ok" type="button" disabled>OK</button></div></div>
@@ -885,7 +911,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-21f';
+var VER = '2026-10-21g';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1758,7 +1784,7 @@ $('szc').addEventListener('click', async function(e){ var b = e.target.closest('
 var CAT = { items: [], modes: {}, busy: false };
 function isOwner(){ return ls('sj_owner') === '1'; }
 function isBoss(){ return isOwner() && !!COST && !!pinGet(); }   // 10 Oct 2026 (Abbas): staff phones with the catalogue on must NOT see 50-50 or cost check
-function ownerUI(){ var o = isOwner(), bo = isBoss(); $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('doropen').hidden = !bo; if (!bo && $('dor')) $('dor').hidden = true; $('svopen').hidden = !o; $('cbopen').hidden = !o; $('cashopen').hidden = !bo; if (!bo && $('cash')) $('cash').hidden = true; if (!o && $('cb')) $('cb').hidden = true; if (!o && $('sv')) $('sv').hidden = true; /* 11 Oct 2026: his employee (catalogue + star on) uses both */ $('clk').hidden = !bo; $('fpw').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
+function ownerUI(){ var o = isOwner(), bo = isBoss(); if ($('nvtoday')) $('nvtoday').hidden = !bo; if (!bo && $('today') && !$('today').hidden) $('today').hidden = true; $('catbtn').hidden = !o; $('mybtn').hidden = !o; $('ffbtn').hidden = !bo; $('ffopen').hidden = !bo; $('doropen').hidden = !bo; if (!bo && $('dor')) $('dor').hidden = true; $('svopen').hidden = !o; $('cbopen').hidden = !o; $('cashopen').hidden = !bo; if (!bo && $('cash')) $('cash').hidden = true; if (!o && $('cb')) $('cb').hidden = true; if (!o && $('sv')) $('sv').hidden = true; /* 11 Oct 2026: his employee (catalogue + star on) uses both */ $('clk').hidden = !bo; $('fpw').hidden = !bo; document.querySelector('#mode button[data-m="cat"]').hidden = !o; if (!bo && !$('ff').hidden) $('ff').hidden = true; }
 (function(){ var t = null, el = $('ttl');                       // press and hold the title for 2 s to switch the catalogue on/off on this phone
   function start(){ t = setTimeout(function(){ ls('sj_owner', isOwner() ? '0' : '1'); ownerUI(); var p = $('pst'); p.className = ''; p.textContent = isOwner() ? 'Catalogue switched ON for this phone · تم تفعيل الكتالوج' : 'Catalogue switched off for this phone'; setTimeout(function(){ p.textContent = ''; showPst(); }, 4000); }, 2000); }
   function stop(){ clearTimeout(t); }
@@ -2450,7 +2476,7 @@ function ordDone(o){ var s = o.steps || {}; return OKEYS.every(function(k){ retu
 function ordStage(o){ var s = o.steps || {}; return (s.s1 ? 1 : 0) + (s.s2 ? 1 : 0) + (s.s3 ? 1 : 0) + (OSUB.every(function(x){ return s[x[0]]; }) ? 1 : 0); }
 function ordNext(o){ var s = o.steps || {}; for (var i = 0; i < OSTEPS.length; i++) if (!s[OSTEPS[i][0]]) return OSTEPS[i][1]; var left = OSUB.filter(function(x){ return !s[x[0]]; }); return left.length ? left.map(function(x){ return x[1]; }).join(', ') : ''; }
 function ordWhen(t){ var d = new Date(t), h = d.getHours(), m = d.getMinutes(); return d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' · ' + ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' am' : ' pm'); }
-function ordBadge(){ var n = (ORD.list || []).filter(function(o){ return !ordDone(o); }).length; $('ordn').textContent = n ? String(n) : ''; if ($('nvo')) $('nvo').textContent = n ? String(n) : ''; }
+function ordBadge(){ if (typeof tdPoke === 'function') tdPoke(); var n = (ORD.list || []).filter(function(o){ return !ordDone(o); }).length; $('ordn').textContent = n ? String(n) : ''; if ($('nvo')) $('nvo').textContent = n ? String(n) : ''; }
 function ordRow(o, k, en, ar, sub){
   var st = (o.steps || {})[k];
   return '<button type="button" class="ock' + (st ? ' on' : '') + (sub ? ' sub' : '') + '" data-ok="' + k + '" data-oid="' + esc(o.id) + '"><i>' + (st ? '✓' : '') + '</i><span><b>' + en + '</b><small class="ar">' + ar + '</small>' +
@@ -3337,7 +3363,7 @@ async function ccPrefetch(){ if (PF.busy || !token || !RELAY || document.hidden)
   try { for (var i = 0; i < want.length; i++) { var w = want[i]; PF.done[w.k] = w.last;
     try { var j = await ccCall(Object.assign({ op: 'thread', fresh: 0, look: 0 }, w.req), 1); if (j.ok && Array.isArray(j.msgs)) { delete CC.mc[w.k]; CC.mc[w.k] = j.msgs; cKeepMc(); if (ccCurK() === w.k && !CC.busyK) { CC.msgs = j.msgs.slice(); CC.sig = JSON.stringify(j.msgs.map(function(m){ return m.ts; })); ccDraw(); } } } catch(e){} } }
   finally { PF.busy = false; } }
-function ccBadge(){ var n = CC.tot; if ($('nvc')) $('nvc').textContent = n ? String(n) : ''; document.title = (n ? '(' + n + ') ' : '') + 'SJ Stock'; try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else if (navigator.clearAppBadge) navigator.clearAppBadge(); } } catch(e){} }
+function ccBadge(){ if (typeof tdPoke === 'function') tdPoke(); var n = CC.tot; if ($('nvc')) $('nvc').textContent = n ? String(n) : ''; document.title = (n ? '(' + n + ') ' : '') + 'SJ Stock'; try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else if (navigator.clearAppBadge) navigator.clearAppBadge(); } } catch(e){} }
 async function ccPoll(force){ if (!token || !RELAY) return; if (document.hidden && !force) return; if (CC.polling) return; CC.polling = true;
   try { var j = await ccCall({ op: ($('cc').hidden || CC.cur) ? 'ping' : 'list', fresh: force && !CC.cur ? 1 : 0, groots: ordRoots() }, 1); if (j.ok) ccApply(j); else if (!$('cc').hidden) { CC.err = j.error; if (!CC.cur) ccDrawList(); } }
   catch(e){ if (!$('cc').hidden && !CC.list) { CC.err = e.message; if (!CC.cur) ccDrawList(); } }
@@ -3650,10 +3676,11 @@ function drDone(type){ if (!DR.cur || DR.cur.type !== type) return; var ref = DR
 // WhatsApp: Stock · Memo · Chats · Orders · More. Every old button still exists (hidden) and is pressed by the bar, so nothing underneath changed.
 function uiToast(msg){ var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(uiToast.t); uiToast.t = setTimeout(function(){ t.hidden = true; }, 2600); }
 function navMemo(nd, nc){ if ($('nvm')) $('nvm').textContent = nd ? String(nd) : ''; $('bar').classList.toggle('empty', !nc); }
-function navCloseAll(){ ['done', 'cc', 'ords', 'drs', 'more', 'mysheet', 'ff', 'dor', 'cash', 'cb', 'sv'].forEach(function(id){ var e = $(id); if (e && !e.hidden) e.hidden = true; }); clearInterval(CC.timer); if (CC.cu) { CC.cu = null; $('cccu').hidden = true; } }
-function navSync(){ var t = !$('cc').hidden ? 'chats' : !$('ords').hidden ? 'orders' : !$('done').hidden ? 'memo' : !$('more').hidden ? 'more' : 'stock'; document.querySelectorAll('#nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.nv === t); }); }
+function navCloseAll(){ ['done', 'cc', 'ords', 'drs', 'more', 'today', 'mysheet', 'ff', 'dor', 'cash', 'cb', 'sv'].forEach(function(id){ var e = $(id); if (e && !e.hidden) e.hidden = true; }); clearInterval(CC.timer); if (CC.cu) { CC.cu = null; $('cccu').hidden = true; } }
+function navSync(){ var t = !$('today').hidden ? 'today' : !$('cc').hidden ? 'chats' : !$('ords').hidden ? 'orders' : !$('done').hidden ? 'memo' : !$('more').hidden ? 'more' : 'stock'; document.querySelectorAll('#nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.nv === t); }); }
 function navGo(t){
-  if (t === 'stock') { navCloseAll(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  if (t === 'today') { if ($('today').hidden) { navCloseAll(); tdOpen(); } }
+  else if (t === 'stock') { navCloseAll(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   else if (t === 'memo') { if ($('ok').disabled && !Object.keys(state).length) { navCloseAll(); uiToast('Pick colours on the Stock tab first, then press OK · اختر الألوان أولاً'); $('q').focus(); } else if ($('done').hidden || B.mode !== 'memo') { navCloseAll(); $('ok').click(); } }
   else if (t === 'chats') { if ($('cc').hidden) { navCloseAll(); $('ccbtn').click(); } }
   else if (t === 'orders') { if ($('ords').hidden) { navCloseAll(); $('ordbtn').click(); } }
@@ -3667,11 +3694,95 @@ new MutationObserver(navSync).observe(document.body, { attributes: true, subtree
 // His own Tiimo-style planner lives in timo.html (same site, so it reads this phone's owner password and relay set-up and syncs through the
 // relay 'timo' job). Opened full screen inside the app; its "‹ SJ Stock" button closes it. Owner phones only (isBoss).
 function openTimo(){ if (!isBoss()) { uiToast('Timo is on owner phones only'); return; } var w = $('timo');
-  if (!w.firstChild) w.innerHTML = '<iframe src="timo.html?v=' + VER + '" title="Timo" allow="screen-wake-lock; autoplay"></iframe>';
-  else { try { w.firstChild.contentWindow.postMessage({ timo: 'refresh' }, '*'); } catch(e){} }
+  if (w.firstChild) { try { w.firstChild.contentWindow.postMessage({ timo: 'refresh' }, '*'); } catch(e){} } else tdEnsure();   // one frame, made by tdEnsure (Today tab shares it)
   w.hidden = false; }
 $('timoopen').onclick = openTimo;
-window.addEventListener('message', function(e){ if (e.data && e.data.timo === 'close') $('timo').hidden = true; });
+window.addEventListener('message', function(e){ if (!e.data) return; if (e.data.timo === 'close') { $('timo').hidden = true; if (!$('today').hidden) tdDraw(); } if (e.data.timo === 'state' && !$('today').hidden) tdDraw(); });
+// ===== TODAY tab (21 Oct 2026, Abbas: "a personal dashboard, just like an AI assistant in the app ... at that specific time which is going on,
+// I can have all the tasks in front of me"). Owner phones only (isBoss). Reads Timo's day straight from this phone (timo-state in localStorage,
+// kept in sync by timo.html through the relay); every change (tick a step, done, WhatsApp follow-ups) goes to the hidden Timo frame, which
+// owns the data and syncs it - one owner, no two copies. Chats = CC.un (the unread box), orders = ORD.list, WhatsApp = S.wa typed by hand
+// (a normal WhatsApp number cannot be read by any app; the Business API can come later).
+var TD = { timer: null, tick: null, now: null };
+function tdState(){ try { var j = JSON.parse(localStorage.getItem('timo-state') || 'null'); if (j && typeof j === 'object') return j; } catch(e){} return { acts: [], done: {}, checks: {}, wa: [] }; }
+function tdK(d){ d = d || new Date(); return d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1) + '-' + (d.getDate() < 10 ? '0' : '') + d.getDate(); }
+function tdOccurs(a, k){ if ((a.skip || []).indexOf(k) >= 0) return false; if (!a.repeat || a.repeat === 'none') return a.date === k; if (k < a.date) return false;
+  var p = k.split('-'), wd = new Date(+p[0], +p[1] - 1, +p[2]).getDay(); if (a.repeat === 'daily') return true; if (a.repeat === 'weekdays') return wd >= 1 && wd <= 5;
+  if (a.repeat === 'weekly') { var q = a.date.split('-'); return wd === new Date(+q[0], +q[1] - 1, +q[2]).getDay(); } return false; }
+function tdNowMin(){ var d = new Date(); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; }
+function tdT(m){ m = ((Math.round(m) % 1440) + 1440) % 1440; var h = Math.floor(m / 60), mm = m % 60, ap = h < 12 ? ' am' : ' pm'; h = h % 12 || 12; return h + ':' + (mm < 10 ? '0' : '') + mm + ap; }
+function tdD(m){ m = Math.max(0, Math.round(m)); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : ''); }
+function tdS(sec){ sec = Math.max(0, Math.round(sec)); var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60; return (h ? h + ':' + (m < 10 ? '0' : '') + m : m) + ':' + (x < 10 ? '0' : '') + x; }
+function tdDay(S, k){ return (S.acts || []).filter(function(a){ return tdOccurs(a, k); }).sort(function(x, y){ return x.start - y.start; }); }
+function tdEnsure(){ var w = $('timo'); if (!w.firstChild) { w.innerHTML = '<iframe src="timo.html?v=' + VER + '" title="Timo" allow="screen-wake-lock; autoplay"></iframe>'; TD.q = []; TD.ready = false;
+    w.firstChild.addEventListener('load', function(){ TD.ready = true; var f = w.firstChild; (TD.q || []).forEach(function(m){ try { f.contentWindow.postMessage(m, '*'); } catch(e){} }); TD.q = []; }); } return w.firstChild; }
+function tdSend(m){ var f = tdEnsure(); m.timo = 'op'; if (TD.ready) { try { f.contentWindow.postMessage(m, '*'); } catch(e){} } else (TD.q = TD.q || []).push(m); }
+function tdShowTimo(){ tdEnsure(); $('timo').hidden = false; }
+function tdOpen(){ if (!isBoss()) { uiToast('Today is on owner phones only'); return; } $('today').hidden = false; tdEnsure(); tdDraw();
+  if (!ORD.list || ORD.cached) ordLoad().then(function(){ if (!$('today').hidden) tdDraw(); }).catch(function(){});
+  clearInterval(TD.timer); TD.timer = setInterval(function(){ if ($('today').hidden) { clearInterval(TD.timer); return; } if (!document.hidden) tdDraw(); }, 20000);
+  clearInterval(TD.tick); TD.tick = setInterval(function(){ if ($('today').hidden) { clearInterval(TD.tick); return; } var el = $('tdleft'); if (el && TD.now) el.textContent = tdS((TD.now.start + TD.now.dur - tdNowMin()) * 60); }, 1000); }
+function tdRing(frac){ var c = 2 * Math.PI * 27; return '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="7"/><circle cx="32" cy="32" r="27" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + (c * (1 - Math.max(0, Math.min(1, frac)))) + '"/></svg>'; }
+var TDCOL = { peach: '#FFD3B8', mint: '#BDEBD3', sky: '#C2DEFF', lilac: '#DCCFFF', butter: '#FFE9A6', rose: '#FFC9D6', sage: '#D5E2C4', stone: '#E2DED6' };
+function tdSig(){ return (CC.tot || 0) + '|' + Object.keys(CC.un || {}).join(',') + '|' + (ORD.list || []).map(function(o){ return o.id + ':' + Object.keys(o.steps || {}).filter(function(k){ return (o.steps || {})[k]; }).join(''); }).join(','); }
+function tdPoke(){ if ($('today').hidden) return; var g = tdSig(); if (g !== TD.sig) tdDraw(); }
+function tdDraw(){ TD.sig = tdSig();
+  var S = tdState(), k = tdK(), n = tdNowMin(), list = tdDay(S, k), isDone = function(a){ return !!(S.done || {})[a.id + '@' + k]; }, ticks = function(a){ return (S.checks || {})[a.id + '@' + k] || []; };
+  var cur = list.filter(function(a){ return n >= a.start && n < a.start + a.dur && !isDone(a); })[0] || null, next = list.filter(function(a){ return a.start > n && !isDone(a); })[0] || null;
+  TD.now = cur;
+  var open = (ORD.list || []).filter(function(o){ return !ordDone(o); }), unk = Object.keys(CC.un || {}), wa = (S.wa || []).filter(function(x){ return !x.done; }), done = list.filter(isDone).length;
+  var d = new Date(), h = '';
+  $('tdtitle').textContent = 'TODAY · ' + d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase() + ' · ' + tdT(Math.floor(n));
+  h += '<div class="tdk"><button type="button" data-tdgo="chats"><b>' + (CC.tot || 0) + '</b><small>new chats</small></button><button type="button" data-tdgo="orders"><b>' + open.length + '</b><small>orders open</small></button><button type="button" data-tdgo="wa"><b>' + wa.length + '</b><small>WhatsApp</small></button><button type="button" data-tdgo="day"><b>' + done + '/' + list.length + '</b><small>blocks done</small></button></div>';
+  if (cur) { var ci = cur.items.findIndex(function(_, j){ return ticks(cur).indexOf(j) < 0; }), tk = ticks(cur);
+    h += '<div class="tdnow"><div class="h2"><div class="ring">' + tdRing(1 - (n - cur.start) / cur.dur) + '<b id="tdleft">' + tdS((cur.start + cur.dur - n) * 60) + '</b></div><div style="flex:1;min-width:0"><div class="lbl">Now · الآن</div><h2>' + esc(cur.icon || '') + ' ' + esc(cur.title) + '</h2><div class="sub">' + tdT(cur.start) + ' → ' + tdT(cur.start + cur.dur) + ' · ' + tdD(cur.start + cur.dur - n) + ' left</div></div></div>';
+    if (cur.items.length) h += '<div class="tdst">' + cur.items.map(function(st, i){ var on = tk.indexOf(i) >= 0; return '<button type="button" class="' + (on ? 'on' : '') + '" data-tdstep="' + i + '"><i>' + (on ? '✓' : (i === ci ? '▶' : '')) + '</i><span>' + esc(st.t) + (st.m ? ' · ' + st.m + ' min' : '') + '</span></button>'; }).join('') + '</div>';
+    h += '<div class="acts"><button type="button" class="pri" data-tdfocus="' + esc(cur.id) + '">▶ Focus · تركيز</button><button type="button" class="sec" data-tdopen="' + esc(cur.id) + '">Open block</button></div></div>'; }
+  else if (next) h += '<div class="tdnow free"><div class="h2"><div style="flex:1"><div class="lbl">Free time · next up in ' + tdD(next.start - n) + '</div><h2>' + esc(next.icon || '') + ' ' + esc(next.title) + '</h2><div class="sub">' + tdT(next.start) + ' → ' + tdT(next.start + next.dur) + (next.items.length ? ' · ' + next.items.length + ' steps' : '') + '</div></div></div><div class="acts"><button type="button" class="pri" data-tdfocus="' + esc(next.id) + '">▶ Start it now</button><button type="button" class="sec" data-tdopen="' + esc(next.id) + '">Open block</button></div></div>';
+  else h += '<div class="tdnow free"><div class="h2"><div style="flex:1"><div class="lbl">' + (list.length ? 'Day done · انتهى اليوم' : 'Nothing planned · لا شيء مخطط') + '</div><h2>' + (list.length ? 'All blocks finished ✓' : 'Plan your day') + '</h2><div class="sub">' + (list.length ? 'Tap + to add one more block' : 'Tap + · a block has a start, an end and its steps') + '</div></div></div><div class="acts"><button type="button" class="pri" id="tdnew2">+ New block · كتلة جديدة</button></div></div>';
+  h += '<div class="tdsec"><b>Needs you · يحتاجك</b><small>tap a line to open it</small></div>';
+  // chats with new lines (the same box the Chats tab shows)
+  h += '<div class="tdbox"><div class="h"><em>💬</em><span>Chats · ' + (CC.tot ? CC.tot + ' new' : 'nothing new') + '</span><small data-tdgo="chats">Chats tab ›</small></div>';
+  if (!unk.length) h += '<div class="tdempty">No new messages · لا رسائل جديدة</div>';
+  else h += unk.slice(0, 6).map(function(key){ var u = CC.un[key]; return '<button type="button" class="tdr" data-tdchat="' + esc(key) + '"><div class="av">' + (u.ch === 'godown' ? '📦' : esc((u.name || '?').charAt(0).toUpperCase())) + '</div><div class="t"><b>' + esc(u.name) + (u.ch === 'godown' ? ' · godown' : u.root ? ' · order' : '') + '</b><small>' + esc(u.tx || 'new message') + '</small></div><span class="n">' + u.n + ' new</span></button>'; }).join('') + (unk.length > 6 ? '<div class="tdnote">+ ' + (unk.length - 6) + ' more in the Chats tab</div>' : '');
+  h += '</div>';
+  // open orders, the most urgent first: bill still to make → send → waiting for the godown
+  var rank = function(o){ var st = o.steps || {}; return st.s3 && !st.bill ? 0 : st.bill && !st.sent ? 1 : 2; };
+  var ords = open.slice().sort(function(a, b){ return rank(a) - rank(b) || (a.created || 0) - (b.created || 0); });
+  h += '<div class="tdbox"><div class="h"><em>📦</em><span>Orders · ' + open.length + ' open</span><small data-tdgo="orders">Orders tab ›</small></div>';
+  if (!ORD.list) h += '<div class="tdempty">Loading orders…</div>';
+  else if (!open.length) h += '<div class="tdempty">No open orders · لا طلبات مفتوحة</div>';
+  else h += ords.slice(0, 6).map(function(o){ var st = o.steps || {}, r = rank(o), age = Math.floor((Date.now() - (o.created || Date.now())) / 864e5);
+    var tag = r === 0 ? '<span class="tag y">bill today</span>' : r === 1 ? '<span class="tag g">ready to send</span>' : '<span class="tag r">' + (age ? age + ' d waiting' : 'waiting') + '</span>';
+    var line = ['s1', 's2', 's3'].map(function(x, i){ return ['Memo', 'Arrived', 'Packed'][i] + (st[x] ? ' ✓' : ' ✗'); }).concat(['Bill' + (st.bill ? ' ✓' : ' ✗'), 'Sent' + (st.sent ? ' ✓' : ' ✗')]).join(' · ');
+    return '<button type="button" class="tdr" data-tdord="' + esc(o.id) + '"><div class="t"><b>' + esc(o.name || 'No name') + ' · ' + (o.items || []).length + ' designs · ' + (o.pcs || 0) + ' pcs</b><small>' + line + '</small></div>' + tag + '</button>'; }).join('') + (ords.length > 6 ? '<div class="tdnote">+ ' + (ords.length - 6) + ' more in the Orders tab</div>' : '');
+  h += '</div>';
+  // WhatsApp follow-ups, typed by hand (kept in Timo's state → synced to the other owner phone)
+  h += '<div class="tdbox" id="tdwa"><div class="h"><em>🟢</em><span>WhatsApp · ' + (wa.length ? wa.length + ' waiting' : 'nothing waiting') + '</span><small>follow-ups</small></div>';
+  h += wa.slice(0, 8).map(function(x){ return '<button type="button" class="tdr" data-tdwa="' + esc(x.id) + '"><i class="chk"></i><div class="t"><b>' + esc(x.name || 'WhatsApp') + '</b><small>' + esc(x.text || '') + '</small></div><small style="color:var(--mute);font-size:11px;flex:none">' + tdT(Math.floor((new Date(x.at).getHours() * 60 + new Date(x.at).getMinutes()))) + '</small></button>'; }).join('');
+  h += '<form class="tdwa" id="tdwaf"><input id="tdwan" placeholder="Who · من" autocomplete="off" maxlength="60"><input id="tdwat" placeholder="What to answer / send · ماذا" autocomplete="off" maxlength="300"><button type="submit">Add</button></form>';
+  h += '<div class="tdnote">Typed by you: WhatsApp does not let apps read a normal number. Tick a line when it is answered.</div></div>';
+  // the day as blocks, start → end
+  h += '<div class="tdsec"><b>The day · اليوم</b><small>' + (list.length ? done + ' of ' + list.length + ' done' : '') + '</small></div><div class="tdday">';
+  if (!list.length) h += '<div class="tdempty">Nothing planned yet · tap + above</div>';
+  list.forEach(function(a){ var dn = isDone(a), isCur = cur && cur.id === a.id, tk = ticks(a), ci = a.items.findIndex(function(_, j){ return tk.indexOf(j) < 0; });
+    h += '<div class="tdb' + (dn ? ' done' : '') + (isCur ? ' cur' : '') + '"><div class="tm">' + tdT(a.start).replace(' ', '&nbsp;') + '<br>' + tdT(a.start + a.dur).replace(' ', '&nbsp;') + '</div><button type="button" style="background:' + (TDCOL[a.color] || '#E2DED6') + '" data-tdopen="' + esc(a.id) + '"><b>' + esc(a.icon || '') + ' ' + esc(a.title) + (isCur ? ' · now' : '') + '</b><small>' + tdD(a.dur) + (a.items.length ? ' · ☑ ' + tk.length + '/' + a.items.length + (!dn && ci >= 0 ? ' · ▸ ' + esc(a.items[ci].t) : '') : '') + (dn ? ' · done ✓' : '') + '</small></button></div>'; });
+  h += '</div>';
+  $('tdbody').innerHTML = h;
+}
+$('tdnew').onclick = function(){ tdSend({ op: 'new' }); tdShowTimo(); };
+$('tdbody').onclick = function(e){
+  var go = e.target.closest('[data-tdgo]'); if (go) { var t = go.dataset.tdgo; if (t === 'chats' || t === 'orders') { navGo(t); return; } var el = $(t === 'wa' ? 'tdwa' : 'tdbody'); if (t === 'day') el = $('tdbody').querySelector('.tdday'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  var b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'tdnew2') { $('tdnew').click(); return; }
+  if (b.dataset.tdstep != null && TD.now) { tdSend({ op: 'step', id: TD.now.id, i: +b.dataset.tdstep }); b.classList.toggle('on'); return; }
+  if (b.dataset.tdfocus) { tdSend({ op: 'focus', id: b.dataset.tdfocus }); tdShowTimo(); return; }
+  if (b.dataset.tdopen) { tdSend({ op: 'open', id: b.dataset.tdopen }); tdShowTimo(); return; }
+  if (b.dataset.tdchat) { var key = b.dataset.tdchat, u = CC.un[key]; if (!u) return; navCloseAll(); $('cc').hidden = false; CC.touched = Date.now(); if (u.oid) { CC.from = 'today'; ordChat(u.oid, u.ch === 'godown' ? 'g' : 'c'); } else ccChat(u.name, u.root || ''); navSync(); return; }
+  if (b.dataset.tdord) { var o = (ORD.list || []).filter(function(x){ return x.id === b.dataset.tdord; })[0]; if (o) { ccOpenOrder(o); navSync(); } return; }
+  if (b.dataset.tdwa) { tdSend({ op: 'wa', done: b.dataset.tdwa }); b.classList.toggle('on'); return; }
+};
+$('tdbody').addEventListener('submit', function(e){ if (e.target.id !== 'tdwaf') return; e.preventDefault(); var nm = $('tdwan').value.trim(), tx = $('tdwat').value.trim(); if (!nm && !tx) return; tdSend({ op: 'wa', add: { name: nm, text: tx } }); $('tdwan').value = ''; $('tdwat').value = ''; $('tdwan').focus(); });
 function moreDraw(){ var o = isOwner(), bo = isBoss(), nm = me();
   var it = [
     { id: 'bills', t: 'Bills · فواتير', s: 'invoice · receipt voucher · payment voucher · return', i: '🧾', on: true },
