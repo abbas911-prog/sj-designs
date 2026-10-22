@@ -21,7 +21,7 @@
 1. Push app changes straight to `main` (Pages serves `main`). **Bump `var VER` in factory.html on every change**
    (format `YYYY-MM-DDx`, e.g. `2026-10-20a` → `2026-10-20b`) — phones check it every 5 min (`checkVer`) and reload themselves.
 2. relay.gs: always start from the **newest copy in the repo**, never an old one. List every `function` before and after an
-   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 183 on 22 Oct 2026).
+   edit and make sure none disappeared (`grep -o "^function [A-Za-z0-9_]*" tools/relay.gs | sort`; 184 on 22 Oct 2026).
    Abbas deploys it himself (Apps Script editor → paste → Save → Deploy → New version) — tell him when a relay deploy is needed.
    **Never ask him to open Script properties**; any new setting is set from inside the app (an op that stores it, like `fastset`).
 3. **Never put tokens, passwords, costs or prices in any file** — the repo is public. Secrets live only in Script properties /
@@ -68,7 +68,8 @@ per-person topic `FNTFY`, sent by `facNotifyScan` (on Slack events + 1-min timer
 **Work per worker** (21 Oct 2026): the machine workers = the "W - Name" people of the AL MUTAGADED GARMENTS Google Sheet (NOT the Trello
 worker fields `DOX.TEN` — those are Usman hand-work's people). Kept on the relay as `FAC_WORKERS` (`facWorkers`; default list in
 `FAC_WORKERS_DEFAULT`), changed from the app: More → Workers → ✏️ Edit the list (`op:workers`).
-Pieces per day = per WORK day (`facWorkMs`: Dubai time, Sat–Thu 08:00–22:00 = 14 h = 1 day, Friday 08:00–12:00; nights count 0).
+Pieces per day = per WORK day (`facWorkMs`: Dubai time, Sat–Thu 08:00–22:00 minus the breaks 09:00–09:20, 13:00–14:00, 19:00–19:20
+= 12 h 20 min = 1 day (`WORK_BREAKS`, `WORK_DAY_MS`), Friday 08:00–12:00; nights and breaks count 0). Clock hours (`facAttHours` → `facNetMs`) also skip the breaks.
 Card screen "👷 WORK": one row per worker, pieces box + ▶ Give / ✓ Done. `op:workset` writes a Trello comment ("👷 IN · NAME · 20 pcs · who
 (factory app)" / "👷 OUT · … · 1 d 2 h · …"), a chat line "→ *WORK* · who · NAME ← 20 pcs given", and the worker's Trello field ("18 ✓").
 No script properties: `op:work` reads the batches back from the card's comments (`facActs` → `facWkParse`); `op:workrep` sums the board's
@@ -224,6 +225,7 @@ Memo rules (his words, short):
 - 2026-10-21 (VER 2026-10-21l) Abbas: the dashboard is reached from a small 👷 Workers icon in the bottom bar (nothing else changed; More →
   Workers still works). Added: "Today · আজ: N pcs done by M workers" line and an amber "⚠ long" on a batch held 2+ work days. NEEDS: relay deploy.
 - 2026-10-22: Abbas: "the app is laggy, no messages, no workers list" — checked from here: the relay was alive (Ibrahim's gives/moves at 08:43–10:17), the site serves the newest version, the owner path costs ≈6 Slack calls per check; could not reach the live relay/site from the container (network policy). Asked for the "Last requests · speed" screenshot (tap the status line). Arif's and Islam's test work history cleared (Trello comments edited to "🧪 test, cleared"; the two test #report comments too, so SJ-46594 still gets its real report at FINISH).
+- 2026-10-22 (VER 2026-10-22c) Abbas: "we have breaks: 9–9:20, lunch 1–2, 7–7:20" — breaks count for nothing in pieces per day (work rows, dashboard, chat lines, production report; 1 work day = 12 h 20 min net) and in the clock hours (Factory → Month). NEEDS: relay deploy (184 functions).
 - 2026-10-22 (VER 2026-10-22b) Abbas: "when a worker comes in we click his name = logged in; when he leaves we press again; at the end of the month I give the salaries and we see what to pay": More → 🏭 Factory → ATTENDANCE · CLOCK: ▶ In / ■ Out / ✗ absent per worker per day (`FAC_ATT_<date>` = `{NAME: {in, out, late}}`, late = minutes after 08:00 when past 15 min grace; typed times `at` = Abbas only; op `attset` kind in/out/absent/present/clear), 🗓 Month screen (op `attmonth`: days, absent, late, hours In→Out, ⚠ no Out; tap a worker = his days; Share) + salaries for Abbas only (`FAC_SAL`, ops `sal`/`salset`, pay estimate = salary − absent × salary ÷ 30); the daily closing lists late and "no Out yet". Nothing added to the polling. NEEDS: relay deploy (183 functions).
 - 2026-10-22 (VER 2026-10-22a) Abbas: "a complete factory app — redo the workers overview, add the rest as options, change nothing old": Workers dashboard redone (tiles that filter, coloured initials, status chips Working / ⚠ Long / Free / Idle, sort, By design with progress bars done / in hand / left, Week table with ✗ absent + Share); WORK box progress bar; card 📋 SHEET (cut, rejected, packed, to/from hand work, first piece approved, due date → late badge); More → 🏭 Factory: attendance, late / due soon, materials with low alert, wages (Abbas only, rates on the relay), daily closing at 10 pm into the Direct chat (on/off, preview, post now). Tests +4 (sheet, dashboard, Factory screen incl. the 10 pm tick, staff limits). NEEDS: relay deploy (177 functions after the memo chat's direct-chat work).
 - 2026-10-21 (VER 2026-10-21m) Abbas: "what does this whole thing mean?" — worker row reads "⏱ 2 h since Wed 21 Oct 21:55 · 4 min work time · 5 pcs · given by Md ibrahimmiah" (month name, 'work time', 'given by'). No relay deploy.

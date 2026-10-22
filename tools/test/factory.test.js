@@ -158,8 +158,9 @@ async function suite(fast, browser) {
       await until(async () => /Rifat/.test(await page.textContent('#wksbody')), 8000, 'back on the dashboard');
       // pieces per day are counted over working hours (Dubai, Sat-Thu 8 am - 10 pm = 1 day, Fri 8 - 12): same sum as the relay, IN comment time -> OUT time
       const inT = Date.parse(W.trello.actions.find(a => a.type === 'commentCard' && /👷 IN · Rifat/.test(a.data.text)).date), outT = Date.parse(W.trello.actions.find(a => a.type === 'commentCard' && /👷 OUT · Rifat/.test(a.data.text)).date);
-      const workMs = (a, b) => { const tz = 4 * 3600000; let t = a + tz, end = b + tz, tot = 0; while (t < end) { const day = Math.floor(t / 86400000) * 86400000, fri = new Date(day).getUTCDay() === 5; tot += Math.max(0, Math.min(end, day + (fri ? 12 : 22) * 3600000) - Math.max(t, day + 8 * 3600000)); t = day + 86400000; } return tot; };
-      const want = Math.round(18 / Math.max(0.25, workMs(inT, outT) / (14 * 3600000)));
+      const BR = [[9, 0, 9, 20], [13, 0, 14, 0], [19, 0, 19, 20]];   // 22 Oct 2026: breaks count for nothing
+      const workMs = (a, b) => { const tz = 4 * 3600000; let t = a + tz, end = b + tz, tot = 0; while (t < end) { const day = Math.floor(t / 86400000) * 86400000, fri = new Date(day).getUTCDay() === 5, lo = Math.max(t, day + 8 * 3600000), hi = Math.min(end, day + (fri ? 12 : 22) * 3600000); if (hi > lo) { tot += hi - lo; BR.forEach(b => { tot -= Math.max(0, Math.min(hi, day + (b[2] * 60 + b[3]) * 60000) - Math.max(lo, day + (b[0] * 60 + b[1]) * 60000)); }); } t = day + 86400000; } return tot; };
+      const want = Math.round(18 / Math.max(0.25, workMs(inT, outT) / (740 * 60000)));
       ok(new RegExp('≈ ' + want + ' /day').test(await page.textContent('#wksbody')), 'rate over working hours: want ' + want + ' — ' + (await page.textContent('#wksbody')).slice(0, 160));
       ok(/8 am – 10 pm/.test(await page.textContent('#wksbody')), 'says how a day is counted');
       await page.click('#wkedit'); await page.fill('#wkenames', 'Rifat\nArif\nNew Guy'); await page.click('#wkego');
@@ -221,7 +222,7 @@ async function suite(fast, browser) {
       // yesterday, corrected by Abbas with typed times: in 08:30 = 15 min late, out 18:00 = 9.5 h
       const yd = new Date(Date.now() - 86400000 + 4 * 3600000).toISOString().slice(0, 10);
       let ja = await page.evaluate(d => window.__call({ op: 'attset', day: d, name: 'Rifat', kind: 'in', at: '08:30' }), yd); ok(ja.ok && ja.att.RIFAT.late === 30, 'late 30 min (08:30, counted from 08:00): ' + JSON.stringify(ja));
-      ja = await page.evaluate(d => window.__call({ op: 'attset', day: d, name: 'Rifat', kind: 'out', at: '18:00' }), yd); ok(ja.ok && ja.att.RIFAT.out - ja.att.RIFAT.in === 9.5 * 3600000, 'out 18:00');
+      ja = await page.evaluate(d => window.__call({ op: 'attset', day: d, name: 'Rifat', kind: 'out', at: '18:00' }), yd); ok(ja.ok && ja.att.RIFAT.out - ja.att.RIFAT.in === 9.5 * 3600000, 'out 18:00 (9.5 h on the clock, 8.2 h net of breaks)');
       ok(!(await page.evaluate(d => window.__call({ op: 'attset', day: d, name: 'Rifat', kind: 'in', at: '9h' }), yd)).ok, 'a bad time is refused');
       await page.click('#monbtn'); await until(async () => /Rifat/.test(await page.textContent('#monbody')) && (await page.locator('#monbody tr[data-w="Rifat"]').count()) === 1, 10000, 'month screen');
       const mrt = (await page.locator('#monbody tr[data-w="Rifat"]').textContent()).replace(/\s+/g, ''); ok(/Rifat20[12]·\d+min/.test(mrt), 'Rifat: 2 days, 0 absent, late once (yesterday) or twice (today too, if the test runs after 08:15 Dubai): ' + mrt);
@@ -230,7 +231,7 @@ async function suite(fast, browser) {
       await until(async () => /2900/.test(await page.locator('#monbody tr[data-w="Arif"]').textContent()), 8000, 'Arif pay = 3000 − 1 × 100 = 2900');
       ok(/30003000$/.test((await page.locator('#monbody tr[data-w="Rifat"]').textContent()).replace(/\s+/g, '')), 'Rifat pay 3000');
       ok(T.relay.P.FAC_SAL === '{"RIFAT":3000,"ARIF":3000}', 'salaries on the relay only: ' + T.relay.P.FAC_SAL);
-      await page.click('#monbody tr[data-w="Rifat"]'); await until(async () => /in 08:30 ⏰ late 30 min → out 18:00 · 9.5 h/.test(await page.textContent('#mondays')), 5000, 'his day list');
+      await page.click('#monbody tr[data-w="Rifat"]'); await until(async () => /in 08:30 ⏰ late 30 min → out 18:00 · 8\.2 h/.test(await page.textContent('#mondays')), 5000, 'his day list');
       await page.click('#monx');
       await page.click('#matedit'); await until(() => page.locator('#mate').isVisible(), 3000); const mr = page.locator('#materows .mrow').first();
       await mr.locator('input[data-f="n"]').fill('Thread black'); await mr.locator('input[data-f="q"]').fill('2'); await mr.locator('input[data-f="u"]').fill('cones'); await mr.locator('input[data-f="low"]').fill('5'); await page.click('#matego');

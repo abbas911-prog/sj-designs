@@ -531,13 +531,18 @@ function facDur(ms) { ms = Math.max(0, ms); var h = Math.floor(ms / 3600000), d 
 // 21 Oct 2026 (Abbas): "the duties are 8 a.m. to 10 p.m., Friday 8 a.m. to 12 p.m." - pieces per day are counted over WORKING hours
 // (Dubai time; Sat-Thu 08:00-22:00 = 14 h = one work day, Friday 08:00-12:00), not the clock: a batch given at 8 pm and back at 10 am
 // next morning is 4 working hours, not 14; a Friday afternoon and every night count for nothing.
-var WORK_FROM = 8, WORK_TO = 22, WORK_TO_FRI = 12, WORK_DAY_MS = (WORK_TO - WORK_FROM) * 3600000;
-function facWorkMs(a, b) {                                     // ms of working time between two moments
+// 22 Oct 2026 (Abbas): breaks 09:00-09:20, 13:00-14:00 (lunch), 19:00-19:20 count for nothing either (Friday: only the 9 o'clock one falls
+// inside 8-12). One work day = 14 h - 1 h 40 min = 12 h 20 min net.
+var WORK_FROM = 8, WORK_TO = 22, WORK_TO_FRI = 12, WORK_BREAKS = [[9, 0, 9, 20], [13, 0, 14, 0], [19, 0, 19, 20]];
+var WORK_DAY_MS = (WORK_TO - WORK_FROM) * 3600000 - WORK_BREAKS.reduce(function (a, b) { return a + ((b[2] * 60 + b[3]) - (b[0] * 60 + b[1])) * 60000; }, 0);
+function facWorkMs(a, b) {                                     // ms of working time between two moments (shift hours minus the breaks)
   if (!(b > a)) return 0; var tz = 4 * 3600000, t = a + tz, end = b + tz, tot = 0;
-  while (t < end) { var day = Math.floor(t / 86400000) * 86400000, fri = new Date(day).getUTCDay() === 5, s0 = day + WORK_FROM * 3600000, s1 = day + (fri ? WORK_TO_FRI : WORK_TO) * 3600000; tot += Math.max(0, Math.min(end, s1) - Math.max(t, s0)); t = day + 86400000; }
+  while (t < end) { var day = Math.floor(t / 86400000) * 86400000, fri = new Date(day).getUTCDay() === 5, s0 = day + WORK_FROM * 3600000, s1 = day + (fri ? WORK_TO_FRI : WORK_TO) * 3600000, lo = Math.max(t, s0), hi = Math.min(end, s1);
+    if (hi > lo) { tot += hi - lo; WORK_BREAKS.forEach(function (br) { var b0 = day + (br[0] * 60 + br[1]) * 60000, b1 = day + (br[2] * 60 + br[3]) * 60000; tot -= Math.max(0, Math.min(hi, b1) - Math.max(lo, b0)); }); }
+    t = day + 86400000; }
   return tot;
 }
-function facRate(pcs, workMs) { return Math.round(pcs / Math.max(0.25, workMs / WORK_DAY_MS)); }   // pieces per work day (14 h); a tiny batch counts as a quarter day at least
+function facRate(pcs, workMs) { return Math.round(pcs / Math.max(0.25, workMs / WORK_DAY_MS)); }   // pieces per work day (12 h 20 net); a tiny batch counts as a quarter day at least
 function facWorkDur(ms) { var h = ms / 3600000; return h < 1 ? Math.max(1, Math.round(ms / 60000)) + ' min work' : (h >= 10 ? (Math.round(h / (WORK_TO - WORK_FROM) * 10) / 10) + ' work days' : (Math.round(h * 10) / 10) + ' work h'); }
 function facWhen(ms) { var u = new Date(ms + 4 * 3600000); return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][u.getUTCDay()] + ' ' + facDay(ms) + ' ' + ('0' + u.getUTCHours()).slice(-2) + ':' + ('0' + u.getUTCMinutes()).slice(-2); }   // "Tue 21 Oct 14:05" Dubai
 function facDay(ms) { var u = new Date(ms + 4 * 3600000); return u.getUTCDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][u.getUTCMonth()]; }   // Dubai
@@ -575,9 +580,10 @@ function facAttRec(v) { return v && typeof v === 'object' ? v : v === 1 ? { p: 1
 function facAttWeek(P) { var o = {}; for (var i = 0; i < 7; i++) { var d = facYmd(Date.now() - i * 86400000); o[d] = facAtt(P, d); } return o; }
 function facShift(ymd) { var day0 = Date.parse(ymd + 'T00:00:00Z') - 4 * 3600000, fri = new Date(day0 + 4 * 3600000).getUTCDay() === 5; return { start: day0 + WORK_FROM * 3600000, end: day0 + (fri ? WORK_TO_FRI : WORK_TO) * 3600000, fri: fri, day0: day0 }; }
 function facAtMs(ymd, hhmm) { var m = String(hhmm || '').match(/^(\d{1,2}):(\d\d)$/); if (!m) return 0; return facShift(ymd).day0 + (+m[1]) * 3600000 + (+m[2]) * 60000; }   // "08:05" on that day (Dubai) -> ms
+function facNetMs(a, b) { if (!(b > a)) return 0; var tz = 4 * 3600000, t = a + tz, end = b + tz, tot = end - t; while (t < end) { var day = Math.floor(t / 86400000) * 86400000; WORK_BREAKS.forEach(function (br) { var b0 = day + (br[0] * 60 + br[1]) * 60000, b1 = day + (br[2] * 60 + br[3]) * 60000; tot -= Math.max(0, Math.min(end, b1) - Math.max(t, b0)); }); t = day + 86400000; } return tot; }   // clock time minus the breaks (whatever the shift)
 function facAttHours(rec, ymd) {                                  // hours on the clock for one record; a missing OUT counts until the shift end (or now), flagged
   if (!rec || !rec.in) return { h: 0, open: false, noOut: false }; var sh = facShift(ymd), now = Date.now(), out = rec.out || Math.min(now, sh.end), open = !rec.out && now < sh.end;
-  return { h: Math.max(0, out - rec.in) / 3600000, open: open, noOut: !rec.out && !open };
+  return { h: Math.max(0, facNetMs(rec.in, out)) / 3600000, open: open, noOut: !rec.out && !open };   // 22 Oct 2026: minus the breaks
 }
 function facAttMonth(P, ym, names) {                               // one month, every worker: days present / absent / late, hours, missing OUTs, per-day records
   var all = P.getProperties(), days = {}, today = facYmd(Date.now());
@@ -673,7 +679,7 @@ function facReportText(card, st, wk) {
   var L = ['📊 *' + (no ? 'SJ-' + no : p.slice(0, 40)) + ' · PRODUCTION REPORT*' + (pcs ? ' · ' + pcs + ' pcs' : '') + (st.done ? '' : ' (so far)')];
   L.push('🗓 ' + facDay(st.born) + ' → ' + (st.done === 'READY' ? 'READY ' : st.done === 'FINISH' ? 'FINISH ' : 'today ') + facDay(st.end) + ' · *' + facDur(st.total) + '* total');
   st.segs.forEach(function (g) { L.push('• ' + g.name + ' · ' + facDur(g.ms) + (g.n > 1 ? ' (' + g.n + '×)' : '')); });
-  var ws = Object.keys(wk); if (ws.length) { L.push('👷 *Workers* (8 am – 10 pm = 1 day · Fri 8 – 12)'); ws.forEach(function (w) { var bs = wk[w], d = 0, ms = 0, open = 0; bs.forEach(function (b) { if (b.out) { d += b.d; ms += facWorkMs(b.in, b.out); } else open++; });
+  var ws = Object.keys(wk); if (ws.length) { L.push('👷 *Workers* (8 am – 10 pm minus breaks = 1 day · Fri 8 – 12)'); ws.forEach(function (w) { var bs = wk[w], d = 0, ms = 0, open = 0; bs.forEach(function (b) { if (b.out) { d += b.d; ms += facWorkMs(b.in, b.out); } else open++; });
     L.push('   ' + w + ' · ' + d + ' pcs' + (ms ? ' · ' + facWorkDur(ms) + ' · ≈' + facRate(d, ms) + '/day' : '') + (open ? ' · ' + open + ' batch still in ⏳' : '')); }); }
   L.push('_উৎপাদন রিপোর্ট · শুরু থেকে ' + (st.done === 'READY' ? 'রেডি' : 'শেষ') + ' পর্যন্ত ' + facDur(st.total) + '_');
   return L.join('\n');
@@ -1299,7 +1305,7 @@ function fac0(reqText, P) {
       var know = Date.now(), kgot = kk === 'OUT' ? kopen[0] : null;
       var kline = kk === 'IN'
         ? '👷 *' + kW.name + '* ← *' + kp + ' pcs* given · 🕒 ' + facWhen(know) + (kopen.length ? ' · now *' + (kopen[0].g + kp) + ' pcs* in hand (first ' + kopen[0].g + ' on ' + facWhen(kopen[0].in) + ')' : '') + '\n_' + kW.name + ' · ' + kp + ' পিস দেওয়া হয়েছে · ' + facWhen(know) + '_'
-        : '👷 *' + kW.name + '* ✓ *' + kp + ' pcs* done' + (kp !== kgot.g ? ' of ' + kgot.g + ' given' : '') + '\n🕒 got ' + facWhen(kgot.in) + (kgot.addT ? kgot.addT.map(function (t, i) { return ' (+' + kgot.adds[i] + ' on ' + facWhen(t) + ')'; }).join('') : '') + ' → back ' + facWhen(know) + '\n⏱ ' + kdur + ' on the clock · ' + facWorkDur(kwms) + ' (8 am – 10 pm' + (kwms !== know - kgot.in ? ', Fri 8 – 12' : '') + ') · *≈ ' + facRate(kp, kwms) + ' pcs / day*\n_' + kW.name + ' · ' + kp + ' পিস হয়ে গেছে · ' + facWorkDur(kwms) + ' · দিনে ≈ ' + facRate(kp, kwms) + ' পিস_';
+        : '👷 *' + kW.name + '* ✓ *' + kp + ' pcs* done' + (kp !== kgot.g ? ' of ' + kgot.g + ' given' : '') + '\n🕒 got ' + facWhen(kgot.in) + (kgot.addT ? kgot.addT.map(function (t, i) { return ' (+' + kgot.adds[i] + ' on ' + facWhen(t) + ')'; }).join('') : '') + ' → back ' + facWhen(know) + '\n⏱ ' + kdur + ' on the clock · ' + facWorkDur(kwms) + ' (8 am – 10 pm, breaks off' + (kwms !== know - kgot.in ? ', Fri 8 – 12' : '') + ') · *≈ ' + facRate(kp, kwms) + ' pcs / day*\n_' + kW.name + ' · ' + kp + ' পিস হয়ে গেছে · ' + facWorkDur(kwms) + ' · দিনে ≈ ' + facRate(kp, kwms) + ' পিস_';
       try { if (FT) { var kth = facThread(P, FT, kc, rtok, true); if (kth) slackApi(FT, 'chat.postMessage', { channel: kth.ch, thread_ts: kth.ts, text: '→ *WORK* · ' + kwho + ' · ' + kline }); } } catch (e) {}
       CacheService.getScriptCache().remove('FAC_WK_' + kc); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump(); facNudge(P, kc);
       return out({ ok: true });

@@ -268,7 +268,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-22b';
+var VER = '2026-10-22c';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -736,7 +736,9 @@ var WKCHIP = { busy: ['Working', 'কাজে', 'g'], long: ['⚠ Long', 'অ�
 function attRec(v){ return v && typeof v === 'object' ? v : v === 1 ? { p: 1 } : v === 0 ? { a: 1 } : null; }
 function attMark(j, name, day){ var a = attRec(((j.att || {})[day || j.today || isoDay(Date.now())] || {})[String(name).toUpperCase()]); return !a ? '' : a.a ? '✗' : '✓'; }
 function hhmm(ms){ var d = new Date(+ms + 4 * 3600000); return ('0' + d.getUTCHours()).slice(-2) + ':' + ('0' + d.getUTCMinutes()).slice(-2); }   // Dubai clock time
-function attLine(r, day){ if (!r) return ''; if (r.a) return 'absent · অনুপস্থিত'; if (!r.in) return 'present · উপস্থিত'; var now = Date.now(), end = Date.parse(day + 'T00:00:00Z') - 4 * 3600000 + (new Date(day + 'T12:00:00Z').getUTCDay() === 5 ? 12 : 22) * 3600000, out = r.out || Math.min(now, end), h = Math.max(0, out - r.in) / 3600000; return 'in ' + hhmm(r.in) + (r.late ? ' ⏰ late ' + r.late + ' min' : '') + (r.out ? ' → out ' + hhmm(r.out) + ' · ' + (Math.round(h * 10) / 10) + ' h' : now < end ? ' · working ' + (Math.round(h * 10) / 10) + ' h' : ' · no Out ⚠'); }
+var BREAKS = [[9, 0, 9, 20], [13, 0, 14, 0], [19, 0, 19, 20]];   // 22 Oct 2026 (Abbas): the breaks count for nothing
+function netMs(a, b){ if (!(b > a)) return 0; var tz = 4 * 3600000, t = a + tz, end = b + tz, tot = end - t; while (t < end) { var day = Math.floor(t / 86400000) * 86400000; BREAKS.forEach(function(br){ var b0 = day + (br[0] * 60 + br[1]) * 60000, b1 = day + (br[2] * 60 + br[3]) * 60000; tot -= Math.max(0, Math.min(end, b1) - Math.max(t, b0)); }); t = day + 86400000; } return tot; }
+function attLine(r, day){ if (!r) return ''; if (r.a) return 'absent · অনুপস্থিত'; if (!r.in) return 'present · উপস্থিত'; var now = Date.now(), end = Date.parse(day + 'T00:00:00Z') - 4 * 3600000 + (new Date(day + 'T12:00:00Z').getUTCDay() === 5 ? 12 : 22) * 3600000, out = r.out || Math.min(now, end), h = Math.max(0, netMs(r.in, out)) / 3600000; return 'in ' + hhmm(r.in) + (r.late ? ' ⏰ late ' + r.late + ' min' : '') + (r.out ? ' → out ' + hhmm(r.out) + ' · ' + (Math.round(h * 10) / 10) + ' h' : now < end ? ' · working ' + (Math.round(h * 10) / 10) + ' h' : ' · no Out ⚠'); }
 function wkDays(j){ var out = [], t = Date.parse((j.today || isoDay(Date.now())) + 'T12:00:00Z'); for (var i = 6; i >= 0; i--) { var d = new Date(t - i * 86400000); out.push({ k: d.toISOString().slice(0, 10), n: DAYN[d.getUTCDay()], d: d.getUTCDate() }); } return out; }
 function wksDraw(){ var j = WKR; if (!j) return; var now = Date.now(), ws = (j.workers || []).slice(), el = $('wksbody');
   ws.forEach(function(w){ w.hand = w.hand || []; w.st = wkStatus(w, now); w.inhand = w.hand.reduce(function(a, h){ return a + h.g; }, 0); });
@@ -746,7 +748,7 @@ function wksDraw(){ var j = WKR; if (!j) return; var now = Date.now(), ws = (j.w
   var late = j.late || [], over = late.filter(function(x){ return x.days < 0; }).length, soon = late.length - over;
   var lateH = late.length ? '<div class="dnote r" id="wklate">⏰ ' + (over ? over + ' late · দেরি' : '') + (over && soon ? ' · ' : '') + (soon ? soon + ' due soon · শীঘ্রই' : '') + ' — tap to see · দেখুন</div>' : '';
   var lowH = (j.low || []).length ? '<div class="dnote a">📦 Low stock · কম আছে: ' + j.low.map(function(m){ return esc(m.n) + ' ' + m.q + (m.u ? ' ' + esc(m.u) : ''); }).join(' · ') + '</div>' : '';
-  var sub = '<div class="dsub"><b>' + done + ' pcs</b> done in ' + j.days + ' d' + (j.todayN ? ' · today <b>' + today + ' pcs</b> by ' + j.todayN + (j.todayN === 1 ? ' worker' : ' workers') : '') + ' · ≈ /day = per work day 8 am – 10 pm, Fri 8 – 12 · দিন = সকাল ৮টা – রাত ১০টা</div>';
+  var sub = '<div class="dsub"><b>' + done + ' pcs</b> done in ' + j.days + ' d' + (j.todayN ? ' · today <b>' + today + ' pcs</b> by ' + j.todayN + (j.todayN === 1 ? ' worker' : ' workers') : '') + ' · ≈ /day = per work day 8 am – 10 pm minus breaks (9:00–9:20, 1–2 pm, 7:00–7:20), Fri 8 – 12 · দিন = সকাল ৮টা – রাত ১০টা, বিরতি বাদ</div>';
   $('wksort').hidden = WKV !== 'w';
   if (WKV === 'w') {
     var list = ws.filter(function(w){ return !WKF || (WKF === 'busy' ? w.hand.length : WKF === 'free' ? !w.hand.length : WKF === 'inhand' ? w.inhand : w.today); });
@@ -852,7 +854,7 @@ function monDraw(){ var j = MONR; if (!j) return; var ym = j.ym, y = +ym.slice(0
     + ws.map(function(w){ var s0 = sal[w.name.toUpperCase()] || 0, pay = s0 ? Math.round(s0 - w.absent * s0 / 30) : 0; tp += w.present; ta += w.absent; tl += w.late; th += w.hours; tpay += pay;
       return '<tr data-w="' + esc(w.name) + '"><td class="nm">' + avHtml(w.name, 's') + esc(w.name) + '</td><td class="g">' + w.present + '</td><td class="' + (w.absent ? 'r' : '') + '">' + w.absent + '</td><td class="' + (w.late ? 'r' : '') + '">' + (w.late ? w.late + '<small> · ' + w.lateMin + ' min</small>' : '0') + '</td><td>' + w.hours + (w.noOut ? '<small style="color:#c4561a"> ⚠' + w.noOut + '</small>' : '') + '</td>' + (own ? '<td>' + (s0 || '<small style="color:var(--mute)">—</small>') + '</td><td class="pay">' + (s0 ? pay : '') + '</td>' : '') + '</tr>'; }).join('')
     + '<tr class="tot"><td style="text-align:left;padding-left:10px">Total</td><td>' + tp + '</td><td>' + ta + '</td><td>' + tl + '</td><td>' + (Math.round(th * 10) / 10) + '</td>' + (own ? '<td></td><td class="pay">' + tpay + '</td>' : '') + '</tr></table></div>');
-  H.push('<div class="dnote">days = days clocked in or marked ✓ · late = in after 08:15 · hours = In → Out (⚠ = no Out pressed, counted to the shift end) · ' + (isOwner() ? 'pay = salary − absent × salary ÷ 30 · <button class="lnk" id="saledit">💵 Salaries · বেতন</button>' : 'salaries: Abbas only') + '</div>');
+  H.push('<div class="dnote">days = days clocked in or marked ✓ · late = in after 08:15 · hours = In → Out minus breaks (⚠ = no Out pressed, counted to the shift end) · ' + (isOwner() ? 'pay = salary − absent × salary ÷ 30 · <button class="lnk" id="saledit">💵 Salaries · বেতন</button>' : 'salaries: Abbas only') + '</div>');
   H.push('<div style="font-size:12.5px;color:var(--mute);margin:0 2px 8px">Tap a worker for his days · দিন দেখতে নামে চাপুন</div><div id="mondays"></div>');
   $('monbody').innerHTML = H.join(''); }
 $('monx').onclick = monHide;
