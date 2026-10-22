@@ -423,7 +423,10 @@ def og_cover(src, stem, customer, sub, en=None, ar=None, brand='SJ TRADING'):
     who = H.escape(customer or 'NEW COLLECTION'); subl = H.escape(sub or '')
     en = en or '%d NEW DESIGN%s  ·  TAP TO VIEW &amp; ORDER' % (n, '' if n == 1 else 'S')
     ar = ar or ar_count(n) + ' · اضغط للمشاهدة والطلب'
+    # 22 Oct 2026: the Arabic font travels with the repo (tools/catalog/fonts) - no apt-get on the runner, which hung for 30 min today
+    arfont = 'file://' + os.path.join(HERE, 'fonts', 'NotoNaskhArabic-Regular.ttf')
     page = f'''<!doctype html><meta charset="utf-8"><style>
+    @font-face{{font-family:'SJArabic';src:url('{arfont}') format('truetype')}}
     body{{margin:0;position:relative;width:1200px;height:630px;background:#F4F2ED;font-family:Arial,Helvetica,sans-serif;overflow:hidden}}
     .g{{display:grid;grid-template-columns:repeat({cols},1fr);grid-template-rows:repeat({rows},1fr);gap:6px;height:452px;padding:6px 6px 0}}
     .t{{background-size:cover;background-position:center 22%;border-radius:4px}}
@@ -432,7 +435,7 @@ def og_cover(src, stem, customer, sub, en=None, ar=None, brand='SJ TRADING'):
     .who{{position:absolute;left:40px;top:28px;font:bold 46px Arial;letter-spacing:1px}}
     .who small{{font:bold 22px Arial;color:#CFE0DC;margin-left:14px;letter-spacing:3px}}
     .en{{position:absolute;left:40px;bottom:30px;font:bold 25px Arial;color:#E9D9B4;letter-spacing:1px}}
-    .ar{{position:absolute;right:40px;bottom:28px;font:bold 30px Arial;direction:rtl;color:#F3F6F5}}
+    .ar{{position:absolute;right:40px;bottom:28px;font:bold 30px 'SJArabic',Arial;direction:rtl;color:#F3F6F5}}
     .brand{{position:absolute;right:40px;top:34px;font:bold 22px Arial;letter-spacing:4px;color:#CFE0DC}}
     </style><div class="g">{tiles}</div><div class="top"></div><div class="b">
     <div class="who">{who}<small>{subl}</small></div><div class="brand">{brand}</div>

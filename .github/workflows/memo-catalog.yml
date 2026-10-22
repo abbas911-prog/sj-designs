@@ -16,10 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Tools
+        # 22 Oct 2026: no font download any more (the Arabic font is in tools/catalog/fonts); ffmpeg is on the runner already.
+        # A hanging download used to sit here for 30 min (Abbas: "it's been 23 minutes") - now this step may take 4 min at most.
+        timeout-minutes: 4
         run: |
           pip install -q pillow numpy
-          which ffmpeg || (sudo apt-get update -q && sudo apt-get install -y -q ffmpeg)
-          fc-list :lang=ar | grep -q . || (sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-core)
+          which ffmpeg || (sudo apt-get update -q -o Acquire::Retries=3 -o Acquire::http::Timeout=20 && sudo apt-get install -y -q ffmpeg)
       - name: Build the catalogue
         env:
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
