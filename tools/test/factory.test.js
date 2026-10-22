@@ -210,7 +210,7 @@ async function suite(fast, browser) {
       await page.click('#wksbody #wklate'); await until(() => page.locator('#fac').isVisible(), 5000, 'late note opens the Factory screen');
       await until(async () => /SJ-17841/.test(await page.textContent('#fs-late')), 8000, 'late list has SJ-17841'); await page.click('#facx'); await page.click('#tabs button[data-t="cards"]');
     });
-    await test('Factory screen: attendance, materials with a low alert, wages (Abbas), daily closing preview + post + the 10 pm tick', async () => {
+    await test('Factory screen: attendance clock, month + salaries (Abbas), materials with a low alert, daily closing preview + post + the 10 pm tick', async () => {
       await home(page);
       await page.click('#tabs button[data-t="more"]'); await page.click('#bfac'); await until(async () => /ATTENDANCE/.test(await page.textContent('#facbody')) && (await page.locator('#fs-att .ar').count()) === 3, 10000, 'attendance rows');
       await page.locator('#fs-att .ar[data-n="Rifat"] button.in').click(); await page.locator('#fs-att .ar[data-n="Arif"] button.x').click();
@@ -236,10 +236,7 @@ async function suite(fast, browser) {
       await page.click('#matedit'); await until(() => page.locator('#mate').isVisible(), 3000); const mr = page.locator('#materows .mrow').first();
       await mr.locator('input[data-f="n"]').fill('Thread black'); await mr.locator('input[data-f="q"]').fill('2'); await mr.locator('input[data-f="u"]').fill('cones'); await mr.locator('input[data-f="low"]').fill('5'); await page.click('#matego');
       await until(async () => /⚠ Thread black/.test(await page.textContent('#fs-mat')), 8000, 'low material shown'); ok(/"n":"Thread black"/.test(T.relay.P.FAC_MAT || ''), 'saved on the relay');
-      ok(/WAGES/.test(await page.textContent('#facbody')), 'Abbas sees the wages block');
-      await page.click('#rteedit'); await until(() => page.locator('#rte').isVisible(), 3000); await page.fill('#rtetxt', 'Rifat 2.5\nArif 2'); await page.click('#rtego');
-      await until(async () => /18 pcs/.test(await page.textContent('#fs-wage')) && /45\.00/.test(await page.textContent('#fs-wage')), 8000, 'wages: 18 × 2.5 = 45.00 — ' + (await page.textContent('#fs-wage')));
-      ok(T.relay.P.FAC_RATES === '{"RIFAT":2.5,"ARIF":2}', 'rates live on the relay: ' + T.relay.P.FAC_RATES);
+      ok(/SALARIES/.test(await page.textContent('#facbody')) && !/WAGES|piece rate/i.test(await page.textContent('#facbody')), 'Abbas sees the salaries note, no piece rates (the workers are on salary)');
       await page.click('#dailypv'); await until(async () => /DAILY CLOSING/.test(await page.textContent('#tgbody')), 10000, 'preview');
       const pv = await page.textContent('#tgbody'); ok(/18 pcs done today/.test(pv) && /Rifat 18/.test(pv) && /In hand.*Arif 6/.test(pv) && /Present 1/.test(pv) && /Absent 1 \(Arif\)/.test(pv) && /Late.*SJ-17841 \(1 d\)/.test(pv) && /Low stock.*Thread black 2 cones/.test(pv), 'preview text:\n' + pv);
       await page.click('#tgx');
@@ -480,10 +477,9 @@ async function staffSuite(browser) {
       ok(!j2.ok, 'relay refuses a post too');
       ok(!T.errors.length, T.errors.join('\n'));
     });
-    await test('staff: Factory screen without wages or Post now; rates and daily post refused; attendance allowed', async () => {
+    await test('staff: Factory screen without salaries or Post now; salaries and daily post refused; attendance allowed', async () => {
       await page.click('#tabs button[data-t="more"]'); await page.click('#bfac'); await until(async () => /ATTENDANCE/.test(await page.textContent('#facbody')) && /Rifat/.test(await page.textContent('#facbody')), 10000, 'factory screen');
-      const body = await page.textContent('#facbody'); ok(!/WAGES/.test(body) && !/Post now/.test(body), 'no wages, no Post now');
-      ok(!(await page.evaluate(() => window.__call({ op: 'rates' }))).ok, 'rates refused');
+      const body = await page.textContent('#facbody'); ok(!/SALARIES/.test(body) && !/Post now/.test(body), 'no salaries, no Post now');
       ok(!(await page.evaluate(() => window.__call({ op: 'daily', kind: 'now' }))).ok, 'daily post refused');
       await page.locator('#fs-att .ar[data-n="Rifat"] button.in').click();
       const today = new Date(Date.now() + 4 * 3600000).toISOString().slice(0, 10);

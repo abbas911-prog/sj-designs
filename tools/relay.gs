@@ -599,8 +599,6 @@ function facSal(P) { var r = null; try { r = JSON.parse(P.getProperty('FAC_SAL')
 // Materials: a short list (FAC_MAT = [{n: name, q: quantity, u: unit, low: alert level}]) kept by the factory; "low" = q at or under the alert level.
 function facMat(P) { var r = null; try { r = JSON.parse(P.getProperty('FAC_MAT') || 'null'); } catch (e) {} return Array.isArray(r) ? r : []; }
 function facMatLow(P) { return facMat(P).filter(function (m) { return m.low != null && m.low !== '' && +m.q <= +m.low; }); }
-// Piece rates (FAC_RATES = {NAME: rate}) - only Abbas (facOwner) can read or set them; never in the repo, never sent to a staff phone.
-function facRates(P) { var r = null; try { r = JSON.parse(P.getProperty('FAC_RATES') || 'null'); } catch (e) {} return r && typeof r === 'object' ? r : {}; }
 function facLate(P, rtok) {                                     // cards with a due date that is past or within 2 days, not yet READY / FINISH (Trello, cached 60 s)
   var c = CacheService.getScriptCache(), h = c.get('FAC_LATE'); if (h) return JSON.parse(h);
   var cards = []; try { cards = (trApi('get', '/boards/' + FAC.BOARD + '/cards', { filter: 'open', limit: 1000, fields: 'name,idList,due' }, rtok) || []).map(function (x) { return { id: x.id, name: x.name, l: x.idList, due: x.due ? String(x.due).slice(0, 10) : '' }; }); } catch (e) {}
@@ -851,7 +849,7 @@ function setupFacWatch() {                                     // Abbas runs thi
 }
 // 15 Oct 2026 audit: a phone that lost the answer (LTE, locked screen) retries - for a post / upload / new card that used to do it TWICE.
 // Every action now carries a once-only id (rid): the first answer is kept 10 min and any retry gets that same answer.
-var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report|workers|sheetset|attset|matset|ratesset|salset|daily)$/;
+var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report|workers|sheetset|attset|matset|salset|daily)$/;
 function fac(reqText, P) {
   var rq0 = {}; try { rq0 = JSON.parse(reqText); } catch (e) {}
   var rid = FAC_ONCE.test(rq0.op || '') ? String(rq0.rid || '').replace(/[^\w-]/g, '').slice(0, 40) : '', cR = CacheService.getScriptCache();
@@ -1365,11 +1363,6 @@ function fac0(reqText, P) {
         return { n: n, q: Math.max(0, Math.round(+m.q || 0)), u: String(m.u || '').trim().slice(0, 12), low: m.low === '' || m.low == null ? null : Math.max(0, Math.round(+m.low || 0)) }; }).filter(Boolean) : null;
       if (!mi) return out({ ok: false, error: 'bad request' }); P.setProperty('FAC_MAT', JSON.stringify(mi)); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']);
       return out({ ok: true, items: mi, low: facMatLow(P) });
-    }
-    if (req.op === 'rates' || req.op === 'ratesset') {        // 22 Oct 2026: piece rates - Abbas only (wages = pieces × rate, worked out on his phone)
-      if (!facOwner(req.who)) return out({ ok: false, error: 'only Abbas can see the rates', noaccess: true });
-      if (req.op === 'ratesset') { var rr = {}, rin = req.rates && typeof req.rates === 'object' ? req.rates : {}; Object.keys(rin).slice(0, 60).forEach(function (n) { var k = String(n).trim().toUpperCase().slice(0, 30), v = +rin[n]; if (k && v > 0 && v < 100000) rr[k] = Math.round(v * 100) / 100; }); P.setProperty('FAC_RATES', JSON.stringify(rr)); }
-      return out({ ok: true, rates: facRates(P) });
     }
     if (req.op === 'daily') {                                 // 22 Oct 2026: the daily closing report - get / set (on-off) / now (post it now); only Abbas changes or posts
       if (req.kind === 'get') return out({ ok: true, on: !P.getProperty('FAC_DAILY_OFF'), last: P.getProperty('FAC_DAILY_LAST') || '' });
