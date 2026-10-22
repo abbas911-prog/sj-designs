@@ -1583,7 +1583,7 @@ function dmCh(P, tok) {
   var cur = '', n = 0;
   do { var j = slackApi(tok, 'conversations.list', { types: 'public_channel,private_channel', exclude_archived: 'true', limit: 200, cursor: cur }, true); if (!j.ok) break;
     var hit = (j.channels || []).filter(function (c) { return c.name === DM_NAME; })[0]; if (hit) { id = hit.id; break; } cur = (j.response_metadata || {}).next_cursor || ''; } while (cur && ++n < 10);
-  if (!id) { var cj = slackApi(tok, 'conversations.create', { name: DM_NAME, is_private: true }); if (!cj.ok) throw new Error('Slack would not make #' + DM_NAME + ' (' + cj.error + ') — make a private channel #' + DM_NAME + ' and invite @SJ Memo'); id = (cj.channel || {}).id; }
+  if (!id) { var cj = slackApi(tok, 'conversations.create', { name: DM_NAME, is_private: true }); if (!cj.ok) throw new Error('Slack would not let the bot make #' + DM_NAME + ' (' + cj.error + ')'); id = (cj.channel || {}).id; }
   if (!id) throw new Error('no #' + DM_NAME); P.setProperty('CC_DM_CH', id); return id;
 }
 function dmRoot(P, tok, name) {                                    // the person's thread root in #sj-direct, made once
@@ -1670,8 +1670,8 @@ function cchat(reqText, P) {
       ords.sort(function (a, b) { return +b.last - +a.last; });
       if (!cR.get('CC_NSCAN')) { cR.put('CC_NSCAN', '1', 60); try { ccNotifyScan(P, 'poll'); } catch (e) {} }   // fallback when Slack's push is not pointed at the relay
       var gun = {}; try { gun = gdUnread(P, tok, who, req.groots || Object.keys(gdOrders(P)), req.op === 'ping' ? 4 : 8, !!req.fresh); } catch (e) {}
-      var dms = []; try { dms = dmList(P, tok, who, req.op === 'ping' ? 2 : 4, !!req.fresh); } catch (e) { dms = []; }
-      var ev = cR.get('CC_EV_AT'); return out({ ok: true, dms: dms, gun: gun, customers: Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return +b.last - +a.last; }), orders: ords.slice(0, 150), live: ccLive(P), nt: !!ntf[ccWhoKey(who)], ev: !!ev });
+      var dms = [], dmerr = ''; try { dms = dmList(P, tok, who, req.op === 'ping' ? 2 : 4, !!req.fresh); } catch (e) { dms = []; dmerr = String(e.message || e).slice(0, 300); }   // 22 Oct 2026: the reason is shown in the app, never swallowed
+      var ev = cR.get('CC_EV_AT'); return out({ ok: true, dms: dms, dmerr: dmerr, gun: gun, customers: Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return +b.last - +a.last; }), orders: ords.slice(0, 150), live: ccLive(P), nt: !!ntf[ccWhoKey(who)], ev: !!ev });
     }
     if ((req.ch === 'godown' || req.ch === 'direct') && (req.op === 'thread' || req.op === 'seen' || req.op === 'post' || req.op === 'up')) {
       var gr = String(req.root || '').replace(/[^\d.]/g, ''); if (!gr) return out({ ok: false, error: req.ch === 'direct' ? 'no direct chat yet' : 'no #godown post for this order' });
@@ -1698,6 +1698,13 @@ function cchat(reqText, P) {
       var sg3 = ccSeenGet(P, who), nowG = String(Date.now() / 1000 + 2); if (+nowG > +(sg3[XP + gr] || 0)) { sg3[XP + gr] = nowG; ccSeenPut(P, who, sg3); }
       ccNudge(P, XP + gr);
       var grt = JSON.stringify(gres); if (rid) cR.put('CCR_' + rid, grt, 21600); return ContentService.createTextOutput(grt).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (req.op === 'dmset') {                                   // 22 Oct 2026: Abbas made #sj-direct himself (bot not allowed to) and pastes its id from the app (owner only)
+      if (!ownerOk(P, req.chk)) return out({ ok: false, error: 'owner only' });
+      var dch = String(req.ch || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); if (!/^[CG][A-Z0-9]{8,}$/.test(dch)) return out({ ok: false, error: 'that is not a channel id (it looks like C0ABC12DEF)' });
+      var di = slackApi(tok, 'conversations.info', { channel: dch }, true); if (!di.ok) return out({ ok: false, error: ccErr(di.error) + ' — invite @SJ Memo to that channel' });
+      P.setProperty('CC_DM_CH', dch); Object.keys(P.getProperties()).forEach(function (k) { if (k.indexOf('CC_DM_ROOT_') === 0) P.deleteProperty(k); }); CacheService.getScriptCache().remove('DM_HIST');
+      return out({ ok: true, ch: dch, name: (di.channel || {}).name || '' });
     }
     if (req.op === 'dmpeople') {                                // 22 Oct 2026: Abbas edits the list of people with a direct chat (owner check as the vault)
       if (!ownerOk(P, req.chk)) return out({ ok: false, error: 'owner only' });

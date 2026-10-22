@@ -85,6 +85,7 @@ main{max-width:720px;margin:0 auto;}
 .bl span{display:block;color:var(--mute);font-size:13px}
 .bprices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .bsec{font-weight:700;font-size:14px;margin-top:4px}.bsec small{font-weight:400;color:var(--mute)}.bsec.top{margin:2px 0 6px}
+.dmfix form{display:flex;gap:6px;margin-top:8px}.dmfix input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:14px}.dmfix button{border:0;border-radius:10px;background:var(--gold);color:#fff;font:inherit;font-weight:800;padding:0 12px}
 .bex{display:grid;grid-template-columns:1fr 110px 40px;gap:6px}
 .bman{display:grid;grid-template-columns:1fr 64px 84px 40px;gap:6px;margin-bottom:6px}.bman input{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:#fff}.bman button,.bex button{border:0;background:none;font-size:18px;color:var(--mute)}
 .bex button,.badd{border:1.5px solid var(--line);background:#fff;border-radius:10px;font:inherit}
@@ -914,7 +915,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-22d';
+var VER = '2026-10-22e';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -3347,7 +3348,7 @@ var ccAudio = null; function ccBeep(){ try { if (!ccAudio) return; var o = ccAud
 document.addEventListener('touchstart', function(){ try { if (!ccAudio) ccAudio = new (window.AudioContext || window.webkitAudioContext)(); if (ccAudio.state === 'suspended') ccAudio.resume(); } catch(e){} }, { passive: true, once: false });
 document.addEventListener('click', function(){ try { if (!ccAudio) ccAudio = new (window.AudioContext || window.webkitAudioContext)(); if (ccAudio.state === 'suspended') ccAudio.resume(); } catch(e){} }, { passive: true });
 function ccApply(j){ var un = {}, tot = 0; (j.customers || []).concat(j.orders || []).forEach(function(c){ var k = c.k || ccK(c.name); if (c.un) { un[k] = { n: c.un, tx: c.tx || '', name: c.name, last: c.last, root: c.ts || '' }; tot += c.un; } });
-  if (Array.isArray(j.dms)) { CC.dms = j.dms; j.dms.forEach(function(r){ if (r.un) { un[r.k] = { n: r.un, tx: r.tx || '', name: r.name, last: r.last, root: r.root, ch: 'direct' }; tot += r.un; } }); }   // 22 Oct 2026: direct chats (Abbas ↔ a person)
+  CC.dmerr = j.dmerr || ''; if (Array.isArray(j.dms)) { CC.dms = j.dms; j.dms.forEach(function(r){ if (r.un) { un[r.k] = { n: r.un, tx: r.tx || '', name: r.name, last: r.last, root: r.root, ch: 'direct' }; tot += r.un; } }); }   // 22 Oct 2026: direct chats (Abbas ↔ a person)
   Object.keys(j.gun || {}).forEach(function(k){ var u = j.gun[k], o = ordByTs(k.slice(1)); un[k] = { n: u.n, tx: u.tx || '', name: o ? (o.name || 'order') : 'order', last: u.last, root: k.slice(1), ch: 'godown', oid: o ? o.id : '' }; tot += u.n; });
   Object.keys(un).forEach(function(k){ if (k.charAt(0) === 'O') { var o2 = (ORD.list || []).filter(function(x){ return x.cts === k.slice(1); })[0]; if (o2) un[k].oid = o2.id; } });
   if (CC.cur && un[ccCurK()] && ccLooking()) { delete un[ccCurK()]; tot = Object.keys(un).reduce(function(s, k){ return s + un[k].n; }, 0); }
@@ -3395,7 +3396,8 @@ function ccDrawList(){ if (CC.bell) return;   // 20 Oct 2026: the 🔔 setup sta
   var L = ords.concat(custs).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
   L.sort(function(a, b){ var ua = (CC.un[a.k || ccK(a.name)] || {}).n ? 1 : 0, ub = (CC.un[b.k || ccK(b.name)] || {}).n ? 1 : 0; return ub - ua || (+b.last || 0) - (+a.last || 0); });
   var DL = (CC.dms || []).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
-  var hd = ''; if (DL.length) hd += '<div class="bsec top">Direct · مباشر <small>' + (ccK(ccWho()).indexOf('ABBAS') === 0 ? 'you ↔ each person' : 'you ↔ Abbas') + '</small></div>' + DL.map(function(r){ var u = CC.un[r.k]; return '<div class="ccrow' + (u ? ' un' : '') + '" data-n="' + esc(r.name) + '" data-r="' + esc(r.root) + '" data-ch="direct"><div class="av">💬</div><div class="t"><b>' + esc(ccK(ccWho()).indexOf('ABBAS') === 0 ? r.name : 'Abbas') + '</b><small>' + (u && u.tx ? esc(u.tx) : 'direct chat · محادثة مباشرة') + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
+  var hd = ''; if (CC.dmerr && !DL.length) hd += '<div class="stk bad dmfix">Direct chats: ' + esc(CC.dmerr) + (isBoss() ? '<br><br><b>Fix A:</b> api.slack.com/apps → SJ Memo → OAuth &amp; Permissions → Bot Token Scopes → add <b>groups:read</b> + <b>groups:write</b> (and <b>groups:history</b>) → Reinstall to Workspace.<br><b>Fix B:</b> in Slack make a private channel <b>sj-direct</b>, invite <b>@SJ Memo</b>, open its details and copy the Channel ID at the bottom, paste it here:<form id="dmsetf"><input id="dmsetc" placeholder="C0ABC12DEF" autocomplete="off"><button type="submit">Use it</button></form>' : '<br>Abbas: see the Chats tab on your phone.') + '</div>';
+  if (DL.length) hd += '<div class="bsec top">Direct · مباشر <small>' + (ccK(ccWho()).indexOf('ABBAS') === 0 ? 'you ↔ each person' : 'you ↔ Abbas') + '</small></div>' + DL.map(function(r){ var u = CC.un[r.k]; return '<div class="ccrow' + (u ? ' un' : '') + '" data-n="' + esc(r.name) + '" data-r="' + esc(r.root) + '" data-ch="direct"><div class="av">💬</div><div class="t"><b>' + esc(ccK(ccWho()).indexOf('ABBAS') === 0 ? r.name : 'Abbas') + '</b><small>' + (u && u.tx ? esc(u.tx) : 'direct chat · محادثة مباشرة') + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
   var h = hd + '<div class="ccsrch"><input id="ccq" placeholder="Search customer · ابحث عن عميل" autocomplete="off" value="' + esc(q) + '"></div>';
   var unk = Object.keys(CC.un);
   if (unk.length && !qq) { h += '<div class="ccnew"><div class="ccnh"><b>💬 New messages · ' + CC.tot + '</b><button type="button" id="cccatch">⚡ Catch up</button></div>' + unk.map(function(k){ var u = CC.un[k]; return '<div class="ccnr" data-k="' + esc(k) + '" data-n="' + esc(u.name) + '" data-r="' + esc(u.root || '') + '"' + (u.ch === 'direct' ? ' data-ch="direct"' : '') + '><span class="n">' + (u.ch === 'godown' ? '📦 ' : u.ch === 'direct' ? '💬 ' : u.root ? '📄 ' : '') + esc(u.ch === 'direct' && ccK(ccWho()).indexOf('ABBAS') !== 0 ? 'Abbas' : u.name) + (u.ch === 'godown' ? ' · godown' : u.ch === 'direct' ? ' · direct' : '') + '</span><span class="x">' + esc(u.tx || 'new message') + '</span><i>NEW ' + u.n + '</i></div>'; }).join('') + '</div>'; }
@@ -3410,6 +3412,7 @@ function ccDrawList(){ if (CC.bell) return;   // 20 Oct 2026: the 🔔 setup sta
   var had = document.activeElement && document.activeElement.id === 'ccq'; $('ccbody').innerHTML = h;
   var qi = $('ccq'); qi.oninput = function(){ ccDrawList(); }; if (had) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
   var cb = $('cccatch'); if (cb) cb.onclick = ccCuStart;
+  var df = $('dmsetf'); if (df) df.onsubmit = async function(e){ e.preventDefault(); var ch = $('dmsetc').value.trim(); if (!ch) return; try { var chk = await svChk(); var j = await ccCall({ op: 'dmset', ch: ch, chk: chk }); if (!j.ok) throw new Error(j.error); uiToast('✓ #' + (j.name || 'sj-direct') + ' is the direct-chat channel'); CC.dmerr = ''; ccLoad(true); } catch(e2){ alert('Not set: ' + e2.message); } };
 }
 $('ccbody').addEventListener('click', function(e){
   var r = e.target.closest('.ccrow,.ccnr'); if (r && !CC.cur) { if (r.dataset.oid) { CC.from = 'chats'; ordChat(r.dataset.oid); return; } var uu = CC.un[r.dataset.k || ''] || null; if (uu && uu.oid) { CC.from = 'chats'; ordChat(uu.oid, uu.ch === 'godown' ? 'g' : 'c'); return; } ccChat(r.dataset.n, r.dataset.r || '', r.dataset.ch === 'direct' ? 'direct' : ''); return; }

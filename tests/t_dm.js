@@ -27,4 +27,13 @@ const p2 = call({ op: 'post', ch: 'direct', root: rootM, name: 'Muhammad', text:
 const a2 = call({ op: 'list', who: 'Abbas' });
 ok('Abbas: 1 new from Muhammad, nothing from Imran', p2.ok && a2.dms[0].un === 1 && /Muhammad: Done/.test(a2.dms[0].tx) && a2.dms[1].un === 0);
 ok('people list is owner-only', call({ op: 'dmpeople', who: 'Abbas', people: ['Muhammad', 'Imran', 'Rifat'] }).ok === false);
+// a bot without the scopes: the reason reaches the app; the owner pastes the channel id instead
+const W2 = F.makeWorld(), relay2 = F.makeRelay(W2, { MEMO_PASSWORD: PW, SLACK_BOT_TOKEN: 'xoxb-memo-test', VAULT_CHK: crypto.createHash('sha256').update('ownerchk-32-chars-long-xxxxxxxxxxxx').digest('hex') });
+W2.slack.ch['C0BP6DSUHSA'] = { id: 'C0BP6DSUHSA', name: 'customer', member: true, msgs: [] }; W2.slack.ch['C08EDKV94SV'] = { id: 'C08EDKV94SV', name: 'godown', member: true, msgs: [] };
+W2.slack.ch['C0DIRECT001'] = { id: 'C0DIRECT001', name: 'sj-direct', member: true, priv: true, msgs: [] }; W2.slackNoCreate = true;
+const call2 = o => { const req = JSON.stringify(Object.assign({ t: Date.now() }, o)); return JSON.parse(relay2.post(JSON.stringify({ job: 'cchat', req, sig: crypto.createHmac('sha256', PW).update(req).digest('hex') }))); };
+const d1 = call2({ op: 'dmset', who: 'Abbas', ch: 'C0DIRECT001', chk: 'ownerchk-32-chars-long-xxxxxxxxxxxx' });
+ok('owner pastes the channel id → accepted', d1.ok && d1.name === 'sj-direct');
+ok('a wrong id is refused', call2({ op: 'dmset', who: 'Abbas', ch: 'hello', chk: 'ownerchk-32-chars-long-xxxxxxxxxxxx' }).ok === false);
+const l2 = call2({ op: 'list', who: 'Abbas' }); ok('chats then run in that channel', l2.ok && l2.dms.length === 2 && W2.slack.ch['C0DIRECT001'].msgs.length === 2 && !l2.dmerr);
 out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); if (!out.every(o => o[1])) { console.log(JSON.stringify({ a, m, i, r, p1, m2, th, a2 }).slice(0, 2500)); process.exit(1); }
