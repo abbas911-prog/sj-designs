@@ -25,6 +25,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   // Abbas's phone
   const pg = await boot('Abbas'); await pg.click('#nav button[data-nv="chats"]'); await pg.waitForSelector('.ccrow[data-ch="direct"]', { timeout: 10000 });
   ok('Abbas: Direct section with Muhammad and Imran', (await pg.$$eval('.ccrow[data-ch="direct"] .t b', L => L.map(e => e.textContent))).join() === 'Muhammad,Imran');
+  ok('direct rows are the first thing in the Chats tab', await pg.$eval('#ccbody', e => e.firstElementChild.classList.contains('bsec') && e.children[1].dataset.ch === 'direct'));
   await pg.click('.ccrow[data-ch="direct"]'); await pg.waitForSelector('.ccm', { timeout: 8000 });
   ok('opens as a direct chat with the line', (await t(pg, '#cct')).indexOf('Muhammad') >= 0 && (await t(pg, '#cct')).indexOf('direct') >= 0 && (await pg.$$eval('.ccm', L => L.length)) === 1);
   await pg.fill('#cctxt', 'Thanks, send photos'); await pg.click('#ccsend');

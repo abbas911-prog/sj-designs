@@ -84,7 +84,7 @@ main{max-width:720px;margin:0 auto;}
 .bl{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}.bl:last-child{border:0}
 .bl span{display:block;color:var(--mute);font-size:13px}
 .bprices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.bsec{font-weight:700;font-size:14px;margin-top:4px}.bsec small{font-weight:400;color:var(--mute)}
+.bsec{font-weight:700;font-size:14px;margin-top:4px}.bsec small{font-weight:400;color:var(--mute)}.bsec.top{margin:2px 0 6px}
 .bex{display:grid;grid-template-columns:1fr 110px 40px;gap:6px}
 .bman{display:grid;grid-template-columns:1fr 64px 84px 40px;gap:6px;margin-bottom:6px}.bman input{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:#fff}.bman button,.bex button{border:0;background:none;font-size:18px;color:var(--mute)}
 .bex button,.badd{border:1.5px solid var(--line);background:#fff;border-radius:10px;font:inherit}
@@ -914,7 +914,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-22c';
+var VER = '2026-10-22d';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -3394,12 +3394,12 @@ function ccDrawList(){ if (CC.bell) return;   // 20 Oct 2026: the 🔔 setup sta
   if (qq) Array.from($('custnames').options || []).forEach(function(o){ var n = String(o.value || '').trim(); if (n && !seen[ccK(n)] && ccK(n).indexOf(qq) >= 0) { seen[ccK(n)] = 1; custs.push({ k: ccK(n), name: n, last: '0', memos: 0, chat: 0 }); } });
   var L = ords.concat(custs).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
   L.sort(function(a, b){ var ua = (CC.un[a.k || ccK(a.name)] || {}).n ? 1 : 0, ub = (CC.un[b.k || ccK(b.name)] || {}).n ? 1 : 0; return ub - ua || (+b.last || 0) - (+a.last || 0); });
-  var h = '<div class="ccsrch"><input id="ccq" placeholder="Search customer · ابحث عن عميل" autocomplete="off" value="' + esc(q) + '"></div>';
+  var DL = (CC.dms || []).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
+  var hd = ''; if (DL.length) hd += '<div class="bsec top">Direct · مباشر <small>' + (ccK(ccWho()).indexOf('ABBAS') === 0 ? 'you ↔ each person' : 'you ↔ Abbas') + '</small></div>' + DL.map(function(r){ var u = CC.un[r.k]; return '<div class="ccrow' + (u ? ' un' : '') + '" data-n="' + esc(r.name) + '" data-r="' + esc(r.root) + '" data-ch="direct"><div class="av">💬</div><div class="t"><b>' + esc(ccK(ccWho()).indexOf('ABBAS') === 0 ? r.name : 'Abbas') + '</b><small>' + (u && u.tx ? esc(u.tx) : 'direct chat · محادثة مباشرة') + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
+  var h = hd + '<div class="ccsrch"><input id="ccq" placeholder="Search customer · ابحث عن عميل" autocomplete="off" value="' + esc(q) + '"></div>';
   var unk = Object.keys(CC.un);
   if (unk.length && !qq) { h += '<div class="ccnew"><div class="ccnh"><b>💬 New messages · ' + CC.tot + '</b><button type="button" id="cccatch">⚡ Catch up</button></div>' + unk.map(function(k){ var u = CC.un[k]; return '<div class="ccnr" data-k="' + esc(k) + '" data-n="' + esc(u.name) + '" data-r="' + esc(u.root || '') + '"' + (u.ch === 'direct' ? ' data-ch="direct"' : '') + '><span class="n">' + (u.ch === 'godown' ? '📦 ' : u.ch === 'direct' ? '💬 ' : u.root ? '📄 ' : '') + esc(u.ch === 'direct' && ccK(ccWho()).indexOf('ABBAS') !== 0 ? 'Abbas' : u.name) + (u.ch === 'godown' ? ' · godown' : u.ch === 'direct' ? ' · direct' : '') + '</span><span class="x">' + esc(u.tx || 'new message') + '</span><i>NEW ' + u.n + '</i></div>'; }).join('') + '</div>'; }
   if (qq && !custs.some(function(r){ return ccK(r.name) === qq; })) h += '<div class="ccrow" data-n="' + esc(q.trim()) + '" data-r=""><div class="av">＋</div><div class="t"><b>' + esc(q.trim()) + '</b><small>new general chat with this customer · محادثة جديدة</small></div></div>';
-  var DL = (CC.dms || []).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
-  if (DL.length) h += '<div class="bsec">Direct · مباشر <small>' + (ccK(ccWho()).indexOf('ABBAS') === 0 ? 'you ↔ each person' : 'you ↔ Abbas') + '</small></div>' + DL.map(function(r){ var u = CC.un[r.k]; return '<div class="ccrow' + (u ? ' un' : '') + '" data-n="' + esc(r.name) + '" data-r="' + esc(r.root) + '" data-ch="direct"><div class="av">💬</div><div class="t"><b>' + esc(ccK(ccWho()).indexOf('ABBAS') === 0 ? r.name : 'Abbas') + '</b><small>' + (u && u.tx ? esc(u.tx) : 'direct chat · محادثة مباشرة') + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
   var OL = (ORD.list || []).filter(function(o){ return (o.gts || o.cts) && (!qq || ccK(o.name).indexOf(qq) >= 0); }).slice(0, 40);
   if (OL.length) { h += '<div class="bsec">Orders · الطلبات <small>#godown + #customer chat of each order</small></div>' + OL.map(function(o){ var n = ordUn(o, 'g') + ordUn(o, 'c'), u = (o.gts && CC.un['G' + o.gts]) || (o.cts && CC.un['O' + o.cts]);
       return '<div class="ccrow ord' + (n ? ' un' : '') + '" data-oid="' + esc(o.id) + '"><div class="av">📦</div><div class="t"><b>' + esc(o.name || 'No name') + ' <small class="od">' + ordWhen(o.created) + '</small></b><small>' + (u && u.tx ? esc(u.tx) : esc((o.items || []).map(function(x){ return 'SJ-' + x.no; }).slice(0, 4).join(' · ')) + ' · ' + (o.pcs || 0) + ' pcs') + '</small></div><span class="tm">' + (ordDone(o) ? '✓' : 'step ' + ordStage(o) + '/4') + (n ? '<i>' + n + '</i>' : '') + '</span></div>'; }).join('') + '<div class="bsec">Other chats · محادثات أخرى</div>'; }
