@@ -7,7 +7,8 @@ The same customer page the chat runs built (sj-1005b, sj-1005, sj-1003, ahmad-li
   * customer name (+ country) at the top, nothing else written across the top (Rule Ten)
   * per design SETS or COMPLETE, page can mix them, designs in the order given (Rules Twelve, Sixteen)
   * newest READY card for a design number; photos JAMAL first (Rule Two), newest photo = first colour group (Rule One)
-  * the sum is run and must match the card, or nothing is built (Rule Three); a 0 colour is CUT OUT of the photo, the rest renumbered
+  * the sum is run and must match the card, or nothing is built (Rule Three); a 0 colour stays IN the photo, faded + "sold out",
+    and every colour keeps the card's own number (22 Oct 2026, Abbas: cutting left half dresses and confused the numbering)
   * chips by Rule Four (leftover rides on the top chip), pre-rendered in the HTML (Rule Five)
   * the card video under the photos, re-encoded to ~4-6 MB, served from vid/<no>.mp4 (Rule Eleven)
   * no prices, no piece counts on the page (Rule Eight); Send order = one PDF (Seven-A); Share button on every photo/video
@@ -113,16 +114,13 @@ def find_bounds(im, n):
     return [W * i / n for i in range(n + 1)]
 
 def keep_columns(im, pcs):
-    """pcs = pieces per dress left->right. Returns (image with the 0 dresses removed, kept pcs, column fractions)."""
+    """22 Oct 2026 (Abbas, 57026 / 48188: "it's messed up ... half dresses"): the photo is NEVER cut any more. pcs = pieces per dress
+    left->right. Returns (the whole image, pcs unchanged, one column (left, right) fraction per dress). A 0 dress is drawn faded by the
+    page (the column fractions say where), with its number greyed - so the numbers always match the dresses and the card."""
     n = len(pcs)
-    if all(p > 0 for p in pcs): return im, pcs, None
-    b = find_bounds(im, n)
-    parts = [(int(round(b[i])), int(round(b[i + 1]))) for i in range(n) if pcs[i] > 0]
-    W = sum(r - l for l, r in parts)
-    out = Image.new('RGB', (W, im.height), 'white'); x = 0; cols = []
-    for l, r in parts:
-        out.paste(im.crop((l, 0, r, im.height)), (x, 0)); cols.append((x / W, (x + r - l) / W)); x += r - l
-    return out, [p for p in pcs if p > 0], cols
+    if n <= 1: return im, pcs, [(0.0, 1.0)] * n
+    b = find_bounds(im, n); W = float(im.width)
+    return im, list(pcs), [(b[i] / W, b[i + 1] / W) for i in range(n)]
 
 # ---------- page text (same as build6 / sj-1005b) ----------
 AR_D = '٠١٢٣٤٥٦٧٨٩'
@@ -185,27 +183,24 @@ def build(req):
             groups[-2] = groups[-2] + groups[-1]; groups.pop()
         ORDER.append(no); MODE[no] = mode; PHOTOS[no] = []
         cut = []
+        c, PCSS[no] = 0, {}
+        for a, g in zip(pick, groups):
+            if not any(g): c += len(g); cut.append(len(g)); continue           # a whole photo of sold-out colours: left out, numbers still move on
+            im, kept, cols = keep_columns(photo(a), g)
+            nums, sold = [], []
+            for q in kept:
+                c += 1; nums.append(c)
+                if q > 0: PCSS[no][c] = q
+                else: sold.append(c)
+            if sold: cut.append(len(sold))
+            PHOTOS[no].append((im, nums, cols, sold))
         if mode == 'C':
-            live = [q for q in cells if q > 0]
-            TOT[no], COLS[no] = sum(live), len(live)
-            for a, g in zip(pick, groups):
-                im, kept, cols = keep_columns(photo(a), g)
-                if not kept: continue
-                if len(kept) < len(g): cut.append(len(g) - len(kept))
-                PHOTOS[no].append((im, list(range(1, len(kept) + 1)), cols))
+            TOT[no], COLS[no] = sum(PCSS[no].values()), len(PCSS[no])
             u = COLS[no] * 4
             report.append('SJ-%s COMPLETE  %s → %d complete sets%s' % (no, line, TOT[no] // u, (' + %d pcs' % (TOT[no] % u)) if TOT[no] % u else ''))
         else:
-            c, PCSS[no] = 0, {}
-            for a, g in zip(pick, groups):
-                im, kept, cols = keep_columns(photo(a), g)
-                if not kept: continue
-                if len(kept) < len(g): cut.append(len(g) - len(kept))
-                nums = []
-                for q in kept: c += 1; PCSS[no][c] = q; nums.append(c)
-                PHOTOS[no].append((im, nums, cols))
-            report.append('SJ-%s SETS  %s → %d colours' % (no, line, c))
-        if cut: flags.append('SJ-%s: %d sold-out colour%s cut out of the photo and the rest renumbered — check the photo.' % (no, sum(cut), '' if sum(cut) == 1 else 's'))
+            report.append('SJ-%s SETS  %s → %d colours' % (no, line, len(PCSS[no])))
+        if cut: flags.append('SJ-%s: %d sold-out colour%s shown faded on the photo (numbers stay as on the card).' % (no, sum(cut), '' if sum(cut) == 1 else 's'))
         vids = [a for a in att if str(a.get('mimeType', '')).startswith('video/')]
         if vids and video(no, vids[0]): VIDS[no] = 1
     if errors: return {'ok': False, 'error': ' '.join(errors), 'errors': errors, 'report': report}
@@ -254,17 +249,24 @@ def video(no, a):
         print('video', no, 'failed:', e)
         return os.path.exists('vid/%s.mp4' % no)
 
-def img_tag(im, nums, no, cols=None):
+def sold_html(cols, nums, sold):
+    """The faded 'sold out' veil over each 0 dress (22 Oct 2026). cols = one (left, right) fraction per dress."""
+    out = []
+    for (l, r), c in zip(cols, nums):
+        if c in sold: out.append('<i class="sold" style="left:%.2f%%;width:%.2f%%"><b>Sold out<small>نفذ</small></b></i>' % (l * 100, (r - l) * 100))
+    return ''.join(out)
+
+def img_tag(im, nums, no, cols=None, sold=()):
     if im.width > 1200: im = im.resize((1200, round(im.height * 1200 / im.width)), Image.LANCZOS)
     b = io.BytesIO(); im.save(b, 'JPEG', quality=82, optimize=True, progressive=True)
     d = base64.b64encode(b.getvalue()).decode(); n = len(nums)
-    cells = ''.join('<span>%d</span>' % x for x in nums)
+    cells = ''.join(('<span class="out">%d</span>' if x in sold else '<span>%d</span>') % x for x in nums)
     if cols:
         gtc = ' '.join('%.4ffr' % (r - l) for l, r in cols); cattr = ' data-cols="%s"' % ';'.join('%.4f,%.4f' % (l, r) for l, r in cols)
     else:
-        gtc = 'repeat(%d,1fr)' % n; cattr = ''
-    return ('<div class="photo" data-nums="%s" data-n="%d"%s><img src="data:image/jpeg;base64,%s" alt="Design %s" width="%d" height="%d">\n'
-            '        <div class="nums" style="grid-template-columns:%s">%s</div></div>' % (','.join(map(str, nums)), n, cattr, d, no, im.width, im.height, gtc, cells))
+        cols = [(i / n, (i + 1) / n) for i in range(n)]; gtc = 'repeat(%d,1fr)' % n; cattr = ''
+    return ('<div class="photo" data-nums="%s" data-n="%d"%s><img src="data:image/jpeg;base64,%s" alt="Design %s" width="%d" height="%d">%s\n'
+            '        <div class="nums" style="grid-template-columns:%s">%s</div></div>' % (','.join(map(str, nums)), n, cattr, d, no, im.width, im.height, sold_html(cols, nums, sold), gtc, cells))
 
 # ---------- TRY-ON BUTTONS (12 Oct 2026, Abbas: "two processes — one where a customer takes a photo and tries on different dresses,
 # the second the video live part … I need both set up in the HTML"). Two buttons under the design's video. They appear only when the
@@ -310,7 +312,7 @@ def render(PAGE, CUSTOMER, CUSTOMER_SUB, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, V
     arts = []
     for no in ORDER:
         C = MODE[no] == 'C'
-        photos = ''.join('      ' + img_tag(im, nums, no, cols) + '\n' for im, nums, cols in PHOTOS[no])
+        photos = ''.join('      ' + img_tag(im, nums, no, cols, sold) + '\n' for im, nums, cols, sold in PHOTOS[no])
         vid = ('      <div class="vid"><video src="vid/%s.mp4" controls playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture></video></div>\n' % no) if no in VIDS else ''
         if C:
             head = ('      <div class="head"><div><div class="lbl">Design</div><div class="no">%s</div></div>'

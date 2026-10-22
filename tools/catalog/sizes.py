@@ -9,7 +9,7 @@ option — a customer might want 2 medium, 3 large · include the video · a tic
 Input (from memo.html on Include & share, tick on): REQ = {"id","kind":"sizes","ref","cust","items":[{"card","no","c","pcs"}]}
   card = Trello card id, c = colour position in the card title (same numbering as the stock job), pcs = pieces on the invoice.
 The card is read BY ID, so it is found even after the stock job has moved it to FINISH.
-Page: only the colours on the invoice (the rest cut out of the photo, the kept ones renumbered 1, 2, 3), the card video,
+Page: only the colours on the invoice can be chosen (the others stay in the photo, faded; every colour keeps the card's number - 22 Oct 2026), the card video,
 under each colour its piece count and one number box per size. Send order = one PDF (reopen link inside). Share on every
 photo/video. Cover og-<page>.jpg with SJ TRADING. Rule Eight is lifted here by his own words ("with the quantity").
 """
@@ -84,19 +84,21 @@ def build_sizes(req):
         while len(pick) < len(groups): groups[-2] = groups[-2] + groups[-1]; groups.pop()
         key = no if no not in used else '%s-%d' % (no, used[no] + 1)
         used[no] = used.get(no, 0) + 1
-        photos, pcs, n = [], [], 0
+        photos, pcs, cs = [], [], []
         for a, g in zip(pick, groups):
             mask = [billed[i] for i in g]
             if not any(mask): continue
             im, kept, cols = B.keep_columns(B.photo(a), mask)
-            if cols is None: cols = [(i / len(kept), (i + 1) / len(kept)) for i in range(len(kept))]
-            nums = []
-            for q in kept: n += 1; pcs.append(q); nums.append(n)
-            photos.append((im, nums, cols))
+            nums, sold = [], []
+            for i, q in zip(g, kept):
+                nums.append(i + 1)                                   # the card's own colour number (22 Oct 2026)
+                if q > 0: pcs.append(q); cs.append(i + 1)
+                else: sold.append(i + 1)
+            photos.append((im, nums, cols, sold))
         sizes, why = sizes_of(card['name'])
         vids = [a for a in att if str(a.get('mimeType', '')).startswith('video/')]
         vid = bool(vids) and B.video(no, vids[0])
-        designs.append({'key': key, 'no': no, 'photos': photos, 'pcs': pcs, 'sizes': sizes, 'vid': vid})
+        designs.append({'key': key, 'no': no, 'photos': photos, 'pcs': pcs, 'cs': cs, 'sizes': sizes, 'vid': vid})
         report.append('SJ-%s  %s → %d colour%s on the bill, %d pcs · sizes %s (%s)%s' % (no, '+'.join(str(b) for b in billed), len(pcs), '' if len(pcs) == 1 else 's',
                       sum(pcs), ' '.join(sizes), why, '' if vid else ' · no video on the card'))
     if errors: return {'ok': False, 'error': ' '.join(errors), 'errors': errors, 'report': report}
@@ -124,17 +126,17 @@ def size_ar(s): return 'مقاس حر' if s == 'FREE SIZE' else 'مقاس ' + ar
 def render(stem, designs):
     arts, data = [], []
     for d in designs:
-        k = d['key']; ph_html = []; dd = {'key': k, 'no': d['no'], 'sizes': d['sizes'], 'pcs': d['pcs'], 'photos': []}
-        for im, nums, cols in d['photos']:
+        k = d['key']; ph_html = []; dd = {'key': k, 'no': d['no'], 'sizes': d['sizes'], 'pcs': d['pcs'], 'cs': d['cs'], 'photos': []}
+        for im, nums, cols, sold in d['photos']:
             src, w, h = img_src(im)
             gtc = ' '.join('%.4ffr' % (r - l) for l, r in cols)
-            ph_html.append('<div class="photo"><img src="%s" alt="Design %s" width="%d" height="%d"><div class="nums" style="grid-template-columns:%s">%s</div></div>'
-                           % (src, d['no'], w, h, gtc, ''.join('<span>%d</span>' % x for x in nums)))
+            ph_html.append('<div class="photo"><img src="%s" alt="Design %s" width="%d" height="%d">%s<div class="nums" style="grid-template-columns:%s">%s</div></div>'
+                           % (src, d['no'], w, h, B.sold_html(cols, nums, sold), gtc, ''.join(('<span class="out">%d</span>' if x in sold else '<span>%d</span>') % x for x in nums)))
             dd['photos'].append({'nums': nums, 'cols': [[round(l, 4), round(r, 4)] for l, r in cols], 'w': w, 'h': h})
         n_s = len(d['sizes'])
         rows = []
         for i, p in enumerate(d['pcs']):
-            c = i + 1; per = p if n_s == 1 else math.ceil(p / n_s)
+            c = d['cs'][i]; per = p if n_s == 1 else math.ceil(p / n_s)
             each_en = (' · %d of each size' % (p // n_s)) if n_s > 1 and p % n_s == 0 else ''
             each_ar = ('، %s من كل مقاس' % arPcs(p // n_s)) if n_s > 1 and p % n_s == 0 else ''
             cells = ''.join(
