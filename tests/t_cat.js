@@ -12,7 +12,10 @@ cols = [(200,160,80),(30,30,35),(230,225,120),(150,170,120),(90,40,90),(200,90,1
 for i, c in enumerate(cols): x = 40 + i * 190; d.rectangle([x, 120, x + 140, 720], fill=c)
 im.save('${L}/p1.jpg', 'JPEG', quality=90)
 import json; json.dump([{'id': 'abc123abc123abc123abc101', 'name': 'SJ-57026 (42) colour = (6) (0/14/16/0/4/8)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
-  {'id': 'abc123abc123abc123abc102', 'name': 'SJ-48188 (12) colour = (3) (4/4/4)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]}], open('${L}/cards.json', 'w'))
+  {'id': 'abc123abc123abc123abc102', 'name': 'SJ-48188 (12) colour = (3) (4/4/4)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
+  {'id': 'abc123abc123abc123abc201', 'name': 'Sj 6668 (40) 5 colors (8/8/8/8/8)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
+  {'id': 'abc123abc123abc123abc203', 'name': 'Sj 6668 (70 pcs) 5 colors (14/14/14/14/14)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
+  {'id': 'abc123abc123abc123abc202', 'name': 'Sj = **(6668)**(65pcs) 5 color (13/13/13/13/13)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]}], open('${L}/cards.json', 'w'))
 `]);
 const env = Object.assign({}, process.env, { CAT_LOCAL: L, PYTHONPATH: path.join(DIR, 'tools') + ':' + path.join(DIR, 'tools/catalog'), REQ: JSON.stringify({ id: 't1', name: 'TEST CUSTOMER', items: [{ no: '57026', mode: 'S' }] }), SIG: '' });
 let out = execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env }).toString();
@@ -39,6 +42,12 @@ execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, en
 const r2 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t2.json')));
 const h2 = r2.ok ? fs.readFileSync(path.join(T, r2.page), 'utf8') : '';
 ok('sizes page: colours keep the card numbers 2 and 5, photo cut to two', r2.ok && /data-c="57026:2"/.test(h2) && /data-c="57026:5"/.test(h2) && !/data-c="57026:1"/.test(h2) && /<span>2<\/span><span>5<\/span>/.test(h2));
+// "6668 all" (23 Oct 2026): every READY card of that number, each its own design, oldest card first
+const env3 = Object.assign({}, env, { REQ: JSON.stringify({ id: 't3', name: 'ALL TEST', items: [{ no: '6668 all', mode: 'S' }, { no: '57026', mode: 'S' }] }) });
+execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: env3 });
+const r3 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t3.json'))); const h3 = r3.ok ? fs.readFileSync(path.join(T, r3.page), 'utf8') : '';
+ok('"6668 all" → three designs 6668_01, 6668_02, 6668_03 + 57026', r3.ok && (h3.match(/<article class="design" data-no="([^"]+)"/g) || []).map(x => x.match(/data-no="([^"]+)"/)[1]).join() === '6668_01,6668_02,6668_03,57026');
+ok('oldest card is _01 (40 pcs), newest _03 (70 pcs)', /data-no="6668_01"[\s\S]*?data-k="6668_01:1"/.test(h3) && (r3.report || []).some(l => /6668 all: 3 READY cards/.test(l)) && /data-c="6668_03:1"|data-k="6668_03:1"/.test(h3));
 (async () => {
   const br = await chromium.launch(); const pg = await br.newPage({ viewport: { width: 390, height: 844 } }); const errs = [];
   pg.on('pageerror', e => errs.push(e.message));

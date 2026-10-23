@@ -665,7 +665,7 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
   <h2 style="margin:6px 0 2px">Catalogue · كتالوج</h2>
   <div class="sub">Design numbers → a customer catalogue link with photos, videos and the Send-order PDF, same as before. Stock is not touched.</div>
   <div class="bgrid" style="margin-top:8px"><label class="bf"><span>Customer · العميل</span><input id="cname" placeholder="e.g. AHMAD AL WASTA"></label><label class="bf"><span>Country · البلد</span><input id="ccountry" placeholder="e.g. LIBYA"></label></div>
-  <label class="bf" style="margin-top:8px"><span>Design numbers — one per line, add SETS or COMPLETE after the number · أرقام التصاميم</span><textarea id="cnos" placeholder="46209 complete&#10;38156 sets&#10;71352 c"></textarea></label>
+  <label class="bf" style="margin-top:8px"><span>Design numbers — one per line, add SETS or COMPLETE after the number · أرقام التصاميم</span><textarea id="cnos" placeholder="46209 complete&#10;38156 sets&#10;6668 all sets"></textarea></label>
   <div id="clist"></div>
   <div id="cprice" class="pl" hidden></div>
   <div class="btns"><button id="cmake" class="gold" type="button">Make catalogue · اصنع الكتالوج</button></div>
@@ -915,7 +915,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-22f';
+var VER = '2026-10-23a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2035,18 +2035,20 @@ function catOpen(){ if (!$('cname').value.trim()) $('cname').value = $('name').v
 function catParse(){
   var out = [], seen = {};
   // 17 Oct 2026 (Abbas): "6668 and 6668-1 ... it only gives me one design" — a dash suffix after the number is a different card, kept as its own line
-  $('cnos').value.split(/[\n,;]+/).forEach(function(line){ var m = line.match(/(\d{3,6})(?:\s*-\s*([A-Za-z0-9]{1,3}))?/); if (!m) return; var key = m[1] + (m[2] ? '-' + m[2].toUpperCase() : ''); if (seen[key]) return; seen[key] = 1;
-    var w = line.replace(m[0], '').toLowerCase().trim();
+  $('cnos').value.split(/[\n,;]+/).forEach(function(line){ var m = line.match(/(\d{3,6})(?:\s*-\s*([A-Za-z0-9]{1,3}))?/); if (!m) return; var key = m[1] + (m[2] ? '-' + m[2].toUpperCase() : ''); var w = line.replace(m[0], '').toLowerCase().trim();
+    if (!m[2] && (/\b(all|every|كل)\b/.test(w) || w.indexOf('*') >= 0)) { key = m[1] + '-ALL'; w = w.replace(/\b(all|every|كل)\b|\*/g, '').trim(); }   // 23 Oct 2026: "6668 all" = every READY card of that number, each its own design
+    if (seen[key]) return; seen[key] = 1;
     var mode = /comp|^c\b|كامل/.test(w) ? 'C' : /set|^s\b|طقم|اطقم|أطقم/.test(w) ? 'S' : (CAT.modes[key] || '');
     out.push({ no: key, mode: mode }); });
   CAT.items = out; setTimeout(catPrices, 0);
   $('clist').innerHTML = out.map(function(it, i){ var b0 = it.no.split('-')[0], inR = designs.some(function(d){ return d.base === it.no || d.base === b0; });
-    return '<div class="crow"><span>SJ-' + it.no + ' <small style="font-weight:500;color:' + (inR ? 'var(--mute)' : '#9a3b1e') + '">' + (inR ? 'in READY' : 'not in READY') + '</small></span><span class="sw">' +
+    var nAll = /-ALL$/.test(it.no) ? designs.filter(function(d){ return d.base === b0; }).length : 0;
+    return '<div class="crow"><span>SJ-' + (nAll ? b0 + ' <b>all</b>' : it.no) + ' <small style="font-weight:500;color:' + (inR ? 'var(--mute)' : '#9a3b1e') + '">' + (nAll ? nAll + ' cards in READY, each its own design' : inR ? 'in READY' : 'not in READY') + '</small></span><span class="sw">' +
       '<button type="button" data-i="' + i + '" data-v="S" class="' + (it.mode === 'S' ? 'on' : '') + '">SETS</button><button type="button" data-i="' + i + '" data-v="C" class="' + (it.mode === 'C' ? 'on' : '') + '">COMPLETE</button></span></div>'; }).join('');
 }
 $('cnos').addEventListener('input', catParse);
 $('clist').addEventListener('click', function(e){ var b = e.target.closest('button[data-i]'); if (!b) return; var it = CAT.items[+b.dataset.i]; it.mode = b.dataset.v; CAT.modes[it.no] = it.mode;
-  $('cnos').value = CAT.items.map(function(x){ return x.no + (x.mode ? (x.mode === 'C' ? ' complete' : ' sets') : ''); }).join('\n'); catParse(); });
+  $('cnos').value = CAT.items.map(function(x){ return x.no.replace(/-ALL$/, ' all') + (x.mode ? (x.mode === 'C' ? ' complete' : ' sets') : ''); }).join('\n'); catParse(); });
 function cst(cls, h){ var el = $('cst'); el.hidden = !h; el.className = 'stk ' + cls; el.innerHTML = h; }
 $('cmake').onclick = async function(){
   if (CAT.busy) return; catParse();

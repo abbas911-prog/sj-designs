@@ -205,22 +205,34 @@ def build(req):
         mm = re.match(r'\s*(?:SJ|SH)?\s*[-=:]*\s*(\d{3,6})\s*(?:-\s*([A-Za-z0-9]{1,3}))?', str(it.get('no', '')), re.I)
         if not mm: continue
         no = mm.group(1) + ('-' + mm.group(2).upper() if mm.group(2) else '')
+        # 23 Oct 2026 (Abbas: "6668 has 20 cards with different prints, I want them all"): "6668 all" / "6668*" = EVERY READY card with that
+        # number, each as its own design 6668_01, 6668_02 … (oldest card first, so the numbers stay the same next time)
+        if not mm.group(2) and (re.search(r'\b(all|every|كل)\b', str(it.get('no', '')), re.I) or '*' in str(it.get('no', ''))): no = mm.group(1) + '-ALL'
         if no not in seen: seen.add(no); items.append((no, 'C' if str(it.get('mode', 'S')).upper().startswith('C') else 'S'))
     if not items: return {'ok': False, 'error': 'No design numbers.'}
     cards = ready_cards()
     errors, report, flags = [], [], []
     MODE, TOT, COLS, PCSS, PHOTOS, VIDS, ORDER = {}, {}, {}, {}, {}, {}, []
+    todo, novid = [], set()
     for no, mode in items:
         base, suf = (no.split('-', 1) + [''])[:2]
         cands = [c for c in cards if parse(c['name'])['no'] == base]
+        if suf == 'ALL':
+            if not cands: errors.append('SJ-%s is not in READY on Trello.' % base); continue
+            cands.sort(key=lambda c: c['id'])                        # oldest first: 6668_01 stays 6668_01 next time
+            for i, c in enumerate(cands): todo.append(('%s_%02d' % (base, i + 1), mode, c))
+            report.append('SJ-%s all: %d READY cards → %s_01 … %s_%02d' % (base, len(cands), base, base, len(cands)))
+            if len(cands) > 8: novid.update('%s_%02d' % (base, i + 1) for i in range(len(cands))); flags.append('SJ-%s all: %d cards — videos left out (too many for one page); make a small catalogue for the ones that need the video.' % (base, len(cands)))
+            continue
         if suf: mine = [c for c in cands if re.search(r'\b%s\s*-\s*%s\b' % (base, re.escape(suf)), c['name'], re.I)]
         else:
             plain = [c for c in cands if not re.search(r'\b%s\s*-\s*[A-Za-z0-9]{1,3}\b' % base, c['name'])]
             mine = plain or cands
         if not mine: errors.append('SJ-%s is not in READY on Trello.' % no + (' (cards with this number: %s)' % ', '.join(c['name'][:30] for c in cands[:3]) if cands else '')); continue
         mine.sort(key=lambda c: c['id'], reverse=True)            # "the last one added in trello" = newest card id
-        card = mine[0]
-        if len(mine) > 1: flags.append('SJ-%s has %d READY cards — used the newest: %s' % (no, len(mine), card['name']))
+        if len(mine) > 1: flags.append('SJ-%s has %d READY cards — used the newest: %s (type "%s all" for every card)' % (no, len(mine), mine[0]['name'], base))
+        todo.append((no, mode, mine[0]))
+    for no, mode, card in todo:
         p = parse(card['name'])
         cells = [c[0] for c in p['cells']]
         tot = p['total'][0] if p['total'] else None
@@ -261,7 +273,7 @@ def build(req):
         else:
             report.append('SJ-%s SETS  %s → %d colours' % (no, line, len(PCSS[no])))
         if cut: flags.append('SJ-%s: %d sold-out colour%s cut out of the photo (numbers stay as on the card) — check the photo.' % (no, sum(cut), '' if sum(cut) == 1 else 's'))
-        vids = [a for a in att if str(a.get('mimeType', '')).startswith('video/')]
+        vids = [] if no in novid else [a for a in att if str(a.get('mimeType', '')).startswith('video/')]
         if vids and video(no, vids[0]): VIDS[no] = 1
     if errors: return {'ok': False, 'error': ' '.join(errors), 'errors': errors, 'report': report}
     stem = page_stem(name)
