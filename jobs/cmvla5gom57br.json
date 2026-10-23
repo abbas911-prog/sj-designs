@@ -1,0 +1,20 @@
+{
+ "ok": false,
+ "error": "SJ-70438: 12+7+8+4+8+8+0+0+8+0+4+4 = 63 ✗ (card: 64) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.",
+ "errors": [
+  "SJ-70438: 12+7+8+4+8+8+0+0+8+0+4+4 = 63 ✗ (card: 64) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again."
+ ],
+ "report": [
+  "SJ-50473 SETS  9+4+0+0+0+4+0+4 = 21 ✓ (card: 21) → 4 colours",
+  "SJ-62348 SETS  4+4+4+4+4+4 = 24 ✓ (card: 24) → 6 colours",
+  "SJ-68391 SETS  12+4+12+8+4+4 = 44 ✓ (card: 44) → 6 colours",
+  "SJ-21876 SETS  7+8+8+8 = 31 ✓ (card: 31) → 4 colours",
+  "SJ-79623 SETS  16+8+8+8+16+16+8+8+8 = 96 ✓ (card: 96) → 9 colours",
+  "SJ-34185 SETS  1+0+0+8+4+4+4+8+4+8+8 = 49 ✓ (card: 49) → 9 colours",
+  "SJ-35091 SETS  4+4+4+4+8+4+4+4+4+4+4+4 = 52 ✓ (card: 52) → 12 colours",
+  "SJ-35218 SETS  0+8+4+8+4+4+4+4+4+4+4+4 = 52 ✓ (card: 52) → 11 colours",
+  "SJ-20713 SETS  8+8+4+0+8+4+4+4+4+4+4+4 = 56 ✓ (card: 56) → 11 colours",
+  "SJ-79246 SETS  0+4+4+4+4+8+4+4+8+8+8+8 = 64 ✓ (card: 64) → 11 colours"
+ ],
+ "id": "cmvla5gom57br"
+}
