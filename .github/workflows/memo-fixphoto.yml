@@ -1,0 +1,33 @@
+name: memo-fixphoto
+run-name: fix photo ${{ inputs.no }} in ${{ inputs.page }}
+# 23 Oct 2026: swap one photo of one design inside an existing catalogue page (same link). Started by hand (Actions → Run workflow).
+on:
+  workflow_dispatch:
+    inputs:
+      page: { description: 'catalogue page file, e.g. nasir-libya-1023b.html', required: true }
+      no: { description: 'design number on that page, e.g. 79623', required: true }
+      slot: { description: 'which photo of that design (1 = first)', required: true, default: '1' }
+      card: { description: 'Trello card id', required: true }
+      att: { description: 'Trello attachment id of the right photo', required: true }
+permissions:
+  contents: write
+concurrency: { group: memo-catalog, cancel-in-progress: false }
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        timeout-minutes: 5
+        run: pip install -q pillow numpy
+      - name: Swap the photo
+        env:
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+        run: python3 tools/catalog/fixphoto.py "${{ inputs.page }}" "${{ inputs.no }}" "${{ inputs.slot }}" "${{ inputs.card }}" "${{ inputs.att }}"
+      - name: Publish
+        run: |
+          git config user.name memo-bot; git config user.email memo-bot@users.noreply.github.com
+          git add -A "${{ inputs.page }}"
+          git commit -q -m "catalogue: ${{ inputs.page }} - design ${{ inputs.no }} photo ${{ inputs.slot }} replaced" || exit 0
+          for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done
