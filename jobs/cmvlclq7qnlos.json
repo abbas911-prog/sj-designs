@@ -1,0 +1,34 @@
+{
+ "ok": false,
+ "error": "SJ-6668_05: 14+13+14+14+12 = 67 ✗ (card: ?) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again. SJ-6668_06: 10+10+10+14+10 = 54 ✗ (card: ?) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again. SJ-6668_07: 12+12+12+12+12 = 60 ✗ (card: ?) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again. SJ-6668_08: — = 0 ✗ (card: ?) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again. SJ-6668_09: — = 0 ✗ (card: 60) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.",
+ "errors": [
+  "SJ-6668_05: 14+13+14+14+12 = 67 ✗ (card: ?) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.",
+  "SJ-6668_06: 10+10+10+14+10 = 54 ✗ (card: ?) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.",
+  "SJ-6668_07: 12+12+12+12+12 = 60 ✗ (card: ?) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.",
+  "SJ-6668_08: — = 0 ✗ (card: ?) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.",
+  "SJ-6668_09: — = 0 ✗ (card: 60) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again."
+ ],
+ "report": [
+  "SJ-6668 all: 24 READY cards → 6668_01 … 6668_24",
+  "SJ-6668_01 COMPLETE  20+20+20+20+20 = 100 ✓ (card: 100) → 5 complete sets",
+  "SJ-6668_02 COMPLETE  10+10+10+10+10 = 50 ✓ (card: 50) → 2 complete sets + 10 pcs",
+  "SJ-6668_03 COMPLETE  14+14+14+14+14 = 70 ✓ (card: 70) → 3 complete sets + 10 pcs",
+  "SJ-6668_04 COMPLETE  8+10+10+8+10 = 46 ✓ (card: 46) → 2 complete sets + 6 pcs",
+  "SJ-6668_10 COMPLETE  14+14+14+14+14+0 = 70 ✓ (card: 70) → 3 complete sets + 10 pcs",
+  "SJ-6668_11 COMPLETE  6+6+6+6+6 = 30 ✓ (card: 30) → 1 complete sets + 10 pcs",
+  "SJ-6668_12 COMPLETE  14+14+14+14+14+0 = 70 ✓ (card: 70) → 3 complete sets + 10 pcs",
+  "SJ-6668_13 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-6668_14 COMPLETE  14+14+14+14+14 = 70 ✓ (card: 70) → 3 complete sets + 10 pcs",
+  "SJ-6668_15 COMPLETE  10+10+10+10+10 = 50 ✓ (card: 50) → 2 complete sets + 10 pcs",
+  "SJ-6668_16 COMPLETE  14+14+14+14+14 = 70 ✓ (card: 70) → 3 complete sets + 10 pcs",
+  "SJ-6668_17 COMPLETE  10+10+10+10+10 = 50 ✓ (card: 50) → 2 complete sets + 10 pcs",
+  "SJ-6668_18 COMPLETE  8+10+10+8+10 = 46 ✓ (card: 46) → 2 complete sets + 6 pcs",
+  "SJ-6668_19 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-6668_20 COMPLETE  14+14+14+14+14 = 70 ✓ (card: 70) → 3 complete sets + 10 pcs",
+  "SJ-6668_21 COMPLETE  14+14+10+13+14 = 65 ✓ (card: 65) → 3 complete sets + 5 pcs",
+  "SJ-6668_22 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-6668_23 COMPLETE  13+14+14+14+14 = 69 ✓ (card: 69) → 3 complete sets + 9 pcs",
+  "SJ-6668_24 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets"
+ ],
+ "id": "cmvlclq7qnlos"
+}
