@@ -517,11 +517,23 @@ function facTrelloMoves(P, wtok, FT) {
 // AL MUTAGADED GARMENTS sheet (the "W - Name" tabs), kept here as FAC_WORKERS (changed from the app: More → Workers → ✏️ Edit the list).
 // Until the list is changed from the app, this is the list from the sheet on 21 Oct 2026. A worker who also has a Trello field of the same
 // name gets his pieces written into it; the others simply have no field.
-var FAC_WORKERS_DEFAULT = ['Arif', 'Darmindar', 'Dildar', 'Islam', 'Mamun', 'Mohsin', 'Moshtaq', 'Nahid', 'Ram', 'Rifat', 'Rubindar', 'Sajjad', 'Shadab', 'Shamim', 'Shoab', 'Shohan', 'Shuman', 'Waris', 'Ibraheem'];
+// 23 Oct 2026 (Abbas): "Ibrahim is management, not a worker; Ram is checking; Arif is the iron man; Waris left". A list entry can carry a
+// ROLE in brackets - "Ram (checking)", "Arif (iron)": such a person is on attendance and salary like everyone, but is not a machine worker
+// (listed after the machine workers in the WORK box, never counted as "free"). The old 19-name list is brought up to date once (FAC_WORKERS_V).
+var FAC_WORKERS_DEFAULT = ['Darmindar', 'Dildar', 'Islam', 'Mamun', 'Mohsin', 'Moshtaq', 'Nahid', 'Rifat', 'Rubindar', 'Sajjad', 'Shadab', 'Shamim', 'Shoab', 'Shohan', 'Shuman', 'Ram (checking)', 'Arif (iron)'];
+function facWorkerSplit(n) { var m = String(n || '').trim().match(/^(.*?)\s*\(([^()]+)\)\s*$/); return m ? { name: m[1].trim().slice(0, 30), role: m[2].trim().toLowerCase().slice(0, 20) } : { name: String(n || '').trim().slice(0, 30), role: '' }; }
+function facWorkersMigrate(P, names) {                            // once: drop Ibraheem / Ibrahim and Waris, tag Ram = checking and Arif = iron (Abbas, 23 Oct 2026)
+  if (P.getProperty('FAC_WORKERS_V') === '2') return names;
+  var out = names.map(function (n) { var w = facWorkerSplit(n), k = w.name.toUpperCase(); if (/^(IBRAHEEM|IBRAHIM|WARIS)$/.test(k)) return null; if (!w.role && k === 'RAM') return 'Ram (checking)'; if (!w.role && k === 'ARIF') return 'Arif (iron)'; return n; }).filter(Boolean);
+  var mach = out.filter(function (n) { return !facWorkerSplit(n).role; }), rest = out.filter(function (n) { return facWorkerSplit(n).role; }); out = mach.concat(rest);
+  try { P.setProperty('FAC_WORKERS', JSON.stringify(out)); P.setProperty('FAC_WORKERS_V', '2'); } catch (e) {} return out;
+}
+function facRoles(P, tok) { var r = {}; facWorkers(P, tok).forEach(function (w) { if (w.role) r[w.name.toUpperCase()] = w.role; }); return r; }   // {NAME: role} for the app
 function facWorkers(P, tok) {
-  var names = null; try { names = JSON.parse(P.getProperty('FAC_WORKERS') || 'null'); } catch (e) {} if (!Array.isArray(names) || !names.length) names = FAC_WORKERS_DEFAULT;
+  var names = null; try { names = JSON.parse(P.getProperty('FAC_WORKERS') || 'null'); } catch (e) {} if (!Array.isArray(names) || !names.length) names = FAC_WORKERS_DEFAULT.slice();
+  names = facWorkersMigrate(P, names);
   var byName = {}; try { var cf = facCf(tok); Object.keys(cf).forEach(function (id) { byName[String(cf[id]).trim().toUpperCase()] = id; }); } catch (e) {}
-  return names.map(function (n) { n = String(n).trim().slice(0, 30); return n ? { id: byName[n.toUpperCase()] || '', name: n } : null; }).filter(Boolean);
+  return names.map(function (n) { var w = facWorkerSplit(n); return w.name ? { id: byName[w.name.toUpperCase()] || '', name: w.name, role: w.role } : null; }).filter(Boolean);
 }
 function facActs(tok, cid) {                                   // the card's history, oldest first: moves, creation, comments
   var a = trApi('get', '/cards/' + cid + '/actions', { filter: 'updateCard:idList,createCard,copyCard,moveCardToBoard,convertToCardFromCheckItem,commentCard', limit: 1000 }, tok) || [];
@@ -617,7 +629,7 @@ function facWorkRep(P, rtok, rdays) {                            // every worker
       if (b.out) { if (b.out >= rday0) r.today = (r.today || 0) + b.d; if (b.out < rcut) return; r.pcs += b.d; r.ms += facWorkMs(b.in, b.out); r.batches++; r.cards[cid0] = (r.cards[cid0] || 0) + b.d; if (b.out > r.last) r.last = b.out; var dk = facYmd(b.out); r.byDay[dk] = (r.byDay[dk] || 0) + b.d; }
       else { r.open++; r.hand.push({ id: cid0, name: bc.name, g: b.g, in: b.in, adds: b.adds || [], by: b.by, wd: facWorkDur(facWorkMs(b.in, Date.now())) }); } }); }); });
   var rout = { ok: true, t: Date.now(), days: rdays, todayN: Object.keys(rw).filter(function (k) { return rw[k].today; }).length, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, today: r.today || 0, pcs: r.pcs, dur: facWorkDur(r.ms), perDay: r.ms ? facRate(r.pcs, r.ms) : 0, batches: r.batches, open: r.open, last: r.last, byDay: r.byDay, hand: r.hand.sort(function (a, b) { return a.in - b.in; }), cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
-  rout.att = facAttWeek(P); rout.today = facYmd(Date.now()); try { rout.late = facLate(P, rtok); } catch (e) { rout.late = []; } rout.low = facMatLow(P).map(function (m) { return { n: m.n, q: m.q, u: m.u || '' }; });
+  rout.att = facAttWeek(P); rout.roles = facRoles(P, rtok); rout.today = facYmd(Date.now()); try { rout.late = facLate(P, rtok); } catch (e) { rout.late = []; } rout.low = facMatLow(P).map(function (m) { return { n: m.n, q: m.q, u: m.u || '' }; });
   return rout;
 }
 // The DAILY CLOSING: at 10 pm Dubai (Friday 12 noon) the relay writes the day into the direct chat - pieces per worker, who has what in hand,
@@ -888,7 +900,7 @@ function fac0(reqText, P) {
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
       try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; } res.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.lo = facLaisOrders(P, who0, false);
-      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
+      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.wroles = facRoles(P, rtok); res.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
       return out(res);
     }
     if (req.op === 'ping') {                                  // 15 Oct 2026: the cheap "anything new?" every 4 s - no Trello call; the cards come from the cached list
@@ -1276,17 +1288,17 @@ function fac0(reqText, P) {
     if (req.op === 'work') {                                  // 21 Oct 2026: the workers and their batches on this card (from the Trello comments)
       var wc = String(req.card || '').replace(/[^0-9a-f]/g, ''); if (!wc) return out({ ok: false, error: 'bad request' });
       var wcache = CacheService.getScriptCache(), wh = req.fresh ? null : wcache.get('FAC_WK_' + wc), wnames = facWorkers(P, rtok).map(function (w) { return w.name; });   // the list of names is never from the cache (it can be edited any time)
-      if (wh) { var wh0 = JSON.parse(wh); wh0.workers = wnames; return out(wh0); }
-      var wacts = facActs(rtok, wc), wres = { ok: true, workers: wnames, batches: facWkParse(wacts), sheet: facSheetParse(wacts), hours: [WORK_FROM, WORK_TO] };   // 22 Oct 2026: + the card sheet (cut / rejected / packed …)
+      if (wh) { var wh0 = JSON.parse(wh); wh0.workers = wnames; wh0.roles = facRoles(P, rtok); return out(wh0); }
+      var wacts = facActs(rtok, wc), wres = { ok: true, workers: wnames, roles: facRoles(P, rtok), batches: facWkParse(wacts), sheet: facSheetParse(wacts), hours: [WORK_FROM, WORK_TO] };   // 22 Oct 2026: + the card sheet (cut / rejected / packed …)
       Object.keys(wres.batches).forEach(function (w) { wres.batches[w].forEach(function (b) { var wm = facWorkMs(b.in, b.out || Date.now()); b.wd = facWorkDur(wm); if (b.out) b.rate = facRate(b.d, wm); }); });
       try { wcache.put('FAC_WK_' + wc, JSON.stringify(wres), 30); } catch (e) {} return out(wres);
     }
     if (req.op === 'workers') {                               // 21 Oct 2026: the list of machine workers, changed from the app (More → Workers → Edit)
-      var wn = Array.isArray(req.names) ? req.names.map(function (x) { return String(x || '').replace(/[^\w .'\-\u0980-\u09ff]/g, '').trim().slice(0, 30); }).filter(Boolean) : null;
+      var wn = Array.isArray(req.names) ? req.names.map(function (x) { return String(x || '').replace(/[^\w .'()\-\u0980-\u09ff]/g, '').trim().slice(0, 44); }).filter(Boolean) : null;   // "Name (role)" allowed
       if (!wn || !wn.length || wn.length > 40) return out({ ok: false, error: 'give 1 to 40 names' });
-      var wseen = {}; wn = wn.filter(function (x) { var k = x.toUpperCase(); if (wseen[k]) return false; wseen[k] = 1; return true; });
-      P.setProperty('FAC_WORKERS', JSON.stringify(wn)); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']);
-      return out({ ok: true, workers: facWorkers(P, rtok).map(function (w) { return w.name; }) });
+      var wseen = {}; wn = wn.filter(function (x) { var k = facWorkerSplit(x).name.toUpperCase(); if (!k || wseen[k]) return false; wseen[k] = 1; return true; });
+      P.setProperty('FAC_WORKERS', JSON.stringify(wn)); P.setProperty('FAC_WORKERS_V', '2'); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']);
+      return out({ ok: true, workers: facWorkers(P, rtok).map(function (w) { return w.name; }), roles: facRoles(P, rtok) });
     }
     if (req.op === 'workset') {                               // 21 Oct 2026: pieces given to a worker (kind 'in') / pieces back from them (kind 'out')
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
@@ -1332,7 +1344,7 @@ function fac0(reqText, P) {
     }
     if (req.op === 'att') {                                   // 22 Oct 2026: attendance of one day (+ the week), for the Factory screen
       var ad = /^\d{4}-\d\d-\d\d$/.test(String(req.day || '')) ? String(req.day) : facYmd(Date.now());
-      return out({ ok: true, day: ad, today: facYmd(Date.now()), att: facAtt(P, ad), week: facAttWeek(P), workers: facWorkers(P, rtok).map(function (w) { return w.name; }) });
+      return out({ ok: true, day: ad, today: facYmd(Date.now()), att: facAtt(P, ad), week: facAttWeek(P), workers: facWorkers(P, rtok).map(function (w) { return w.name; }), roles: facRoles(P, rtok) });
     }
     if (req.op === 'attset') {                                // 22 Oct 2026: the clock - kind in / out / absent / present / clear, one worker; 'at' = "HH:MM" to correct a time (Abbas only)
       var ad2 = /^\d{4}-\d\d-\d\d$/.test(String(req.day || '')) ? String(req.day) : facYmd(Date.now()), cur = facAtt(P, ad2), an = String(req.name || '').trim().toUpperCase().slice(0, 30), ak = String(req.kind || ''), anow = Date.now();

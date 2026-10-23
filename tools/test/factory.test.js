@@ -117,7 +117,10 @@ async function suite(fast, browser) {
     await test('work: give pieces to a worker, timer runs, Done stops it - Trello comment, field and chat line', async () => {
       await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '17841');
       await until(() => page.locator('#work').isVisible(), 8000, 'work box');
-      const rows = page.locator('#wkrows .wr'); await until(async () => (await rows.count()) === 19, 8000, '19 workers (the sheet list)');
+      const rows = page.locator('#wkrows .wr'); await until(async () => (await rows.count()) === 17, 8000, '17 workers (the sheet list minus Ibraheem and Waris - 23 Oct)');
+      const wtxt = await page.textContent('#wkrows'); ok(!/Ibraheem|Waris/.test(wtxt) && /Checking · iron/.test(wtxt), 'Ibraheem / Waris gone, the role divider shown');
+      ok(await page.locator('#wkrows .wr').last().evaluate(e => /Arif/.test(e.textContent) && /iron/.test(e.textContent) && e.classList.contains('role')), 'Arif (iron) is the last row, with his job');
+      ok(/"Ram \(checking\)"/.test(T.relay.P.FAC_WORKERS) && T.relay.P.FAC_WORKERS_V === '2', 'the list on the relay was brought up to date once: ' + T.relay.P.FAC_WORKERS);
       ok(!(await page.textContent('#wkrows')).includes('TASLEEM'), 'hand-work names are NOT the workers');
       const r = page.locator('#wkrows .wr[data-w="Rifat"]'); await r.locator('input').fill('20'); await r.locator('button.in').click();
       await until(() => W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && /^👷 IN · Rifat · 20 pcs · Abbas \(factory app\)/.test(a.data.text)), 10000, 'IN comment on Trello');
@@ -163,8 +166,8 @@ async function suite(fast, browser) {
       const want = Math.round(18 / Math.max(0.25, workMs(inT, outT) / (740 * 60000)));
       ok(new RegExp('≈ ' + want + ' /day').test(await page.textContent('#wksbody')), 'rate over working hours: want ' + want + ' — ' + (await page.textContent('#wksbody')).slice(0, 160));
       ok(/8 am – 10 pm/.test(await page.textContent('#wksbody')), 'says how a day is counted');
-      await page.click('#wkedit'); await page.fill('#wkenames', 'Rifat\nArif\nNew Guy'); await page.click('#wkego');
-      await until(() => JSON.stringify(JSON.parse(T.relay.P.FAC_WORKERS || '[]')) === '["Rifat","Arif","New Guy"]', 8000, 'list saved on the relay');
+      await page.click('#wkedit'); ok(/Arif \(iron\)/.test(await page.inputValue('#wkenames')), 'the edit box shows the job in brackets'); await page.fill('#wkenames', 'Rifat\nArif (iron)\nNew Guy'); await page.click('#wkego');
+      await until(() => JSON.stringify(JSON.parse(T.relay.P.FAC_WORKERS || '[]')) === '["Rifat","Arif (iron)","New Guy"]', 8000, 'list saved on the relay');
       await until(async () => /New Guy/.test(await page.textContent('#wksbody')), 8000, 'screen shows the new list');
       await page.click('#wksx'); await page.click('#tabs button[data-t="cards"]');
       await openCardNo(page, '17841'); await until(async () => (await page.locator('#wkrows .wr').count()) === 3, 8000, 'card shows the 3 workers'); await page.goBack();
@@ -201,6 +204,7 @@ async function suite(fast, browser) {
       const rem = await page.textContent('#wksbody .rem'); ok(/IN LINE · REMAINING/.test(rem) && /SJ-17841/.test(rem) && /12 pcs · given 24 \(⏳ 6 · ✓ 18\)/.test(rem) && /0\s*remaining/.test(rem), 'remaining strip: ' + rem.slice(0, 200));
       await page.click('#wksbody .rr'); await until(() => page.locator('#card').isVisible(), 5000, 'tap opens the card'); ok(/17841/.test(await page.textContent('#cnm')), 'the right card'); await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000); await page.click('#twork'); await until(async () => /Rifat/.test(await page.textContent('#wksbody')), 8000, 'dashboard again');
       ok(await page.locator('#wksbody .wkc[data-w="Rifat"] .chip').evaluate(e => /Free/.test(e.textContent)), 'Rifat: Free chip');
+      ok(/2\s*free/.test(await page.textContent('#wksbody .dtiles')), 'free tile counts Rifat and New Guy (Arif has pieces; a role person is never "free")');
       await page.click('#wksbody .dtile[data-f="free"]'); await until(async () => (await page.locator('#wksbody .wkc').count()) === 2 && !/Arif/.test(await page.textContent('#wksbody .wkc')), 5000, 'free filter hides Arif');
       await page.click('#wksbody .dtile[data-f="free"]'); await until(async () => (await page.locator('#wksbody .wkc').count()) === 3, 5000, 'filter off');
       await page.click('#wksort button[data-s="done"]'); await until(async () => /Rifat/.test(await page.locator('#wksbody .wkc').first().textContent()), 5000, 'most done first = Rifat');
