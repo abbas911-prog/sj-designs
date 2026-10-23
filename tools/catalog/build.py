@@ -102,22 +102,27 @@ def column_profile(im, width=800):
         wgt = np.ones(w, dtype=np.float32); col = px.mean(axis=0)
     return wgt, col, w, clean
 
-def find_cuts(im, n, lo=0.45, hi=1.75):
-    W = im.size[0]
-    if n <= 1: return [0.0, float(W)]
+def colour_table(im):
+    """The column profile plus what the cutter and the photo matcher share: frac (dress per column), wgt, the line-up's left/right
+    edge (first/last column where a dress really stands - a vase or flowers never pass 0.3), w, clean and colour_cost(a, b) =
+    the colour spread inside the columns a..b (sum w|c|^2 - |sum w c|^2 / sum w, from cumulative sums)."""
     frac, col, w, clean = column_profile(im)
     wgt = np.clip(frac, 0, 1) ** 2 + 1e-3                        # a half-filled column (sleeve, hair) counts less
-    # trim: the line-up's left/right edge = first/last column where a dress really stands (a vase or flowers never pass 0.3)
     xs = np.where(frac > 0.3)[0]
     left, right = (max(0, int(xs[0]) - 2), min(w, int(xs[-1]) + 3)) if len(xs) else (0, w)
-    avg = (right - left) / n
-    wmin, wmax = max(4, int(avg * lo)), int(avg * hi) + 1
-    # cumulative sums for the within-group colour spread: cost(a,b) = sum w|c|^2 - |sum w c|^2 / sum w
     wc = wgt[:, None] * col; wc2 = (wgt * (col * col).sum(axis=1))
     C1 = np.concatenate([[0.0], np.cumsum(wgt)]); C2 = np.vstack([np.zeros((1, 3)), np.cumsum(wc, axis=0)]); C3 = np.concatenate([[0.0], np.cumsum(wc2)])
     def colour_cost(a, b):                                      # a, b arrays of equal length, a < b
         sw = C1[b] - C1[a]; s = C2[b] - C2[a]; s2 = C3[b] - C3[a]
         return s2 - (s * s).sum(axis=1) / np.maximum(sw, 1e-6)
+    return frac, wgt, left, right, w, clean, colour_cost
+
+def find_cuts(im, n, lo=0.45, hi=1.75):
+    W = im.size[0]
+    if n <= 1: return [0.0, float(W)]
+    frac, wgt, left, right, w, clean, colour_cost = colour_table(im)
+    avg = (right - left) / n
+    wmin, wmax = max(4, int(avg * lo)), int(avg * hi) + 1
     # a shop photo (other dresses hanging behind) also leans on "the dresses hang evenly spaced": a width far from the average costs
     eq = np.array([left + round(avg * i) for i in range(n + 1)]); base = float(colour_cost(eq[:-1], eq[1:]).sum()) / n
     mu = (0.0 if clean else 0.8) * base
@@ -151,6 +156,51 @@ def find_cuts(im, n, lo=0.45, hi=1.75):
         if clean and seg[j] < 0.35 and seg[j] < frac[c] * 0.8: cuts[i] = lo_ + j
     cuts[0] = 0; cuts[-1] = w                                   # the dress edges keep the full picture width
     return [c * W / w for c in cuts]
+
+def split_cost(im, ns, lo=0.45, hi=1.75):
+    """How well a photo splits into n dresses, for each n in ns: the colour spread left inside the n best pieces divided by the
+    spread of the whole line-up (0 = every piece one flat colour). A 6-dress photo cut into 3 keeps a big mix in every piece
+    (high); a 3-dress photo cut into 6 costs almost nothing (low) - that asymmetry is what match_photos uses."""
+    frac, wgt, left, right, w, clean, colour_cost = colour_table(im)
+    c1 = float(colour_cost(np.array([left]), np.array([right]))[0]) or 1e-6
+    out, INF = {}, 1e18
+    for n in sorted(set(int(x) for x in ns)):
+        if n <= 1: out[n] = 1.0; continue
+        avg = (right - left) / n
+        wmin, wmax = max(4, int(avg * lo)), int(avg * hi) + 1
+        best = np.full((n + 1, w + 1), INF); best[0][left] = 0.0
+        for k in range(1, n + 1):
+            for b in range(left + k * wmin, right + 1):
+                a_lo, a_hi = max(left, b - wmax), b - wmin
+                if a_hi < a_lo: continue
+                A = np.arange(a_lo, a_hi + 1); prev = best[k - 1][A]
+                if not (prev < INF).any(): continue
+                best[k][b] = (prev + colour_cost(A, np.full_like(A, b))).min()
+        out[n] = float(best[n][right]) / c1 if best[n][right] < INF else 1.0
+    return out
+
+def match_photos(cands, groups, default, load, is_cover):
+    """23 Oct 2026 (Nasir / SJ-79623: the 3-colour group got a 6-dress shop photo): which photo belongs to which colour group.
+    cands = the card's photos in the old preference order (JAMAL covers first, then shop line-ups, newest first); groups = the
+    colour groups of the title; default = the old pick. Every (photo, group) pair gets a cost = split_cost of the photo at that
+    group's dress count (+ a little for a shop photo, + a hair for an older photo, so ties keep the old order); the cheapest
+    one-photo-per-group choice wins - but only when it is clearly better than the old pick (< 0.7 of its cost), because a
+    printed fabric fools the colour measure. Returns (pick, changed)."""
+    import itertools
+    ns = sorted(set(len(g) for g in groups))
+    if len(cands) <= len(groups) and len(ns) == 1: return default, False
+    cands = cands[:8]
+    fit = {}
+    for a in cands:
+        try: fit[a['id']] = split_cost(load(a), ns)
+        except Exception as e:
+            print('split_cost failed (%s)' % e, file=sys.stderr); fit[a['id']] = {n: 1.0 for n in ns}
+    rank = {a['id']: i for i, a in enumerate(cands)}
+    def cost(pick): return sum(fit[a['id']][len(g)] + (0 if is_cover(a) else 0.05) + 0.002 * rank[a['id']] for a, g in zip(pick, groups))
+    best = min((list(p) for p in itertools.permutations(cands, min(len(groups), len(cands)))), key=cost)
+    c0, c1 = cost(default), cost(best)
+    if [a['id'] for a in best] == [a['id'] for a in default] or c1 >= 0.7 * c0: return default, False
+    return best, True
 
 def find_bounds(im, n):
     """n+1 x positions (pixels): left edge of dress 1 ... right edge of dress n."""
@@ -248,18 +298,25 @@ def build(req):
         att = sorted(card.get('attachments', []), key=lambda a: a.get('date', ''), reverse=True)    # newest first = first group
         imgs = [a for a in att if str(a.get('mimeType', '')).startswith('image/')]
         covers = [a for a in imgs if role(a) == 'cover']; lineups = [a for a in imgs if role(a) == 'lineup']
-        if len(covers) >= len(groups): pick = covers[:len(groups)]
-        elif lineups: pick = (lineups + covers)[:len(groups)]; flags.append('SJ-%s: no JAMĀL photo for every colour group — shop photo used.' % no)
-        else: pick = imgs[:len(groups)]
+        if len(covers) >= len(groups): pick = covers[:len(groups)]; cands = covers + lineups
+        elif lineups: pick = (lineups + covers)[:len(groups)]; cands = lineups + covers
+        else: pick = imgs[:len(groups)]; cands = imgs
         if not pick: errors.append('SJ-%s: no photo on the card.' % no); continue
         while len(pick) < len(groups):                             # fewer photos than groups: the rest ride on the last photo
             groups[-2] = groups[-2] + groups[-1]; groups.pop()
+        loaded = {}
+        def load(a):
+            if a['id'] not in loaded: loaded[a['id']] = photo(a)
+            return loaded[a['id']]
+        pick, changed = match_photos(cands, groups, pick, load, lambda a: role(a) == 'cover')   # each group gets the photo with its dress count
+        if changed: flags.append('SJ-%s: photos matched to the colour groups by their dress count (%s).' % (no, ' + '.join('%d' % len(g) for g in groups)))
+        if any(role(a) != 'cover' for a in pick): flags.append('SJ-%s: no JAMĀL photo for every colour group — shop photo used.' % no)
         ORDER.append(no); MODE[no] = mode; PHOTOS[no] = []
         cut = []
         c, PCSS[no] = 0, {}
         for a, g in zip(pick, groups):
             if not any(g): c += len(g); cut.append(len(g)); continue           # a whole photo of sold-out colours: left out, numbers still move on
-            im, kept, cols = keep_columns(photo(a), g)
+            im, kept, cols = keep_columns(load(a), g)
             nums = []
             for q in g:
                 c += 1

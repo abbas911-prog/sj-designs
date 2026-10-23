@@ -3,7 +3,7 @@
 // photo (CAT_LOCAL mode, no Trello), then the page is driven; plus the real 57026 studio photo as a guard on the cutter.
 const { chromium } = require('playwright'); const { execFileSync } = require('child_process'); const fs = require('fs'), path = require('path'), os = require('os');
 const DIR = path.join(__dirname, '..');
-const T = fs.mkdtempSync(path.join(os.tmpdir(), 'sjcat-')), L = path.join(T, 'local'); fs.mkdirSync(L);
+const T = fs.mkdtempSync(path.join(os.tmpdir(), 'sjcat-')), L = path.join(T, 'local'); fs.mkdirSync(L); const F79 = path.join(__dirname, 'fixtures/79623');
 // a 1200x800 "line-up": six coloured dresses on a white wall
 execFileSync('python3', ['-c', `
 from PIL import Image, ImageDraw
@@ -11,7 +11,13 @@ im = Image.new('RGB', (1200, 800), (245, 243, 238)); d = ImageDraw.Draw(im)
 cols = [(200,160,80),(30,30,35),(230,225,120),(150,170,120),(90,40,90),(200,90,120)]
 for i, c in enumerate(cols): x = 40 + i * 190; d.rectangle([x, 120, x + 140, 720], fill=c)
 im.save('${L}/p1.jpg', 'JPEG', quality=90)
-import json; json.dump([{'id': 'abc123abc123abc123abc101', 'name': 'SJ-57026 (42) colour = (6) (0/14/16/0/4/8)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
+# the real SJ-79623 card (Nasir, 23 Oct 2026): 5 Trello photos (shop shot, shop 3, shop 6, JAMAL 3, JAMAL 6) as the repo's thumbnails
+import shutil, os, json; os.makedirs('${T}/thumbs', exist_ok=True)
+for f in os.listdir('${F79}'): shutil.copy(os.path.join('${F79}', f), '${L}/' + f)
+json.dump({'6a368bee72fb291b1477f713': ['shot'], '6a381658df3773d1ea5397da': ['lineup'], '6a38168c84e0eb6464b9ab4d': ['lineup'], '6a58efc843b0bc351f6ed77f': ['cover'], '6a58efd612e8e3518909c3bb': ['lineup']}, open('${T}/thumbs/roles.json', 'w'))
+att79 = [('6a368bee72fb291b1477f713', 'photo.jpeg', '2026-06-20T12:47:42Z'), ('6a381658df3773d1ea5397da', 'photo.jpeg', '2026-06-21T16:50:32Z'), ('6a38168c84e0eb6464b9ab4d', 'photo.jpeg', '2026-06-21T16:51:24Z'), ('6a58efc843b0bc351f6ed77f', 'photo.png', '2026-07-16T14:50:48Z'), ('6a58efd612e8e3518909c3bb', 'photo.png', '2026-07-16T14:51:02Z')]
+json.dump([{'id': '6a324a6384a02f213399fefe', 'name': 'SJ = **(79623)** (96) pcs color = (9) ,,,, (16/8/8/8/16/16)..(8/8/8)', 'attachments': [{'id': i, 'name': n, 'mimeType': 'image/jpeg', 'date': d, 'url': 'x'} for i, n, d in att79]},
+  {'id': 'abc123abc123abc123abc101', 'name': 'SJ-57026 (42) colour = (6) (0/14/16/0/4/8)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
   {'id': 'abc123abc123abc123abc102', 'name': 'SJ-48188 (12) colour = (3) (4/4/4)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
   {'id': 'abc123abc123abc123abc201', 'name': 'Sj 6668 (40) 5 colors (8/8/8/8/8)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
   {'id': 'abc123abc123abc123abc203', 'name': 'Sj 6668 (70 pcs) 5 colors (14/14/14/14/14)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
@@ -48,6 +54,14 @@ execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, en
 const r3 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t3.json'))); const h3 = r3.ok ? fs.readFileSync(path.join(T, r3.page), 'utf8') : '';
 ok('"6668 all" → three designs 6668_01, 6668_02, 6668_03 + 57026', r3.ok && (h3.match(/<article class="design" data-no="([^"]+)"/g) || []).map(x => x.match(/data-no="([^"]+)"/)[1]).join() === '6668_01,6668_02,6668_03,57026');
 ok('oldest card is _01 (40 pcs), newest _03 (70 pcs)', /data-no="6668_01"[\s\S]*?data-k="6668_01:1"/.test(h3) && (r3.report || []).some(l => /6668 all: 3 READY cards/.test(l)) && /data-c="6668_03:1"|data-k="6668_03:1"/.test(h3));
+// Nasir / SJ-79623 (23 Oct 2026): groups 6 + 3 colours; the old pick (shop line-ups first, newest first) gave the 3-colour group a
+// 6-dress shop photo. Now each group gets the photo that splits into its dress count: JAMAL 6 (500x359) and JAMAL 3 (500x368).
+const env4 = Object.assign({}, env, { REQ: JSON.stringify({ id: 't4', name: 'NASIR TEST', items: [{ no: '79623', mode: 'S' }] }) });
+execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: env4 });
+const r4 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t4.json'))); const h4 = r4.ok ? fs.readFileSync(path.join(T, r4.page), 'utf8') : '';
+const ph4 = [...h4.matchAll(/<div class="photo"[^>]*data-nums="([^"]*)"[^>]*>\s*<img[^>]*width="(\d+)" height="(\d+)"/g)].map(m => [m[1], Math.round(100 * m[2] / m[3])]);
+ok('79623: 6-colour group = the 6-dress JAMAL photo, 3-colour group = the 3-dress JAMAL photo', r4.ok && ph4.length === 2 && ph4[0][0] === '1,2,3,4,5,6' && ph4[0][1] === 139 && ph4[1][0] === '7,8,9' && ph4[1][1] === 136);
+ok('79623: flag says the photos were matched by dress count', (r4.flags || []).some(f => /79623: photos matched/.test(f)));
 (async () => {
   const br = await chromium.launch(); const pg = await br.newPage({ viewport: { width: 390, height: 844 } }); const errs = [];
   pg.on('pageerror', e => errs.push(e.message));
