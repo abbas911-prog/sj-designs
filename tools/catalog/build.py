@@ -160,7 +160,7 @@ def find_cuts(im, n, lo=0.45, hi=1.75):
 def split_cost(im, ns, lo=0.45, hi=1.75):
     """How well a photo splits into n dresses, for each n in ns: the colour spread left inside the n best pieces divided by the
     spread of the whole line-up (0 = every piece one flat colour). A 6-dress photo cut into 3 keeps a big mix in every piece
-    (high); a 3-dress photo cut into 6 costs almost nothing (low) - that asymmetry is what match_photos uses."""
+    (high); a 3-dress photo cut into 6 costs almost nothing (low) - that asymmetry is what check_photos uses."""
     frac, wgt, left, right, w, clean, colour_cost = colour_table(im)
     c1 = float(colour_cost(np.array([left]), np.array([right]))[0]) or 1e-6
     out, INF = {}, 1e18
@@ -179,28 +179,45 @@ def split_cost(im, ns, lo=0.45, hi=1.75):
         out[n] = float(best[n][right]) / c1 if best[n][right] < INF else 1.0
     return out
 
-def match_photos(cands, groups, default, load, is_cover):
-    """23 Oct 2026 (Nasir / SJ-79623: the 3-colour group got a 6-dress shop photo): which photo belongs to which colour group.
-    cands = the card's photos in the old preference order (JAMAL covers first, then shop line-ups, newest first); groups = the
-    colour groups of the title; default = the old pick. Every (photo, group) pair gets a cost = split_cost of the photo at that
-    group's dress count (+ a little for a shop photo, + a hair for an older photo, so ties keep the old order); the cheapest
-    one-photo-per-group choice wins - but only when it is clearly better than the old pick (< 0.7 of its cost), because a
-    printed fabric fools the colour measure. Returns (pick, changed)."""
+LOGO = None
+def logo_score(im, width=600):
+    """How strongly the real JAMAL logo (the gold mark + the word, tools/catalog/jamal-logo.png) shows in the top third of the photo:
+    normalised cross-correlation at several logo sizes, 1 = perfect. A JAMAL studio photo scores 0.8-1.0, every shop photo and
+    every AI cover checked (493 thumbnails, 23 Oct 2026) stays under 0.55."""
+    global LOGO
+    if LOGO is None: LOGO = np.asarray(Image.open(os.path.join(HERE, 'jamal-logo.png')).convert('L'), dtype=np.float32)
+    W, H = im.size
+    g = np.asarray(im.convert('L').resize((width, max(1, int(width * H / W)))), dtype=np.float32)
+    band = g[:int(g.shape[0] * 0.34)]
+    best = 0.0
+    for sc in (0.55, 0.7, 0.85, 1.0, 1.2, 1.45, 1.75):
+        tw, th = max(8, int(LOGO.shape[1] * sc)), max(12, int(LOGO.shape[0] * sc))
+        t = np.asarray(Image.fromarray(LOGO.astype('uint8')).resize((tw, th)), dtype=np.float32)
+        Hb, Wb = band.shape
+        if Hb < th + 2 or Wb < tw + 2: continue
+        t = t - t.mean(); tn = np.sqrt((t * t).sum()) or 1.0
+        fh, fw = Hb + th - 1, Wb + tw - 1
+        corr = np.fft.irfft2(np.fft.rfft2(band, (fh, fw)) * np.fft.rfft2(t[::-1, ::-1], (fh, fw)), (fh, fw))[th - 1:Hb, tw - 1:Wb]
+        I = np.pad(band, ((1, 0), (1, 0))).cumsum(0).cumsum(1); I2 = np.pad(band * band, ((1, 0), (1, 0))).cumsum(0).cumsum(1)
+        s1 = I[th:, tw:] - I[:-th, tw:] - I[th:, :-tw] + I[:-th, :-tw]
+        s2 = I2[th:, tw:] - I2[:-th, tw:] - I2[th:, :-tw] + I2[:-th, :-tw]
+        var = np.maximum(s2 - s1 * s1 / (th * tw), 16.0 * th * tw)    # a window flatter than 4 grey levels never matches
+        best = max(best, float((corr / (np.sqrt(var) * tn)).max()))
+    return best
+
+def check_photos(pick, groups, load):
+    """23 Oct 2026: a warning only (Abbas: the JAMAL photo always, then the upload sequence - never a reshuffle). For each chosen photo
+    the colour spread left after cutting it into its group's dress count (split_cost); if swapping the photos around would fit
+    clearly better (< 0.7 of the cost), the page is probably wrong and the flag says so."""
     import itertools
     ns = sorted(set(len(g) for g in groups))
-    if len(cands) <= len(groups) and len(ns) == 1: return default, False
-    cands = cands[:8]
-    fit = {}
-    for a in cands:
-        try: fit[a['id']] = split_cost(load(a), ns)
-        except Exception as e:
-            print('split_cost failed (%s)' % e, file=sys.stderr); fit[a['id']] = {n: 1.0 for n in ns}
-    rank = {a['id']: i for i, a in enumerate(cands)}
-    def cost(pick): return sum(fit[a['id']][len(g)] + (0 if is_cover(a) else 0.05) + 0.002 * rank[a['id']] for a, g in zip(pick, groups))
-    best = min((list(p) for p in itertools.permutations(cands, min(len(groups), len(cands)))), key=cost)
-    c0, c1 = cost(default), cost(best)
-    if [a['id'] for a in best] == [a['id'] for a in default] or c1 >= 0.7 * c0: return default, False
-    return best, True
+    if len(ns) < 2 or len(pick) > 6: return False
+    try: fit = [split_cost(load(a), ns) for a in pick]
+    except Exception as e:
+        print('split_cost failed (%s)' % e, file=sys.stderr); return False
+    def cost(order): return sum(fit[i][len(g)] for i, g in zip(order, groups))
+    c0 = cost(range(len(pick))); c1 = min(cost(p) for p in itertools.permutations(range(len(pick))))
+    return c1 < 0.7 * c0
 
 def find_bounds(im, n):
     """n+1 x positions (pixels): left edge of dress 1 ... right edge of dress n."""
@@ -297,20 +314,24 @@ def build(req):
         if k < len(cells): groups.append(cells[k:])
         att = sorted(card.get('attachments', []), key=lambda a: a.get('date', ''), reverse=True)    # newest first = first group
         imgs = [a for a in att if str(a.get('mimeType', '')).startswith('image/')]
-        covers = [a for a in imgs if role(a) == 'cover']; lineups = [a for a in imgs if role(a) == 'lineup']
-        if len(covers) >= len(groups): pick = covers[:len(groups)]; cands = covers + lineups
-        elif lineups: pick = (lineups + covers)[:len(groups)]; cands = lineups + covers
-        else: pick = imgs[:len(groups)]; cands = imgs
-        if not pick: errors.append('SJ-%s: no photo on the card.' % no); continue
-        while len(pick) < len(groups):                             # fewer photos than groups: the rest ride on the last photo
-            groups[-2] = groups[-2] + groups[-1]; groups.pop()
         loaded = {}
         def load(a):
             if a['id'] not in loaded: loaded[a['id']] = photo(a)
             return loaded[a['id']]
-        pick, changed = match_photos(cands, groups, pick, load, lambda a: role(a) == 'cover')   # each group gets the photo with its dress count
-        if changed: flags.append('SJ-%s: photos matched to the colour groups by their dress count (%s).' % (no, ' + '.join('%d' % len(g) for g in groups)))
-        if any(role(a) != 'cover' for a in pick): flags.append('SJ-%s: no JAMĀL photo for every colour group — shop photo used.' % no)
+        def jamal(a):                                              # a JAMAL photo: the thumbnail sorter says cover, or the real JAMAL logo is in it
+            if role(a) == 'cover': return True
+            if role(a) == 'shot': return False
+            try: return logo_score(load(a)) >= 0.6
+            except Exception as e: print('logo_score failed (%s)' % e, file=sys.stderr); return False
+        if not imgs: errors.append('SJ-%s: no photo on the card.' % no); continue
+        covers = [a for a in imgs if jamal(a)]; lineups = [a for a in imgs if a not in covers and role(a) == 'lineup']
+        others = [a for a in imgs if a not in covers and a not in lineups]
+        pick = (covers + lineups + others)[:len(groups)]            # Abbas (23 Oct 2026): the JAMAL photo always; the rest only to fill up
+        pick.sort(key=lambda a: a.get('date', ''), reverse=True)   # ... and in the upload sequence: newest = first colour group
+        while len(pick) < len(groups):                             # fewer photos than groups: the rest ride on the last photo
+            groups[-2] = groups[-2] + groups[-1]; groups.pop()
+        if any(a not in covers for a in pick): flags.append('SJ-%s: no JAMĀL photo for every colour group — shop photo used.' % no)
+        if check_photos(pick, groups, load): flags.append('SJ-%s: the photos may not match the colour groups (%s) — check the page.' % (no, ' + '.join('%d' % len(g) for g in groups)))
         ORDER.append(no); MODE[no] = mode; PHOTOS[no] = []
         cut = []
         c, PCSS[no] = 0, {}

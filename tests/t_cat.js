@@ -17,6 +17,7 @@ for f in os.listdir('${F79}'): shutil.copy(os.path.join('${F79}', f), '${L}/' + 
 json.dump({'6a368bee72fb291b1477f713': ['shot'], '6a381658df3773d1ea5397da': ['lineup'], '6a38168c84e0eb6464b9ab4d': ['lineup'], '6a58efc843b0bc351f6ed77f': ['cover'], '6a58efd612e8e3518909c3bb': ['lineup']}, open('${T}/thumbs/roles.json', 'w'))
 att79 = [('6a368bee72fb291b1477f713', 'photo.jpeg', '2026-06-20T12:47:42Z'), ('6a381658df3773d1ea5397da', 'photo.jpeg', '2026-06-21T16:50:32Z'), ('6a38168c84e0eb6464b9ab4d', 'photo.jpeg', '2026-06-21T16:51:24Z'), ('6a58efc843b0bc351f6ed77f', 'photo.png', '2026-07-16T14:50:48Z'), ('6a58efd612e8e3518909c3bb', 'photo.png', '2026-07-16T14:51:02Z')]
 json.dump([{'id': '6a324a6384a02f213399fefe', 'name': 'SJ = **(79623)** (96) pcs color = (9) ,,,, (16/8/8/8/16/16)..(8/8/8)', 'attachments': [{'id': i, 'name': n, 'mimeType': 'image/jpeg', 'date': d, 'url': 'x'} for i, n, d in att79]},
+  {'id': '6a324a6384a02f213399feff', 'name': 'SJ = **(79624)** (96) pcs color = (9) (8/8/8) (16/8/8/8/16/16)', 'attachments': [{'id': i, 'name': n, 'mimeType': 'image/jpeg', 'date': d, 'url': 'x'} for i, n, d in att79[1:3]]},
   {'id': 'abc123abc123abc123abc101', 'name': 'SJ-57026 (42) colour = (6) (0/14/16/0/4/8)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
   {'id': 'abc123abc123abc123abc102', 'name': 'SJ-48188 (12) colour = (3) (4/4/4)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
   {'id': 'abc123abc123abc123abc201', 'name': 'Sj 6668 (40) 5 colors (8/8/8/8/8)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
@@ -61,7 +62,15 @@ execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, en
 const r4 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t4.json'))); const h4 = r4.ok ? fs.readFileSync(path.join(T, r4.page), 'utf8') : '';
 const ph4 = [...h4.matchAll(/<div class="photo"[^>]*data-nums="([^"]*)"[^>]*>\s*<img[^>]*width="(\d+)" height="(\d+)"/g)].map(m => [m[1], Math.round(100 * m[2] / m[3])]);
 ok('79623: 6-colour group = the 6-dress JAMAL photo, 3-colour group = the 3-dress JAMAL photo', r4.ok && ph4.length === 2 && ph4[0][0] === '1,2,3,4,5,6' && ph4[0][1] === 139 && ph4[1][0] === '7,8,9' && ph4[1][1] === 136);
-ok('79623: flag says the photos were matched by dress count', (r4.flags || []).some(f => /79623: photos matched/.test(f)));
+ok('79623: both are JAMAL photos (the 6-dress one found by its logo, the sorter had called it a shop photo) - no warning', !(r4.flags || []).some(f => /79623/.test(f)));
+// the same card with only the two shop photos and the groups the other way round (3 first, then 6): the upload sequence rules
+// (newest photo = first group) even though the counts disagree - and the job warns
+const env5 = Object.assign({}, env, { REQ: JSON.stringify({ id: 't5', name: 'SEQ TEST', items: [{ no: '79624', mode: 'S' }] }) });
+execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: env5 });
+const r5 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t5.json'))); const h5 = r5.ok ? fs.readFileSync(path.join(T, r5.page), 'utf8') : '';
+const ph5 = [...h5.matchAll(/<div class="photo"[^>]*data-nums="([^"]*)"[^>]*>\s*<img[^>]*width="(\d+)" height="(\d+)"/g)].map(m => [m[1], Math.round(100 * m[2] / m[3])]);
+ok('no JAMAL photo: the newest photo goes to the first group, whatever the counts (sequence kept)', r5.ok && ph5.length === 2 && ph5[0][0] === '1,2,3' && ph5[0][1] === 157 && ph5[1][0] === '4,5,6,7,8,9' && ph5[1][1] === 79);
+ok('... and the job warns that the photos may not match the groups', (r5.flags || []).some(f => /79624: the photos may not match the colour groups \(3 \+ 6\)/.test(f)) && (r5.flags || []).some(f => /79624: no JAMĀL photo/.test(f)));
 (async () => {
   const br = await chromium.launch(); const pg = await br.newPage({ viewport: { width: 390, height: 844 } }); const errs = [];
   pg.on('pageerror', e => errs.push(e.message));
