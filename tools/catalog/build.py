@@ -289,6 +289,16 @@ def page_stem(name):
         i += 1; stem = base + 'bcdefghijklmnop'[i - 1]
     return stem
 
+def ffmpeg_bin():
+    """23 Oct 2026 (Abbas: "why did it stop making my catalogue"): the GitHub runner has no ffmpeg and apt-get took > 4 min - the pip package
+    imageio-ffmpeg carries its own ffmpeg (installed in seconds from PyPI); a system ffmpeg is used when there is one."""
+    import shutil
+    p = os.environ.get('FFMPEG') or shutil.which('ffmpeg')
+    if p: return p
+    try:
+        import imageio_ffmpeg; return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception: return 'ffmpeg'
+
 def video(no, a):
     """Rule Eleven: re-encode to 640-720 px short side, H.264, ~4-6 MB, vid/<no>.mp4; reused when it is the same clip."""
     os.makedirs('vid', exist_ok=True)
@@ -299,7 +309,7 @@ def video(no, a):
         with tempfile.TemporaryDirectory() as t:
             src = os.path.join(t, 'in'); open(src, 'wb').write(get(api_url(a['url']), AUTH))
             for crf in (29, 32, 35):
-                subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', src, '-vf', "scale='if(gt(iw,ih),-2,min(720,iw))':'if(gt(iw,ih),min(720,ih),-2)'",
+                subprocess.run([ffmpeg_bin(), '-y', '-loglevel', 'error', '-i', src, '-vf', "scale='if(gt(iw,ih),-2,min(720,iw))':'if(gt(iw,ih),min(720,ih),-2)'",
                                 '-c:v', 'libx264', '-preset', 'medium', '-crf', str(crf), '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-ac', '1', '-b:a', '64k',
                                 '-movflags', '+faststart', 'vid/%s.mp4' % no], check=True)
                 if os.path.getsize('vid/%s.mp4' % no) < 9_000_000: break
