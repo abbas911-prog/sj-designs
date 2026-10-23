@@ -24,3 +24,12 @@ r1 = st.run({'op':'retbill','ref':'RET-0001','dev':'d1','who':'Musalim','lines':
 print(json.dumps(r1, ensure_ascii=False, indent=0))
 print(cards['A'], cards['B']['name'], cards['C']['name'])
 r2 = st.run({'op':'retbill','ref':'RET-0001','dev':'d1','lines':[{'card':'A','no':'48293','c':1,'pcs':3}]}); print('again:', r2)
+# 23 Oct 2026 (Abbas, "6668 all": "the numbers add up, why does it say they don't?"): titles as the shop really types them
+for t, want in [('Sj 6668 (pcs67) 5 colors.      (14/13/14/14/12)', (67, [14, 13, 14, 14, 12])), ('Sj 6668 (pcs 60 ) 5 colors.  (12/12/12/12/12)', (60, [12] * 5)),
+                ('Sj  6668  (20pcc) 5 colors.  (4/4/4/4/4)', (20, [4] * 5)), ('Sj 6668(70pcs)5 colors.   (14/14/14/14/14/)', (70, [14] * 5)),
+                ('Sj= **6668** pcs (46) 5 colors.   (8/10/10/8/10)', (46, [8, 10, 10, 8, 10]))]:
+    p = st.parse(t); got = (p['total'] and p['total'][0], [c[0] for c in p['cells']])
+    assert p['ok'] and got == want, (t, got)
+for t in ['Sj = **(6668) ', 'SJ = **6668** (60) pcs ,,, colors = (5) ,,,,,,']:
+    assert not st.parse(t)['ok'], t
+print('parse: shop-typed titles ok')

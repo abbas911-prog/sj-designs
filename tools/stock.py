@@ -24,12 +24,12 @@ def parse(t):
     no = m.group(1) if m else ''
     ci = re.search(r'colou?rs?', s, re.I); ci = ci.start() if ci else -1
     head, off = (s[:ci], ci) if ci >= 0 else (s, 0)
-    hn = [(int(x.group(1)), x.span(1)) for x in re.finditer(r'\((\s*\d+\s*),?\)', head)]
+    hn = [(int(x.group(1)), x.span(1)) for x in re.finditer(r'\(\s*(?:pcs\s*)?(\s*\d+\s*)(?:pcs\s*)?,?\)', head, re.I)]   # (67) (pcs67) (pcs 60 ) (70pcs) - 23 Oct 2026
     hn = [(v, (a + len(x) - len(x.lstrip()), b - (len(x) - len(x.rstrip())))) for (v, (a, b)), x in zip(hn, [head[a:b] for _, (a, b) in hn])]
     if no and hn and hn[0][0] == int(no): hn.pop(0)
     total = hn[0] if hn else None
     if total is None:
-        m2 = re.search(r'(\d+)\s*\)?\s*pcs', head, re.I)
+        m2 = re.search(r'(\d+)\s*\)?\s*p(?:cs|cc|is|ics)', head, re.I) or re.search(r'pcs\s*\(?\s*(\d+)', head, re.I)   # 67 pcs / 20pcc / pcs 67
         if m2: total = (int(m2.group(1)), m2.span(1))
     tail = (s[ci:] if ci >= 0 else s) + ')'
     cells = []                                              # one per colour: [pcs, (start, end) in t, pure_number]
@@ -37,7 +37,9 @@ def parse(t):
     for g in re.finditer(r'\(([^()]*/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)', tail):   # (8-1/8-2) = pieces-row per colour; a single colour may be (8-1) (12 Oct 2026)
         groups += 1
         pos = g.start(1)
-        for tok in g.group(1).split('/'):
+        toks = g.group(1).split('/')
+        while len(toks) > 1 and not toks[-1].strip(): toks.pop()      # "(14/14/14/14/14/)" - a stray slash at the end is not a 6th colour (23 Oct 2026)
+        for tok in toks:
             d = re.search(r'\d+', tok)
             if d:
                 a, b = off + pos + d.start(), off + pos + d.end()

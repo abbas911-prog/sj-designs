@@ -304,9 +304,10 @@ def build(req):
         cells = [c[0] for c in p['cells']]
         tot = p['total'][0] if p['total'] else None
         line = '%s = %d %s (card: %s)' % ('+'.join(map(str, cells)) or '—', sum(cells), '✓' if p['ok'] else '✗', tot if tot is not None else '?')
-        if not p['ok']:
-            errors.append('SJ-%s: %s — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.' % (no, line)); continue
-        if sum(cells) == 0: errors.append('SJ-%s: every colour is 0 — nothing to offer.' % no); continue
+        if not p['ok'] or sum(cells) == 0:                        # 23 Oct 2026: "6668 all" leaves such a card out (flag) instead of refusing the whole catalogue
+            why = 'every colour is 0 — nothing to offer' if p['ok'] else ('the colours do not add up to the card total' if cells else 'no colour counts in the title')
+            if re.search(r'_\d\d$', no): flags.append('SJ-%s LEFT OUT: "%s" — %s (%s). Fix the card in Trello to include it.' % (no, card['name'].strip()[:60], why, line)); continue
+            errors.append('SJ-%s: %s — %s. Fix the card in Trello, then make the catalogue again.' % (no, line, why)); continue
         # colour groups, in title order
         groups, k = [], 0
         for g in group_sizes(card['name']):
