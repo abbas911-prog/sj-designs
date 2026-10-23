@@ -558,14 +558,15 @@ function facRate(pcs, workMs) { return Math.round(pcs / Math.max(0.25, workMs / 
 function facWorkDur(ms) { var h = ms / 3600000; return h < 1 ? Math.max(1, Math.round(ms / 60000)) + ' min work' : (h >= 10 ? (Math.round(h / (WORK_TO - WORK_FROM) * 10) / 10) + ' work days' : (Math.round(h * 10) / 10) + ' work h'); }
 function facWhen(ms) { var u = new Date(ms + 4 * 3600000); return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][u.getUTCDay()] + ' ' + facDay(ms) + ' ' + ('0' + u.getUTCHours()).slice(-2) + ':' + ('0' + u.getUTCMinutes()).slice(-2); }   // "Tue 21 Oct 14:05" Dubai
 function facDay(ms) { var u = new Date(ms + 4 * 3600000); return u.getUTCDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][u.getUTCMonth()]; }   // Dubai
-var WK_RE = /^👷 (IN|OUT) · (.+?) · (\d+) pcs(?: · ([^·]+?))? · (.+?) \(factory app\)/;
+var WK_RE = /^👷 (IN|OUT|PART) · (.+?) · (\d+) pcs(?: · ([^·]+?))? · (.+?) \(factory app\)/;   // 23 Oct 2026: PART = some pieces came back, the rest stays with him
 function facWkParse(acts) {                                    // comments -> { WORKER: [{in, out, g, d, by, hid}] } (oldest first)
   var out = {};
   acts.forEach(function (a) { if (a.type !== 'commentCard') return; var m = String((a.data || {}).text || '').match(WK_RE); if (!m) return;
     var w = m[2].trim().toUpperCase(), t = Date.parse(a.date), L = out[w] = out[w] || [];
     if (m[1] === 'IN') { var oi = null; for (var k = L.length - 1; k >= 0; k--) if (!L[k].out) { oi = L[k]; break; }
       if (oi) { oi.g += +m[3]; oi.adds = (oi.adds || []).concat([+m[3]]); oi.addT = (oi.addT || []).concat([t]); } else L.push({ in: t, g: +m[3], by: m[5].trim(), id: a.id }); }   // 21 Oct 2026: more pieces of the same design to a worker who still has some = added to his open batch (the 6th colour that came later)
-    else { var o = null; for (var i = L.length - 1; i >= 0; i--) if (!L[i].out) { o = L[i]; break; } if (o) { o.out = t; o.d = +m[3]; o.outBy = m[5].trim(); } else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); } });
+    else if (m[1] === 'PART') { var op = null; for (var j = L.length - 1; j >= 0; j--) if (!L[j].out) { op = L[j]; break; } if (op) { op.pd = (op.pd || 0) + +m[3]; op.parts = (op.parts || []).concat([{ t: t, n: +m[3] }]); } else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); }   // 23 Oct 2026 (Abbas: "20 given, 2 done, 18 remaining"): a part delivery; the batch stays open
+    else { var o = null; for (var i = L.length - 1; i >= 0; i--) if (!L[i].out) { o = L[i]; break; } if (o) { o.out = t; o.d = (o.pd || 0) + +m[3]; o.outBy = m[5].trim(); } else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); } });
   return out;
 }
 // ===== 22 Oct 2026 (Abbas: "a complete factory app - everything happens here; add new things as options") =====
@@ -626,8 +627,10 @@ function facWorkRep(P, rtok, rdays) {                            // every worker
   var rw = {}; facWorkers(P, rtok).forEach(function (w) { rw[w.name.toUpperCase()] = { name: w.name, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0, byDay: {} }; });
   Object.keys(byCard).forEach(function (cid0) { var bc = byCard[cid0], wk0 = facWkParse(bc.acts.slice().sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); }));
     Object.keys(wk0).forEach(function (w) { var r = rw[w] = rw[w] || { name: w, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0, byDay: {} }; wk0[w].forEach(function (b) {
-      if (b.out) { if (b.out >= rday0) r.today = (r.today || 0) + b.d; if (b.out < rcut) return; r.pcs += b.d; r.ms += facWorkMs(b.in, b.out); r.batches++; r.cards[cid0] = (r.cards[cid0] || 0) + b.d; if (b.out > r.last) r.last = b.out; var dk = facYmd(b.out); r.byDay[dk] = (r.byDay[dk] || 0) + b.d; }
-      else { r.open++; r.hand.push({ id: cid0, name: bc.name, g: b.g, in: b.in, adds: b.adds || [], by: b.by, wd: facWorkDur(facWorkMs(b.in, Date.now())) }); } }); }); });
+      var evs = (b.parts || []).slice(); if (b.out) evs.push({ t: b.out, n: b.d - (b.pd || 0) });   // 23 Oct 2026: every delivery counts on its own day (parts too)
+      evs.forEach(function (ev) { if (ev.t >= rday0) r.today = (r.today || 0) + ev.n; if (ev.t < rcut) return; r.pcs += ev.n; r.cards[cid0] = (r.cards[cid0] || 0) + ev.n; if (ev.t > r.last) r.last = ev.t; var dk = facYmd(ev.t); r.byDay[dk] = (r.byDay[dk] || 0) + ev.n; });
+      if (b.out) { if (b.out >= rcut) { r.ms += facWorkMs(b.in, b.out); r.batches++; } }
+      else { r.open++; if (b.pd && evs.length && evs[evs.length - 1].t >= rcut) r.ms += facWorkMs(b.in, evs[evs.length - 1].t); r.hand.push({ id: cid0, name: bc.name, g: b.g - (b.pd || 0), given: b.g, pd: b.pd || 0, in: b.in, adds: b.adds || [], by: b.by, wd: facWorkDur(facWorkMs(b.in, Date.now())) }); } }); }); });
   var rout = { ok: true, t: Date.now(), days: rdays, todayN: Object.keys(rw).filter(function (k) { return rw[k].today; }).length, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, today: r.today || 0, pcs: r.pcs, dur: facWorkDur(r.ms), perDay: r.ms ? facRate(r.pcs, r.ms) : 0, batches: r.batches, open: r.open, last: r.last, byDay: r.byDay, hand: r.hand.sort(function (a, b) { return a.in - b.in; }), cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
   rout.att = facAttWeek(P); rout.roles = facRoles(P, rtok); rout.today = facYmd(Date.now()); try { rout.late = facLate(P, rtok); } catch (e) { rout.late = []; } rout.low = facMatLow(P).map(function (m) { return { n: m.n, q: m.q, u: m.u || '' }; });
   return rout;
@@ -689,7 +692,7 @@ function facReportText(card, st, wk) {
   var L = ['📊 *' + (no ? 'SJ-' + no : p.slice(0, 40)) + ' · PRODUCTION REPORT*' + (pcs ? ' · ' + pcs + ' pcs' : '') + (st.done ? '' : ' (so far)')];
   L.push('🗓 ' + facDay(st.born) + ' → ' + (st.done === 'READY' ? 'READY ' : st.done === 'FINISH' ? 'FINISH ' : 'today ') + facDay(st.end) + ' · *' + facDur(st.total) + '* total');
   st.segs.forEach(function (g) { L.push('• ' + g.name + ' · ' + facDur(g.ms) + (g.n > 1 ? ' (' + g.n + '×)' : '')); });
-  var ws = Object.keys(wk); if (ws.length) { L.push('👷 *Workers* (8 am – 10 pm minus breaks = 1 day · Fri 8 – 12)'); ws.forEach(function (w) { var bs = wk[w], d = 0, ms = 0, open = 0; bs.forEach(function (b) { if (b.out) { d += b.d; ms += facWorkMs(b.in, b.out); } else open++; });
+  var ws = Object.keys(wk); if (ws.length) { L.push('👷 *Workers* (8 am – 10 pm minus breaks = 1 day · Fri 8 – 12)'); ws.forEach(function (w) { var bs = wk[w], d = 0, ms = 0, open = 0; bs.forEach(function (b) { if (b.out) { d += b.d; ms += facWorkMs(b.in, b.out); } else { open++; d += b.pd || 0; } });
     L.push('   ' + w + ' · ' + d + ' pcs' + (ms ? ' · ' + facWorkDur(ms) + ' · ≈' + facRate(d, ms) + '/day' : '') + (open ? ' · ' + open + ' batch still in ⏳' : '')); }); }
   L.push('_উৎপাদন রিপোর্ট · শুরু থেকে ' + (st.done === 'READY' ? 'রেডি' : 'শেষ') + ' পর্যন্ত ' + facDur(st.total) + '_');
   return L.join('\n');
@@ -1302,20 +1305,25 @@ function fac0(reqText, P) {
     }
     if (req.op === 'workset') {                               // 21 Oct 2026: pieces given to a worker (kind 'in') / pieces back from them (kind 'out')
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });
-      var kc = String(req.card || '').replace(/[^0-9a-f]/g, ''), kw = String(req.worker || '').trim().toUpperCase().slice(0, 40), kp = Math.floor(+req.pcs || 0), kk = req.kind === 'out' ? 'OUT' : 'IN', kwho = String(req.who || '').slice(0, 40) || 'factory';
-      var kW = facWorkers(P, rtok).filter(function (w) { return w.name.toUpperCase() === kw; })[0]; if (!kc || !kW || !(kp > 0 && kp < 100000)) return out({ ok: false, error: 'bad request' });
+      var kc = String(req.card || '').replace(/[^0-9a-f]/g, ''), kw = String(req.worker || '').trim().toUpperCase().slice(0, 40), kp = Math.floor(+req.pcs || 0), kk = req.kind === 'out' ? 'OUT' : req.kind === 'part' ? 'PART' : 'IN', kwho = String(req.who || '').slice(0, 40) || 'factory';
+      var kW = facWorkers(P, rtok).filter(function (w) { return w.name.toUpperCase() === kw; })[0]; if (!kc || !kW || !((kp > 0 || (kk === 'OUT' && kp === 0)) && kp < 100000)) return out({ ok: false, error: 'bad request' });
       var kcard = trApi('get', '/cards/' + kc, { fields: 'idBoard,name' }, wtok); if (kcard.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
       var kacts = facActs(rtok, kc), kb = facWkParse(kacts)[kW.name.toUpperCase()] || [], kopen = kb.filter(function (b) { return !b.out; });
-      if (kk === 'OUT' && !kopen.length) return out({ ok: false, error: kW.name + ' has no pieces in hand on this card' });
+      if (kk !== 'IN' && !kopen.length) return out({ ok: false, error: kW.name + ' has no pieces in hand on this card' });
+      var kpd = kopen.length ? (kopen[0].pd || 0) : 0, krem = kopen.length ? kopen[0].g - kpd : 0, kd = kk === 'OUT' ? kpd + kp : 0;   // kd = the batch's total done when it closes
+      if (kk === 'PART' && !(kp < krem)) return out({ ok: false, error: 'part done must be less than the ' + krem + ' pcs in hand - use All done' });
+      if (kk === 'OUT' && kp === 0 && !kpd) return out({ ok: false, error: 'how many pieces came back?' });
       var kdur = kk === 'OUT' ? facDur(Date.now() - kopen[0].in) : '', kwms = kk === 'OUT' ? facWorkMs(kopen[0].in, Date.now()) : 0;
-      trApi('post', '/cards/' + kc + '/actions/comments', { text: '👷 ' + kk + ' · ' + kW.name + ' · ' + kp + ' pcs' + (kdur ? ' · ' + kdur : '') + ' · ' + kwho + ' (factory app) · ' + facWhen(Date.now()) + (kk === 'OUT' ? ' · got ' + facWhen(kopen[0].in) + ' · ' + facWorkDur(kwms) + ' · ≈' + facRate(kp, kwms) + '/day' : '') }, wtok);
-      var ktot = kb.reduce(function (a, b) { return a + (b.out ? b.d : 0); }, 0) + (kk === 'OUT' ? kp : 0);
-      facWkField(wtok, kc, kW, kk === 'IN' ? (ktot ? ktot + ' ✓ + ' : '') + kp + ' ⏳' : ktot + ' ✓');
+      trApi('post', '/cards/' + kc + '/actions/comments', { text: '👷 ' + kk + ' · ' + kW.name + ' · ' + kp + ' pcs' + (kdur ? ' · ' + kdur : '') + ' · ' + kwho + ' (factory app) · ' + facWhen(Date.now()) + (kk === 'OUT' ? ' · got ' + facWhen(kopen[0].in) + ' · ' + facWorkDur(kwms) + (kpd ? ' · total ' + kd + ' pcs' : '') + ' · ≈' + facRate(kd, kwms) + '/day' : kk === 'PART' ? ' · ' + (krem - kp) + ' pcs still in hand' : '') }, wtok);
+      var ktot = kb.reduce(function (a, b) { return a + (b.out ? b.d : (b.pd || 0)); }, 0) + kp;   // done on this card so far, this delivery included
+      facWkField(wtok, kc, kW, kk === 'IN' ? (ktot - kp ? (ktot - kp) + ' ✓ + ' : '') + (krem + kp) + ' ⏳' : kk === 'PART' ? ktot + ' ✓ + ' + (krem - kp) + ' ⏳' : ktot + ' ✓');
       // 21 Oct 2026 (Abbas: "mention the time - when the worker got the work, when we pressed Done, how much time he took - flawless and detailed")
       var know = Date.now(), kgot = kk === 'OUT' ? kopen[0] : null;
       var kline = kk === 'IN'
-        ? '👷 *' + kW.name + '* ← *' + kp + ' pcs* given · 🕒 ' + facWhen(know) + (kopen.length ? ' · now *' + (kopen[0].g + kp) + ' pcs* in hand (first ' + kopen[0].g + ' on ' + facWhen(kopen[0].in) + ')' : '') + '\n_' + kW.name + ' · ' + kp + ' পিস দেওয়া হয়েছে · ' + facWhen(know) + '_'
-        : '👷 *' + kW.name + '* ✓ *' + kp + ' pcs* done' + (kp !== kgot.g ? ' of ' + kgot.g + ' given' : '') + '\n🕒 got ' + facWhen(kgot.in) + (kgot.addT ? kgot.addT.map(function (t, i) { return ' (+' + kgot.adds[i] + ' on ' + facWhen(t) + ')'; }).join('') : '') + ' → back ' + facWhen(know) + '\n⏱ ' + kdur + ' on the clock · ' + facWorkDur(kwms) + ' (8 am – 10 pm, breaks off' + (kwms !== know - kgot.in ? ', Fri 8 – 12' : '') + ') · *≈ ' + facRate(kp, kwms) + ' pcs / day*\n_' + kW.name + ' · ' + kp + ' পিস হয়ে গেছে · ' + facWorkDur(kwms) + ' · দিনে ≈ ' + facRate(kp, kwms) + ' পিস_';
+        ? '👷 *' + kW.name + '* ← *' + kp + ' pcs* given · 🕒 ' + facWhen(know) + (kopen.length ? ' · now *' + (krem + kp) + ' pcs* in hand (first ' + kopen[0].g + ' on ' + facWhen(kopen[0].in) + ')' : '') + '\n_' + kW.name + ' · ' + kp + ' পিস দেওয়া হয়েছে · ' + facWhen(know) + '_'
+        : kk === 'PART'
+        ? '👷 *' + kW.name + '* ✓ *' + kp + ' pcs* done (part) · *' + (krem - kp) + ' pcs* still in hand · ' + (kpd + kp) + ' of ' + kopen[0].g + ' done so far · 🕒 ' + facWhen(know) + ' · got ' + facWhen(kopen[0].in) + '\n_' + kW.name + ' · ' + kp + ' পিস হয়ে গেছে · ' + (krem - kp) + ' পিস এখনো হাতে_'
+        : '👷 *' + kW.name + '* ✓ *' + kd + ' pcs* done' + (kpd ? ' (' + kp + ' now + ' + kpd + ' before)' : '') + (kd !== kgot.g ? ' of ' + kgot.g + ' given' : '') + '\n🕒 got ' + facWhen(kgot.in) + (kgot.addT ? kgot.addT.map(function (t, i) { return ' (+' + kgot.adds[i] + ' on ' + facWhen(t) + ')'; }).join('') : '') + ' → back ' + facWhen(know) + '\n⏱ ' + kdur + ' on the clock · ' + facWorkDur(kwms) + ' (8 am – 10 pm, breaks off' + (kwms !== know - kgot.in ? ', Fri 8 – 12' : '') + ') · *≈ ' + facRate(kd, kwms) + ' pcs / day*\n_' + kW.name + ' · ' + kd + ' পিস হয়ে গেছে · ' + facWorkDur(kwms) + ' · দিনে ≈ ' + facRate(kd, kwms) + ' পিস_';
       try { if (FT) { var kth = facThread(P, FT, kc, rtok, true); if (kth) slackApi(FT, 'chat.postMessage', { channel: kth.ch, thread_ts: kth.ts, text: '→ *WORK* · ' + kwho + ' · ' + kline }); } } catch (e) {}
       CacheService.getScriptCache().remove('FAC_WK_' + kc); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump(); facNudge(P, kc);
       return out({ ok: true });

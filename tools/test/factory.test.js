@@ -129,18 +129,25 @@ async function suite(fast, browser) {
       // the 6th colour comes later: more pieces of the same design to the same worker = added to what he has (one timer)
       await r.locator('input').fill('4'); await r.locator('button.in').click();
       await until(() => W.trello.actions.filter(a => a.type === 'commentCard' && /^👷 IN · Rifat/.test(a.data.text)).length === 2, 10000, 'second IN comment');
-      await until(async () => /24 pcs \(20\+4\)/.test(await r.textContent()) && /since/.test(await r.textContent()), 8000, 'row shows 24 pcs (20+4) and since when');
+      await until(async () => /24 pcs in hand/.test(await r.textContent()) && /\(20\+4\)/.test(await r.textContent()) && /since/.test(await r.textContent()), 8000, 'row shows 24 pcs in hand (20+4) and since when');
       // another worker gets the same design at the same time
       const r2 = page.locator('#wkrows .wr[data-w="Arif"]'); await r2.locator('input').fill('6'); await r2.locator('button.in').click();
       await until(async () => /6 pcs/.test(await r2.textContent()) && /since/.test(await r2.textContent()), 10000, 'Arif has 6 of the same card');
       W.trello.actions.filter(a => a.type === 'commentCard' && /👷 IN/.test(a.data.text)).forEach(a => a.date = new Date(Date.now() - 26 * 3600000).toISOString()); T.relay.cache.remove('FAC_WK_' + W.cardB.id);   // a day passes
       await page.reload(); await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length); await openCardNo(page, '17841');
       await until(async () => /1 d 2 h/.test(await r.textContent()), 10000, 'timer shows 1 d 2 h');
-      await r.locator('input').fill('18'); await r.locator('button.out').click();
-      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && /^👷 OUT · Rifat · 18 pcs · 1 d 2 h · Abbas/.test(a.data.text)), 10000, 'OUT comment');
+      // 23 Oct 2026 (Abbas: "20 given, 2 done, 18 remaining"): a PART delivery keeps the batch open
+      await r.locator('input').fill('24'); await r.locator('button.part').click(); await until(async () => /All done/.test(await page.textContent('#toast')), 3000, 'part = all is refused'); 
+      await r.locator('input').fill('5'); await r.locator('button.part').click();
+      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && /^👷 PART · Rifat · 5 pcs · Abbas \(factory app\) · .* · 19 pcs still in hand$/.test(a.data.text)), 10000, 'PART comment');
+      await until(async () => /19 pcs in hand/.test(await r.textContent()) && /✓ 5 done so far/.test(await r.textContent()), 8000, 'row: 19 in hand, 5 done so far');
+      ok(W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootB && /Rifat\* ✓ \*5 pcs\* done \(part\) · \*19 pcs\* still in hand · 5 of 24 done so far/.test(m.text || '')), 'part line in the chat');
+      await until(async () => /19 done/.test(await page.textContent('#wkprog')) || /5 done/.test(await page.textContent('#wkprog')), 5000, 'progress counts the part');
+      await r.locator('input').fill('13'); await r.locator('button.out').click();
+      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && /^👷 OUT · Rifat · 13 pcs · 1 d 2 h · Abbas/.test(a.data.text) && /total 18 pcs/.test(a.data.text)), 10000, 'OUT comment with the total');
       await until(async () => /✓ 18 pcs/.test(await r.textContent()) && (await r.locator('button.out').count()) === 0, 8000, 'row shows done');
       const dl = W.slack.ch[CUT].msgs.map(m => m.text || '').find(t => /Rifat\* ✓ \*18 pcs\* done/.test(t));
-      ok(dl && /got (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d+ [A-Z][a-z]{2} \d\d:\d\d \(\+4 on .*\) → back (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d+ [A-Z][a-z]{2} \d\d:\d\d/.test(dl) && /on the clock/.test(dl) && /≈ \d+ pcs \/ day/.test(dl) && /of 24 given/.test(dl), 'Done line: got → back, time, rate:\n' + dl);
+      ok(dl && /\(13 now \+ 5 before\)/.test(dl) && /got (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d+ [A-Z][a-z]{2} \d\d:\d\d \(\+4 on .*\) → back (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d+ [A-Z][a-z]{2} \d\d:\d\d/.test(dl) && /on the clock/.test(dl) && /≈ \d+ pcs \/ day/.test(dl) && /of 24 given/.test(dl), 'Done line: 18 = 13 now + 5 before, got → back, time, rate:\n' + dl);
       ok(/→ /.test(await r.textContent()), 'row shows got → back times');
       ok(/6 pcs/.test(await r2.textContent()) && /since/.test(await r2.textContent()), 'Arif still has his 6');
       await page.goBack();
