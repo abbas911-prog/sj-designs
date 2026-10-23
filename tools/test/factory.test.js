@@ -197,6 +197,9 @@ async function suite(fast, browser) {
     await test('Workers dashboard: tiles filter, sort, status chips, by-design bars, week table, late note', async () => {
       await page.click('#twork'); await until(async () => /Rifat/.test(await page.textContent('#wksbody')) && /1 late/.test(await page.textContent('#wksbody')), 10000, 'dashboard with the late note');
       ok(await page.locator('#wksbody .wkc[data-w="Arif"] .chip').evaluate(e => /Working/.test(e.textContent)), 'Arif: Working chip');
+      // 23 Oct 2026: the remaining strip at the top - SJ-17841 (12 pcs, in IN LINE) has 18 done + 6 in hand -> 0 remaining
+      const rem = await page.textContent('#wksbody .rem'); ok(/IN LINE · REMAINING/.test(rem) && /SJ-17841/.test(rem) && /12 pcs · given 24 \(⏳ 6 · ✓ 18\)/.test(rem) && /0\s*remaining/.test(rem), 'remaining strip: ' + rem.slice(0, 200));
+      await page.click('#wksbody .rr'); await until(() => page.locator('#card').isVisible(), 5000, 'tap opens the card'); ok(/17841/.test(await page.textContent('#cnm')), 'the right card'); await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000); await page.click('#twork'); await until(async () => /Rifat/.test(await page.textContent('#wksbody')), 8000, 'dashboard again');
       ok(await page.locator('#wksbody .wkc[data-w="Rifat"] .chip').evaluate(e => /Free/.test(e.textContent)), 'Rifat: Free chip');
       await page.click('#wksbody .dtile[data-f="free"]'); await until(async () => (await page.locator('#wksbody .wkc').count()) === 2 && !/Arif/.test(await page.textContent('#wksbody .wkc')), 5000, 'free filter hides Arif');
       await page.click('#wksbody .dtile[data-f="free"]'); await until(async () => (await page.locator('#wksbody .wkc').count()) === 3, 5000, 'filter off');
@@ -244,12 +247,13 @@ async function suite(fast, browser) {
       // the timer: before 10 pm nothing; after 10 pm once (not twice); switched off -> nothing
       const n0 = W.slack.ch[DM].msgs.length, ctx = T.relay.ctx, realNow = Date.now, at = h => { const d = new Date(); d.setUTCHours(h - 4, 30, 0, 0); return d.getTime(); };
       delete T.relay.P.FAC_DAILY_LAST;
-      Date.now = () => at(15); ctx.facNotifyTick(); ok(W.slack.ch[DM].msgs.length === n0, 'nothing at 3 pm');
-      Date.now = () => at(22); ctx.facNotifyTick(); ok(W.slack.ch[DM].msgs.length === n0 + 1, 'the closing at 10 pm');
-      Date.now = () => at(23); ctx.facNotifyTick(); ok(W.slack.ch[DM].msgs.length === n0 + 1, 'not a second time');
+      const fri = new Date(Date.now() + 4 * 3600000).getUTCDay() === 5, hBefore = fri ? 10 : 15, hClose = fri ? 12 : 22, hAfter = fri ? 13 : 23;   // Friday closes at noon
+      Date.now = () => at(hBefore); ctx.facNotifyTick(); ok(W.slack.ch[DM].msgs.length === n0, 'nothing before closing time');
+      Date.now = () => at(hClose); ctx.facNotifyTick(); ok(W.slack.ch[DM].msgs.length === n0 + 1, 'the closing at ' + hClose + ':30');
+      Date.now = () => at(hAfter); ctx.facNotifyTick(); ok(W.slack.ch[DM].msgs.length === n0 + 1, 'not a second time');
       Date.now = realNow;
       await page.click('#dailytgl'); await until(() => T.relay.P.FAC_DAILY_OFF === '1', 5000, 'switched off on the relay');
-      delete T.relay.P.FAC_DAILY_LAST; Date.now = () => at(22); ctx.facNotifyTick(); Date.now = realNow; ok(W.slack.ch[DM].msgs.length === n0 + 1, 'off = no report');
+      delete T.relay.P.FAC_DAILY_LAST; Date.now = () => at(hClose); ctx.facNotifyTick(); Date.now = realNow; ok(W.slack.ch[DM].msgs.length === n0 + 1, 'off = no report');
       await page.click('#dailytgl'); await until(() => !T.relay.P.FAC_DAILY_OFF, 5000, 'on again');
       await page.click('#facx'); await page.click('#tabs button[data-t="cards"]');
     });
