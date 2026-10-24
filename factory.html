@@ -269,7 +269,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-24a';
+var VER = '2026-10-24b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -1087,8 +1087,8 @@ async function thPull(){
   var real = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }), top = real.length ? real[real.length - 1].ts : '', part = !!THCP[c.id], last = part ? '' : top;
   TH.n = (TH.n || 0) + 1; var look = looking(), frc = TH.n % 4 === 0 || TH.force; TH.force = false; var j = null;
   if (fastOn()) { var rf = c.id === 'lais' || c.lo ? null : c.dm ? (roomCh(c) ? [roomCh(c).ch] : null) : FAST.refs[c.id];   // #laisfactory is in the SJTC workspace - the relay only
-    if (rf) { j = await fast(c.dm ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (j && !j.ok) j = null; } }
-  if (!j) { j = await call({ op: 'thread', card: c.id, since: last, look: 0, force: frc ? 1 : 0 }); if (j && j.ok && j.ch && j.ts && !c.dm) { var rr = {}; rr[c.id] = [j.ch, j.ts]; refsSet(rr, true); } }
+    if (rf) { j = await fast(c.dm ? { op: 'dm', ch: rf[0], since: last, fresh: frc ? 1 : 0 } : { op: 'thread', ch: rf[0], ts: rf[1], since: last, fresh: frc ? 1 : 0 }); if (j && !j.ok) j = null; } }   // 24 Oct 2026: a forced read (doorbell, after a send) skips the worker's 1.5-s cache
+  if (!j) { j = await call({ op: 'thread', card: c.id, since: last, look: 0, force: frc ? 1 : 0, make: !c.dm && !c.xr && !c.lo && c.id !== 'lais' ? 1 : 0 }); if (j && j.ok && j.ch && j.ts && !c.dm) { var rr = {}; rr[c.id] = [j.ch, j.ts]; refsSet(rr, true); } }   // 24 Oct 2026 (Abbas: "two cards, only one chat in #cutting"): opening a card made in Trello / the Stock app makes its chat at once
   // 20 Oct 2026: compared by id - the card object is replaced on every list refresh, and an answer that arrived just after one was thrown away (the chat waited for the next pull)
   TH.busy = 0; if (TH.again) { TH.again = false; setTimeout(thPull, 30); } if (!TH.card || TH.card.id !== c.id) { if (TH.card) setTimeout(thPull, 50); return; } c = TH.card; if (j && j.ok) TH.lastPull = Date.now();
   // 20 Oct 2026: "seen" is sent by the phone, for the lines it really shows, while the chat is still open and being looked at. Before, the relay marked

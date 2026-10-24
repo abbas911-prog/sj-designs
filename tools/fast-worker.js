@@ -127,12 +127,12 @@ function shape(U, m, root) {                                     // one Slack me
 }
 const SHOW = m => !m.subtype || m.subtype === 'bot_message' || m.subtype === 'file_share' || m.subtype === 'thread_broadcast';
 
-async function hot(key, fn) { const h = HOT.get(key); if (h && Date.now() - h.at < 1500) return h.p; const p = fn(); HOT.set(key, { at: Date.now(), p }); if (HOT.size > 200) HOT.clear(); return p; }
+async function hot(key, fn, fresh) { const h = HOT.get(key); if (h && !fresh && Date.now() - h.at < 1500) return h.p; const p = fn(); HOT.set(key, { at: Date.now(), p }); if (HOT.size > 200) HOT.clear(); return p; }
 
 async function thread(env, q) {                                  // a card chat = the replies of its #cutting (or #samples-discuss) message
   const ch = String(q.ch || ''), ts = String(q.ts || ''), since = /^\d+\.\d+$/.test(String(q.since || '')) ? String(q.since) : '';
   if (!/^[CG][A-Z0-9]{5,}$/.test(ch) || !/^\d+\.\d+$/.test(ts)) return { ok: false, error: 'bad request' };
-  const rp = await hot('t' + ch + ts + since, () => slack(env, 'conversations.replies', { channel: ch, ts, limit: 200, oldest: since }, true));
+  const rp = await hot('t' + ch + ts + since, () => slack(env, 'conversations.replies', { channel: ch, ts, limit: 200, oldest: since }, true), !!q.fresh);   // 24 Oct 2026: fresh = the phone was told something new arrived
   if (!rp.ok) return { ok: false, error: rp.error === 'ratelimited' ? 'Slack is busy - one moment' : 'Slack said ' + rp.error, slow: rp.error === 'ratelimited' };
   const U = await users(env);
   return { ok: true, ch, ts, msgs: (rp.messages || []).filter(m => !since || +m.ts > +since).map(m => shape(U, m, ts)) };
@@ -141,7 +141,7 @@ async function thread(env, q) {                                  // a card chat 
 async function dm(env, q) {                                      // the Direct chat: newest 60 channel lines + replies inside their threads (shown with ↳)
   const ch = String(q.ch || ''), since = /^\d+\.\d+$/.test(String(q.since || '')) ? String(q.since) : '';
   if (!/^[CG][A-Z0-9]{5,}$/.test(ch)) return { ok: false, error: 'bad request' };
-  const h = await hot('d' + ch, () => slack(env, 'conversations.history', { channel: ch, limit: 60 }, true));
+  const h = await hot('d' + ch, () => slack(env, 'conversations.history', { channel: ch, limit: 60 }, true), !!q.fresh);
   if (!h.ok) return { ok: false, error: h.error === 'ratelimited' ? 'Slack is busy - one moment' : 'Slack said ' + h.error, slow: h.error === 'ratelimited' };
   const U = await users(env), out = [];
   const top = (h.messages || []).filter(SHOW);

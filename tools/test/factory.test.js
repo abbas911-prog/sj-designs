@@ -61,6 +61,14 @@ async function suite(fast, browser) {
       await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootB && /IN LINE/.test(m.text || '')), 8000, 'move line in chat');
       await page.goBack();
     });
+    await test('a card made in Trello (no chat yet) gets its #cutting chat the moment it is opened', async () => {   // 24 Oct 2026
+      if (await page.locator('#card').isVisible()) await page.goBack();
+      ok(!W.slack.ch[CUT].msgs.some(m => (m.text || '').includes(W.cardA.shortUrl)), 'no root for card A before');
+      await openCardNo(page, '48188');
+      await until(() => W.slack.ch[CUT].msgs.some(m => (m.text || '').includes(W.cardA.shortUrl) && /card chat · factory app/.test(m.text)), 10000, 'root made in #cutting on open');
+      await page.waitForTimeout(1200); ok(W.slack.ch[CUT].msgs.filter(m => (m.text || '').includes(W.cardA.shortUrl)).length === 1, 'made once');
+      await page.goBack();
+    });
     await test('send a photo: original size reaches Slack, once, and shows in the chat', async () => {
       if (!(await page.locator('#card').isVisible())) await openCardNo(page, '48188');
       else { await page.goBack(); await openCardNo(page, '48188'); }
@@ -330,6 +338,7 @@ async function suite(fast, browser) {
       W.slack.files.FVOICE1 = { id: 'FVOICE1', name: 'voice-1.m4a', mimetype: 'audio/mp4', size: 3000, bytes: Buffer.alloc(3000, 1), url_private: 'https://files.slack.com/dl/FVOICE1', url_private_download: 'https://files.slack.com/dl/FVOICE1' };
       W.slack.files.FPHOTO1 = { id: 'FPHOTO1', name: 'p.jpg', mimetype: 'image/jpeg', size: 4000, bytes: Buffer.from([0xff, 0xd8, 0xff, 0xd9]), url_private: 'https://files.slack.com/dl/FPHOTO1', url_private_download: 'https://files.slack.com/dl/FPHOTO1', thumb_720: 'https://files.slack.com/thumb/FPHOTO1' };
       F.postSlack(W, CUT, { text: '', user: 'U1', thread_ts: W.rootB, files: [W.slack.files.FVOICE1, W.slack.files.FPHOTO1] });
+      T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'EV' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));   // Slack's push, as in real life
       await openCardNo(page, '17841');
       await until(async () => (await page.$$('#thread audio')).length, 10000, 'voice note ready as a player, without a tap');
       ok(await page.$eval('#thread audio', a => a.paused), 'not playing by itself');
