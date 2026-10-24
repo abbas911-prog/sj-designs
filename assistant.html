@@ -102,6 +102,22 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 .chd .tt{flex:1;min-width:0}
 .chd .tt b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chd .tt small{display:block;font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chd .nx{background:#fff;color:var(--pri);border-radius:14px;padding:8px 12px;font-weight:800;font-size:13px;white-space:nowrap}
+.cu{position:sticky;top:0;z-index:2;background:var(--soft);color:var(--sub);font-size:12px;font-weight:600;text-align:center;padding:6px;border-radius:12px;margin-bottom:8px}
+.go{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--grad);color:#fff;border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh);margin-bottom:14px}
+.go b{font-size:17px;display:block}.go small{opacity:.9;font-size:12.5px}.go .pl{margin-left:auto;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+/* ask */
+.ask{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--sh);margin-top:18px}
+.ask textarea{width:100%;border:0;outline:none;background:var(--bg);border-radius:14px;padding:12px;min-height:84px;resize:none}
+.ask .bar{display:flex;gap:8px;margin-top:10px}
+.ask .bar button{flex:1;padding:12px 0;border-radius:14px;font-weight:700;background:var(--soft)}
+.ask .bar button.p{background:var(--grad);color:#fff;flex:2}
+.ask .bar button.rec{background:var(--red);color:#fff;animation:pulse 1s infinite}
+.ex{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.ex button{background:var(--soft);border-radius:20px;padding:7px 12px;font-size:13px}
+.ans{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--sh);margin-top:12px;white-space:pre-wrap}
+.ans.err{border-left:4px solid var(--red)}
+.ans .acts{margin-top:10px}
 #cbody{flex:1;overflow-y:auto;padding:12px 12px 18px;-webkit-overflow-scrolling:touch}
 .day{text-align:center;margin:12px 0 8px}
 .day span{font-size:11px;font-weight:700;color:var(--sub);background:var(--soft);padding:4px 10px;border-radius:20px}
@@ -185,16 +201,24 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
       <div id="alist"></div>
     </section>
     <section id="v-today" hidden><div id="tday"></div></section>
+    <section id="v-ask" hidden>
+      <div class="h2"><h2>✨ Ask your assistant</h2></div>
+      <div class="ask"><textarea id="atxt" placeholder="Type a command or a question…&#10;e.g. send 20 m lace ordered to #cash&#10;open 48188 · what's new · forward last photo of 48188 to whatsapp"></textarea>
+        <div class="bar"><button type="button" id="amic" aria-label="Speak">🎤 Speak</button><button type="button" class="p" id="ago">Do it ➤</button></div>
+        <div class="ex" id="aex"><button type="button">what's new</button><button type="button">open 48188</button><button type="button">send ok noted to #cash</button><button type="button">forward last photo of 48188 to whatsapp</button><button type="button">mark all done</button></div></div>
+      <div id="aout"></div>
+    </section>
   </main>
   <nav id="nav">
     <button data-v="catch" class="on" type="button"><b>⚡</b>Catch-up<i id="nb" hidden></i></button>
     <button data-v="chats" type="button"><b>💬</b>Chats</button>
     <button data-v="today" type="button"><b>🗓</b>Today</button>
+    <button data-v="ask" type="button"><b>✨</b>Ask</button>
   </nav>
 </div>
 
 <section id="chat" hidden>
-  <div class="chd"><button class="back" id="cback" type="button" aria-label="Back">‹</button><div class="tt"><b id="ct"></b><small id="cs"></small></div></div>
+  <div class="chd"><button class="back" id="cback" type="button" aria-label="Back">‹</button><div class="tt"><b id="ct"></b><small id="cs"></small></div><button class="nx" id="cnext" type="button" hidden>Next ›</button></div>
   <div id="cbody"></div>
   <div class="cft">
     <div id="tgt">Sending to <button id="tgtb" type="button"></button></div>
@@ -216,7 +240,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <script>
 (function(){
-var VER = '2026-10-24b';
+var VER = '2026-10-24c';
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -287,14 +311,14 @@ function draw(){
   $('hsum').textContent = !L.length ? 'Getting your chats…' : tot ? tot + ' new message' + (tot > 1 ? 's' : '') + ' waiting in ' + un.length + ' chat' + (un.length > 1 ? 's' : '') : 'You are all caught up ✨';
   $('nb').hidden = !tot; $('nb').textContent = tot; document.title = tot ? '(' + tot + ') Assistant' : 'Assistant'; try { if (navigator.setAppBadge) tot ? navigator.setAppBadge(tot) : navigator.clearAppBadge(); } catch(e){}
   if (VIEW === 'catch') { todayCard();
-    var h = un.length ? '<div class="h2"><h2>Needs you</h2><button type="button" id="allread">✓ Mark all done</button></div>' + un.map(cardHtml).join('') : '<div class="zero"><b>' + (L.length ? '✨' : '⏳') + '</b>' + (L.length ? 'All caught up. Nothing new in SJTC or the factory.' : 'Reading your chats for the first time…') + '</div>';
+    var h = un.length ? '<button class="go" type="button" id="gocu"><span><b>▶ Catch up</b><small>Open the ' + un.length + ' chat' + (un.length > 1 ? 's' : '') + ' one by one — read, reply, Next</small></span><span class="pl">' + tot + '</span></button><div class="h2"><h2>Needs you</h2><button type="button" id="allread">✓ Mark all done</button></div>' + un.map(cardHtml).join('') : '<div class="zero"><b>' + (L.length ? '✨' : '⏳') + '</b>' + (L.length ? 'All caught up. Nothing new in SJTC or the factory.' : 'Reading your chats for the first time…') + '</div>';
     var rec = L.filter(function(c){ return !c.un; }).slice(0, 5); if (rec.length) h += '<div class="h2"><h2>Recently</h2></div>' + rec.map(function(c){ return rowHtml(c); }).join('');
     setHtml('clist', h); }
   if (VIEW === 'chats') { var q = $('q').value.trim().toLowerCase(), A = L.filter(function(c){ return (!FILT || (FILT === 'c' ? c.kind === 'channel' : FILT === 'un' ? c.un : c.ws === FILT)) && (!q || (c.title + ' ' + subOf(c) + ' ' + (c.lines || []).map(function(l){ return l.who + ' ' + l.text; }).join(' ')).toLowerCase().indexOf(q) >= 0); });
     setHtml('alist', A.length ? A.slice(0, 250).map(function(c){ return rowHtml(c); }).join('') : '<div class="zero"><b>🔍</b>No chat found.</div>'); }
   if (VIEW === 'today') todayFull();
 }
-function show(v){ VIEW = v; ['catch', 'chats', 'today'].forEach(function(x){ $('v-' + x).hidden = x !== v; }); $('nav').querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.v === v); }); draw(); window.scrollTo(0, 0); }
+function show(v){ VIEW = v; ['catch', 'chats', 'today', 'ask'].forEach(function(x){ $('v-' + x).hidden = x !== v; }); $('nav').querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.dataset.v === v); }); draw(); window.scrollTo(0, 0); }
 $('nav').onclick = function(e){ var b = e.target.closest('button'); if (b) show(b.dataset.v); };
 $('q').oninput = draw;
 $('fchips').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; FILT = b.dataset.f; $('fchips').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); }); draw(); };
@@ -303,6 +327,7 @@ $('app').addEventListener('click', function(e){
   var o = e.target.closest('[data-open]'); if (o) { openChat(o.dataset.open); return; }
   var d = e.target.closest('[data-done]'); if (d) { markDone(d.dataset.done); return; }
   var f = e.target.closest('[data-fwc]'); if (f) { var c = CH[f.dataset.fwc]; openChat(c.k, true); return; }
+  if (e.target.closest('#gocu')) { cuStart(); return; }
   if (e.target.id === 'allread') { list().filter(function(c){ return c.un; }).forEach(function(c){ markDone(c.k); }); toast('✓ All marked done'); return; }
   if (e.target.closest('[data-timo]')) openTimo(); });
 
@@ -335,10 +360,16 @@ window.addEventListener('message', function(e){ if (e.data && e.data.timo === 's
 var CUR = null, MSGS = [], ATT = [], TGT = null, PEND = [], MEDIA = {};
 function openChat(k, fwPick){ var c = CH[k]; if (!c) return; CUR = c; TGT = null; ATT = []; MSGS = []; PEND = []; readChat.sig = '';
   if (c.un) { ZERO[k] = Date.now() / 1000; c.un = 0; c.lines = []; draw(); }
-  $('ct').textContent = chIcon(c) + ' ' + c.title; $('cs').textContent = subOf(c); $('cbody').innerHTML = '<div class="zero"><b>⏳</b>Loading…</div>';
+  $('ct').textContent = chIcon(c) + ' ' + c.title; $('cs').textContent = (CU.on ? 'Catch up ' + (CU.i + 1) + ' of ' + CU.q.length + ' · ' : '') + subOf(c); if (!CU.on) $('cnext').hidden = true; $('cbody').innerHTML = '<div class="zero"><b>⏳</b>Loading…</div>';
   $('chat').hidden = false; drawTgt(); drawAtt(); readChat(false).then(function(){ if (fwPick) { var last = MSGS.filter(function(m){ return !m.sys; }).pop(); if (last) forward(last); } });
   clearInterval(openChat.t); openChat.t = setInterval(function(){ if (!document.hidden && CUR) readChat(true); }, 5000); }
-function closeChat(){ CUR = null; $('chat').hidden = true; clearInterval(openChat.t); stopRec(true); draw(); }
+function closeChat(){ CUR = null; CU.on = false; $('cnext').hidden = true; $('chat').hidden = true; clearInterval(openChat.t); stopRec(true); draw(); }
+// ---------- Catch up: walk through every chat with new lines, one by one ----------
+var CU = { on: false, q: [], i: 0 };
+function cuStart(){ CU.q = list().filter(function(c){ return c.un; }).map(function(c){ return c.k; }); if (!CU.q.length) { toast('✨ Nothing new'); return; } CU.on = true; CU.i = -1; cuNext(); }
+function cuNext(){ CU.i++; if (CU.i >= CU.q.length) { closeChat(); toast('✓ Caught up — ' + CU.q.length + ' chat' + (CU.q.length > 1 ? 's' : '') + ' read'); return; }
+  openChat(CU.q[CU.i]); $('cnext').hidden = false; $('cnext').textContent = CU.i + 1 < CU.q.length ? 'Next ›' : 'Finish ✓'; }
+$('cnext').onclick = function(){ if (CU.on) cuNext(); };
 $('cback').onclick = closeChat;
 async function readChat(quiet){ var c = CUR; if (!c || readChat.busy) return; readChat.busy = true;
   try { var j = await api({ op: 'thread', k: c.k, look: 1 }, 2); if (c !== CUR) return;
@@ -413,8 +444,7 @@ async function waShare(text, files){
   if (text) window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank'); return true; }
 
 // ---------- forward a message with its photos / voice notes (originals) ----------
-function forward(m){ var from = CUR;
-  pick('Forward to…', async function(t){
+function forward(m, t0){ var from = CUR, go = async function(t){
     sheet('<h3>Getting the files…</h3><div class="zero"><b>⏳</b></div>'); var files = [];
     try { for (var i = 0; i < (m.files || []).length; i++) { var f = m.files[i], g = await getFile(from.k, f.id, true); files.push(new File([g.blob], f.name || g.name || ('file-' + i), { type: g.type || f.type || '' })); } }
     catch(e){ sheet('<h3>⚠ Could not get the file</h3><p>' + esc(e.message) + '</p><div class="acts"><button type="button" data-x="1">Close</button></div>'); return; }
@@ -426,7 +456,7 @@ function forward(m){ var from = CUR;
     $('fwgo').onclick = function(){ var text = $('fwnote').value.trim(); if (!text && !files.length) { toast('Nothing to send'); return; }
       if (t.wa) { waShare(text, files).then(function(ok){ if (ok) closeSheet(); }); return; }
       closeSheet(); toast('Sending to ' + t.title + '…'); doSend({ to: t, text: text, files: files, rid: rid() }); };
-  }); }
+  }; if (t0) go(t0); else pick('Forward to…', go); }
 
 // ---------- sheets ----------
 function sheet(h){ $('sheetb').innerHTML = h; $('sheet').hidden = false; }
@@ -463,6 +493,37 @@ function setup(){ $('app').hidden = true; $('chat').hidden = true; var el = $('s
       if (!j.ready) { var s = await raw({ setup: { pw: pw, s: $('sts').value.trim(), f: $('stf').value.trim() } }); if (!s.ok) { $('serr2').textContent = s.error; return; } }
       PW = pw; var h = await api({ op: 'hello' }, 1); if (!h.ok) { PW = ''; $('serr2').textContent = /wrong password/.test(h.error) ? 'That password did not work' : h.error; return; }
       ls('as2_pw', pw); start(); }; }; }
+
+// ---------- Ask: a direct command. The app does what it can itself; anything else goes to Claude with the latest lines attached ----------
+function findChat(q){ q = String(q || '').trim().toLowerCase().replace(/^#/, ''); if (!q) return null; var L = list().concat((CHANS || []).map(function(x){ return { k: x.k, ws: x.ws, chn: x.chn, title: '#' + x.chn, kind: 'channel', last: '0', un: 0, lines: [] }; }));
+  var hit = L.filter(function(c){ return c.title.toLowerCase().replace(/^#/, '') === q || (c.kind === 'channel' && c.chn.toLowerCase() === q); })[0] || L.filter(function(c){ return (c.title + ' ' + c.chn).toLowerCase().indexOf(q) >= 0; })[0];
+  if (hit && !CH[hit.k]) CH[hit.k] = hit; return hit || null; }
+function digest(n){ return list().filter(function(c){ return c.un && c.lines.length; }).slice(0, n || 12).map(function(c){ return '• ' + c.title + ' (' + subOf(c) + '): ' + c.lines.map(function(l){ return l.who + ': ' + l.text; }).join(' / '); }).join('\n'); }
+function aOut(h, err){ $('aout').innerHTML = '<div class="ans' + (err ? ' err' : '') + '">' + h + '</div>' + $('aout').innerHTML; }
+async function ask(q){ q = String(q || '').trim(); if (!q) return; var l = q.toLowerCase(), m;
+  if (/^(what'?s new|catch ?up|new\??|kya naya hai)$/.test(l)) { var d = digest(20); aOut(d ? '<b>New right now</b>\n' + esc(d) + '<div class="acts"><button class="p" type="button" id="aCu">▶ Catch up</button></div>' : '✨ Nothing new.'); if ($('aCu')) $('aCu').onclick = function(){ show('catch'); cuStart(); }; return; }
+  if (/^mark all (done|read)$/.test(l)) { list().filter(function(c){ return c.un; }).forEach(function(c){ markDone(c.k); }); aOut('✓ All marked done.'); return; }
+  if ((m = l.match(/^(?:open|show|go to)\s+(.+)$/))) { var c1 = findChat(m[1]); if (!c1) { aOut('I could not find a chat called “' + esc(m[1]) + '”.', 1); return; } openChat(c1.k); return; }
+  if ((m = q.match(/^(?:send|tell|post|write)\s+(.+?)\s+(?:to|in|into|on)\s+(#?\S.*)$/i))) { var c2 = findChat(m[2]); if (!c2) { aOut('I could not find a chat called “' + esc(m[2]) + '”. Say the name as it is in the list (e.g. #cash, 48188, NASIR).', 1); return; }
+    aOut('Send to <b>' + esc(chIcon(c2) + ' ' + c2.title) + '</b>:\n“' + esc(m[1]) + '”<div class="acts"><button class="p" type="button" id="aYes">Send</button><button type="button" id="aNo">Cancel</button></div>');
+    $('aYes').onclick = function(){ $('aYes').disabled = true; doSend({ to: c2, text: m[1], files: [], rid: rid() }); aOut('✓ Sent to ' + esc(c2.title)); }; $('aNo').onclick = function(){ $('aout').firstChild.remove(); }; return; }
+  if ((m = q.match(/^(?:forward|fwd|share)\s+(?:the\s+)?(?:last|latest)\s+(photo|picture|voice|file|message|line)\s+(?:of|from|in)\s+(.+?)\s+(?:to|on)\s+(.+)$/i))) { var c3 = findChat(m[2]); if (!c3) { aOut('I could not find “' + esc(m[2]) + '”.', 1); return; }
+    var toWa = /whats?app|wa/i.test(m[3]), c4 = toWa ? { wa: true, title: 'WhatsApp' } : findChat(m[3]); if (!c4) { aOut('I could not find “' + esc(m[3]) + '”.', 1); return; }
+    var j = await api({ op: 'thread', k: c3.k, look: 0 }, 2); if (!j.ok) { aOut(esc(j.error), 1); return; } var want = /photo|picture/i.test(m[1]) ? 'img' : /voice/i.test(m[1]) ? 'audio' : /file/i.test(m[1]) ? 'file' : '';
+    var pickM = (j.msgs || []).slice().reverse().filter(function(x){ return !x.sys && (!want || (x.files || []).some(function(f){ return fileKind(f) === want; })); })[0]; if (!pickM) { aOut('No ' + esc(m[1]) + ' found in ' + esc(c3.title) + '.', 1); return; }
+    CUR = c3; forward(pickM, c4); return; }
+  // anything else → Claude, with the latest lines attached so it can answer about them
+  var ctx = digest(15), prompt = 'You are Abbas\'s business assistant for SJ Trading (SJTC, Dubai) and the AL MUTAGADED factory. Latest new chat lines (Urdu / Arabic / Bengali may appear — translate when useful):\n' + (ctx || '(nothing new)') + '\n\nAbbas asks: ' + q;
+  aOut('I cannot do that inside the app yet — opening Claude with your question and the latest lines attached.<div class="acts"><button class="p" type="button" id="aCl">Open Claude ↗</button></div>');
+  $('aCl').onclick = function(){ window.open('https://claude.ai/new?q=' + encodeURIComponent(prompt), '_blank'); }; }
+$('ago').onclick = function(){ var q = $('atxt').value; $('atxt').value = ''; ask(q); };
+$('atxt').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('ago').onclick(); } };
+$('aex').onclick = function(e){ var b = e.target.closest('button'); if (b) { $('atxt').value = b.textContent; $('ago').onclick(); } };
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition, srec = null;
+$('amic').onclick = function(){ if (!SR) { toast('Use the 🎤 on your keyboard to dictate'); $('atxt').focus(); return; } if (srec) { srec.stop(); return; }
+  srec = new SR(); srec.lang = 'en-IN'; srec.interimResults = true; $('amic').classList.add('rec'); $('amic').textContent = '■ Stop';
+  srec.onresult = function(ev){ var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; $('atxt').value = t; };
+  srec.onend = function(){ srec = null; $('amic').classList.remove('rec'); $('amic').textContent = '🎤 Speak'; if ($('atxt').value.trim()) $('ago').onclick(); }; srec.onerror = srec.onend; srec.start(); };
 
 // ---------- start ----------
 var TICK = 0;

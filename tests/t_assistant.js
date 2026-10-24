@@ -103,6 +103,26 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0], f = 
   ok('typed line went to #cash (top level), not the card thread', FW.slack.ch.C0CASH00001.msgs.some(m => m.text === '*Abbas:* 20 m lace 400 AED' && !m.thread_ts) && !replies(FW, 'C09S552KD7T', card.ts).some(m => /400 AED/.test(m.text)));
   await pg.click('#cback');
 
+  // 4b. Catch up walks the unread chats one by one, Next → next chat, Finish → back
+  F.postSlack(S, 'C0GODN0001', { text: 'Packed, 215 pcs', user: 'U1', thread_ts: pick.ts }); F.postSlack(FW, 'C09S552KD7T', { text: '*Rifat:* Lace mil gayi', bot_id: 'B1', thread_ts: card.ts });
+  CACHE.forEach((v, k) => { if (/^H_|^R_/.test(k)) CACHE.delete(k); }); await pg.click('#nav button[data-v="catch"]'); await pg.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await pg.waitForFunction(() => document.querySelectorAll('#clist .card').length >= 2, null, { timeout: 15000 }); const nq = await pg.$$eval('#clist .card', L => L.length);
+  await pg.click('#gocu'); await pg.waitForSelector('#chat .m', { timeout: 8000 });
+  ok('Catch up → first unread chat opens, header says 1 of N', /Catch up 1 of/.test(await t(pg, '#cs')) && await pg.isVisible('#cnext'));
+  const first = await t(pg, '#ct'); await pg.click('#cnext'); await pg.waitForTimeout(600);
+  ok('Next → the second chat (different), 2 of N', /Catch up 2 of/.test(await t(pg, '#cs')) && (await t(pg, '#ct')) !== first);
+  for (let i = 2; i < nq; i++) { await pg.click('#cnext'); await pg.waitForTimeout(400); }
+  ok('last one says Finish', (await t(pg, '#cnext')) === 'Finish ✓'); await pg.click('#cnext'); await pg.waitForTimeout(400);
+  ok('Finish → back to the list, every chat read', await pg.isHidden('#chat'));
+  // 4c. Ask: local commands
+  await pg.click('#nav button[data-v="ask"]'); await pg.fill('#atxt', 'send Lace ordered, 20 m to #cash'); await pg.click('#ago'); await pg.waitForSelector('#aYes');
+  ok('Ask: "send … to #cash" asks to confirm first', /Send to/.test(await t(pg, '#aout')) && /#cash/.test(await t(pg, '#aout')));
+  await pg.click('#aYes'); await pg.waitForTimeout(800); ok('…and sends it', FW.slack.ch.C0CASH00001.msgs.some(m => m.text === '*Abbas:* Lace ordered, 20 m'));
+  await pg.fill('#atxt', 'open 48188'); await pg.click('#ago'); await pg.waitForSelector('#chat:not([hidden])'); ok('Ask: "open 48188" opens the card chat', /48188/.test(await t(pg, '#ct'))); await pg.click('#cback');
+  await pg.fill('#atxt', 'forward last photo of 48188 to whatsapp'); await pg.click('#ago'); await pg.waitForSelector('#fwgo', { timeout: 8000 });
+  ok('Ask: "forward last photo of 48188 to whatsapp" finds the photo and opens the WhatsApp sheet', /WhatsApp/.test(await t(pg, '#sheetb')) && (await pg.$$('#sheetb .prev img')).length === 1); await pg.click('#sheetb [data-x]');
+  await pg.fill('#atxt', 'kitna maal ready hai?'); await pg.click('#ago'); await pg.waitForSelector('#aCl'); ok('Ask: a real question → hands over to Claude', await pg.isVisible('#aCl'));
+  await pg.click('#nav button[data-v="catch"]');
   // 5. read chats are not "new" any more; Mark all done clears the rest (kept in the script)
   F.postSlack(FW, 'C09S552KD7T', { text: '*Ibrahim:* Lace aa gayi, cutting shuru', bot_id: 'B1', thread_ts: card.ts });   // a new line arrives meanwhile
   CACHE.forEach((v, k) => { if (/^H_|^R_/.test(k)) CACHE.delete(k); });
