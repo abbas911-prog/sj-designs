@@ -2,7 +2,8 @@
 """Sort every photo in thumbs/ into a role for memo.html, once per photo (results kept in thumbs/roles.json):
   lineup = real shop photo of several colours side by side  -> carries the colour numbers
   detail = real close-up / single dress / sleeve             -> shown, no numbers
-  cover  = JAMAL AI cover                                     -> hidden when a lineup exists
+  cover  = JAMAL AI cover (made by ChatGPT)                   -> hidden when a lineup exists
+           (a REAL JAMAL studio photo, with the gold logo, is a lineup: found by tools/catalog/jamal.py, 23 Oct 2026)
   shot   = screenshot of a card / chat                        -> never shown
 Uses the free CLIP image model on GitHub's servers: each new photo gets the role of the checked photos it looks most like. No Claude, no AI tokens."""
 import json, os, sys
@@ -17,13 +18,36 @@ def load(p, d):
     except Exception:
         return d
 
+LOGOS = 'thumbs/logo.json'    # id -> JAMAL logo score, each photo checked once (23 Oct 2026)
+def jamal_pass(ids, roles, labels):
+    """23 Oct 2026 (Abbas, SJ-79623: the Stock app put 7-9 on a shop photo; the two JAMAL photos were hand-labelled lineup AND cover):
+    a photo with the real JAMAL logo is a real photo of several colours = lineup, whatever CLIP or an old label said. Each photo
+    is checked once (thumbs/logo.json); numpy + pillow only, ~0.1 s per new photo."""
+    logos = load(LOGOS, {})
+    new = [i for i in ids if i not in logos]
+    if new:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'catalog'))
+        from jamal import logo_score
+        from PIL import Image, ImageOps
+        for i in new:
+            try: logos[i] = round(logo_score(ImageOps.exif_transpose(Image.open('thumbs/%s.jpg' % i)).convert('RGB')), 3)
+            except Exception as e: print('logo', i, e); logos[i] = 0.0
+        json.dump({k: v for k, v in logos.items() if k in ids}, open(LOGOS, 'w'), separators=(',', ':'), sort_keys=True)
+    from jamal import JAMAL_MIN
+    n = 0
+    for i in ids:
+        if logos.get(i, 0) >= JAMAL_MIN and (i not in roles or roles[i][0] != 'lineup' or len(roles[i]) < 3):
+            roles[i] = ['lineup', logos[i], 'jamal']; n += 1
+    return n
+
 def main():
     roles, labels, ref = load(ROLES, {}), load(LABELS, {}), load(REF, None)
     ids = sorted(f[:-4] for f in os.listdir('thumbs') if f.endswith('.jpg'))
     roles = {k: v for k, v in roles.items() if k in ids}
     for i in ids:                                   # a checked photo always keeps its checked role
-        if i in labels and (i not in roles or roles[i][0] != labels[i]):
+        if i in labels and (i not in roles or roles[i][0] != labels[i]) and not (len(roles.get(i, [])) > 2 and roles[i][2] == 'jamal'):
             roles[i] = [labels[i]]
+    jamal_pass(ids, roles, labels)                  # ... unless the real JAMAL logo is in it: then it is a lineup
     todo = [i for i in ids if i not in roles]
     need = bool(todo) or ref is None
     if '--check' in sys.argv:
