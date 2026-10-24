@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Assistant · setup</title>
+<style>body{font-family:-apple-system,system-ui,sans-serif;margin:0;padding:18px;background:#f5f6fb;color:#0f172a}h2{margin:0 0 8px}p,li{font-size:16px;line-height:1.5}ol{padding-left:22px}
+.top{background:linear-gradient(135deg,#5b4cf0,#8b5cf6 55%,#ec4899);color:#fff;border-radius:20px;padding:18px;margin-bottom:14px}
+button{display:block;width:100%;border:0;border-radius:16px;padding:16px;font-size:18px;font-weight:800;background:#5b4cf0;color:#fff;margin:12px 0}
+textarea{width:100%;height:110px;font:12px monospace;border:1.5px solid #e2e4ef;border-radius:12px;padding:8px;box-sizing:border-box}#st{font-weight:700;min-height:22px}
+a.b{display:block;text-align:center;border:1.5px solid #5b4cf0;border-radius:16px;padding:14px;font-weight:800;color:#5b4cf0;text-decoration:none;margin:8px 0}
+.note{background:#fff;border-radius:16px;padding:12px 14px;font-size:14px;color:#475569}</style></head><body>
+<!-- 24 Oct 2026: the Assistant's OWN Google script (tools/assistant.gs) — a new Apps Script project, never the SJ relay project -->
+<div class="top"><h2>✨ Assistant — its own script</h2><div>This is a <b>new, separate</b> Google script. Do not paste it into the SJ relay.</div></div>
+<ol>
+<li>Tap <b>Copy the code</b>.</li>
+<li>Open Apps Script → <b>New project</b> → name it <b>SJ Assistant</b> → select all the sample code → <b>Paste</b> → <b>Save</b> 💾.</li>
+<li><b>Deploy</b> → <b>New deployment</b> → type <b>Web app</b> → Execute as <b>Me</b> → Who has access <b>Anyone</b> → <b>Deploy</b> → allow access.</li>
+<li>Copy the <b>Web app URL</b> (ends in /exec) and paste it in the Assistant app.</li>
+<li>Later updates: paste the new code → <b>Deploy</b> → <b>Manage deployments</b> → ✏️ → <b>New version</b> (same link).</li>
+</ol>
+<button id="cp">📋 Copy the code</button><div id="st">Loading the code…</div>
+<a class="b" href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">New Apps Script project ↗</a>
+<a class="b" href="assistant.html">Open the Assistant app</a>
+<p class="note">The first time, the app asks for a new Assistant password and the two Slack bot tokens (SJTC “SJ Memo” and the factory “SJ Orders” — api.slack.com/apps → the bot → OAuth &amp; Permissions → Bot User OAuth Token). They go straight into your new script and stay there.</p>
+<textarea id="code" readonly></textarea>
+<script>
+var code = '';
+fetch('tools/assistant.gs?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ if (!r.ok) throw new Error(r.status); return r.text(); }).then(function(t){ code = t; document.getElementById('code').value = t;
+    var v = (t.match(/var AS_VER = '([^']+)'/) || [])[1] || '?'; document.getElementById('st').textContent = 'Ready · version ' + v + ' · complete: ' + (/function doPost\(/.test(t) && /function feed\(/.test(t) ? 'yes ✅' : 'NO ⚠ reload'); })
+  .catch(function(){ document.getElementById('st').textContent = 'Could not load — check the internet and reload'; });
+document.getElementById('cp').onclick = async function(){ var st = document.getElementById('st'); if (!code) return;
+  try { await navigator.clipboard.writeText(code); st.textContent = '✅ Copied — now paste it in the new Apps Script project'; }
+  catch(e){ var ta = document.getElementById('code'); ta.focus(); ta.select(); ta.setSelectionRange(0, code.length); var ok = false; try { ok = document.execCommand('copy'); } catch(x){} st.textContent = ok ? '✅ Copied' : 'Press and hold in the box below → Select All → Copy'; } };
+</script></body></html>
