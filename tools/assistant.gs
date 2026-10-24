@@ -3,7 +3,7 @@
 // the Assistant app's setup screen; they are kept in THIS script's properties only (never in the repo, never in a chat).
 // Every chat the bots can see = one channel chat (its top-level posts) + one chat per thread (an order memo, a pick list, a card…).
 // Lines written from any SJ app are "*Name:* text" posted by a bot — shown as Name. Read marks ("seen") are the Assistant's own.
-var AS_VER = '2026-10-24a';
+var AS_VER = '2026-10-24b';
 var WS = ['s', 'f'];                                               // s = SJTC workspace, f = factory workspace
 var HOT_MS = 2 * 3600 * 1000, PER_CALL = 4, HIST_N = 200;           // channels read per feed call per workspace: hot ones + the longest-unread cold ones
 
@@ -61,6 +61,7 @@ function run(req, who, P) {
     return { ok: true, msgs: outm };
   }
   if (op === 'seen') { seenPut(P, req.k, String(req.ts || Date.now() / 1000)); return { ok: true }; }
+  if (op === 'unseen') { return { ok: true, mark: unseen(P, req.k, String(req.since || '')) }; }   // keep unread: the chat comes back in the Catch-up as it was
   if (op === 'post') {
     var tx = String(req.text || '').slice(0, 3500); if (!tx.trim()) return { ok: false, error: 'empty' };
     var p = { channel: k.ch, text: '*' + who + ':* ' + tx }; if (k.ts) p.thread_ts = k.ts;
@@ -154,7 +155,8 @@ function title(text, chn) {                                       // a thread's 
 }
 
 // ---------- seen marks (the Assistant's own) ----------
-function seenPut(P, key, ts) { var k = 'SN_' + key; if (+ts > +(P.getProperty(k) || 0)) P.setProperty(k, String(ts)); }
+function seenPut(P, key, ts) { var k = 'SN_' + key, old = P.getProperty(k) || ''; if (+ts > +(old || 0)) { P.setProperty(k, String(ts)); P.setProperty('SNP_' + key, old || '0'); } }   // SNP_ = the mark before, for "keep unread"
+function unseen(P, key, since) { var k = 'SN_' + key, prev = P.getProperty('SNP_' + key), cur = +(P.getProperty(k) || 0), t = prev != null ? +prev : 0; if (+since > 0) t = Math.min(t || +since, +since - 0.000001); if (t < cur) P.setProperty(k, String(t)); return t; }
 function mine(o, who) { var a = String(o.who || '').toUpperCase().replace(/[^A-Z ]/g, '').trim().split(' ')[0], b = String(who || '').toUpperCase().replace(/[^A-Z ]/g, '').trim().split(' ')[0]; return a.length >= 3 && b.length >= 3 && (a === b || a.indexOf(b) === 0 || b.indexOf(a) === 0); }
 
 // ---------- the Catch-up: every chat with what is new in it, newest first ----------

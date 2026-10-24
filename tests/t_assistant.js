@@ -123,6 +123,15 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0], f = 
   ok('Ask: "forward last photo of 48188 to whatsapp" finds the photo and opens the WhatsApp sheet', /WhatsApp/.test(await t(pg, '#sheetb')) && (await pg.$$('#sheetb .prev img')).length === 1); await pg.click('#sheetb [data-x]');
   await pg.fill('#atxt', 'kitna maal ready hai?'); await pg.click('#ago'); await pg.waitForSelector('#aCl'); ok('Ask: a real question → hands over to Claude', await pg.isVisible('#aCl'));
   await pg.click('#nav button[data-v="catch"]');
+  // 4d. Keep unread: open a chat, tap 🔔, leave → it comes back in Catch-up with the same lines, until read without 🔔
+  F.postSlack(FW, 'C09S552KD7T', { text: '*Rifat:* Thread chahiye, 2 cone', bot_id: 'B1', thread_ts: card.ts }); CACHE.forEach((v, k) => { if (/^H_|^R_/.test(k)) CACHE.delete(k); });
+  await pg.click('#nav button[data-v="catch"]'); await pg.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await pg.waitForFunction(() => /Thread chahiye/.test(document.querySelector('#clist').textContent), null, { timeout: 15000 });
+  await pg.click('.card:has-text("SJ-48188") [data-open]'); await pg.waitForSelector('#chat .m'); await pg.click('#ckeep'); ok('🔔 → "Stays unread"', /Stays unread/.test(await t(pg, '#ckeep'))); await pg.click('#cback'); await pg.waitForTimeout(1500);
+  ok('left with 🔔 → the chat is back in Catch-up with Rifat\'s line', /Thread chahiye/.test(await t(pg, '#clist')) && (await pg.$$('.card:has-text("SJ-48188")')).length === 1);
+  await pg.reload(); await pg.waitForFunction(() => document.querySelectorAll('#clist .card').length >= 1, null, { timeout: 15000 });
+  ok('…and still after the app is opened again (kept in the script)', /Thread chahiye/.test(await t(pg, '#clist')));
+  await pg.click('.card:has-text("SJ-48188") [data-open]'); await pg.waitForSelector('#chat .m'); await pg.click('#cback'); CACHE.forEach((v, k) => { if (/^H_|^R_/.test(k)) CACHE.delete(k); }); await pg.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await pg.waitForTimeout(1500);
+  ok('read normally → gone from Catch-up', !/Thread chahiye/.test(await t(pg, '#clist')));
   // 5. read chats are not "new" any more; Mark all done clears the rest (kept in the script)
   F.postSlack(FW, 'C09S552KD7T', { text: '*Ibrahim:* Lace aa gayi, cutting shuru', bot_id: 'B1', thread_ts: card.ts });   // a new line arrives meanwhile
   CACHE.forEach((v, k) => { if (/^H_|^R_/.test(k)) CACHE.delete(k); });

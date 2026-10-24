@@ -102,6 +102,8 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 .chd .tt{flex:1;min-width:0}
 .chd .tt b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chd .tt small{display:block;font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chd .kp{background:rgba(255,255,255,.2);color:#fff;border-radius:14px;padding:8px 10px;font-weight:700;font-size:13px;white-space:nowrap}
+.chd .kp.on{background:#fff;color:#b45309}
 .chd .nx{background:#fff;color:var(--pri);border-radius:14px;padding:8px 12px;font-weight:800;font-size:13px;white-space:nowrap}
 .cu{position:sticky;top:0;z-index:2;background:var(--soft);color:var(--sub);font-size:12px;font-weight:600;text-align:center;padding:6px;border-radius:12px;margin-bottom:8px}
 .go{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--grad);color:#fff;border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh);margin-bottom:14px}
@@ -218,7 +220,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 </div>
 
 <section id="chat" hidden>
-  <div class="chd"><button class="back" id="cback" type="button" aria-label="Back">‹</button><div class="tt"><b id="ct"></b><small id="cs"></small></div><button class="nx" id="cnext" type="button" hidden>Next ›</button></div>
+  <div class="chd"><button class="back" id="cback" type="button" aria-label="Back">‹</button><div class="tt"><b id="ct"></b><small id="cs"></small></div><button class="kp" id="ckeep" type="button" aria-label="Keep unread">🔔</button><button class="nx" id="cnext" type="button" hidden>Next ›</button></div>
   <div id="cbody"></div>
   <div class="cft">
     <div id="tgt">Sending to <button id="tgtb" type="button"></button></div>
@@ -240,7 +242,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <script>
 (function(){
-var VER = '2026-10-24c';
+var VER = '2026-10-24d';
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -358,12 +360,14 @@ window.addEventListener('message', function(e){ if (e.data && e.data.timo === 's
 
 // ---------- one chat ----------
 var CUR = null, MSGS = [], ATT = [], TGT = null, PEND = [], MEDIA = {};
-function openChat(k, fwPick){ var c = CH[k]; if (!c) return; CUR = c; TGT = null; ATT = []; MSGS = []; PEND = []; readChat.sig = '';
+function openChat(k, fwPick){ var c = CH[k]; if (!c) return; if (CUR && CUR !== c) leaveChat(CUR); CUR = c; TGT = null; ATT = []; MSGS = []; PEND = []; readChat.sig = ''; c.keep = false; c.since = c.un > 0 && c.lines.length ? c.lines[0].ts : ''; $('ckeep').classList.remove('on'); $('ckeep').textContent = '🔔';
   if (c.un) { ZERO[k] = Date.now() / 1000; c.un = 0; c.lines = []; draw(); }
   $('ct').textContent = chIcon(c) + ' ' + c.title; $('cs').textContent = (CU.on ? 'Catch up ' + (CU.i + 1) + ' of ' + CU.q.length + ' · ' : '') + subOf(c); if (!CU.on) $('cnext').hidden = true; $('cbody').innerHTML = '<div class="zero"><b>⏳</b>Loading…</div>';
   $('chat').hidden = false; drawTgt(); drawAtt(); readChat(false).then(function(){ if (fwPick) { var last = MSGS.filter(function(m){ return !m.sys; }).pop(); if (last) forward(last); } });
   clearInterval(openChat.t); openChat.t = setInterval(function(){ if (!document.hidden && CUR) readChat(true); }, 5000); }
-function closeChat(){ CUR = null; CU.on = false; $('cnext').hidden = true; $('chat').hidden = true; clearInterval(openChat.t); stopRec(true); draw(); }
+function leaveChat(c){ if (!c || !c.keep) return; c.keep = false; delete ZERO[c.k]; api({ op: 'unseen', k: c.k, since: c.since || '' }, 2).then(function(){ loadFeed(false); }); toast('🔔 ' + c.title + ' stays unread'); }
+$('ckeep').onclick = function(){ if (!CUR) return; CUR.keep = !CUR.keep; $('ckeep').classList.toggle('on', CUR.keep); $('ckeep').textContent = CUR.keep ? '🔔 Stays unread' : '🔔'; toast(CUR.keep ? '🔔 This chat will come back in Catch-up' : 'Marked as read'); };
+function closeChat(){ leaveChat(CUR); CUR = null; CU.on = false; $('cnext').hidden = true; $('chat').hidden = true; clearInterval(openChat.t); stopRec(true); draw(); }
 // ---------- Catch up: walk through every chat with new lines, one by one ----------
 var CU = { on: false, q: [], i: 0 };
 function cuStart(){ CU.q = list().filter(function(c){ return c.un; }).map(function(c){ return c.k; }); if (!CU.q.length) { toast('✨ Nothing new'); return; } CU.on = true; CU.i = -1; cuNext(); }
