@@ -25,15 +25,14 @@ def jamal_pass(ids, roles, labels):
     is checked once (thumbs/logo.json); numpy + pillow only, ~0.1 s per new photo."""
     logos = load(LOGOS, {})
     new = [i for i in ids if i not in logos]
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'catalog'))
+    from jamal import logo_score, JAMAL_MIN
     if new:
-        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'catalog'))
-        from jamal import logo_score
         from PIL import Image, ImageOps
         for i in new:
             try: logos[i] = round(logo_score(ImageOps.exif_transpose(Image.open('thumbs/%s.jpg' % i)).convert('RGB')), 3)
             except Exception as e: print('logo', i, e); logos[i] = 0.0
         json.dump({k: v for k, v in logos.items() if k in ids}, open(LOGOS, 'w'), separators=(',', ':'), sort_keys=True)
-    from jamal import JAMAL_MIN
     n = 0
     for i in ids:
         if logos.get(i, 0) >= JAMAL_MIN and (i not in roles or roles[i][0] != 'lineup' or len(roles[i]) < 3):
