@@ -797,10 +797,14 @@ function mkDesigns(cards, roles){
     var p = parseTitle(c.name);
     var all = c.attachments.filter(function(a){ return /^image\//.test(a.mimeType); })
       .sort(function(a, b){ return new Date(b.date) - new Date(a.date); });    // newest first = first colour group
-    // photo roles come from the memo-roles job: numbers go on the real shop lineup photos, never on the JAMAL cover or a screenshot
+    // photo roles come from the memo-roles job: numbers go on the real shop lineup photos, never on the JAMAL cover or a screenshot.
+    // 24 Oct 2026 (Abbas: "in the app we always take the photos which are not JAMAL; only if there is no real picture, the JAMAL photo"):
+    // a real JAMAL studio photo is marked ['lineup', score, 'jamal'] by the roles job - it carries the numbers only when the card has no shop photo
     function role(a){ var r = roles[a.id]; return r ? r[0] : 'lineup'; }
-    var lineups = all.filter(function(a){ return role(a) === 'lineup'; }), covers = all.filter(function(a){ return role(a) === 'cover'; }), details = all.filter(function(a){ return role(a) === 'detail'; });
-    var imgs = lineups.length ? lineups : (covers.length ? covers.slice(0, 1) : details.slice(0, 1));
+    function jamal(a){ var r = roles[a.id]; return !!(r && r[2] === 'jamal'); }
+    var lineups = all.filter(function(a){ return role(a) === 'lineup' && !jamal(a); }), jamals = all.filter(function(a){ return role(a) === 'lineup' && jamal(a); });
+    var covers = all.filter(function(a){ return role(a) === 'cover'; }), details = all.filter(function(a){ return role(a) === 'detail'; });
+    var imgs = lineups.length ? lineups : (jamals.length ? jamals : (covers.length ? covers.slice(0, 1) : details.slice(0, 1)));
     var extra = details.filter(function(a){ return imgs.indexOf(a) < 0; });
     var photos = [], c0 = 0;
     imgs.forEach(function(a, i){
@@ -915,7 +919,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-23a';
+var VER = '2026-10-24a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
