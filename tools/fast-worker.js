@@ -59,7 +59,7 @@ async function tmove(env, q, ctx) {                             // Done -> next 
     await trello(env, 'put', '/cards/' + id, { idList: to, pos: 'top' });
     ctx.waitUntil(trello(env, 'post', '/cards/' + id + '/actions/comments', { text: '→ ' + tl[0] + ' · ' + who + ' (factory app)' }).catch(() => {}));
     const ref = Array.isArray(q.ref) ? q.ref : null;
-    if (ref && /^[CG][A-Z0-9]{5,}$/.test(ref[0]) && /^\d+\.\d+$/.test(ref[1]) && env.SLACK_TOKEN) ctx.waitUntil(slack(env, 'chat.postMessage', { channel: ref[0], thread_ts: ref[1], text: '→ *' + tl[0] + '* · ' + who }).catch(() => {}));
+    if (ref && /^[CG][A-Z0-9]{5,}$/.test(ref[0]) && /^\d+\.\d+$/.test(ref[1]) && env.SLACK_TOKEN) ctx.waitUntil(slack(env, 'chat.postMessage', { channel: ref[0], thread_ts: ref[1], text: '→ *' + tl[0] + '* · ' + who + ' · 🕒 ' + dubaiWhen(Date.now()) }).catch(() => {}));   // 24 Oct 2026 (Abbas): the time with every move
   }
   const topic = String(q.topic || '').replace(/[^\w-]/g, '').slice(0, 64);
   if (topic) ctx.waitUntil(fetch('https://ntfy.sh/' + topic, { method: 'POST', body: 'c=list:' + id, headers: { Cache: 'no', Firebase: 'no' } }).catch(() => {}));
@@ -127,6 +127,7 @@ function shape(U, m, root) {                                     // one Slack me
 }
 const SHOW = m => !m.subtype || m.subtype === 'bot_message' || m.subtype === 'file_share' || m.subtype === 'thread_broadcast';
 
+function dubaiWhen(ms) { const u = new Date(ms + 4 * 3600000), M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], D = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; return D[u.getUTCDay()] + ' ' + u.getUTCDate() + ' ' + M[u.getUTCMonth()] + ' ' + String(u.getUTCHours()).padStart(2, '0') + ':' + String(u.getUTCMinutes()).padStart(2, '0'); }   // "Fri 24 Oct 16:42" Dubai, same as the relay's facWhen
 async function hot(key, fn, fresh) { const h = HOT.get(key); if (h && !fresh && Date.now() - h.at < 1500) return h.p; const p = fn(); HOT.set(key, { at: Date.now(), p }); if (HOT.size > 200) HOT.clear(); return p; }
 
 async function thread(env, q) {                                  // a card chat = the replies of its #cutting (or #samples-discuss) message

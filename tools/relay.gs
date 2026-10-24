@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-10-24a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-10-24b';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -497,7 +497,7 @@ function facTrelloMoves(P, wtok, FT) {
         var cid = a.data.card.id, t = Date.parse(a.date); if ((app[cid] || []).some(function (d) { return d >= t - 5000 && d <= t + 120000; })) return;   // the app (or the stock job) already wrote it
         var th = P.getProperty('FTH_' + cid); if (!th) return; th = JSON.parse(th);
         var who = String(((a.memberCreator || {}).fullName) || 'Trello').slice(0, 40), to = String(a.data.listAfter.name || '?'), fr = String((a.data.listBefore || {}).name || '');
-        var pr = slackApi(FT, 'chat.postMessage', { channel: th.ch, thread_ts: th.ts, text: '→ *' + to + '* · ' + who + ' · in Trello' + (fr ? ' (from ' + fr + ')' : '') });
+        var pr = slackApi(FT, 'chat.postMessage', { channel: th.ch, thread_ts: th.ts, text: '→ *' + to + '* · ' + who + ' · in Trello' + (fr ? ' (from ' + fr + ')' : '') + ' · 🕒 ' + facWhen(t) });   // 24 Oct 2026 (Abbas): the time with every move
         if (pr.ok) { try { facNudge(P, cid); facNudge(P, 'list:' + cid); } catch (e) {} }
       });
     P.setProperty('FMOVE_LAST', newest); if (newest !== last) { bigDrop(c, 'FAC_LIST'); facBump(); }
@@ -682,19 +682,29 @@ function facStages(acts, card) {                               // time in each l
   var upto = fin != null ? fin : evs.length;                   // events before the final FINISH count
   for (var j = upto - 1; j >= 0; j--) if (RDY.test(evs[j].to)) { cut = j; break; }
   var end = cut != null ? evs[cut].t : fin != null ? evs[fin].t : Date.now(), stop = cut != null ? cut : fin != null ? fin : evs.length;
-  var segs = {}, order = [], t0 = born, list = cur;
-  for (var k = 0; k < stop; k++) { var e = evs[k]; if (e.t > t0) { if (!segs[list]) { segs[list] = { name: list, ms: 0, n: 0 }; order.push(list); } segs[list].ms += e.t - t0; segs[list].n++; } t0 = e.t; list = e.to; }
-  if (end > t0) { if (!segs[list]) { segs[list] = { name: list, ms: 0, n: 0 }; order.push(list); } segs[list].ms += end - t0; segs[list].n++; }
+  var segs = {}, order = [], t0 = born, list = cur, steps = [];   // 24 Oct 2026: steps = the card's path in order (list, from, to), for a clean timeline
+  for (var k = 0; k < stop; k++) { var e = evs[k]; if (e.t > t0) { if (!segs[list]) { segs[list] = { name: list, ms: 0, n: 0 }; order.push(list); } segs[list].ms += e.t - t0; segs[list].n++; steps.push({ name: list, t0: t0, t1: e.t }); } t0 = e.t; list = e.to; }
+  if (end > t0) { if (!segs[list]) { segs[list] = { name: list, ms: 0, n: 0 }; order.push(list); } segs[list].ms += end - t0; segs[list].n++; steps.push({ name: list, t0: t0, t1: end }); }
   var known = FAC.LISTS.map(function (l) { return l[0]; }); order.sort(function (a, b) { var x = known.indexOf(a), y = known.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); });
-  return { born: born, end: end, total: end - born, segs: order.map(function (n) { return segs[n]; }), done: cut != null ? 'READY' : fin != null ? 'FINISH' : '', finished: fin != null };
+  return { born: born, end: end, total: end - born, segs: order.map(function (n) { return segs[n]; }), steps: steps, endList: cut != null ? evs[cut].to : fin != null ? evs[fin].to : '', done: cut != null ? 'READY' : fin != null ? 'FINISH' : '', finished: fin != null };
 }
-function facReportText(card, st, wk) {
+function facReportText(card, st, wk) {                       // 24 Oct 2026 (Abbas: "give me the report in the chat very clean"): header, timeline with dates, totals, workers
   var p = String(card.name || ''), no = (p.match(/(?:SJ|SH|US)\s*[-=:*#(]*\s*\**\(?\s*(\d{3,6}(?:-[A-Z])?)/i) || p.match(/\b(\d{4,6})\b/) || [])[1] || '', pcs = (p.match(/(\d{1,4})\s*pcs/i) || [])[1] || '';
-  var L = ['📊 *' + (no ? 'SJ-' + no : p.slice(0, 40)) + ' · PRODUCTION REPORT*' + (pcs ? ' · ' + pcs + ' pcs' : '') + (st.done ? '' : ' (so far)')];
-  L.push('🗓 ' + facDay(st.born) + ' → ' + (st.done === 'READY' ? 'READY ' : st.done === 'FINISH' ? 'FINISH ' : 'today ') + facDay(st.end) + ' · *' + facDur(st.total) + '* total');
-  st.segs.forEach(function (g) { L.push('• ' + g.name + ' · ' + facDur(g.ms) + (g.n > 1 ? ' (' + g.n + '×)' : '')); });
-  var ws = Object.keys(wk); if (ws.length) { L.push('👷 *Workers* (8 am – 10 pm minus breaks = 1 day · Fri 8 – 12)'); ws.forEach(function (w) { var bs = wk[w], d = 0, ms = 0, open = 0; bs.forEach(function (b) { if (b.out) { d += b.d; ms += facWorkMs(b.in, b.out); } else { open++; d += b.pd || 0; } });
-    L.push('   ' + w + ' · ' + d + ' pcs' + (ms ? ' · ' + facWorkDur(ms) + ' · ≈' + facRate(d, ms) + '/day' : '') + (open ? ' · ' + open + ' batch still in ⏳' : '')); }); }
+  var NUM = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫', '⑬', '⑭', '⑮'], L = [];
+  L.push('📊 *' + (no ? 'SJ-' + no : p.slice(0, 40)) + ' · PRODUCTION REPORT*' + (pcs ? ' · ' + pcs + ' pcs' : '') + (st.done ? '' : ' · so far'));
+  L.push('🗓 *' + facDay(st.born) + ' → ' + (st.done ? (st.endList || st.done) + ' ' : 'today ') + facDay(st.end) + '* · *' + facDur(st.total) + '* total · মোট');
+  L.push('');
+  L.push('*Timeline · ধাপে ধাপে*');
+  var steps = st.steps || [], shown = steps.length > 15 ? steps.slice(steps.length - 15) : steps; if (steps.length > 15) L.push('… ' + (steps.length - 15) + ' earlier moves');
+  shown.forEach(function (g, i) { L.push(NUM[i] + ' *' + g.name + '* · ' + facDur(g.t1 - g.t0) + ' · ' + facWhen(g.t0) + ' → ' + facWhen(g.t1)); });
+  if (st.done) L.push('✅ *' + (st.endList || st.done) + '* · ' + facWhen(st.end)); else L.push('⏳ still going · এখনো চলছে');
+  var multi = st.segs.filter(function (g) { return g.n > 1; });
+  if (multi.length) { L.push(''); L.push('*Time per stage · ধাপ অনুযায়ী মোট* (came back more than once)'); st.segs.forEach(function (g) { L.push('• ' + g.name + ' · ' + facDur(g.ms) + (g.n > 1 ? ' · ' + g.n + '×' : '')); }); }
+  var ws = Object.keys(wk);
+  if (ws.length) { L.push(''); L.push('👷 *Workers · কর্মী* (1 day = 8 am – 10 pm minus breaks · Fri 8 – 12)');
+    ws.forEach(function (w) { var bs = wk[w], d = 0, ms = 0, open = 0, inh = 0; bs.forEach(function (b) { if (b.out) { d += b.d; ms += facWorkMs(b.in, b.out); } else { open++; d += b.pd || 0; inh += b.g - (b.pd || 0); } });
+      L.push('• *' + w + '* · ' + d + ' pcs' + (ms ? ' · ' + facWorkDur(ms) + ' · ≈ ' + facRate(d, ms) + ' pcs/day' : '') + (open ? ' · ' + inh + ' pcs still in hand ⏳' : '')); }); }
+  L.push('');
   L.push('_উৎপাদন রিপোর্ট · শুরু থেকে ' + (st.done === 'READY' ? 'রেডি' : 'শেষ') + ' পর্যন্ত ' + facDur(st.total) + '_');
   return L.join('\n');
 }
@@ -1265,7 +1275,7 @@ function fac0(reqText, P) {
       if (req.op === 'add' && req.usman && FT) try {   // 18 Oct 2026 (Abbas): ticked "USMAN hand work" -> the card's chat is made in #usmancutting, not #cutting
         var nup = slackApi(FT, 'chat.postMessage', { channel: DOX.USMANCUT, text: '🧵 ' + nname + '\n🧵 USMAN hand work\n' + ncard.shortUrl + '\n_card chat · factory app_' });
         if (nup.ok) P.setProperty('FTH_' + ncard.id, JSON.stringify({ ch: DOX.USMANCUT, ts: nup.ts })); } catch (e) {}
-      try { if (FT) { var nth = facThread(P, FT, ncard.id, rtok, true); slackApi(FT, 'chat.postMessage', { channel: nth.ch, thread_ts: nth.ts, text: '→ *' + (ln2 ? ln2[0] : 'NEW') + '* · ' + nwho + (req.op === 'copy' ? ' copied this card from ' + scard.shortUrl : ' added this card') }); } } catch (e) {}
+      try { if (FT) { var nth = facThread(P, FT, ncard.id, rtok, true); slackApi(FT, 'chat.postMessage', { channel: nth.ch, thread_ts: nth.ts, text: '→ *' + (ln2 ? ln2[0] : 'NEW') + '* · ' + nwho + (req.op === 'copy' ? ' copied this card from ' + scard.shortUrl : ' added this card') + ' · 🕒 ' + facWhen(Date.now()) }); } } catch (e) {}
       bigDrop(CacheService.getScriptCache(), 'FAC_LIST');
       return out({ ok: true, id: ncard.id, url: ncard.shortUrl });
     }
@@ -1283,7 +1293,7 @@ function fac0(reqText, P) {
         trApi('put', '/cards/' + card, { idList: to, pos: 'top' }, wtok);
         var tn = FAC.LISTS.filter(function (l) { return l[1] === to; })[0][0];
         try { trApi('post', '/cards/' + card + '/actions/comments', { text: '→ ' + tn + ' · ' + who + ' (factory app)' }, wtok); } catch (e) {}
-        try { var mth = P.getProperty('FTH_' + card); if (mth && FT) { mth = JSON.parse(mth); slackApi(FT, 'chat.postMessage', { channel: mth.ch, thread_ts: mth.ts, text: '→ *' + tn + '* · ' + who }); } } catch (e) {}
+        try { var mth = P.getProperty('FTH_' + card); if (mth && FT) { mth = JSON.parse(mth); slackApi(FT, 'chat.postMessage', { channel: mth.ch, thread_ts: mth.ts, text: '→ *' + tn + '* · ' + who + ' · 🕒 ' + facWhen(Date.now()) }); } } catch (e) {}
       }
       bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facNudge(P, 'list:' + card);
       if (/^(FINISH|FINISH SAMPLES)$/.test(FAC.LISTS.filter(function (l) { return l[1] === to; })[0][0])) { try { facReport(P, wtok, FT, card, false, who); } catch (e) {} }   // 21 Oct 2026: the production report

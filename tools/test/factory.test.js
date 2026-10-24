@@ -58,7 +58,7 @@ async function suite(fast, browser) {
     await test('Done → next stage moves the Trello card and writes it in the chat', async () => {
       await page.click('#bdone');
       await until(() => W.trello.cards[W.cardB.id].idList === '6527c57cd7e267fbf2a602b4', 8000, 'card on IN LINE');
-      await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootB && /IN LINE/.test(m.text || '')), 8000, 'move line in chat');
+      await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootB && /→ \*IN LINE\* · Abbas · 🕒 (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d+ [A-Z][a-z]{2} \d\d:\d\d/.test(m.text || '')), 8000, 'move line in chat, with the time (24 Oct 2026)');
       await page.goBack();
     });
     await test('a card made in Trello (no chat yet) gets its #cutting chat the moment it is opened', async () => {   // 24 Oct 2026
@@ -146,8 +146,8 @@ async function suite(fast, browser) {
       await until(async () => /1 d 2 h/.test(await r.textContent()), 10000, 'timer shows 1 d 2 h');
       // 23 Oct 2026 (Abbas: "20 given, 2 done, 18 remaining"): a PART delivery keeps the batch open
       await r.locator('input').fill('24'); await r.locator('button.part').click(); await until(async () => /All done/.test(await page.textContent('#toast')), 3000, 'part = all is refused'); 
-      ok(/relay 2026-10-24a/.test(await page.textContent('#verline')), 'More shows the relay version: ' + (await page.textContent('#verline')));   // 24 Oct 2026
-      await page.evaluate(() => { window.__f.D.rv = '2026-10-23b'; }); await r.locator('input').fill('5'); await r.locator('button.part').click(); await until(async () => /relay needs its new code/.test(await page.textContent('#toast')), 3000, 'Part refused on an old relay'); await page.evaluate(() => { window.__f.D.rv = '2026-10-24a'; });
+      const RV = (require('fs').readFileSync(require('path').join(__dirname, '..', 'relay.gs'), 'utf8').match(/var RELAY_VER = '([^']+)'/) || [])[1]; ok(RV && (await page.textContent('#verline')).includes('relay ' + RV), 'More shows the relay version ' + RV + ': ' + (await page.textContent('#verline')));   // 24 Oct 2026
+      await page.evaluate(() => { window.__f.D.rv = '2026-10-23b'; }); await r.locator('input').fill('5'); await r.locator('button.part').click(); await until(async () => /relay needs its new code/.test(await page.textContent('#toast')), 3000, 'Part refused on an old relay'); await page.evaluate(rv => { window.__f.D.rv = rv; }, RV);
       await r.locator('input').fill('5'); await r.locator('button.part').click();
       await until(() => W.trello.actions.some(a => a.type === 'commentCard' && /^👷 PART · Rifat · 5 pcs · Abbas \(factory app\) · .* · 19 pcs still in hand$/.test(a.data.text)), 10000, 'PART comment');
       await until(async () => /19 pcs in hand/.test(await r.textContent()) && /✓ 5 done so far/.test(await r.textContent()), 8000, 'row: 19 in hand, 5 done so far');
@@ -426,7 +426,7 @@ async function suite(fast, browser) {
       await page.click('#bdone');                                 // READY → FINISH (Undo bar, then sent)
       await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootL && /PRODUCTION REPORT/.test(m.text || '')), 15000, 'report in the chat');
       const rp = W.slack.ch[CUT].msgs.find(m => /PRODUCTION REPORT/.test(m.text || '')).text;
-      ok(/START · 1 d 3 h/.test(rp) && /CUTTING · 1 d 21 h/.test(rp) && /IN LINE · 4 d/.test(rp) && /IRON\/CHECKING · 1 d/.test(rp) && /READY .* · \*8 d\* total/.test(rp) && !/READY · /.test(rp.replace(/→ READY/, '')), 'stages right:\n' + rp);
+      ok(/① \*START\* · 1 d 3 h · (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d+ [A-Z][a-z]{2} \d\d:\d\d → /.test(rp) && /② \*CUTTING\* · 1 d 21 h/.test(rp) && /③ \*IN LINE\* · 4 d/.test(rp) && /④ \*IRON\/CHECKING\* · 1 d/.test(rp) && /→ READY .*\* · \*8 d\* total/.test(rp) && /✅ \*READY\* · (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d+ [A-Z][a-z]{2} \d\d:\d\d/.test(rp) && !/READY\* · \d+ [dhm]/.test(rp), 'timeline with dates, totals, READY not a timed stage:\n' + rp);
       ok(/উৎপাদন রিপোর্ট/.test(rp), 'Bengali line');
       await until(async () => /PRODUCTION REPORT/.test(await page.textContent('#thread')), 15000, 'shown in the app');
       ok(W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text)), 'Trello comment #report');
