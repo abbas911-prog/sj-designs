@@ -12,7 +12,7 @@ a.b{display:block;text-align:center;border:1.5px solid #b8860b;border-radius:14p
 <script>
 var code = '';
 fetch('tools/relay.gs?t=' + Date.now(), { cache: 'no-store' }).then(function(r){ if (!r.ok) throw new Error(r.status); return r.text(); }).then(function(t){ code = t; document.getElementById('code').value = t;
-    var n = (t.match(/^function /gm) || []).length; document.getElementById('st').textContent = 'Ready · ' + t.split('\n').length + ' lines · ' + n + ' functions · complete: ' + (/function timo\(/.test(t) && /function facDaily\(/.test(t) && /function doPost\(/.test(t) ? 'yes ✅' : 'NO ⚠ reload'); })
+    var n = (t.match(/^function /gm) || []).length, rv = (t.match(/var RELAY_VER = '([^']+)'/) || [])[1] || '?'; document.getElementById('st').textContent = 'Ready · version ' + rv + ' · ' + n + ' functions · complete: ' + (/function timo\(/.test(t) && /function facDaily\(/.test(t) && /function doPost\(/.test(t) ? 'yes ✅' : 'NO ⚠ reload'); })
   .catch(function(){ document.getElementById('st').textContent = 'Could not load — check the internet and reload'; });
 document.getElementById('cp').onclick = async function(){ var st = document.getElementById('st'); if (!code) return;
   try { await navigator.clipboard.writeText(code); st.textContent = '✅ Copied — now paste it in Apps Script'; }

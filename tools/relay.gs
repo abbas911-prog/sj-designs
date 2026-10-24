@@ -78,6 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
+var RELAY_VER = '2026-10-24a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -883,7 +884,7 @@ function fac0(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.lo = facLaisOrders(P, who0, false); hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.lo = facLaisOrders(P, who0, false); hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.rv = RELAY_VER; hv.wroles = facRoles(P, P.getProperty('TRELLO') || P.getProperty('TRELLO_W')); hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -903,7 +904,7 @@ function fac0(reqText, P) {
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
       try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; } res.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.lo = facLaisOrders(P, who0, false);
-      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.wroles = facRoles(P, rtok); res.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
+      res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.rv = RELAY_VER; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.wroles = facRoles(P, rtok); res.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
       return out(res);
     }
     if (req.op === 'ping') {                                  // 15 Oct 2026: the cheap "anything new?" every 4 s - no Trello call; the cards come from the cached list
@@ -915,7 +916,7 @@ function fac0(reqText, P) {
       var pdm = null; try { pdm = facDm(P, FTp); } catch (e) {}
       var prs = null; try { prs = facRetSum(P); } catch (e) {}
       var pact; try { pact = facAct(P, FTp, pcards); } catch (e) {}   // 17 Oct 2026: last-line time per chat on every ping, so the Chats tab never shows an older line
-      return out({ ok: true, th: pth, later: facLater(P, whp), dm: pdm, lais: facLaisFor(P, FTp, whp), rooms: facXRoomsFor(P, FTp, whp), lo: facLaisOrders(P, whp, false), gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
+      return out({ ok: true, rv: RELAY_VER, th: pth, later: facLater(P, whp), dm: pdm, lais: facLaisFor(P, FTp, whp), rooms: facXRoomsFor(P, FTp, whp), lo: facLaisOrders(P, whp, false), gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
     }
     if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
       var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });

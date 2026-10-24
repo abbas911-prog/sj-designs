@@ -29,10 +29,10 @@ async function tlist(env, q) {                                  // the cards of 
   // free plan's 10 ms CPU, so the worker failed and every phone fell back to the slow relay. The long "done" lists (FINISH, SAMPLE DONE,
   // FINISH SAMPLES - the ones with a limit) are NOT read here: the phone keeps them from the relay's list (refreshed every 5 min).
   const limit = q.limit || {}, lists = Array.isArray(q.lists) ? q.lists.map(l => String(l[1] || '')).filter(x => /^[0-9a-f]{24}$/.test(x) && !limit[x]) : []; if (!lists.length) return { ok: false, error: 'bad request' };
-  const [cf, per] = await Promise.all([cfNames(env), Promise.all(lists.map(id => trello(env, 'get', '/lists/' + id + '/cards', { fields: 'name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels', customFieldItems: 'true' })))]);
+  const [cf, per] = await Promise.all([cfNames(env), Promise.all(lists.map(id => trello(env, 'get', '/lists/' + id + '/cards', { fields: 'name,idList,pos,shortUrl,idAttachmentCover,dateLastActivity,labels,due', customFieldItems: 'true' })))]);
   const cards = [].concat.apply([], per).sort((a, b) => a.pos - b.pos);
   return { ok: true, t: Date.now(), covered: lists, cards: cards.map(c => { const f = {}; (c.customFieldItems || []).forEach(it => { const n = cf[it.idCustomField], v = it.value || {}; const x = v.text != null ? v.text : v.number != null ? v.number : v.date || (v.checked === 'true' ? '✓' : null); if (n && x != null && String(x).trim() !== '') f[n] = String(x); });
-    return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: c.idAttachmentCover || '', f, at: c.dateLastActivity, lb: (c.labels || []).filter(l => l.name).map(l => ({ n: l.name, c: l.color || '' })) }; }) };
+    return { id: c.id, name: c.name, l: c.idList, pos: c.pos, url: c.shortUrl, img: c.idAttachmentCover || '', f, at: c.dateLastActivity, due: c.due ? String(c.due).slice(0, 10) : '', lb: (c.labels || []).filter(l => l.name).map(l => ({ n: l.name, c: l.color || '' })) }; }) };
 }
 async function tatts(env, q) {
   const id = String(q.card || '').replace(/[^0-9a-f]/g, ''); if (!id) return { ok: false, error: 'bad request' };

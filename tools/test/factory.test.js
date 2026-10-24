@@ -138,6 +138,8 @@ async function suite(fast, browser) {
       await until(async () => /1 d 2 h/.test(await r.textContent()), 10000, 'timer shows 1 d 2 h');
       // 23 Oct 2026 (Abbas: "20 given, 2 done, 18 remaining"): a PART delivery keeps the batch open
       await r.locator('input').fill('24'); await r.locator('button.part').click(); await until(async () => /All done/.test(await page.textContent('#toast')), 3000, 'part = all is refused'); 
+      ok(/relay 2026-10-24a/.test(await page.textContent('#verline')), 'More shows the relay version: ' + (await page.textContent('#verline')));   // 24 Oct 2026
+      await page.evaluate(() => { window.__f.D.rv = '2026-10-23b'; }); await r.locator('input').fill('5'); await r.locator('button.part').click(); await until(async () => /relay needs its new code/.test(await page.textContent('#toast')), 3000, 'Part refused on an old relay'); await page.evaluate(() => { window.__f.D.rv = '2026-10-24a'; });
       await r.locator('input').fill('5'); await r.locator('button.part').click();
       await until(() => W.trello.actions.some(a => a.type === 'commentCard' && /^👷 PART · Rifat · 5 pcs · Abbas \(factory app\) · .* · 19 pcs still in hand$/.test(a.data.text)), 10000, 'PART comment');
       await until(async () => /19 pcs in hand/.test(await r.textContent()) && /✓ 5 done so far/.test(await r.textContent()), 8000, 'row: 19 in hand, 5 done so far');

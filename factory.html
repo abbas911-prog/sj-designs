@@ -269,7 +269,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-23c';
+var VER = '2026-10-24a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -399,7 +399,7 @@ function loSync(){ if (!D.byId) return; var by = {}; (D.cards || []).forEach(fun
     c.no = o.no; c.name = o.no ? 'SJ-' + o.no : 'Order'; c.title = o.no ? 'SJ-' + o.no : '🧵 Order'; c.sub = o.sub || ''; c.ts = o.ts; c.lr = o.lr || ''; c.rc = o.rc || 0; c.src = src; c.img = src ? src.img : '';
     D.byId[o.id] = c; }); }
 function phc(c){ return c && c.lo ? (c.src || c) : c; }          // 14 Oct 2026 (Abbas): ONE direct chat with the employee on the main page = a Slack channel of the ChatGPT workspace
-function applyList(j){ D.lists = j.lists; if (j.workers) D.workers = j.workers; if (j.wroles) D.wroles = j.wroles; D.show = j.show || []; if (j.limit) D.limit = j.limit; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.lais = j.lais || null; D.rooms = j.rooms || []; D.lo = j.lo || []; if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; xrooms().forEach(function(c){ D.byId[c.id] = c; }); loSync(); bellPaint(); }
+function applyList(j){ D.lists = j.lists; if (j.workers) D.workers = j.workers; if (j.wroles) D.wroles = j.wroles; D.show = j.show || []; if (j.limit) D.limit = j.limit; D.cards = j.cards; D.w = j.w; D.th = j.th || {}; D.later = j.later || {}; D.dm = j.dm || null; D.lais = j.lais || null; D.rooms = j.rooms || []; D.lo = j.lo || []; if (j.fast !== undefined) fastSet(j.fast); if (j.rv) rvSet(j.rv); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; xrooms().forEach(function(c){ D.byId[c.id] = c; }); loSync(); bellPaint(); }
 function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if (!j || !j.cards) return false; applyList(j); if (j.live && PW) liveStart(j.live); var t = new Date(j.t || 0); $('msg').className = 'ok'; $('msg').textContent = '⏳ Cards from ' + t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0') + ' · লোড হচ্ছে'; draw(); return true; } catch(e){ return false; } }
 // 18 Oct 2026 (Abbas: "when it's done it has to be in Came back, but it's not there — it's deleted. Why?"): the fast lane does not read the
 // long done-lists (RETURNS BACK, FINISH, SAMPLE DONE, FINISH SAMPLES — Cloudflare's CPU limit); the phone kept them from the relay's list, but the
@@ -417,6 +417,7 @@ async function load(fresh){
   // (~0.3 s); the relay's slower list (new-message counts, Later, direct chat, settings) is fetched in the background every 5 min
   var j = null;
   if (fastTr() && D.lists && D.lists.length) { var fj = await fast({ op: 'tlist', lists: D.lists, limit: D.limit || {} });
+    if (fj && fj.ok) fj.cards.forEach(function(c){ if (c.due === undefined) { var o = D.byId && D.byId[c.id]; if (o && o.due) c.due = o.due; } });   // 24 Oct 2026: an older worker sends no due date - keep the relay's
     if (fj && fj.ok) j = { ok: true, t: fj.t, lists: D.lists, show: D.show, limit: D.limit, cards: fj.cards.concat((D.cards || []).filter(function(c){ return (fj.covered || []).indexOf(c.l) < 0; })), w: D.w, th: D.th, later: D.later, dm: D.dm, lais: D.lais, rooms: D.rooms, lo: D.lo, live: LIVE.topic, fast: FAST.url, via: 'fast' };
     else if (fj && fj.notrello) FAST.notr = Date.now() + 600000; }
   if (j && (fresh || Date.now() - (FAST.relAt || 0) > 90000)) { FAST.relAt = Date.now(); call({ op: 'list', fresh: !!fresh }).then(function(rj){ if (rj && rj.ok && !LOADING) { relCards(rj); D.th = rj.th || D.th; D.later = rj.later || D.later; if (rj.dm !== undefined) D.dm = rj.dm; if (rj.lais !== undefined) D.lais = rj.lais; if (rj.rooms !== undefined) { D.rooms = rj.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (rj.lo !== undefined) { D.lo = rj.lo || []; loSync(); } if (rj.limit) D.limit = rj.limit; if (rj.lists) D.lists = rj.lists; if (rj.show) D.show = rj.show; D.w = rj.w; if (rj.refs) refsSet(rj.refs, true); if (rj.act) D.act = rj.act; if (rj.fast !== undefined) fastSet(rj.fast); if (rj.live) liveStart(rj.live); CHATSIG = ''; draw(); } }); }
@@ -706,6 +707,7 @@ $('shrows').onclick = async function(e){ var b = e.target.closest('button[data-k
 $('wkrows').onclick = async function(e){ var b = e.target.closest('button[data-k]'); if (!b || !open) return; var row = b.closest('.wr'), w = row.dataset.w, k = b.dataset.k, pcs = Math.floor(+row.querySelector('input').value || 0), c = open;
   var rem = Math.floor(+b.dataset.g || 0);
   if (k === 'out' && !(pcs > 0)) pcs = rem;                      // All done with the box empty = everything still in his hands came back
+  if (k === 'part' && !rvOk('part')) { toast('⚠ The relay needs its new code first (relaycode.html) · রিলে আপডেট দরকার'); return; }
   if (k === 'part' && !(pcs > 0 && pcs < rem)) { row.querySelector('input').focus(); toast(pcs >= rem ? 'That is all of it - press All done · সব হলে All done চাপুন' : 'How many pieces are done? · কত পিস হয়েছে?'); return; }   // 23 Oct 2026 (Abbas): "20 given, 2 done, 18 remaining"
   if (!(pcs > 0) && !(k === 'out' && rem === 0)) { row.querySelector('input').focus(); toast(k === 'in' ? 'How many pieces? · কত পিস?' : 'How many pieces came back? · কত পিস ফেরত এল?'); return; }
   b.disabled = true; b.textContent = '⏳';
@@ -1488,7 +1490,7 @@ var PAGAIN = false;
 async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now() - PINGING < 30000) { PAGAIN = true; return; } PINGING = Date.now(); PAGAIN = false;
   var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
-  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.lais !== undefined) D.lais = j.lais; if (j.rooms !== undefined) { D.rooms = j.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (j.lo !== undefined) { D.lo = j.lo || []; loSync(); } if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; draw(); alertNew(); liveMark(); prefetch(); }
+  D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.lais !== undefined) D.lais = j.lais; if (j.rooms !== undefined) { D.rooms = j.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (j.lo !== undefined) { D.lo = j.lo || []; loSync(); } if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); if (j.rv) rvSet(j.rv); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; draw(); alertNew(); liveMark(); prefetch(); }
 // 15 Oct 2026 (Abbas: "you see how long it is taking refreshing? I run a business - when a message comes I want it as instant as possible, without
 // any long loading of the chats"): (a) the "anything new?" check no longer waits behind the card-list refresh; (b) the status line shows the
 // time of the last check ("● Live 16:46:05"); (c) the newest message text is shown right on the home screen; (d) the chats with new messages
@@ -1577,7 +1579,12 @@ async function checkVer(){ if (busyWork()) return; try { var t = await (await fe
 
 $('who').textContent = WHO;
 thcLoad(); oload(); setInterval(function(){ if (OUT.length && !OUTRUN) outRun(); }, 10000);
-setTab(TAB); $('verline').textContent = 'AL MUTAGADED GARMENTS · app ' + VER;
+// 24 Oct 2026: the relay tells its version (rv); the app shows it under More and refuses a button the deployed relay does not know yet
+var RV_NEED = { part: '2026-10-24a' };
+function rvSet(v){ D.rv = String(v || ''); ls('sj_fac_rv', D.rv); verLine(); }
+function rvOk(k){ return !RV_NEED[k] || (D.rv || ls('sj_fac_rv') || '') >= RV_NEED[k]; }
+function verLine(){ var rv = D.rv || ls('sj_fac_rv') || ''; $('verline').textContent = 'AL MUTAGADED GARMENTS · app ' + VER + (rv ? ' · relay ' + rv : ' · relay ?'); }
+setTab(TAB); verLine();
 if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } load(false); }
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
