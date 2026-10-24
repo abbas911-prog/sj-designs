@@ -6,6 +6,8 @@
 ## Files that matter
 - `factory.html` — **AL MUTAGADED** factory app (Trello ALM board + Slack card chats). One file: CSS, HTML, one big `<script>`.
 - `memo.html` — SJ Stock app. **Another chat works on it — don't touch unless Abbas asks.**
+- `assistant.html` — **Assistant** (24 Oct 2026): one Catch-up for SJ Stock + AL MUTAGADED, reply / forward from any chat. Only uses relay ops that
+  already exist (`cchat`, `orders`, `fac`) — no relay change. `assistant.webmanifest`. Test: `node tests/t_assistant.js` (25).
 - `tools/relay.gs` — Google Apps Script relay shared by **all** apps (memo, factory, timo, bills…).
 - `tools/fast-worker.js` — Cloudflare worker "sj-fast" (the fast lane).
 - `fac-sw.js` — the factory app's phone helper (service worker, scope = factory.html ONLY): keeps the page on the phone (opens at once /
@@ -160,6 +162,7 @@ Memo rules (his words, short):
   `RELAY - ONE CODE FOR ALL APPS (read before changing relay.gs)`.
 
 ## Change log
+- 2026-10-24: (Abbas: "an Assistant app — a catch-up of everything going on, open it like a chat, reply from there, take a photo and send it to that chat, another channel or WhatsApp, voice notes too") **assistant.html** (VER 2026-10-24a), new page, nothing else touched: ⚡ Catch-up = every chat with new lines from BOTH apps (SJ Stock order / customer / #godown / direct chats via `cchat` list/ping + `orders` list for the godown roots; factory card chats, Direct, #cash, #expenses, #laisfactory + lace orders via `fac` list/ping), newest first, badge; 💬 All chats with search; 🗓 Today = Timo blocks from `timo-state` (Timo opens in a frame). A chat opens like the apps' own (read with `look:1` = seen), photos load, voice notes / videos tap to play; write text, 📷 camera, 📎 files, 🎤 voice note (MediaRecorder), sent with `post` / `up` (original bytes, once-only `rid`). "Send to …" sends what you write to ANY other chat of either app; ↪ on a message forwards it with its files (fetched full: `file` / `media`) to another chat or to 🟢 WhatsApp (the phone's share sheet — he picks the person). Live: both apps' ntfy doorbells + an 8-s poll while open. Sign-in: uses the passwords SJ Stock / the factory app keep on the same phone, else asks once (kept on the phone). WhatsApp reading and email come later (PC). No relay deploy.
 - 2026-10-20: CLAUDE.md created (rules + map of the factory app).
 - 2026-10-20: memo tests added in `tests/` (t_shell, t_ord, t_rn, t_stock) + SJ Stock notes merged in here.
 - 2026-10-20 (VER 2026-10-20b) "make the whole process more smooth": test harness added (tools/test). Fixed: (1) a message written just after

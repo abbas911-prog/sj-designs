@@ -1,0 +1,13 @@
+{
+  "name": "Assistant",
+  "short_name": "Assistant",
+  "start_url": "assistant.html",
+  "scope": "assistant.html",
+  "display": "standalone",
+  "background_color": "#14213d",
+  "theme_color": "#14213d",
+  "icons": [
+    { "src": "memo-icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "memo-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
