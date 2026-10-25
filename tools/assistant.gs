@@ -3,7 +3,7 @@
 // the Assistant app's setup screen; they are kept in THIS script's properties only (never in the repo, never in a chat).
 // Every chat the bots can see = one channel chat (its top-level posts) + one chat per thread (an order memo, a pick list, a card…).
 // Lines written from any SJ app are "*Name:* text" posted by a bot — shown as Name. Read marks ("seen") are the Assistant's own.
-var AS_VER = '2026-10-25b';
+var AS_VER = '2026-10-25c';
 var WS = ['s', 'f'];                                               // s = SJTC workspace, f = factory workspace; e = Email (the Gmail this script runs as — see below)
 // EMAIL (25 Oct 2026): a third source. The script reads the Gmail inbox of the Google account it is deployed under (abbassayed033@gmail.com);
 // the other addresses auto-forward into it. No tokens: Google asks Abbas once to allow Gmail when the new version is deployed.
@@ -49,12 +49,22 @@ function setup(s, P) {
 
 function run(req, who, P) {
   var op = req.op;
-  if (op === 'hello') return { ok: true, ver: AS_VER, teams: { s: P.getProperty('AS_TEAM_s') || '', f: P.getProperty('AS_TEAM_f') || '' }, email: gmailOn() ? myMail() : '', ai: !!P.getProperty('AS_AI'), trello: !!P.getProperty('AS_TRELLO_TOKEN'), brain: P.getProperty('AS_BRAIN') || BRAIN_DEFAULT, notes: P.getProperty('AS_NOTES') || '' };
+  if (op === 'hello') return { ok: true, ver: AS_VER, teams: { s: P.getProperty('AS_TEAM_s') || '', f: P.getProperty('AS_TEAM_f') || '' }, email: gmailOn() ? myMail() : '', ai: !!P.getProperty('AS_AI'), tts: P.getProperty('AS_TTS_KIND') || '', trello: !!P.getProperty('AS_TRELLO_TOKEN'), brain: P.getProperty('AS_BRAIN') || BRAIN_DEFAULT, notes: P.getProperty('AS_NOTES') || '' };
   if (op === 'mail') return mailNew(req, who, P);                  // a new email to an address (text + files), e.g. a Slack photo sent on by email
   if (op === 'aikey') { var kk = String(req.key || '').trim(); if (!kk) { P.deleteProperty('AS_AI'); return { ok: true, ai: false }; } if (!/^sk-ant-/.test(kk)) return { ok: false, error: 'that does not look like an Anthropic key (sk-ant-…)' };
     var tst = aiCall(kk, P, [{ role: 'user', content: 'Say OK' }], 'Reply with the single word OK.', [], 20); if (tst.error) return { ok: false, error: tst.error }; P.setProperty('AS_AI', kk); return { ok: true, ai: true }; }
   if (op === 'trello') { var tk = String(req.key || '').trim(), tt = String(req.token || '').trim(); if (!tk || !tt) { P.deleteProperty('AS_TRELLO_KEY'); P.deleteProperty('AS_TRELLO_TOKEN'); return { ok: true, trello: false }; }
     var tr = UrlFetchApp.fetch('https://api.trello.com/1/members/me?fields=username&key=' + tk + '&token=' + tt, { muteHttpExceptions: true }); if (tr.getResponseCode() !== 200) return { ok: false, error: 'Trello refused that key/token' }; P.setProperty('AS_TRELLO_KEY', tk); P.setProperty('AS_TRELLO_TOKEN', tt); C_().remove('TRELLO_CARDS'); return { ok: true, trello: true }; }
+  if (op === 'ttskey') {                                         // a professional voice: OpenAI or ElevenLabs key, pasted by Abbas; tested once
+    var kind = String(req.kind || ''), tk2 = String(req.key || '').trim(); if (!tk2) { P.deleteProperty('AS_TTS_KEY'); P.deleteProperty('AS_TTS_KIND'); return { ok: true, tts: '' }; }
+    if (kind !== 'openai' && kind !== 'eleven') return { ok: false, error: 'pick OpenAI or ElevenLabs' };
+    var tr2 = ttsMake(kind, tk2, String(req.voice || ''), 'Hello Abbas.'); if (tr2.error) return { ok: false, error: tr2.error };
+    P.setProperty('AS_TTS_KEY', tk2); P.setProperty('AS_TTS_KIND', kind); if (req.voice) P.setProperty('AS_TTS_VOICE', String(req.voice)); return { ok: true, tts: kind, b64: tr2.b64 }; }
+  if (op === 'ttsvoice') { P.setProperty('AS_TTS_VOICE', String(req.voice || '')); return { ok: true }; }
+  if (op === 'tts') { var kd = P.getProperty('AS_TTS_KIND'), ky = P.getProperty('AS_TTS_KEY'); if (!kd || !ky) return { ok: false, error: 'no voice key' };
+    var tx3 = String(req.text || '').replace(/\s+/g, ' ').trim().slice(0, 1200); if (!tx3) return { ok: false, error: 'empty' };
+    var c3 = C_(), ck = 'TTS_' + hex(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, kd + '|' + (P.getProperty('AS_TTS_VOICE') || '') + '|' + tx3)), hit = bigGet(c3, ck); if (hit) return { ok: true, b64: hit, cached: true };
+    var r3 = ttsMake(kd, ky, P.getProperty('AS_TTS_VOICE') || '', tx3); if (r3.error) return { ok: false, error: r3.error }; try { bigPut(c3, ck, r3.b64, 21600); } catch (e) {} return { ok: true, b64: r3.b64 }; }
   if (op === 'brain') { P.setProperty('AS_BRAIN', String(req.text || '').slice(0, 8000)); return { ok: true }; }
   if (op === 'notes') { if (req.text !== undefined) P.setProperty('AS_NOTES', String(req.text || '').slice(0, 8000)); return { ok: true, notes: P.getProperty('AS_NOTES') || '' }; }
   if (op === 'ask') return askAI(req, who, P);
@@ -303,6 +313,26 @@ function askAI(req, who, P) {
   }
   return { ok: true, text: text.trim() || (actions.length ? 'Ready.' : '…'), actions: actions, notes: notes, shown: shown.slice(0, 8) };
 }
+// ---------- a professional voice (25 Oct 2026, Abbas: "not robotic, like Claude's app") ----------
+// OpenAI (model gpt-4o-mini-tts, voices alloy/ash/coral/echo/fable/nova/onyx/sage/shimmer; ~AED 2 per 1M letters) or ElevenLabs (voice id; Starter plan).
+function ttsMake(kind, key, voice, text) {
+  try {
+    if (kind === 'openai') {
+      var r = UrlFetchApp.fetch('https://api.openai.com/v1/audio/speech', { method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + key }, muteHttpExceptions: true,
+        payload: JSON.stringify({ model: 'gpt-4o-mini-tts', voice: voice || 'onyx', input: text, response_format: 'mp3', instructions: 'Calm, warm, professional assistant. Natural pace. British-neutral English. Say Arabic and Urdu names naturally.' }) });
+      if (r.getResponseCode() !== 200) { var j; try { j = JSON.parse(r.getContentText()); } catch (e) {} return { error: 'OpenAI said: ' + ((j && j.error && j.error.message) || r.getResponseCode()).toString().slice(0, 160) }; }
+      return { b64: Utilities.base64Encode(r.getBlob().getBytes()) };
+    }
+    if (kind === 'eleven') {
+      var vid = voice || 'JBFqnCBsd6RMkjVDRZzb';                      // "George" — warm, professional
+      var r2 = UrlFetchApp.fetch('https://api.elevenlabs.io/v1/text-to-speech/' + vid + '?output_format=mp3_44100_64', { method: 'post', contentType: 'application/json', headers: { 'xi-api-key': key }, muteHttpExceptions: true,
+        payload: JSON.stringify({ text: text, model_id: 'eleven_turbo_v2_5', voice_settings: { stability: 0.5, similarity_boost: 0.8 } }) });
+      if (r2.getResponseCode() !== 200) return { error: 'ElevenLabs said: ' + r2.getContentText().slice(0, 160) };
+      return { b64: Utilities.base64Encode(r2.getBlob().getBytes()) };
+    }
+    return { error: 'unknown voice service' };
+  } catch (e) { return { error: 'voice: ' + String(e.message || e).slice(0, 160) }; }
+}
 function emType(n) { n = String(n || '').toLowerCase(); return /\.(jpe?g)$/.test(n) ? 'image/jpeg' : /\.png$/.test(n) ? 'image/png' : /\.webp$/.test(n) ? 'image/webp' : /\.pdf$/.test(n) ? 'application/pdf' : /\.(m4a|mp4)$/.test(n) ? 'audio/mp4' : /\.webm$/.test(n) ? 'audio/webm' : /\.mp4$/.test(n) ? 'video/mp4' : 'application/octet-stream'; }
 function mailNew(req, who, P) {                                   // op mail: { to, subject, text, files[] }
   if (!gmailOn()) return { ok: false, error: 'Gmail is not allowed for this script yet' };
@@ -423,5 +453,5 @@ function feed(who, P, fresh) {
   emailFeed(who, P, all, fresh, chats, errs);
   chats.sort(function (a, b) { return +b.last - +a.last; });
   var cut = Date.now() / 1000 - 45 * 86400; chats = chats.filter(function (x) { return x.un || +x.last > cut; }).slice(0, 400);
-  return { ok: true, ver: AS_VER, chats: chats, errs: errs.slice(0, 5), t: Date.now(), email: gmailOn() ? myMail() : '' };
+  return { ok: true, ver: AS_VER, chats: chats, errs: errs.slice(0, 5), t: Date.now(), email: gmailOn() ? myMail() : '', ai: !!all.AS_AI, tts: all.AS_TTS_KIND || '' };
 }

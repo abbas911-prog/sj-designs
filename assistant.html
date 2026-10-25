@@ -272,7 +272,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <script>
 (function(){
-var VER = '2026-10-25e';
+var VER = '2026-10-25f';
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -312,7 +312,7 @@ function dayName(ts){ var d = new Date(+ts * 1000), now = new Date(); if (d.toDa
   return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }); }
 
 // ---------- data ----------
-var CH = {}, ORDER = [], ZERO = {}, EMAIL = ls('as2_email') || '', AI = ls('as2_ai') === '1', HIST = [], DRIVE = false, PENDA = null, VOICEIN = false;      // EMAIL = the Gmail address the script reads (empty until the script allows Gmail)
+var CH = {}, ORDER = [], ZERO = {}, EMAIL = ls('as2_email') || '', AI = ls('as2_ai') === '1', HIST = [], DRIVE = false, PENDA = null, VOICEIN = false, TTS = ls('as2_tts') || '', AUD = null;      // EMAIL = the Gmail address the script reads (empty until the script allows Gmail)
 function wsName(w){ return w === 's' ? 'SJTC' : w === 'e' ? 'Email' : 'Factory'; }
 function tagOf(c){ return c.ws === 'e' ? 'Email · ' + c.chn : wsName(c.ws) + ' · #' + c.chn; }
 function chIcon(c){ return c.ws === 'e' ? '✉️' : c.kind === 'channel' ? '💬' : /order memo|customer/.test(c.kind) ? '👤' : /godown/.test(c.kind) ? '📦' : c.ws === 'f' ? '🏭' : '💬'; }
@@ -321,7 +321,7 @@ async function loadFeed(fresh){
   if (loadFeed.busy) return; loadFeed.busy = true;
   try { var j = await api({ op: 'feed', fresh: fresh ? 1 : 0 }, 2); if (!j.ok) { if (/wrong password/.test(j.error)) { PW = ''; ls('as2_pw', null); setup(); } return; }
     var M = {}; (j.chats || []).forEach(function(c){ if (ZERO[c.k] && +(c.lines.length ? c.lines[c.lines.length - 1].ts : c.last) <= ZERO[c.k]) { c.un = 0; c.lines = []; } M[c.k] = c; });
-    CH = M; ORDER = j.chats.map(function(c){ return c.k; }); if (j.email !== undefined && j.email !== EMAIL) { EMAIL = j.email || ''; ls('as2_email', EMAIL); } if (j.ai !== undefined && !!j.ai !== AI) { AI = !!j.ai; ls('as2_ai', AI ? '1' : '0'); } $('aikey').hidden = AI; draw();
+    CH = M; ORDER = j.chats.map(function(c){ return c.k; }); if (j.email !== undefined && j.email !== EMAIL) { EMAIL = j.email || ''; ls('as2_email', EMAIL); } if (j.ai !== undefined && !!j.ai !== AI) { AI = !!j.ai; ls('as2_ai', AI ? '1' : '0'); } if (j.tts !== undefined && (j.tts || '') !== TTS) { TTS = j.tts || ''; ls('as2_tts', TTS); } $('aikey').hidden = AI; draw();
   } finally { loadFeed.busy = false; } }
 function liveLine(){ var bad = !!LASTERR || navigator.onLine === false; $('live').classList.toggle('bad', bad); $('lvt').textContent = navigator.onLine === false ? 'Offline' : LASTERR ? 'Problem' : LASTOK ? 'Live' : 'Connecting'; $('live').title = LASTERR; }
 
@@ -597,17 +597,24 @@ function timoText(){ var S = tState(); if (!S) return ''; var k = tK(), L = tDay
 // ---------- voice out (the phone's own voice, free) + Drive mode: speak → listen → act, hands free ----------
 function pickVoice(){ if (pickVoice.v !== undefined) return pickVoice.v; var L = []; try { L = speechSynthesis.getVoices() || []; } catch(e){} if (!L.length) return null;
   var want = ls('as2_voice'), byName = want && L.filter(function(v){ return v.name === want; })[0]; if (byName) return (pickVoice.v = byName);
-  var score = function(v){ var n = (v.name || '') + ' ' + (v.voiceURI || ''), s = 0; if (!/^en/i.test(v.lang || '')) return -1; if (/premium|enhanced|natural|neural|siri/i.test(n)) s += 6; if (/Google UK English Female|Google US English|Samantha|Karen|Moira|Ava|Zoe|Allison|Serena|Rishi|Veena|Aditi|Libby|Sonia|Jenny|Aria/i.test(n)) s += 4; if (/en-(IN|GB)/i.test(v.lang)) s += 2; if (/compact|eloquence|fred|zarvox|whisper|bad news|bells|bubbles|cellos|deranged|hysterical|organ|trinoids|boing|junior|ralph|kathy/i.test(n)) s -= 8; if (v.localService) s += 1; return s; };
+  var score = function(v){ var n = (v.name || '') + ' ' + (v.voiceURI || ''), s = 0; if (!/^en/i.test(v.lang || '')) return -1; if (/premium|enhanced|natural|neural|siri/i.test(n)) s += 6; if (/Google UK English Female|Google US English|Samantha|Karen|Moira|Ava|Zoe|Allison|Serena|Rishi|Veena|Aditi|Libby|Sonia|Jenny|Aria/i.test(n)) s += 4; if (/en-(US|GB)/i.test(v.lang)) s += 2; if (/en-IN/i.test(v.lang)) s -= 3; if (/compact|eloquence|fred|zarvox|whisper|bad news|bells|bubbles|cellos|deranged|hysterical|organ|trinoids|boing|junior|ralph|kathy/i.test(n)) s -= 8; if (v.localService) s += 1; return s; };
   L = L.slice().sort(function(a, b){ return score(b) - score(a); }); return (pickVoice.v = L[0] && score(L[0]) >= 0 ? L[0] : null); }
 try { speechSynthesis.onvoiceschanged = function(){ pickVoice.v = undefined; }; } catch(e){}
 var MUTE = false, TKERR = 0;
 function tkState(st, msg){ var el = $('talk'); el.classList.remove('listening', 'thinking', 'speaking'); if (st) el.classList.add(st); $('tkst').textContent = msg || ''; }
 function tkLog(cls, t){ var d = document.createElement('div'); d.className = cls; d.textContent = t; $('tklog').appendChild(d); $('tklog').scrollTop = 1e9; return d; }
 function say(t, cb){ var txt = String(t).replace(/[*_#•→↪✓⚠✨🟢📎🎤📷🗓]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500);
-  if (!(DRIVE || VOICEIN) || !window.speechSynthesis || MUTE || !txt) { if (cb) setTimeout(cb, 50); return; }
-  try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(txt); var v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-IN'; u.rate = 1.0; u.pitch = 1.0;
+  if (!(DRIVE || VOICEIN) || MUTE || !txt) { if (cb) setTimeout(cb, 50); return; }
+  if (TTS && AUD) { sayPro(txt, cb); return; }
+  if (!window.speechSynthesis) { if (cb) setTimeout(cb, 50); return; }
+  try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(txt); var v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-GB'; u.rate = 1.0; u.pitch = 1.0;
     if (DRIVE) tkState('speaking', 'Speaking…'); var done = false, fin = function(){ if (done) return; done = true; if (cb) cb(); else if (DRIVE) setTimeout(listen, 250); };
     u.onend = fin; u.onerror = fin; speechSynthesis.speak(u); setTimeout(function(){ if (!speechSynthesis.speaking) fin(); }, Math.min(30000, 400 + txt.length * 90)); } catch(e){ if (cb) cb(); } }
+function sayPro(txt, cb){ var done = false, fin = function(){ if (done) return; done = true; if (cb) cb(); else if (DRIVE) setTimeout(listen, 250); };
+  if (DRIVE) tkState('speaking', 'Speaking…'); try { speechSynthesis.cancel(); } catch(e){}
+  api({ op: 'tts', text: txt }, 1).then(function(r){ if (!r.ok) { if (DRIVE) tkLog('e', 'Voice: ' + r.error); fin(); return; }
+    try { AUD.onended = fin; AUD.onerror = fin; AUD.src = 'data:audio/mpeg;base64,' + r.b64; var pr = AUD.play(); if (pr && pr.catch) pr.catch(function(){ fin(); }); } catch(e){ fin(); }
+    setTimeout(function(){ if (!done && AUD.paused) fin(); }, 2000); }).catch(fin); }
 function listen(){ if (!DRIVE || !SR || srec || heard.busy) return;
   try { srec = new SR(); srec.lang = 'en-IN'; srec.interimResults = true; var got = ''; tkState('listening', 'Listening… (say "stop" to close)');
     srec.onresult = function(ev){ var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; got = t.trim(); $('tkst').textContent = got ? '“' + got + '”' : 'Listening…'; };
@@ -628,9 +635,10 @@ async function heard(t){ if (!t) return; heard.busy = true; var l = t.toLowerCas
   finally { heard.busy = false; if (DRIVE && !speechSynthesis.speaking && !srec) setTimeout(listen, 400); } }
 function drive(on){ DRIVE = on; $('adrive').classList.toggle('on', on); $('adrive').textContent = on ? '■ Stop' : '🎙 Talk'; $('talk').hidden = !on; $('tkyn').hidden = true;
   if (!on) { try { speechSynthesis.cancel(); } catch(e){} if (srec) { try { srec.stop(); } catch(e){} } tkState('', ''); return; }
-  $('tklog').innerHTML = ''; TKERR = 0; try { var u0 = new SpeechSynthesisUtterance(' '); speechSynthesis.speak(u0); } catch(e){}
+  $('tklog').innerHTML = ''; TKERR = 0; try { if (!AUD) { AUD = new Audio(); AUD.setAttribute('playsinline', ''); } AUD.src = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OACDDxbaJKVfAJ0u9wCaE5EDHgGyKEV/kvTCo4IwJn+1GRxCHgYa4NmL9x9ug+bwbWRgQBgJwY6AAiq4HsAgFSCEAAALgAACAAABAAAEhhdHNCBgC/'; var pr0 = AUD.play(); if (pr0 && pr0.catch) pr0.catch(function(){}); } catch(e){} try { var u0 = new SpeechSynthesisUtterance(' '); speechSynthesis.speak(u0); } catch(e){}
   if (!SR) tkLog('e', 'This browser cannot listen by itself — use 🎤 Hold to talk or type. For hands-free, open the Assistant in Safari.');
-  var tot = list().filter(function(c){ return c.un; }).length, hello = (greet().replace(/,.*$/, '') + ' Abbas. ' + (tot ? tot + ' chats have new messages. ' : 'Nothing new. ') + 'What do you need?'); tkLog('a', hello); say(hello, function(){ if (DRIVE) listen(); }); }
+  var go = function(){ var tot = list().filter(function(c){ return c.un; }).length, hello = (greet().replace(/,.*$/, '') + ' Abbas. ' + (tot ? tot + ' chats have new messages. ' : (list().length ? 'Nothing new. ' : '')) + 'What do you need?'); tkLog('a', hello); say(hello, function(){ if (DRIVE) listen(); }); };
+  if (list().length) go(); else { tkState('thinking', 'Reading your chats…'); loadFeed(false).catch(function(){}).then(function(){ if (DRIVE) go(); }); } }
 $('adrive').onclick = function(){ drive(!DRIVE); }; $('tkopen').onclick = function(){ drive(true); }; $('tkx').onclick = function(){ drive(false); };
 $('tkmute').onclick = function(){ MUTE = !MUTE; $('tkmute').textContent = MUTE ? '🔇' : '🔊'; if (MUTE) try { speechSynthesis.cancel(); } catch(e){} };
 $('tkyes').onclick = function(){ runActs(); }; $('tkno').onclick = function(){ PENDA = null; $('tkyn').hidden = true; tkLog('a', 'Cancelled.'); };
@@ -648,12 +656,17 @@ $('csumx').onclick = function(){ $('csum').hidden = true; };
 $('gear').onclick = async function(){ sheet('<h3>⚙️ Settings</h3><div class="zero"><b>⏳</b></div>'); var h = await api({ op: 'hello' }, 1); if (!h.ok) { sheet('<h3>⚙️ Settings</h3><p>' + esc(h.error) + '</p>'); return; }
   sheet('<h3>⚙️ Settings</h3><div class="setup" style="padding:0"><label for="skey">AI key (Anthropic, sk-ant-…) — ' + (h.ai ? '✅ set' : 'not set') + '</label><input id="skey" type="password" autocomplete="off" placeholder="' + (h.ai ? 'paste a new key to change it' : 'paste the key here') + '"><div class="acts"><button class="p" type="button" id="skgo">' + (h.ai ? 'Change key' : 'Save key') + '</button>' + (h.ai ? '<button type="button" id="skrm">Remove</button>' : '') + '</div><div class="err" id="skerr"></div>' +
     '<div class="acts" style="margin-top:14px"><button class="p" type="button" id="stest">▶ Test the assistant</button></div><div class="err" id="stres" style="white-space:pre-wrap;color:var(--ink)"></div>' +
-    '<label for="svoice">Voice</label><select id="svoice" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);color:inherit"></select><div class="acts"><button type="button" id="svtry">🔊 Hear it</button></div>' +
+    '<label for="sttsk">Professional voice — ' + (h.tts ? '✅ ' + (h.tts === 'openai' ? 'OpenAI' : 'ElevenLabs') : 'not set (phone voice is used)') + '</label><select id="sttsp" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);color:inherit"><option value="openai">OpenAI (cheap, natural — key from platform.openai.com)</option><option value="eleven">ElevenLabs (best voices — key from elevenlabs.io)</option></select><input id="sttsk" type="password" autocomplete="off" placeholder="paste the voice key" style="margin-top:6px"><input id="sttsv" autocomplete="off" placeholder="voice (OpenAI: onyx · nova · alloy · echo · sage · shimmer; ElevenLabs: voice id) — optional" style="margin-top:6px"><div class="acts"><button class="p" type="button" id="sttsgo">Save voice key</button>' + (h.tts ? '<button type="button" id="sttsrm">Remove</button>' : '') + '</div><div class="err" id="sttserr"></div>' +
+    '<label for="svoice">Phone voice (fallback)</label><select id="svoice" style="width:100%;padding:12px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);color:inherit"></select><div class="acts"><button type="button" id="svtry">🔊 Hear it</button></div>' +
     '<label for="stk">Trello key + token (for card status) — ' + (h.trello ? '✅ set' : 'not set') + '</label><input id="stk" placeholder="Trello API key" autocomplete="off"><input id="stt" type="password" placeholder="Trello token" autocomplete="off" style="margin-top:6px"><div class="acts"><button class="p" type="button" id="stgo">Save Trello</button></div><div class="err" id="sterr"></div>' +
     '<label for="sbrain">Brain — what the assistant knows about you (edit freely)</label><textarea id="sbrain">' + esc(h.brain || '') + '</textarea><div class="acts"><button class="p" type="button" id="sbgo">Save brain</button></div>' +
     '<label for="snotes">Notebook — things you told it to remember</label><textarea id="snotes">' + esc(h.notes || '') + '</textarea><div class="acts"><button class="p" type="button" id="sngo">Save notebook</button><button type="button" data-x="1">Close</button></div></div>');
   $('skgo').onclick = async function(){ var k = $('skey').value.trim(); if (!k) { $('skerr').textContent = 'Paste the key first'; return; } $('skerr').textContent = 'Checking the key…'; var r = await api({ op: 'aikey', key: k }, 1); $('skey').value = ''; if (!r.ok) { $('skerr').textContent = r.error; return; } AI = true; ls('as2_ai', '1'); $('aikey').hidden = true; $('skerr').textContent = '✅ Key works — the assistant is on'; toast('✨ AI on'); };
   if ($('skrm')) $('skrm').onclick = async function(){ var r = await api({ op: 'aikey', key: '' }, 1); if (r.ok) { AI = false; ls('as2_ai', '0'); $('aikey').hidden = false; closeSheet(); toast('AI key removed'); } };
+  $('sttsgo').onclick = async function(){ var k = $('sttsk').value.trim(); if (!k) { $('sttserr').textContent = 'Paste the key first'; return; } $('sttserr').textContent = 'Testing the voice…';
+    var r = await api({ op: 'ttskey', kind: $('sttsp').value, key: k, voice: $('sttsv').value.trim() }, 1); $('sttsk').value = ''; if (!r.ok) { $('sttserr').textContent = r.error; return; }
+    TTS = r.tts; ls('as2_tts', TTS); $('sttserr').textContent = '✅ Voice works'; try { if (!AUD) { AUD = new Audio(); AUD.setAttribute('playsinline', ''); } AUD.src = 'data:audio/mpeg;base64,' + r.b64; AUD.play(); } catch(e){} };
+  if ($('sttsrm')) $('sttsrm').onclick = async function(){ var r = await api({ op: 'ttskey', key: '' }, 1); if (r.ok) { TTS = ''; ls('as2_tts', ''); closeSheet(); toast('Voice key removed'); } };
   $('stest').onclick = async function(){ $('stres').textContent = 'Asking… (this is a real call with your key)'; var r = await api({ op: 'ask', q: 'Say hello to Abbas in one short line and tell him how many chats have new messages.' }, 1); $('stres').textContent = r.ok ? '✅ ' + r.text : '❌ ' + r.error + (r.nokey ? '\n→ the key is not saved in the script (did the new script version deploy? open your …/exec link: it must say ver 2026-10-25b)' : /unknown op/.test(r.error || '') ? '\n→ the script is an OLD version — paste the new code and deploy a New version' : ''); };
   var vs = []; try { vs = speechSynthesis.getVoices().filter(function(v){ return /^en/i.test(v.lang); }); } catch(e){} var best = pickVoice();
   $('svoice').innerHTML = '<option value="">Auto (' + esc(best ? best.name : 'default') + ')</option>' + vs.map(function(v){ return '<option value="' + esc(v.name) + '"' + (ls('as2_voice') === v.name ? ' selected' : '') + '>' + esc(v.name + ' · ' + v.lang) + '</option>'; }).join('');
