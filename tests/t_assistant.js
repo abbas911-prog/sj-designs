@@ -258,6 +258,18 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0], f = 
   ok('a send asked by voice/typing waits for Yes on the Talk screen', !(await pg.$eval('#tkyn', e => e.hidden)) && /aa raha hai/.test(await t(pg, '#tklog')));
   await pg.click('#tkno'); ok('No → cancelled', (await pg.$eval('#tkyn', e => e.hidden)) && /Cancelled/.test(await t(pg, '#tklog')));
   await pg.click('#tkx'); ok('Close leaves Talk', await pg.$eval('#talk', e => e.hidden));
+
+  // 11. the walk (25 Oct): "go one by one" in Talk opens each unread chat on screen with a mini bar, reads it, "reply …" queues a reply, "next" moves on
+  F.postSlack(FW, 'C09S552KD7T', { text: '*Rifat:* Lace aa gayi, cutting kal', bot_id: 'B1', thread_ts: card.ts }); F.postSlack(S, 'C0CUST0001', { text: '*Muhammad:* Bhej diya', bot_id: 'B9', thread_ts: memo.ts });
+  await pg.click('#nav button[data-v="catch"]'); await pg.waitForFunction(() => /Lace aa gayi|Bhej diya/.test(document.querySelector('#clist').textContent), null, { timeout: 60000 }).catch(() => {});
+  await pg.click('#tkopen'); await pg.waitForSelector('#talk:not([hidden])', { timeout: 5000 }); await pg.fill('#tktxt', 'go one by one'); await pg.click('#tksend'); await pg.waitForSelector('#chat:not([hidden])', { timeout: 8000 }).catch(() => {});
+  ok('walk: first unread chat opens with the mini talk bar, Talk overlay hidden', await pg.isVisible('#chat') && await pg.isVisible('#tkmini') && (await pg.$eval('#talk', e => e.hidden)));
+  const lg = await t(pg, '#tklog'); ok('walk: it reads the chat aloud (1 of N, who says what)', /1 of \d/.test(lg) && /says:/.test(lg));
+  await pg.evaluate(() => __tk('reply ok, noted')); await pg.waitForTimeout(500); ok('"reply …" queues a reply to the open chat and waits for yes', /say yes to send/i.test(await t(pg, '#tklog')));
+  const openTitle = await t(pg, '#ct'); await pg.evaluate(() => __tk('yes')); await pg.waitForTimeout(1500);
+  const all = [...FW.slack.ch.C09S552KD7T.msgs, ...S.slack.ch.C0CUST0001.msgs]; ok('yes → the reply is posted as Abbas in that chat', all.some(m => /\*Abbas:\* ok, noted/.test(m.text)));
+  await pg.evaluate(() => __tk('next')); await pg.waitForTimeout(800); const t2 = await t(pg, '#ct'); ok('"next" → the next chat (or back to Talk when done)', t2 !== openTitle || (await pg.$eval('#talk', e => !e.hidden)));
+  await pg.click('#tkmx').catch(() => {}); await pg.click('#tkx').catch(() => {});
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); await br.close(); srv.close(); process.exit(fail ? 1 : 0);
 })();

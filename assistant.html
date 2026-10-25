@@ -200,6 +200,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 #talk .hold.on{background:#10b981;color:#fff}
 #talk .yes{background:#10b981;color:#fff;border-radius:24px;padding:16px 18px;font-weight:800}#talk .no{background:rgba(255,255,255,.14);border-radius:24px;padding:16px 16px;font-weight:700}
 #talk input{flex:1;border:0;border-radius:24px;padding:14px 16px;background:rgba(255,255,255,.14);color:#fff;outline:none;font-size:15px}
+#tkmini{display:flex;align-items:center;gap:8px;background:#1b1540;color:#fff;padding:8px 12px;font-size:13px}#tkmini .dot{width:12px;height:12px;border-radius:50%;background:#7c3aed;flex:none}#tkmini.listening .dot{background:#10b981;animation:breathe 1.4s infinite}#tkmini.thinking .dot{background:#f59e0b;animation:breathe .7s infinite}#tkmini.speaking .dot{background:#ec4899;animation:breathe .9s infinite}#tkmini span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tkmini button{background:rgba(255,255,255,.16);border-radius:14px;padding:6px 10px;font-weight:700;font-size:12px;white-space:nowrap}#tkmini button.on{background:#10b981}
 #toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:14px;font-size:14px;z-index:60;max-width:90%;opacity:0;transition:.2s;pointer-events:none;font-weight:600}
 #toast.show{opacity:1;transform:translateX(-50%)}
 #timo{position:fixed;inset:0;z-index:30;background:#fff}
@@ -243,7 +244,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <section id="chat" hidden>
   <div class="chd"><button class="back" id="cback" type="button" aria-label="Back">‹</button><div class="tt"><b id="ct"></b><small id="cs"></small></div><button class="kp" id="ckeep" type="button" aria-label="Keep unread">🔔</button><button class="nx" id="cnext" type="button" hidden>Next ›</button></div>
-  <div id="csum" hidden><button type="button" id="csumx">✕</button><span id="csumt"></span></div><div id="cbody"></div>
+  <div id="tkmini" hidden><i class="dot"></i><span id="tkmst">Listening…</span><button type="button" id="tkmhold">🎤 Hold</button><button type="button" id="tkmrec" hidden>■ Done</button><button type="button" id="tkmnext">Next ›</button><button type="button" id="tkmx">✕</button></div><div id="csum" hidden><button type="button" id="csumx">✕</button><span id="csumt"></span></div><div id="cbody"></div>
   <div class="cft">
     <div id="tgt">Sending to <button id="tgtb" type="button"></button></div>
     <div id="atts"></div>
@@ -272,7 +273,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <script>
 (function(){
-var VER = '2026-10-25f';
+var VER = '2026-10-25g';
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -397,18 +398,22 @@ window.addEventListener('message', function(e){ if (e.data && e.data.timo === 's
 // ---------- one chat ----------
 var CUR = null, MSGS = [], ATT = [], TGT = null, PEND = [], MEDIA = {};
 function openChat(k, fwPick){ var c = CH[k]; if (!c) return; if (CUR && CUR !== c) leaveChat(CUR); CUR = c; TGT = null; ATT = []; MSGS = []; PEND = []; readChat.sig = ''; c.keep = false; c.since = c.un > 0 && c.lines.length ? c.lines[0].ts : ''; $('ckeep').classList.remove('on'); $('ckeep').textContent = '🔔';
-  if (c.un) { ZERO[k] = Date.now() / 1000; c.un = 0; c.lines = []; draw(); }
+  if (c.un) { c._lines = c.lines.slice(); c._un = c.un; ZERO[k] = Date.now() / 1000; c.un = 0; c.lines = []; draw(); }
   $('ct').textContent = chIcon(c) + ' ' + c.title; $('ctxt').placeholder = c.ws === 'e' ? 'Reply by email…' : 'Message…'; $('cs').textContent = (CU.on ? 'Catch up ' + (CU.i + 1) + ' of ' + CU.q.length + ' · ' : '') + subOf(c); if (!CU.on) $('cnext').hidden = true; $('cbody').innerHTML = '<div class="zero"><b>⏳</b>Loading…</div>';
   $('chat').hidden = false; if (!openChat.sum) { $('csum').hidden = true; } openChat.sum = false; drawTgt(); drawAtt(); readChat(false).then(function(){ if (fwPick) { var last = MSGS.filter(function(m){ return !m.sys; }).pop(); if (last) forward(last); } });
   clearInterval(openChat.t); openChat.t = setInterval(function(){ if (!document.hidden && CUR) readChat(true); }, 5000); }
 function leaveChat(c){ if (!c || !c.keep) return; c.keep = false; delete ZERO[c.k]; api({ op: 'unseen', k: c.k, since: c.since || '' }, 2).then(function(){ loadFeed(false); }); toast('🔔 ' + c.title + ' stays unread'); }
 $('ckeep').onclick = function(){ if (!CUR) return; CUR.keep = !CUR.keep; $('ckeep').classList.toggle('on', CUR.keep); $('ckeep').textContent = CUR.keep ? '🔔 Stays unread' : '🔔'; toast(CUR.keep ? '🔔 This chat will come back in Catch-up' : 'Marked as read'); };
-function closeChat(){ leaveChat(CUR); CUR = null; CU.on = false; $('cnext').hidden = true; $('chat').hidden = true; clearInterval(openChat.t); stopRec(true); draw(); if (DRIVE) { $('talk').hidden = false; if (!srec) setTimeout(listen, 300); } }
+function closeChat(){ leaveChat(CUR); CUR = null; CU.on = false; $('cnext').hidden = true; $('chat').hidden = true; clearInterval(openChat.t); stopRec(true); draw(); $('tkmini').hidden = true; $('tkmrec').hidden = true; if (DRIVE) { $('talk').hidden = false; if (!srec) setTimeout(listen, 300); } }
 // ---------- Catch up: walk through every chat with new lines, one by one ----------
 var CU = { on: false, q: [], i: 0 };
 function cuStart(){ CU.q = list().filter(function(c){ return c.un; }).map(function(c){ return c.k; }); if (!CU.q.length) { toast('✨ Nothing new'); return; } CU.on = true; CU.i = -1; cuNext(); }
-function cuNext(){ CU.i++; if (CU.i >= CU.q.length) { closeChat(); toast('✓ Caught up — ' + CU.q.length + ' chat' + (CU.q.length > 1 ? 's' : '') + ' read'); return; }
-  openChat(CU.q[CU.i]); $('cnext').hidden = false; $('cnext').textContent = CU.i + 1 < CU.q.length ? 'Next ›' : 'Finish ✓'; }
+function cuNext(){ CU.i++; if (CU.i >= CU.q.length) { var nq = CU.q.length; closeChat(); toast('✓ Caught up — ' + nq + ' chat' + (nq > 1 ? 's' : '') + ' read'); if (DRIVE) { tkLog('a', 'That is all. Caught up.'); say('That is all. You are caught up. Anything else?'); } return; }
+  openChat(CU.q[CU.i]); $('cnext').hidden = false; $('cnext').textContent = CU.i + 1 < CU.q.length ? 'Next ›' : 'Finish ✓'; if (DRIVE) walkSay(); }
+function walkSay(){ var c = CUR; if (!c || !DRIVE) return; var pos = CU.on ? (CU.i + 1) + ' of ' + CU.q.length + '. ' : '', who = c.ws === 'e' ? 'Email from ' + c.chn : c.title + (c.kind && c.kind !== 'channel' && c.kind !== 'thread' ? ', ' + c.kind : '');
+  var L = (c._lines || []), n = c._un || L.length, lines = L.map(function(l){ return l.who + ' says: ' + (l.text || '').replace(/https?:\S+/g, 'link') + (l.f ? ' (with ' + l.f + ' file' + (l.f > 1 ? 's' : '') + ')' : ''); }).join('. ');
+  var txt = pos + who + '. ' + (n ? n + ' new. ' : '') + (lines || 'Open to read.') + (CU.on ? ' Say reply, voice note, play it, forward to WhatsApp, or next.' : '');
+  tkLog('a', txt); $('talk').hidden = true; say(txt); }
 $('cnext').onclick = function(){ if (CU.on) cuNext(); };
 $('cback').onclick = closeChat;
 async function readChat(quiet){ var c = CUR; if (!c || readChat.busy) return; readChat.busy = true;
@@ -577,7 +582,7 @@ async function ask(q){ q = String(q || '').trim(); if (!q) return; var l = q.toL
   card.querySelectorAll('img[data-f]').forEach(function(el){ getFile(el.dataset.k, el.dataset.f, false).then(function(m){ el.src = m.url; el.onclick = function(){ getFile(el.dataset.k, el.dataset.f, true).then(function(g){ window.open(g.url, '_blank'); }); }; }).catch(function(){ el.alt = '⚠ photo'; }); });
   if ($('aYes')) $('aYes').onclick = function(){ runActs(); }; if ($('aNo')) $('aNo').onclick = function(){ PENDA = null; card.querySelector('.acts').remove(); say('Cancelled'); };
   acts.forEach(function(a){ if (a.type === 'mark_done') { if (a.chat.toLowerCase() === 'all') list().filter(function(c){ return c.un; }).forEach(function(c){ markDone(c.k); }); else if (a.k) markDone(a.k); } });
-  if (opened) { openChat.sum = true; openChat(opened.k); $('csumt').textContent = r.text; $('csum').hidden = false; if (DRIVE) $('talk').hidden = true; }
+  if (opened) { openChat.sum = true; openChat(opened.k); $('csumt').textContent = r.text; $('csum').hidden = false; if (DRIVE) { $('talk').hidden = true; tkState('listening', 'Listening…'); } }
   say(r.text + (todo.length ? (todo[0].type === 'voice_note' ? ' Say start to record.' : ' Say yes to send.') : '')); }
 function actLabel(a){ return a.type === 'send_message' ? 'Send to ' + a.chat : a.type === 'send_email' ? 'Email to ' + a.to + (a.subject ? ' · ' + a.subject : '') : a.type === 'forward_last' ? 'Forward' : a.type === 'voice_note' ? 'Voice note to ' + a.chat : a.type === 'timo_add' ? 'Add to Timo' : a.type; }
 async function runActs(){ var p = PENDA; if (!p) return; PENDA = null; $('tkyn').hidden = true; var ac = p.card && p.card.querySelector('.acts'); if (ac) ac.remove();
@@ -601,7 +606,7 @@ function pickVoice(){ if (pickVoice.v !== undefined) return pickVoice.v; var L =
   L = L.slice().sort(function(a, b){ return score(b) - score(a); }); return (pickVoice.v = L[0] && score(L[0]) >= 0 ? L[0] : null); }
 try { speechSynthesis.onvoiceschanged = function(){ pickVoice.v = undefined; }; } catch(e){}
 var MUTE = false, TKERR = 0;
-function tkState(st, msg){ var el = $('talk'); el.classList.remove('listening', 'thinking', 'speaking'); if (st) el.classList.add(st); $('tkst').textContent = msg || ''; }
+function tkState(st, msg){ var el = $('talk'), m = $('tkmini'); [el, m].forEach(function(x){ x.classList.remove('listening', 'thinking', 'speaking'); if (st) x.classList.add(st); }); $('tkst').textContent = msg || ''; $('tkmst').textContent = msg || ''; m.hidden = !DRIVE || $('chat').hidden; }
 function tkLog(cls, t){ var d = document.createElement('div'); d.className = cls; d.textContent = t; $('tklog').appendChild(d); $('tklog').scrollTop = 1e9; return d; }
 function say(t, cb){ var txt = String(t).replace(/[*_#•→↪✓⚠✨🟢📎🎤📷🗓]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500);
   if (!(DRIVE || VOICEIN) || MUTE || !txt) { if (cb) setTimeout(cb, 50); return; }
@@ -615,7 +620,7 @@ function sayPro(txt, cb){ var done = false, fin = function(){ if (done) return; 
   api({ op: 'tts', text: txt }, 1).then(function(r){ if (!r.ok) { if (DRIVE) tkLog('e', 'Voice: ' + r.error); fin(); return; }
     try { AUD.onended = fin; AUD.onerror = fin; AUD.src = 'data:audio/mpeg;base64,' + r.b64; var pr = AUD.play(); if (pr && pr.catch) pr.catch(function(){ fin(); }); } catch(e){ fin(); }
     setTimeout(function(){ if (!done && AUD.paused) fin(); }, 2000); }).catch(fin); }
-function listen(){ if (!DRIVE || !SR || srec || heard.busy) return;
+function listen(){ if (!DRIVE || !SR || srec || heard.busy || REC) return;
   try { srec = new SR(); srec.lang = 'en-IN'; srec.interimResults = true; var got = ''; tkState('listening', 'Listening… (say "stop" to close)');
     srec.onresult = function(ev){ var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; got = t.trim(); $('tkst').textContent = got ? '“' + got + '”' : 'Listening…'; };
     srec.onerror = function(ev){ var er = ev && ev.error || ''; srec._err = er; };
@@ -625,11 +630,19 @@ function listen(){ if (!DRIVE || !SR || srec || heard.busy) return;
       if (er === 'no-speech' || er === 'aborted' || !er) { setTimeout(listen, 500); return; }
       tkLog('e', 'Could not hear (' + er + ')'); setTimeout(listen, 1500); }; srec.start(); }
   catch(e){ srec = null; tkLog('e', 'Could not start listening: ' + e.message); } }
-async function heard(t){ if (!t) return; heard.busy = true; var l = t.toLowerCase().trim(); tkLog('u', t);
+async function heard(t){ if (!t) return; heard.busy = true; var l = t.toLowerCase().trim(), m; tkLog('u', t);
   try { if (/^(stop|close|exit|bye|band karo|bas)\b/.test(l) && !REC) { drive(false); return; }
     if (PENDA && /^(yes|yeah|yep|ok|okay|haan|han|ji|send|go|start|do it|confirm|theek hai)\b/.test(l)) { await runActs(); return; }
     if (PENDA && /^(no|nope|cancel|nahi|nahin|don't|dont)\b/.test(l)) { PENDA = null; $('tkyn').hidden = true; tkLog('a', 'Cancelled.'); say('Cancelled'); return; }
     if (REC && /^(stop|done|send|finish)\b/.test(l)) { stopRec(false); await sleep(600); $('csend').onclick(); tkLog('a', 'Voice note sent.'); say('Voice note sent'); return; }
+    if (PENDA && PENDA.acts[0] && PENDA.acts[0].type === 'send_att') { if (/^(yes|send|ok|okay|haan|go)\b/.test(l)) { PENDA = null; $('csend').onclick(); tkLog('a', 'Sent.'); say('Sent.'); } else { PENDA = null; ATT = []; drawAtt(); say('Dropped.'); } return; }
+    if (/^(go one by one|one by one|start catch ?up|catch ?up|let'?s go|start)\b/.test(l) && !CUR) { if (!list().filter(function(c){ return c.un; }).length) { say('Nothing new.'); tkLog('a', 'Nothing new.'); return; } cuStart(); return; }
+    if (CUR && /^(next|skip|aage|done|mark (as )?(done|read))\b/.test(l)) { if (/^skip/.test(l)) CUR.keep = true; if (CU.on) cuNext(); else closeChat(); return; }
+    if (CUR && /^(play|play it|play (the |that )?(voice|audio|note|voice note)|play again|sunao)\b/.test(l)) { playLastVoice(); return; }
+    if (CUR && /^(voice ?note|record|record (a )?voice ?note|take (a )?voice ?note)\b/.test(l)) { if (srec) { try { srec.abort(); } catch(e){} srec = null; } $('bmic').onclick(); $('tkmrec').hidden = false; tkState('thinking', 'Recording… tap ■ Done'); tkLog('a', 'Recording. Tap ■ Done when finished.'); return; }
+    if (CUR && /^(translate|translation|tarjuma)\b/.test(l)) { tkState('thinking', 'Thinking…'); await ask('Translate the latest messages of the chat "' + CUR.title + '" into short plain English, one line each, newest last.'); return; }
+    if (CUR && (m = l.match(/^(?:forward|send|share)\s+(?:this|it|that|the (?:photo|message|voice|file))?\s*(?:to|on)\s+(whats?app|wa)\b/))) { var lastM = MSGS.filter(function(x){ return !x.sys; }).pop(); if (lastM) forward(lastM, { wa: true, title: 'WhatsApp' }); return; }
+    if (CUR && (m = t.match(/^(?:reply|say|tell (?:him|her|them)|answer|write)\s*[:,]?\s+(.+)$/i)) && !/\s(?:to|in)\s+#?\w+$/.test(m[1])) { var rt = m[1].trim(); PENDA = { acts: [{ type: 'send_message', k: CUR.k, chat: CUR.title, text: rt }], card: null }; tkLog('a', 'Reply to ' + CUR.title + ': “' + rt + '” — say yes to send.'); say('Reply: ' + rt + '. Say yes to send.'); return; }
     if (CU.on && /^(next|skip|aage)\b/.test(l)) { cuNext(); return; }
     tkState('thinking', 'Thinking…'); await ask(t); }
   finally { heard.busy = false; if (DRIVE && !speechSynthesis.speaking && !srec) setTimeout(listen, 400); } }
@@ -639,7 +652,11 @@ function drive(on){ DRIVE = on; $('adrive').classList.toggle('on', on); $('adriv
   if (!SR) tkLog('e', 'This browser cannot listen by itself — use 🎤 Hold to talk or type. For hands-free, open the Assistant in Safari.');
   var go = function(){ var tot = list().filter(function(c){ return c.un; }).length, hello = (greet().replace(/,.*$/, '') + ' Abbas. ' + (tot ? tot + ' chats have new messages. ' : (list().length ? 'Nothing new. ' : '')) + 'What do you need?'); tkLog('a', hello); say(hello, function(){ if (DRIVE) listen(); }); };
   if (list().length) go(); else { tkState('thinking', 'Reading your chats…'); loadFeed(false).catch(function(){}).then(function(){ if (DRIVE) go(); }); } }
-$('adrive').onclick = function(){ drive(!DRIVE); }; $('tkopen').onclick = function(){ drive(true); }; $('tkx').onclick = function(){ drive(false); };
+$('adrive').onclick = function(){ drive(!DRIVE); }; $('tkopen').onclick = function(){ drive(true); }; $('tkx').onclick = function(){ drive(false); }; $('tkmx').onclick = function(){ drive(false); };
+$('tkmnext').onclick = function(){ if (CU.on) cuNext(); else closeChat(); }; $('tkmrec').onclick = function(){ if (REC) { stopRec(false); $('tkmrec').hidden = true; setTimeout(function(){ if (ATT.length) { tkLog('a', 'Voice note ready. Say send, or no.'); PENDA = { acts: [{ type: 'send_att' }], card: null }; $('tkyn').hidden = true; say('Voice note ready. Say send, or no.'); } }, 500); } };
+function playLastVoice(){ var m = MSGS.slice().reverse().filter(function(x){ return (x.files || []).some(function(f){ return fileKind(f) === 'audio' || fileKind(f) === 'video'; }); })[0]; if (!m) { say('No voice note in this chat.'); tkLog('a', 'No voice note here.'); return false; }
+  var f = m.files.filter(function(x){ return fileKind(x) === 'audio' || fileKind(x) === 'video'; })[0]; tkState('thinking', 'Playing…'); if (srec) { try { srec.abort(); } catch(e){} srec = null; }
+  getFile(CUR.k, f.id, true).then(function(g){ var el = document.createElement(fileKind(f)); el.controls = true; el.setAttribute('playsinline', ''); el.src = g.url; var btn = $('cbody').querySelector('[data-play="' + f.id + '"]'); if (btn) btn.replaceWith(el); el.onended = function(){ if (DRIVE) { tkState('listening', 'Listening…'); setTimeout(listen, 300); } }; el.play().catch(function(){ if (DRIVE) setTimeout(listen, 300); }); }).catch(function(x){ say('Could not play it'); }); return true; }
 $('tkmute').onclick = function(){ MUTE = !MUTE; $('tkmute').textContent = MUTE ? '🔇' : '🔊'; if (MUTE) try { speechSynthesis.cancel(); } catch(e){} };
 $('tkyes').onclick = function(){ runActs(); }; $('tkno').onclick = function(){ PENDA = null; $('tkyn').hidden = true; tkLog('a', 'Cancelled.'); };
 $('tksend').onclick = function(){ var q = $('tktxt').value.trim(); if (!q) return; $('tktxt').value = ''; heard(q); }; $('tktxt').onkeydown = function(e){ if (e.key === 'Enter') $('tksend').onclick(); };
@@ -650,7 +667,7 @@ $('tksend').onclick = function(){ var q = $('tktxt').value.trim(); if (!q) retur
     hr.onend = function(){ hr = null; h.classList.remove('on'); h.textContent = '🎤 Hold to talk'; if (got) heard(got); else { tkState('', 'Nothing heard'); if (DRIVE) setTimeout(listen, 800); } };
     hr.onerror = function(ev){ if (ev && ev.error === 'not-allowed') tkLog('e', 'Microphone not allowed — open in Safari and allow the mic.'); }; try { hr.start(); } catch(x){ hr = null; } };
   var stop = function(e){ if (e) e.preventDefault(); if (hr) { try { hr.stop(); } catch(x){} } };
-  h.addEventListener('touchstart', start, { passive: false }); h.addEventListener('mousedown', start); h.addEventListener('touchend', stop); h.addEventListener('touchcancel', stop); h.addEventListener('mouseup', stop); h.addEventListener('mouseleave', stop); })();
+  [h, $('tkmhold')].forEach(function(b){ b.addEventListener('touchstart', start, { passive: false }); b.addEventListener('mousedown', start); b.addEventListener('touchend', stop); b.addEventListener('touchcancel', stop); b.addEventListener('mouseup', stop); b.addEventListener('mouseleave', stop); }); })();
 $('csumx').onclick = function(){ $('csum').hidden = true; };
 // ---------- settings: the AI key (Abbas pastes it himself), the brain file, the notebook ----------
 $('gear').onclick = async function(){ sheet('<h3>⚙️ Settings</h3><div class="zero"><b>⏳</b></div>'); var h = await api({ op: 'hello' }, 1); if (!h.ok) { sheet('<h3>⚙️ Settings</h3><p>' + esc(h.error) + '</p>'); return; }
@@ -691,6 +708,7 @@ function poll(){ if (document.hidden || !PW) return; TICK++; loadFeed(TICK === 1
 function start(){ $('setup').hidden = true; $('app').hidden = false; show('catch'); TICK = 0; poll(); clearInterval(start.t); start.t = setInterval(poll, 7000); }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { poll(); if (CUR) readChat(true); } });
 window.addEventListener('online', function(){ liveLine(); poll(); }); window.addEventListener('offline', liveLine);
+window.__tk = heard;                                   // a typed line into Talk (tests, Siri Shortcut later)
 if (URL_ && PW) start(); else setup();
 })();
 </script>
