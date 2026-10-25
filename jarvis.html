@@ -60,7 +60,11 @@ body.speaking .orb i{background:var(--b);animation:pulse .35s ease-in-out infini
   <h2 style="margin:0 0 6px">Connect to the PC</h2>
   <p>On the PC, <b>python jarvis\bridge.py</b> prints a PHONE LINK (https://…trycloudflare.com). Paste it here. It changes each time the bridge restarts.</p>
   <input id="s_url" type="url" placeholder="https://xxxx.trycloudflare.com" inputmode="url">
-  <p id="s_pw_p">The voice and the password come from the Assistant app on this phone — <a href="assistant.html">open it once and sign in</a> if it says no password.</p>
+  <div id="s_as">
+    <p>Assistant link (the …/exec one) and the Assistant password — same as the Assistant app. Needed for the voice and to sign requests.</p>
+    <input id="s_asurl" type="url" placeholder="https://script.google.com/macros/s/…/exec" inputmode="url">
+    <input id="s_aspw" type="password" placeholder="Assistant password">
+  </div>
   <button id="s_ok" type="button">Connect</button>
   <p id="s_err" style="color:var(--r)"></p>
 </div>
@@ -118,10 +122,12 @@ tb.addEventListener('contextmenu', function(e){ e.preventDefault(); });
 $('send').onclick = function(){ unlockAudio(); ask($('txt').value); };
 $('txt').addEventListener('keydown', function(e){ if (e.key === 'Enter') { unlockAudio(); ask($('txt').value); } });
 // ---- setup ----
-function setup(err){ $('s_url').value = BR; $('s_err').textContent = err || ''; $('s_pw_p').style.color = PW ? '' : 'var(--r)'; $('setup').classList.add('show'); }
+function setup(err){ $('s_url').value = BR; $('s_err').textContent = err || ''; $('s_asurl').value = AS_URL; $('s_aspw').value = PW; $('setup').classList.add('show'); }
 $('gear').onclick = function(){ setup(); };
 $('s_ok').onclick = async function(){ var u = $('s_url').value.trim().replace(/\/+$/, ''); if (!/^https?:\/\//.test(u)) { $('s_err').textContent = 'Paste the https://… link the bridge printed.'; return; }
-  if (!PW) { $('s_err').textContent = 'No Assistant password on this phone yet — open assistant.html, sign in, come back.'; return; }
+  var au = $('s_asurl').value.trim(), ap = $('s_aspw').value; if (!ap) { $('s_err').textContent = 'The Assistant password is needed (it signs every request).'; return; }
+  if (au && !/\/exec$/.test(au)) { $('s_err').textContent = 'The Assistant link should end in /exec.'; return; }
+  PW = ap; ls('as2_pw', PW); if (au) { AS_URL = au; ls('as2_url', AS_URL); if (!TTS) { TTS = 'x'; ls('as2_tts', TTS); } }
   $('s_err').textContent = 'Checking…'; var r = await signed(u, { op: 'ping', rid: rid() }, 15000);
   if (!r.ok) { $('s_err').textContent = r.error || 'The bridge did not answer.'; return; }
   BR = u; ls('jv_bridge', BR); $('setup').classList.remove('show'); $('hb').textContent = '● connected'; };
