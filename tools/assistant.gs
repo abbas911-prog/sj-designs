@@ -3,8 +3,13 @@
 // the Assistant app's setup screen; they are kept in THIS script's properties only (never in the repo, never in a chat).
 // Every chat the bots can see = one channel chat (its top-level posts) + one chat per thread (an order memo, a pick list, a card…).
 // Lines written from any SJ app are "*Name:* text" posted by a bot — shown as Name. Read marks ("seen") are the Assistant's own.
-var AS_VER = '2026-10-24b';
-var WS = ['s', 'f'];                                               // s = SJTC workspace, f = factory workspace
+var AS_VER = '2026-10-25a';
+var WS = ['s', 'f'];                                               // s = SJTC workspace, f = factory workspace; e = Email (the Gmail this script runs as — see below)
+// EMAIL (25 Oct 2026): a third source. The script reads the Gmail inbox of the Google account it is deployed under (abbassayed033@gmail.com);
+// the other addresses auto-forward into it. No tokens: Google asks Abbas once to allow Gmail when the new version is deployed.
+// One chat per email thread (key "e:<threadId>:"), newest mail first; marketing / social mail is left out. Reply = a Gmail reply in that thread.
+var EM_DAYS = 10, EM_MAX = 40, EM_Q = 'in:inbox -category:promotions -category:social -category:forums newer_than:' + EM_DAYS + 'd';
+function gmailOn() { return typeof GmailApp !== 'undefined' && !!GmailApp; }
 var HOT_MS = 2 * 3600 * 1000, PER_CALL = 4, HIST_N = 200;           // channels read per feed call per workspace: hot ones + the longest-unread cold ones
 
 function out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
@@ -44,7 +49,8 @@ function setup(s, P) {
 
 function run(req, who, P) {
   var op = req.op;
-  if (op === 'hello') return { ok: true, ver: AS_VER, teams: { s: P.getProperty('AS_TEAM_s') || '', f: P.getProperty('AS_TEAM_f') || '' } };
+  if (op === 'hello') return { ok: true, ver: AS_VER, teams: { s: P.getProperty('AS_TEAM_s') || '', f: P.getProperty('AS_TEAM_f') || '' }, email: gmailOn() ? myMail() : '' };
+  if (op === 'mail') return mailNew(req, who, P);                  // a new email to an address (text + files), e.g. a Slack photo sent on by email
   if (op === 'tokens') {                                         // change a token later from the app (signed)
     var tt = { s: String(req.s || '').trim(), f: String(req.f || '').trim() }, teams = {};
     for (var i = 0; i < WS.length; i++) { var w = WS[i]; if (!tt[w]) continue; var a = slack(tt[w], 'auth.test', {}); if (!a.ok) return { ok: false, error: 'Slack said ' + a.error }; P.setProperty('AS_TOK_' + w, tt[w]); P.setProperty('AS_TEAM_' + w, a.team || ''); C_().remove('CHANS_' + w); teams[w] = a.team; }
@@ -53,6 +59,7 @@ function run(req, who, P) {
   if (op === 'feed') return feed(who, P, !!req.fresh);
   if (op === 'chans') { var L = []; WS.forEach(function (w) { var tk = P.getProperty('AS_TOK_' + w); if (!tk) return; chans(w, tk).forEach(function (ch) { L.push({ k: w + ':' + ch.id + ':', ws: w, ch: ch.id, chn: ch.name }); }); }); return { ok: true, chans: L }; }
   var k = parseKey(req.k); if (!k) return { ok: false, error: 'bad chat' };
+  if (k.ws === 'e') return emailOp(op, k, req, who, P);
   var tok = P.getProperty('AS_TOK_' + k.ws); if (!tok) return { ok: false, error: 'no Slack token for this workspace yet' };
   if (op === 'thread') {
     var msgs = k.ts ? replies(tok, k.ch, k.ts, '', true) : chHist(tok, k.ch, true).slice().reverse();
@@ -90,7 +97,78 @@ function run(req, who, P) {
 }
 function fileWord(fs) { return fs.map(function (f) { var n = String(f.name || ''); return /^voice/i.test(n) ? '🎤 voice note' : /\.(jpe?g|png|webp|heic|gif)$/i.test(n) ? '📷 photo' : /\.(mp4|mov|webm|m4v)$/i.test(n) ? '🎬 video' : '📎 ' + n; }).join(' · '); }
 function afterWrite(P, k, key, ts) { var c = C_(); c.remove('H_' + k.ch); if (k.ts) c.remove('R_' + k.ch + '_' + k.ts); seenPut(P, key, String(Math.max(+ts || 0, Date.now() / 1000) + 1)); }
-function parseKey(s) { var m = String(s || '').match(/^([sf]):([A-Z0-9]{6,}):(\d+\.\d+)?$/); return m ? { ws: m[1], ch: m[2], ts: m[3] || '' } : null; }
+function parseKey(s) { var m = String(s || '').match(/^([sf]):([A-Z0-9]{6,}):(\d+\.\d+)?$/); if (m) return { ws: m[1], ch: m[2], ts: m[3] || '' }; var e = String(s || '').match(/^e:([A-Za-z0-9]{8,}):$/); return e ? { ws: 'e', ch: e[1], ts: '' } : null; }
+
+// ---------- Email (Gmail of the account the script runs as) ----------
+function myMail() { try { return String(Session.getEffectiveUser().getEmail() || ''); } catch (e) { return ''; } }
+function emAddr(s) { var m = String(s || '').match(/<([^>]+)>/); return (m ? m[1] : String(s || '')).trim().toLowerCase(); }
+function emName(s) { var m = String(s || '').match(/^\s*"?([^"<]+?)"?\s*</); var n = m ? m[1].trim() : ''; return n || emAddr(s).split('@')[0]; }
+function emTs(d) { return String(Math.floor((d ? d.getTime() : Date.now()) / 1000)) + '.000000'; }
+function emBody(m) {                                             // the mail's own words: plain text, quoted older mail cut off
+  var t = ''; try { t = String(m.getPlainBody() || ''); } catch (e) {}
+  if (!t.trim()) { try { t = String(m.getBody() || '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&'); } catch (e) {} }
+  t = t.replace(/\r/g, '');
+  var cut = t.search(/\n(On .{5,120}wrote:|-{3,} ?(Original|Forwarded) ?Message|From: .+\nSent: |_{10,})/i); if (cut > 40) t = t.slice(0, cut);
+  return t.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n').trim().slice(0, 6000);
+}
+function emMsgOut(m, me) {                                       // one email → the same shape as a chat line
+  var from = '', date = null, atts = [], id = ''; try { from = m.getFrom(); date = m.getDate(); id = m.getId(); atts = m.getAttachments({ includeInlineImages: false, includeAttachments: true }); } catch (e) {}
+  var mineM = me && emAddr(from) === me;
+  return { ts: emTs(date), who: mineM ? 'Abbas' : emName(from), app: false, sys: false, root: false, text: emBody(m), rc: 0, from: emAddr(from),
+    files: atts.map(function (a, i) { var n = '', t = '', s = 0; try { n = a.getName(); t = a.getContentType(); s = a.getSize(); } catch (e) {} return { id: id + '-' + i, name: n || 'file', type: t || '', size: s }; }) };
+}
+function emThreads(fresh) {                                      // the inbox threads (newest first), kept 60 s so the feed polls do not hammer Gmail
+  var c = C_(), h = fresh ? null : bigGet(c, 'EM_L'); if (h) return JSON.parse(h);
+  var me = myMail().toLowerCase(), L = [], ths = GmailApp.search(EM_Q, 0, EM_MAX);
+  ths.forEach(function (th) {
+    var ms = th.getMessages(), last = ms[ms.length - 1], rows = ms.map(function (m) { return emMsgOut(m, me); });
+    L.push({ id: th.getId(), subj: String(th.getFirstMessageSubject() || '(no subject)').slice(0, 120), from: emAddr(last.getFrom()), last: emTs(last.getDate()), n: ms.length, msgs: rows.map(function (r) { return { ts: r.ts, who: r.who, text: r.text.slice(0, 300), f: r.files.length, from: r.from }; }) });
+  });
+  L.sort(function (a, b) { return +b.last - +a.last; });
+  try { bigPut(c, 'EM_L', JSON.stringify(L), 60); } catch (e) {} return L;
+}
+function emailFeed(who, P, all, fresh, chats, errs) {
+  if (!gmailOn()) return; var L; try { L = emThreads(fresh); } catch (e) { errs.push('Email: ' + String(e.message || e).slice(0, 120)); return; }
+  var t0 = +(all.AS_T0 || 0);
+  L.forEach(function (th) {
+    var key = 'e:' + th.id + ':', mark = Math.max(+(all['SN_' + key] || 0), t0), news = th.msgs.filter(function (m) { return +m.ts > mark && !mine(m, who); });
+    chats.push({ k: key, ws: 'e', team: 'Email', chn: th.from, title: th.subj, kind: 'email', last: th.last, un: news.length, lines: news.slice(-3).map(function (m) { return { who: m.who, text: String(m.text || '').replace(/\s+/g, ' ').trim().slice(0, 220) || (m.f ? '📎 ' + m.f + ' attachment' + (m.f > 1 ? 's' : '') : '(empty mail)'), ts: m.ts, f: m.f }; }) });
+  });
+}
+function emailOp(op, k, req, who, P) {
+  if (!gmailOn()) return { ok: false, error: 'Gmail is not allowed for this script yet — deploy the new version and allow Gmail' };
+  var th = null; try { th = GmailApp.getThreadById(k.ch); } catch (e) {} if (!th) return { ok: false, error: 'that email thread is gone' };
+  if (op === 'thread') { var me = myMail().toLowerCase(), outm = th.getMessages().map(function (m) { return emMsgOut(m, me); }); if (req.look && outm.length) seenPut(P, req.k, outm[outm.length - 1].ts); return { ok: true, msgs: outm, subj: th.getFirstMessageSubject() }; }
+  if (op === 'seen') { seenPut(P, req.k, String(req.ts || Date.now() / 1000)); return { ok: true }; }
+  if (op === 'unseen') { return { ok: true, mark: unseen(P, req.k, String(req.since || '')) }; }
+  if (op === 'post' || op === 'up') {                             // reply in the thread (to the last mail's sender), files attached
+    var tx = String(req.text || '').slice(0, 20000), blobs = [], fs = op === 'up' && Array.isArray(req.files) ? req.files.slice(0, 10) : [], tot = 0;
+    for (var j = 0; j < fs.length; j++) { var by = Utilities.base64Decode(String(fs[j].b64 || '')); tot += by.length; if (tot > 20000000) return { ok: false, error: 'files too big for email (20 MB together)' }; blobs.push(Utilities.newBlob(by, emType(fs[j].name), String(fs[j].name || 'file').slice(0, 80))); }
+    if (!tx.trim() && !blobs.length) return { ok: false, error: 'empty' };
+    var ms = th.getMessages(), lastM = ms[ms.length - 1], o = { name: who }; if (blobs.length) o.attachments = blobs;
+    try { lastM.reply(tx || fileWord(fs), o); } catch (e) { return { ok: false, error: 'Gmail said ' + String(e.message || e).slice(0, 160) }; }
+    C_().remove('EM_L#n'); seenPut(P, req.k, String(Date.now() / 1000 + 2)); return { ok: true, ts: emTs(null), files: blobs.length };
+  }
+  if (op === 'file') {                                            // an attachment: "<messageId>-<index>"
+    var mm = String(req.id || '').match(/^([A-Za-z0-9]{8,})-(\d{1,2})$/); if (!mm) return { ok: false, error: 'bad file' };
+    var msg = null; try { msg = GmailApp.getMessageById(mm[1]); } catch (e) {} if (!msg) return { ok: false, error: 'that email is gone' };
+    var a = msg.getAttachments({ includeInlineImages: false, includeAttachments: true })[+mm[2]]; if (!a) return { ok: false, error: 'no such attachment' };
+    if (a.getSize() > 20000000) return { ok: false, error: 'file too big for the phone' };
+    return { ok: true, b64: Utilities.base64Encode(a.getBytes()), type: a.getContentType() || '', name: a.getName() || 'file' };
+  }
+  return { ok: false, error: 'unknown op ' + op };
+}
+function emType(n) { n = String(n || '').toLowerCase(); return /\.(jpe?g)$/.test(n) ? 'image/jpeg' : /\.png$/.test(n) ? 'image/png' : /\.webp$/.test(n) ? 'image/webp' : /\.pdf$/.test(n) ? 'application/pdf' : /\.(m4a|mp4)$/.test(n) ? 'audio/mp4' : /\.webm$/.test(n) ? 'audio/webm' : /\.mp4$/.test(n) ? 'video/mp4' : 'application/octet-stream'; }
+function mailNew(req, who, P) {                                   // op mail: { to, subject, text, files[] }
+  if (!gmailOn()) return { ok: false, error: 'Gmail is not allowed for this script yet' };
+  var to = String(req.to || '').trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false, error: 'that is not an email address' };
+  var subj = String(req.subject || '').slice(0, 200).trim() || ('From ' + who), tx = String(req.text || '').slice(0, 20000), fs = Array.isArray(req.files) ? req.files.slice(0, 10) : [], blobs = [], tot = 0;
+  for (var j = 0; j < fs.length; j++) { var by = Utilities.base64Decode(String(fs[j].b64 || '')); tot += by.length; if (tot > 20000000) return { ok: false, error: 'files too big for email (20 MB together)' }; blobs.push(Utilities.newBlob(by, emType(fs[j].name), String(fs[j].name || 'file').slice(0, 80))); }
+  if (!tx.trim() && !blobs.length) return { ok: false, error: 'empty' };
+  var o = { name: who }; if (blobs.length) o.attachments = blobs;
+  try { GmailApp.sendEmail(to, subj, tx || fileWord(fs), o); } catch (e) { return { ok: false, error: 'Gmail said ' + String(e.message || e).slice(0, 160) }; }
+  return { ok: true, to: to };
+}
 
 // ---------- Slack ----------
 function slack(tok, method, params, get) {
@@ -197,7 +275,8 @@ function feed(who, P, fresh) {
     });
     try { c.put('ST_' + w, JSON.stringify(st), 21600); } catch (e) {}
   });
+  emailFeed(who, P, all, fresh, chats, errs);
   chats.sort(function (a, b) { return +b.last - +a.last; });
   var cut = Date.now() / 1000 - 45 * 86400; chats = chats.filter(function (x) { return x.un || +x.last > cut; }).slice(0, 400);
-  return { ok: true, ver: AS_VER, chats: chats, errs: errs.slice(0, 5), t: Date.now() };
+  return { ok: true, ver: AS_VER, chats: chats, errs: errs.slice(0, 5), t: Date.now(), email: gmailOn() ? myMail() : '' };
 }

@@ -150,6 +150,39 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0], f = 
   await p2.fill('#spw', PW); await p2.click('#sgo'); await p2.waitForSelector('#app:not([hidden])', { timeout: 8000 }).catch(() => {}); ok('right password → app', await p2.isVisible('#app'));
 
   ok('never talked to the SJ relay (no "job" request)', bodies.length > 10 && bodies.every(b => !/"job"/.test(b)));
+
+  // 7. EMAIL (25 Oct): a fake Gmail appears (the script allowed Gmail) → one chat per thread, reply in the thread, attachment forwarded to Slack, new mail to an address
+  const SENT = [], REPLIES = [];
+  const mkMsg = (id, from, date, body, atts) => ({ getId: () => id, getFrom: () => from, getDate: () => new Date(date), getPlainBody: () => body, getBody: () => body,
+    getAttachments: () => (atts || []).map(a => ({ getName: () => a.name, getContentType: () => a.type, getSize: () => a.bytes.length, getBytes: () => sbytes(a.bytes) })), reply: (txt, o) => { REPLIES.push({ id, txt, atts: ((o || {}).attachments || []).map(b => b._n) }); } });
+  const TH = { 'abc123def456': { subj: 'Lace shipment — 40 cartons', msgs: [mkMsg('m1a2b3c4d5', 'Saruj Lace <saruj@lace.cn>', Date.now() - 3600e3, 'Dear Abbas,\nThe 40 cartons left Guangzhou today. Invoice attached.\n\nOn Fri Saruj wrote:\n> old stuff', [{ name: 'invoice.png', type: 'image/png', bytes: PNG }])] },
+    'ffe0112233445': { subj: 'Re: VAT return Q3', msgs: [mkMsg('m2b2b3c4d5', 'Abbas <abbassayed033@gmail.com>', Date.now() - 7200e3, 'Sending the files now.'), mkMsg('m3c2b3c4d5', 'Arqam <arqam@tax.ae>', Date.now() - 600e3, 'Received, thanks. One question: السلام عليكم — is the October figure final?')] } };
+  const thOf = id => ({ getId: () => id, getFirstMessageSubject: () => TH[id].subj, getMessages: () => TH[id].msgs.slice() });
+  ctx.GmailApp = { search: () => Object.keys(TH).map(thOf), getThreadById: id => (TH[id] ? thOf(id) : null), getMessageById: id => Object.values(TH).flatMap(t => t.msgs).find(m => m.getId() === id) || null,
+    sendEmail: (to, subj, txt, o) => { SENT.push({ to, subj, txt, atts: ((o || {}).attachments || []).map(b => b._n) }); } };
+  ctx.Session = { getEffectiveUser: () => ({ getEmail: () => 'abbassayed033@gmail.com' }) };
+  await pg.click('#nav button[data-v="catch"]'); await pg.waitForFunction(() => /Lace shipment/.test(document.querySelector('#clist').textContent), null, { timeout: 15000 }).catch(() => {});
+  const cl = await t(pg, '#clist');
+  ok('email thread is a Catch-up card: Lace shipment · Saruj Lace', /Lace shipment/.test(cl) && /Saruj/.test(cl) && /40 cartons left/.test(cl));
+  ok('quoted old mail cut off', !/old stuff/.test(cl));
+  ok('my own mail not counted, Arqam\'s reply is', /VAT return/.test(cl) && /Arqam/.test(cl) && !/Sending the files now/.test(cl));
+  ok('Email stat + chip shown', await pg.isVisible('#ste') && !(await pg.$eval('#chipe', e => e.hidden)) && (await t(pg, '#se')) === '2');
+  await pg.click('.card:has-text("VAT return") [data-open]'); await pg.waitForFunction(() => /October figure/.test(document.querySelector('#cbody').textContent), null, { timeout: 8000 }).catch(() => {});
+  ok('email chat opens: both mails, mine on the right', /Sending the files now/.test(await t(pg, '#cbody')) && !!(await pg.$('#cbody .m.me')) && (await pg.getAttribute('#ctxt', 'placeholder')) === 'Reply by email…');
+  await pg.fill('#ctxt', 'Yes, final. Abbas'); await pg.click('#csend'); await pg.waitForFunction(() => !document.querySelector('#cbody .m.pend'), null, { timeout: 8000 }).catch(() => {});
+  ok('reply → Gmail reply in that thread', REPLIES.length === 1 && REPLIES[0].id === 'm3c2b3c4d5' && /final/.test(REPLIES[0].txt));
+  await pg.click('#cback'); await pg.click('.card:has-text("Lace shipment") [data-open]'); await pg.waitForSelector('#cbody img[data-f]', { timeout: 8000 }).catch(() => {});
+  await pg.waitForFunction(() => { const i = document.querySelector('#cbody img[data-f]'); return i && i.src; }, null, { timeout: 8000 }).catch(() => {});
+  ok('email attachment loads as a photo', !!(await pg.$('#cbody img[src^="blob:"]')));
+  await pg.click('#cbody [data-fw]'); await pg.waitForSelector('#plist', { timeout: 5000 }); await pg.fill('#pq', 'cash'); await pg.click('#plist [data-pk]:has-text("#cash")');
+  await pg.waitForSelector('#fwgo', { timeout: 8000 }).catch(async () => { console.log('SHEET:', await t(pg, '#sheetb')); }); await pg.fill('#fwnote', 'Saruj invoice'); await pg.click('#fwgo'); await pg.waitForTimeout(1500);
+  ok('email attachment forwarded to Slack #cash with its file', FW.slack.ch.C0CASH00001.msgs.some(m => /Saruj invoice/.test(m.text) && (m.files || []).length === 1));
+  await pg.click('#tgtb'); await pg.waitForSelector('#plist', { timeout: 5000 }); await pg.click('#plist [data-pk="em"]'); await pg.waitForSelector('#emto', { timeout: 5000 });
+  await pg.fill('#emto', 'nadeem@lais.cn'); await pg.fill('#emsub', 'Photo'); await pg.click('#emgo'); await pg.fill('#ctxt', 'See attached'); await pg.click('#csend'); await pg.waitForTimeout(1500);
+  ok('Send to → Email address → a new mail from the script', SENT.length === 1 && SENT[0].to === 'nadeem@lais.cn' && SENT[0].subj === 'Photo' && /attached/.test(SENT[0].txt));
+  await pg.click('#cback'); await pg.click('#nav button[data-v="ask"]'); await pg.fill('#atxt', 'send invoice ready to arqam@tax.ae'); await pg.click('#ago'); await pg.waitForSelector('#aYes', { timeout: 5000 });
+  ok('Ask: send … to an email address → asks first', /arqam@tax\.ae/.test(await t(pg, '#aout')));
+  await pg.click('#aYes'); await pg.waitForTimeout(1200); ok('… then mails it', SENT.length === 2 && SENT[1].to === 'arqam@tax.ae');
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); await br.close(); srv.close(); process.exit(fail ? 1 : 0);
 })();

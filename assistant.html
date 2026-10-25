@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="memo-icon-180.png">
 <style>
 :root{--bg:#f5f6fb;--card:#fff;--ink:#0f172a;--sub:#64748b;--faint:#94a3b8;--line:#e8eaf3;--soft:#eef0fb;
-  --pri:#5b4cf0;--grad:linear-gradient(135deg,#5b4cf0 0%,#8b5cf6 55%,#ec4899 100%);--s:#3b82f6;--f:#10b981;--wa:#22c55e;--red:#ef4444;--me:#ede9fe;--sys:#f1f5f9;
+  --pri:#5b4cf0;--grad:linear-gradient(135deg,#5b4cf0 0%,#8b5cf6 55%,#ec4899 100%);--s:#3b82f6;--f:#10b981;--e:#f59e0b;--wa:#22c55e;--red:#ef4444;--me:#ede9fe;--sys:#f1f5f9;
   --sh:0 1px 2px rgba(15,23,42,.04),0 6px 20px rgba(15,23,42,.06);--r:20px}
 @media (prefers-color-scheme:dark){:root{--bg:#0b0d17;--card:#151827;--ink:#eef0ff;--sub:#9aa3bf;--faint:#6b7391;--line:#242842;--soft:#1c2036;--me:#2e2560;--sys:#1c2036;--sh:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35)}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -33,7 +33,7 @@ input,textarea{font:inherit;color:inherit}
 .stat{flex:1;background:var(--card);border-radius:18px;padding:12px 14px;box-shadow:var(--sh)}
 .stat b{display:block;font-size:22px;letter-spacing:-.02em}
 .stat span{font-size:12px;color:var(--sub)}
-.stat.s b{color:var(--s)}.stat.f b{color:var(--f)}
+.stat.s b{color:var(--s)}.stat.f b{color:var(--f)}.stat.e b{color:var(--e)}
 main{padding:6px 16px calc(110px + env(safe-area-inset-bottom))}
 .h2{display:flex;align-items:center;margin:22px 4px 10px}
 .h2 h2{margin:0;font-size:17px;flex:1;letter-spacing:-.01em}
@@ -45,7 +45,7 @@ main{padding:6px 16px calc(110px + env(safe-area-inset-bottom))}
 .card .meta{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub)}
 .tag{display:inline-flex;align-items:center;gap:5px;font-weight:600;font-size:11px;padding:3px 8px;border-radius:20px;background:var(--soft);color:var(--sub);white-space:nowrap;max-width:60%;overflow:hidden;text-overflow:ellipsis}
 .tag i{width:7px;height:7px;border-radius:50%;flex:none}
-.tag.s i{background:var(--s)}.tag.f i{background:var(--f)}
+.tag.s i{background:var(--s)}.tag.f i{background:var(--f)}.tag.e i{background:var(--e)}
 .card .meta .t{margin-left:auto;white-space:nowrap}
 .card h3{margin:8px 0 8px;font-size:17px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
 .card h3 .n{background:var(--red);color:#fff;font-size:12px;border-radius:20px;padding:1px 8px}
@@ -70,7 +70,7 @@ main{padding:6px 16px calc(110px + env(safe-area-inset-bottom))}
 .chips button.on{background:var(--ink);color:var(--bg)}
 .row{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:11px 12px;background:var(--card);border-radius:16px;margin-bottom:8px;box-shadow:var(--sh)}
 .row .ic{width:42px;height:42px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;font-size:19px}
-.row .ic.s{background:rgba(59,130,246,.12)}.row .ic.f{background:rgba(16,185,129,.13)}.row .ic.w{background:rgba(34,197,94,.15)}
+.row .ic.s{background:rgba(59,130,246,.12)}.row .ic.f{background:rgba(16,185,129,.13)}.row .ic.e{background:rgba(245,158,11,.14)}.row .ic.w{background:rgba(34,197,94,.15)}
 .row .tx{flex:1;min-width:0}
 .row .tx b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .tx small{display:block;color:var(--sub);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -194,12 +194,12 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
     <h1 id="hello">Good morning</h1>
     <p id="hsum">Getting your chats…</p>
   </div>
-  <div class="stats" id="stats"><div class="stat"><b id="sn">–</b><span>new messages</span></div><div class="stat s"><b id="ss">–</b><span>SJTC chats</span></div><div class="stat f"><b id="sf">–</b><span>Factory chats</span></div></div>
+  <div class="stats" id="stats"><div class="stat"><b id="sn">–</b><span>new messages</span></div><div class="stat s"><b id="ss">–</b><span>SJTC chats</span></div><div class="stat f"><b id="sf">–</b><span>Factory chats</span></div><div class="stat e" id="ste" hidden><b id="se">–</b><span>Emails</span></div></div>
   <main>
     <section id="v-catch"><div id="today1"></div><div id="clist"></div></section>
     <section id="v-chats" hidden>
       <label class="search">🔎<input id="q" placeholder="Search a name, design, channel…" autocomplete="off"></label>
-      <div class="chips" id="fchips"><button data-f="" class="on" type="button">All</button><button data-f="s" type="button">SJTC</button><button data-f="f" type="button">Factory</button><button data-f="c" type="button">Channels</button><button data-f="un" type="button">Unread</button></div>
+      <div class="chips" id="fchips"><button data-f="" class="on" type="button">All</button><button data-f="s" type="button">SJTC</button><button data-f="f" type="button">Factory</button><button data-f="e" type="button" id="chipe" hidden>✉️ Email</button><button data-f="c" type="button">Channels</button><button data-f="un" type="button">Unread</button></div>
       <div id="alist"></div>
     </section>
     <section id="v-today" hidden><div id="tday"></div></section>
@@ -242,7 +242,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <script>
 (function(){
-var VER = '2026-10-24d';
+var VER = '2026-10-25a';
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -282,15 +282,16 @@ function dayName(ts){ var d = new Date(+ts * 1000), now = new Date(); if (d.toDa
   return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }); }
 
 // ---------- data ----------
-var CH = {}, ORDER = [], ZERO = {};
-function wsName(w){ return w === 's' ? 'SJTC' : 'Factory'; }
-function chIcon(c){ return c.kind === 'channel' ? '💬' : /order memo|customer/.test(c.kind) ? '👤' : /godown/.test(c.kind) ? '📦' : c.ws === 'f' ? '🏭' : '💬'; }
-function subOf(c){ return wsName(c.ws) + ' · #' + c.chn + (c.kind && c.kind !== 'channel' && c.kind !== 'thread' ? ' · ' + c.kind : ''); }
+var CH = {}, ORDER = [], ZERO = {}, EMAIL = ls('as2_email') || '';      // EMAIL = the Gmail address the script reads (empty until the script allows Gmail)
+function wsName(w){ return w === 's' ? 'SJTC' : w === 'e' ? 'Email' : 'Factory'; }
+function tagOf(c){ return c.ws === 'e' ? 'Email · ' + c.chn : wsName(c.ws) + ' · #' + c.chn; }
+function chIcon(c){ return c.ws === 'e' ? '✉️' : c.kind === 'channel' ? '💬' : /order memo|customer/.test(c.kind) ? '👤' : /godown/.test(c.kind) ? '📦' : c.ws === 'f' ? '🏭' : '💬'; }
+function subOf(c){ if (c.ws === 'e') return 'Email · ' + c.chn; return wsName(c.ws) + ' · #' + c.chn + (c.kind && c.kind !== 'channel' && c.kind !== 'thread' ? ' · ' + c.kind : ''); }
 async function loadFeed(fresh){
   if (loadFeed.busy) return; loadFeed.busy = true;
   try { var j = await api({ op: 'feed', fresh: fresh ? 1 : 0 }, 2); if (!j.ok) { if (/wrong password/.test(j.error)) { PW = ''; ls('as2_pw', null); setup(); } return; }
     var M = {}; (j.chats || []).forEach(function(c){ if (ZERO[c.k] && +(c.lines.length ? c.lines[c.lines.length - 1].ts : c.last) <= ZERO[c.k]) { c.un = 0; c.lines = []; } M[c.k] = c; });
-    CH = M; ORDER = j.chats.map(function(c){ return c.k; }); draw();
+    CH = M; ORDER = j.chats.map(function(c){ return c.k; }); if (j.email !== undefined && j.email !== EMAIL) { EMAIL = j.email || ''; ls('as2_email', EMAIL); } draw();
   } finally { loadFeed.busy = false; } }
 function liveLine(){ var bad = !!LASTERR || navigator.onLine === false; $('live').classList.toggle('bad', bad); $('lvt').textContent = navigator.onLine === false ? 'Offline' : LASTERR ? 'Problem' : LASTOK ? 'Live' : 'Connecting'; $('live').title = LASTERR; }
 
@@ -301,7 +302,7 @@ function list(){ return ORDER.map(function(k){ return CH[k]; }).filter(Boolean);
 function cardHtml(c){
   var lines = (c.lines || []).map(function(l){ return '<div class="ln">' + av(l.who) + '<div><b style="color:' + col(l.who) + '">' + esc(l.who || '') + '</b><em>' + when(l.ts) + '</em><p>' + esc(l.text) + '</p></div></div>'; }).join('');
   if (!lines && c.un < 0) lines = '<div class="ln"><div><p style="color:var(--sub)">New messages — open to read</p></div></div>';
-  var fr = !SHOWN[c.k + c.last]; SHOWN[c.k + c.last] = 1; return '<article class="card' + (fr ? ' fresh' : '') + '" data-card="' + esc(c.k) + '"><div class="meta"><span class="tag ' + c.ws + '"><i></i>' + esc(wsName(c.ws) + ' · #' + c.chn) + '</span>' + (c.kind && c.kind !== 'channel' && c.kind !== 'thread' ? '<span class="tag">' + esc(c.kind) + '</span>' : '') + '<span class="t">' + when(c.last) + '</span></div>' +
+  var fr = !SHOWN[c.k + c.last]; SHOWN[c.k + c.last] = 1; return '<article class="card' + (fr ? ' fresh' : '') + '" data-card="' + esc(c.k) + '"><div class="meta"><span class="tag ' + c.ws + '"><i></i>' + esc(tagOf(c)) + '</span>' + (c.kind && c.kind !== 'channel' && c.kind !== 'thread' && c.kind !== 'email' ? '<span class="tag">' + esc(c.kind) + '</span>' : '') + '<span class="t">' + when(c.last) + '</span></div>' +
     '<h3>' + esc(chIcon(c) + ' ' + c.title) + (c.un > 0 ? ' <span class="n">' + c.un + '</span>' : '') + '</h3>' + lines +
     '<div class="acts"><button class="p" type="button" data-open="' + esc(c.k) + '">Reply</button><button type="button" data-fwc="' + esc(c.k) + '">↪ Forward</button><button type="button" data-done="' + esc(c.k) + '">✓ Done</button></div></article>'; }
 function rowHtml(c, attr){ return '<button class="row" type="button" ' + (attr || 'data-open') + '="' + esc(c.k) + '"><span class="ic ' + c.ws + '">' + chIcon(c) + '</span><span class="tx"><b>' + esc(c.title) + '</b><small>' + esc(c.un > 0 && c.lines && c.lines.length ? c.lines[c.lines.length - 1].who + ': ' + c.lines[c.lines.length - 1].text : subOf(c)) + '</small></span><span class="rt">' + when(c.last) + (c.un ? '<br><i>' + (c.un > 0 ? c.un : '•') + '</i>' : '') + '</span></button>'; }
@@ -309,11 +310,11 @@ function greet(){ var h = new Date().getHours(); return (h < 12 ? 'Good morning'
 function draw(){
   var L = list(), un = L.filter(function(c){ return c.un; }), tot = un.reduce(function(a, c){ return a + Math.max(c.un, 1); }, 0);
   $('hello').textContent = greet(); $('hdate').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
-  $('sn').textContent = tot; $('ss').textContent = un.filter(function(c){ return c.ws === 's'; }).length; $('sf').textContent = un.filter(function(c){ return c.ws === 'f'; }).length;
+  $('sn').textContent = tot; $('ss').textContent = un.filter(function(c){ return c.ws === 's'; }).length; $('sf').textContent = un.filter(function(c){ return c.ws === 'f'; }).length; var ne = un.filter(function(c){ return c.ws === 'e'; }).length, hasE = L.some(function(c){ return c.ws === 'e'; }) || !!EMAIL; $('se').textContent = ne; $('ste').hidden = !hasE; $('chipe').hidden = !hasE;
   $('hsum').textContent = !L.length ? 'Getting your chats…' : tot ? tot + ' new message' + (tot > 1 ? 's' : '') + ' waiting in ' + un.length + ' chat' + (un.length > 1 ? 's' : '') : 'You are all caught up ✨';
   $('nb').hidden = !tot; $('nb').textContent = tot; document.title = tot ? '(' + tot + ') Assistant' : 'Assistant'; try { if (navigator.setAppBadge) tot ? navigator.setAppBadge(tot) : navigator.clearAppBadge(); } catch(e){}
   if (VIEW === 'catch') { todayCard();
-    var h = un.length ? '<button class="go" type="button" id="gocu"><span><b>▶ Catch up</b><small>Open the ' + un.length + ' chat' + (un.length > 1 ? 's' : '') + ' one by one — read, reply, Next</small></span><span class="pl">' + tot + '</span></button><div class="h2"><h2>Needs you</h2><button type="button" id="allread">✓ Mark all done</button></div>' + un.map(cardHtml).join('') : '<div class="zero"><b>' + (L.length ? '✨' : '⏳') + '</b>' + (L.length ? 'All caught up. Nothing new in SJTC or the factory.' : 'Reading your chats for the first time…') + '</div>';
+    var h = un.length ? '<button class="go" type="button" id="gocu"><span><b>▶ Catch up</b><small>Open the ' + un.length + ' chat' + (un.length > 1 ? 's' : '') + ' one by one — read, reply, Next</small></span><span class="pl">' + tot + '</span></button><div class="h2"><h2>Needs you</h2><button type="button" id="allread">✓ Mark all done</button></div>' + un.map(cardHtml).join('') : '<div class="zero"><b>' + (L.length ? '✨' : '⏳') + '</b>' + (L.length ? 'All caught up. Nothing new in SJTC, the factory' + (EMAIL ? ', email' : '') + '.' : 'Reading your chats for the first time…') + '</div>';
     var rec = L.filter(function(c){ return !c.un; }).slice(0, 5); if (rec.length) h += '<div class="h2"><h2>Recently</h2></div>' + rec.map(function(c){ return rowHtml(c); }).join('');
     setHtml('clist', h); }
   if (VIEW === 'chats') { var q = $('q').value.trim().toLowerCase(), A = L.filter(function(c){ return (!FILT || (FILT === 'c' ? c.kind === 'channel' : FILT === 'un' ? c.un : c.ws === FILT)) && (!q || (c.title + ' ' + subOf(c) + ' ' + (c.lines || []).map(function(l){ return l.who + ' ' + l.text; }).join(' ')).toLowerCase().indexOf(q) >= 0); });
@@ -362,7 +363,7 @@ window.addEventListener('message', function(e){ if (e.data && e.data.timo === 's
 var CUR = null, MSGS = [], ATT = [], TGT = null, PEND = [], MEDIA = {};
 function openChat(k, fwPick){ var c = CH[k]; if (!c) return; if (CUR && CUR !== c) leaveChat(CUR); CUR = c; TGT = null; ATT = []; MSGS = []; PEND = []; readChat.sig = ''; c.keep = false; c.since = c.un > 0 && c.lines.length ? c.lines[0].ts : ''; $('ckeep').classList.remove('on'); $('ckeep').textContent = '🔔';
   if (c.un) { ZERO[k] = Date.now() / 1000; c.un = 0; c.lines = []; draw(); }
-  $('ct').textContent = chIcon(c) + ' ' + c.title; $('cs').textContent = (CU.on ? 'Catch up ' + (CU.i + 1) + ' of ' + CU.q.length + ' · ' : '') + subOf(c); if (!CU.on) $('cnext').hidden = true; $('cbody').innerHTML = '<div class="zero"><b>⏳</b>Loading…</div>';
+  $('ct').textContent = chIcon(c) + ' ' + c.title; $('ctxt').placeholder = c.ws === 'e' ? 'Reply by email…' : 'Message…'; $('cs').textContent = (CU.on ? 'Catch up ' + (CU.i + 1) + ' of ' + CU.q.length + ' · ' : '') + subOf(c); if (!CU.on) $('cnext').hidden = true; $('cbody').innerHTML = '<div class="zero"><b>⏳</b>Loading…</div>';
   $('chat').hidden = false; drawTgt(); drawAtt(); readChat(false).then(function(){ if (fwPick) { var last = MSGS.filter(function(m){ return !m.sys; }).pop(); if (last) forward(last); } });
   clearInterval(openChat.t); openChat.t = setInterval(function(){ if (!document.hidden && CUR) readChat(true); }, 5000); }
 function leaveChat(c){ if (!c || !c.keep) return; c.keep = false; delete ZERO[c.k]; api({ op: 'unseen', k: c.k, since: c.since || '' }, 2).then(function(){ loadFeed(false); }); toast('🔔 ' + c.title + ' stays unread'); }
@@ -405,7 +406,7 @@ $('cbody').addEventListener('click', function(e){
   var rt = e.target.closest('[data-retry]'); if (rt) { var pp = PEND[+rt.dataset.retry]; pp.fail = ''; drawMsgs(); doSend(pp); } });
 
 // ---------- writing: text, camera, files, voice note → this chat, another chat, or WhatsApp ----------
-function drawTgt(){ var wa = TGT && TGT.wa; $('tgtb').textContent = TGT ? (wa ? '🟢 WhatsApp — you pick the person  ✕' : chIcon(TGT) + ' ' + TGT.title + ' · ' + wsName(TGT.ws) + '  ✕') : 'this chat ▾';
+function drawTgt(){ var wa = TGT && TGT.wa; $('tgtb').textContent = TGT ? (wa ? '🟢 WhatsApp — you pick the person  ✕' : TGT.em ? '✉️ ' + TGT.to + '  ✕' : chIcon(TGT) + ' ' + TGT.title + ' · ' + wsName(TGT.ws) + '  ✕') : (CUR && CUR.ws === 'e' ? 'reply by email ▾' : 'this chat ▾');
   $('tgt').classList.toggle('wa', !!wa); $('csend').classList.toggle('wa', !!wa); }
 $('tgtb').onclick = function(){ if (TGT) { TGT = null; drawTgt(); return; } pick('Send what you write to…', function(t){ TGT = t; drawTgt(); }); };
 function drawAtt(){ $('atts').innerHTML = ATT.map(function(f, i){ var im = /^image\//.test(f.type) ? '<img src="' + (f._u || (f._u = URL.createObjectURL(f))) + '" alt="">' : (/^audio\//.test(f.type) || /^voice/i.test(f.name) ? '🎤 ' : '📎 ') + esc(f.name); return '<span>' + im + '<button type="button" data-rm="' + i + '" aria-label="Remove">✕</button></span>'; }).join(''); }
@@ -435,8 +436,8 @@ async function doSend(p){ var to = p.to, j;
   try {
     if (p.files.length) { var big = p.files.filter(function(f){ return f.size > 18 * 1024 * 1024; })[0]; if (big) throw new Error(big.name + ' is over 18 MB');
       var fs = []; for (var i = 0; i < p.files.length; i++) fs.push({ name: String(p.files[i].name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80), b64: await b64(p.files[i]) });
-      j = await api({ op: 'up', k: to.k, text: p.text, files: fs, rid: p.rid }, 2); }
-    else j = await api({ op: 'post', k: to.k, text: p.text, rid: p.rid }, 2);
+      j = to.em ? await api({ op: 'mail', to: to.to, subject: to.subject || '', text: p.text, files: fs, rid: p.rid }, 2) : await api({ op: 'up', k: to.k, text: p.text, files: fs, rid: p.rid }, 2); }
+    else j = to.em ? await api({ op: 'mail', to: to.to, subject: to.subject || '', text: p.text, rid: p.rid }, 2) : await api({ op: 'post', k: to.k, text: p.text, rid: p.rid }, 2);
     if (!j.ok) throw new Error(j.error || 'not sent');
     p.done = true; if (to !== CUR) toast('✓ Sent to ' + to.title); readChat(true);
   } catch(e){ p.fail = e.message; if (to === CUR) drawMsgs(); else toast('⚠ Not sent to ' + to.title + ': ' + e.message); } }
@@ -454,7 +455,7 @@ function forward(m, t0){ var from = CUR, go = async function(t){
     catch(e){ sheet('<h3>⚠ Could not get the file</h3><p>' + esc(e.message) + '</p><div class="acts"><button type="button" data-x="1">Close</button></div>'); return; }
     var orig = m.text && !/^(📎|🎤 voice note|📷 photo)$/.test(m.text) ? m.text.replace(/\*/g, '') : '';
     var prev = files.map(function(f){ return /^image\//.test(f.type) ? '<img src="' + URL.createObjectURL(f) + '" alt="">' : '<span>' + (/^audio\//.test(f.type) || /^voice/i.test(f.name) ? '🎤 ' : '📎 ') + esc(f.name) + '</span>'; }).join('');
-    sheet('<h3>' + (t.wa ? '🟢 Send on WhatsApp' : 'Send to ' + esc(chIcon(t) + ' ' + t.title)) + '</h3>' + (orig ? '<div class="q"><b>' + esc(m.who || '') + ':</b> ' + esc(orig.slice(0, 240)) + '</div>' : '') + '<div class="prev">' + prev + '</div>' +
+    sheet('<h3>' + (t.wa ? '🟢 Send on WhatsApp' : t.em ? '✉️ Email to ' + esc(t.to) : 'Send to ' + esc(chIcon(t) + ' ' + t.title)) + '</h3>' + (orig ? '<div class="q"><b>' + esc(m.who || '') + ':</b> ' + esc(orig.slice(0, 240)) + '</div>' : '') + '<div class="prev">' + prev + '</div>' +
       '<textarea id="fwnote" placeholder="' + (files.length ? 'Add a line (optional)' : 'The message — change it if you like') + '">' + (files.length ? '' : esc(orig)) + '</textarea>' +
       '<div class="acts"><button class="p" type="button" id="fwgo" style="' + (t.wa ? 'background:var(--wa)' : '') + '">' + (t.wa ? 'Open WhatsApp' : 'Send') + '</button><button type="button" data-x="1">Cancel</button></div>');
     $('fwgo').onclick = function(){ var text = $('fwnote').value.trim(); if (!text && !files.length) { toast('Nothing to send'); return; }
@@ -471,11 +472,17 @@ function pick(title, cb){
   var draw1 = function(){ var q = ($('pq') ? $('pq').value : '').trim().toLowerCase(), have = {}, L = list().filter(function(c){ have[c.k] = 1; return !CUR || c.k !== CUR.k; });
     (CHANS || []).forEach(function(x){ if (!have[x.k]) L.push({ k: x.k, ws: x.ws, chn: x.chn, title: '#' + x.chn, kind: 'channel', last: '0', un: 0, lines: [] }); });
     L = L.filter(function(c){ return !q || (c.title + ' ' + subOf(c)).toLowerCase().indexOf(q) >= 0; }).slice(0, 80);
-    $('plist').innerHTML = '<button class="row" type="button" data-pk="wa"><span class="ic w">🟢</span><span class="tx"><b>WhatsApp</b><small>Opens WhatsApp — pick Saruj Lace, a customer, anyone</small></span></button>' + L.map(function(c){ PK[c.k] = c; return rowHtml(c, 'data-pk'); }).join(''); };
+    $('plist').innerHTML = '<button class="row" type="button" data-pk="wa"><span class="ic w">🟢</span><span class="tx"><b>WhatsApp</b><small>Opens WhatsApp — pick Saruj Lace, a customer, anyone</small></span></button>' + (EMAIL ? '<button class="row" type="button" data-pk="em"><span class="ic e">✉️</span><span class="tx"><b>Email</b><small>Type an address — sent from ' + esc(EMAIL) + '</small></span></button>' : '') + L.map(function(c){ PK[c.k] = c; return rowHtml(c, 'data-pk'); }).join(''); };
   var PK = {};
   sheet('<h3>' + esc(title) + '</h3><label class="search" style="margin-top:0">🔎<input id="pq" placeholder="Search a chat or channel…" autocomplete="off"></label><div id="plist"></div><div class="acts"><button type="button" data-x="1">Cancel</button></div>');
   draw1(); $('pq').oninput = draw1; if (!CHANS) api({ op: 'chans' }).then(function(j){ if (j.ok) { CHANS = j.chans; if ($('plist')) draw1(); } });
-  $('plist').onclick = function(e){ var r = e.target.closest('[data-pk]'); if (!r) return; var t = r.dataset.pk === 'wa' ? { wa: true, title: 'WhatsApp' } : PK[r.dataset.pk]; if (t && !CH[t.k] && !t.wa) CH[t.k] = t; closeSheet(); if (t) cb(t); }; }
+  $('plist').onclick = function(e){ var r = e.target.closest('[data-pk]'); if (!r) return; if (r.dataset.pk === 'em') { emailPick(cb); return; } var t = r.dataset.pk === 'wa' ? { wa: true, title: 'WhatsApp' } : PK[r.dataset.pk]; if (t && !CH[t.k] && !t.wa) CH[t.k] = t; closeSheet(); if (t) cb(t); }; }
+function emTarget(to, subject){ to = String(to || '').trim(); return { em: true, to: to, subject: String(subject || '').trim(), title: '✉️ ' + to }; }
+function emailPick(cb){ var seen = {}, L = list().filter(function(c){ return c.ws === 'e' && c.chn && !seen[c.chn] && (seen[c.chn] = 1); }).slice(0, 8);
+  sheet('<h3>✉️ Email to…</h3><label class="search" style="margin-top:0">@<input id="emto" placeholder="name@example.com" autocomplete="off" inputmode="email"></label><label class="search">📝<input id="emsub" placeholder="Subject (optional)" autocomplete="off"></label>' +
+    (L.length ? '<div class="chips">' + L.map(function(c){ return '<button type="button" data-ad="' + esc(c.chn) + '">' + esc(c.chn) + '</button>'; }).join('') + '</div>' : '') + '<div class="acts"><button class="p" type="button" id="emgo">Continue</button><button type="button" data-x="1">Cancel</button></div>');
+  $('sheetb').onclick = function(e){ var b = e.target.closest('[data-ad]'); if (b) $('emto').value = b.dataset.ad; };
+  $('emgo').onclick = function(){ var to = $('emto').value.trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) { toast('⚠ Type a proper email address'); return; } var t = emTarget(to, $('emsub').value); $('sheetb').onclick = null; closeSheet(); cb(t); }; }
 
 // ---------- setup: paste the Assistant link; first time also choose a password + paste the two Slack bot tokens ----------
 function setup(){ $('app').hidden = true; $('chat').hidden = true; var el = $('setup'); el.hidden = false;
@@ -508,11 +515,11 @@ async function ask(q){ q = String(q || '').trim(); if (!q) return; var l = q.toL
   if (/^(what'?s new|catch ?up|new\??|kya naya hai)$/.test(l)) { var d = digest(20); aOut(d ? '<b>New right now</b>\n' + esc(d) + '<div class="acts"><button class="p" type="button" id="aCu">▶ Catch up</button></div>' : '✨ Nothing new.'); if ($('aCu')) $('aCu').onclick = function(){ show('catch'); cuStart(); }; return; }
   if (/^mark all (done|read)$/.test(l)) { list().filter(function(c){ return c.un; }).forEach(function(c){ markDone(c.k); }); aOut('✓ All marked done.'); return; }
   if ((m = l.match(/^(?:open|show|go to)\s+(.+)$/))) { var c1 = findChat(m[1]); if (!c1) { aOut('I could not find a chat called “' + esc(m[1]) + '”.', 1); return; } openChat(c1.k); return; }
-  if ((m = q.match(/^(?:send|tell|post|write)\s+(.+?)\s+(?:to|in|into|on)\s+(#?\S.*)$/i))) { var c2 = findChat(m[2]); if (!c2) { aOut('I could not find a chat called “' + esc(m[2]) + '”. Say the name as it is in the list (e.g. #cash, 48188, NASIR).', 1); return; }
-    aOut('Send to <b>' + esc(chIcon(c2) + ' ' + c2.title) + '</b>:\n“' + esc(m[1]) + '”<div class="acts"><button class="p" type="button" id="aYes">Send</button><button type="button" id="aNo">Cancel</button></div>');
+  if ((m = q.match(/^(?:send|tell|post|write)\s+(.+?)\s+(?:to|in|into|on)\s+(#?\S.*)$/i))) { var c2 = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m[2].trim()) ? emTarget(m[2]) : findChat(m[2]); if (!c2) { aOut('I could not find a chat called “' + esc(m[2]) + '”. Say the name as it is in the list (e.g. #cash, 48188, NASIR).', 1); return; }
+    aOut('Send to <b>' + esc(c2.em ? c2.title : chIcon(c2) + ' ' + c2.title) + '</b>:\n“' + esc(m[1]) + '”<div class="acts"><button class="p" type="button" id="aYes">Send</button><button type="button" id="aNo">Cancel</button></div>');
     $('aYes').onclick = function(){ $('aYes').disabled = true; doSend({ to: c2, text: m[1], files: [], rid: rid() }); aOut('✓ Sent to ' + esc(c2.title)); }; $('aNo').onclick = function(){ $('aout').firstChild.remove(); }; return; }
   if ((m = q.match(/^(?:forward|fwd|share)\s+(?:the\s+)?(?:last|latest)\s+(photo|picture|voice|file|message|line)\s+(?:of|from|in)\s+(.+?)\s+(?:to|on)\s+(.+)$/i))) { var c3 = findChat(m[2]); if (!c3) { aOut('I could not find “' + esc(m[2]) + '”.', 1); return; }
-    var toWa = /whats?app|wa/i.test(m[3]), c4 = toWa ? { wa: true, title: 'WhatsApp' } : findChat(m[3]); if (!c4) { aOut('I could not find “' + esc(m[3]) + '”.', 1); return; }
+    var toWa = /^(whats?app|wa)$/i.test(m[3].trim()), c4 = toWa ? { wa: true, title: 'WhatsApp' } : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m[3].trim()) ? emTarget(m[3]) : findChat(m[3]); if (!c4) { aOut('I could not find “' + esc(m[3]) + '”.', 1); return; }
     var j = await api({ op: 'thread', k: c3.k, look: 0 }, 2); if (!j.ok) { aOut(esc(j.error), 1); return; } var want = /photo|picture/i.test(m[1]) ? 'img' : /voice/i.test(m[1]) ? 'audio' : /file/i.test(m[1]) ? 'file' : '';
     var pickM = (j.msgs || []).slice().reverse().filter(function(x){ return !x.sys && (!want || (x.files || []).some(function(f){ return fileKind(f) === want; })); })[0]; if (!pickM) { aOut('No ' + esc(m[1]) + ' found in ' + esc(c3.title) + '.', 1); return; }
     CUR = c3; forward(pickM, c4); return; }
