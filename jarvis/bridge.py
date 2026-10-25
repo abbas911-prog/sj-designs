@@ -26,14 +26,24 @@ SEEN = set()
 LOCK = threading.Lock()
 STATE = {'started': False, 'tunnel': ''}
 
+def claude_exe():
+    c = shutil.which('claude')
+    if c: return c
+    for cand in [os.path.join(os.path.expanduser('~'), '.local', 'bin', 'claude.exe'), os.path.join(os.path.expanduser('~'), '.local', 'bin', 'claude'),
+                 os.path.join(os.environ.get('APPDATA', ''), 'npm', 'claude.cmd'), '/usr/local/bin/claude']:
+        if cand and os.path.exists(cand): return cand
+    return 'claude'
+
 def jarvis(text):
     """One turn with Jarvis. --continue keeps the conversation (memory of the last turns) between calls."""
-    cmd = ['claude', '-p', PHONE + text, '--output-format', 'text']
+    cmd = [claude_exe(), '-p', PHONE + text, '--output-format', 'text']
     if STATE['started']: cmd.append('--continue')
     try:
-        r = subprocess.run(cmd, cwd=AGENT, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=240, shell=(os.name == 'nt'))
+        r = subprocess.run(cmd, cwd=AGENT, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=240)
     except subprocess.TimeoutExpired:
         return 'Jarvis took too long on that one. Ask again, or ask something smaller.'
+    except FileNotFoundError:
+        return 'The bridge cannot find the claude program on this PC (looked for %s). Start phone.bat from my-agent, or add %s to PATH.' % (claude_exe(), os.path.join(os.path.expanduser('~'), '.local', 'bin'))
     STATE['started'] = True
     out = (r.stdout or '').strip()
     if not out: out = 'Jarvis gave no answer. ' + (r.stderr or '').strip()[-300:]
