@@ -3,7 +3,7 @@
 // the Assistant app's setup screen; they are kept in THIS script's properties only (never in the repo, never in a chat).
 // Every chat the bots can see = one channel chat (its top-level posts) + one chat per thread (an order memo, a pick list, a card…).
 // Lines written from any SJ app are "*Name:* text" posted by a bot — shown as Name. Read marks ("seen") are the Assistant's own.
-var AS_VER = '2026-10-25a';
+var AS_VER = '2026-10-25b';
 var WS = ['s', 'f'];                                               // s = SJTC workspace, f = factory workspace; e = Email (the Gmail this script runs as — see below)
 // EMAIL (25 Oct 2026): a third source. The script reads the Gmail inbox of the Google account it is deployed under (abbassayed033@gmail.com);
 // the other addresses auto-forward into it. No tokens: Google asks Abbas once to allow Gmail when the new version is deployed.
@@ -49,10 +49,12 @@ function setup(s, P) {
 
 function run(req, who, P) {
   var op = req.op;
-  if (op === 'hello') return { ok: true, ver: AS_VER, teams: { s: P.getProperty('AS_TEAM_s') || '', f: P.getProperty('AS_TEAM_f') || '' }, email: gmailOn() ? myMail() : '', ai: !!P.getProperty('AS_AI'), brain: P.getProperty('AS_BRAIN') || BRAIN_DEFAULT, notes: P.getProperty('AS_NOTES') || '' };
+  if (op === 'hello') return { ok: true, ver: AS_VER, teams: { s: P.getProperty('AS_TEAM_s') || '', f: P.getProperty('AS_TEAM_f') || '' }, email: gmailOn() ? myMail() : '', ai: !!P.getProperty('AS_AI'), trello: !!P.getProperty('AS_TRELLO_TOKEN'), brain: P.getProperty('AS_BRAIN') || BRAIN_DEFAULT, notes: P.getProperty('AS_NOTES') || '' };
   if (op === 'mail') return mailNew(req, who, P);                  // a new email to an address (text + files), e.g. a Slack photo sent on by email
   if (op === 'aikey') { var kk = String(req.key || '').trim(); if (!kk) { P.deleteProperty('AS_AI'); return { ok: true, ai: false }; } if (!/^sk-ant-/.test(kk)) return { ok: false, error: 'that does not look like an Anthropic key (sk-ant-…)' };
     var tst = aiCall(kk, P, [{ role: 'user', content: 'Say OK' }], 'Reply with the single word OK.', [], 20); if (tst.error) return { ok: false, error: tst.error }; P.setProperty('AS_AI', kk); return { ok: true, ai: true }; }
+  if (op === 'trello') { var tk = String(req.key || '').trim(), tt = String(req.token || '').trim(); if (!tk || !tt) { P.deleteProperty('AS_TRELLO_KEY'); P.deleteProperty('AS_TRELLO_TOKEN'); return { ok: true, trello: false }; }
+    var tr = UrlFetchApp.fetch('https://api.trello.com/1/members/me?fields=username&key=' + tk + '&token=' + tt, { muteHttpExceptions: true }); if (tr.getResponseCode() !== 200) return { ok: false, error: 'Trello refused that key/token' }; P.setProperty('AS_TRELLO_KEY', tk); P.setProperty('AS_TRELLO_TOKEN', tt); C_().remove('TRELLO_CARDS'); return { ok: true, trello: true }; }
   if (op === 'brain') { P.setProperty('AS_BRAIN', String(req.text || '').slice(0, 8000)); return { ok: true }; }
   if (op === 'notes') { if (req.text !== undefined) P.setProperty('AS_NOTES', String(req.text || '').slice(0, 8000)); return { ok: true, notes: P.getProperty('AS_NOTES') || '' }; }
   if (op === 'ask') return askAI(req, who, P);
@@ -175,7 +177,8 @@ var BRAIN_DEFAULT = [
   'People often write Urdu, Hindi, Arabic or Bengali in Latin letters. Always answer Abbas in short plain English; translate any foreign line you quote.',
   'Style: brief, direct, no flattery. When reading out what is new, go chat by chat: who said what, newest first, and say which ones need his reply.',
   'Never claim something was sent. You only QUEUE sends (send_message, send_email, forward_last); Abbas confirms on the phone. Say "ready to send — say yes".',
-  'Money: AED unless said otherwise. Dates: Dubai time.'
+  'Money: AED unless said otherwise. Dates: Dubai time.',
+  'Lookups: customer balances and saved bills = tool customer; vendors / cash accounts = tool ledger; invoices posted to Slack #sales-new or receipts = tool find_messages (they are shown on the phone with photos); card stage = tool trello_card; his day plan = TIMO below, add with timo_add. Use a lookup before answering a money or status question; never guess figures.'
 ].join('\n');
 var AI_TOOLS = [
   { name: 'read_chat', description: 'Read the last messages of one chat (Slack channel, card thread, order memo, email thread) by its name as it appears in the chat list. Use it before answering about what someone said, a status, a balance written in a chat.', input_schema: { type: 'object', properties: { chat: { type: 'string', description: 'the chat name, e.g. "SJ-48188", "#cash", "NASIR (LIBYA)", "Lace shipment"' }, n: { type: 'integer', description: 'how many latest messages, default 25' } }, required: ['chat'] } },
@@ -185,8 +188,64 @@ var AI_TOOLS = [
   { name: 'forward_last', description: 'QUEUE forwarding the latest photo / voice / file / message of one chat to another chat, to WhatsApp, or to an email address.', input_schema: { type: 'object', properties: { from_chat: { type: 'string' }, kind: { type: 'string', enum: ['photo', 'voice', 'file', 'message'] }, to: { type: 'string', description: 'a chat name, "whatsapp", or an email address' } }, required: ['from_chat', 'kind', 'to'] } },
   { name: 'open_chat', description: 'Open a chat on the phone screen.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } },
   { name: 'mark_done', description: 'Mark one chat (or all, chat = "all") as read in the Catch-up.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } },
-  { name: 'voice_note', description: 'QUEUE a voice note: the phone will record Abbas speaking and send the recording to that chat after his yes.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } }
+  { name: 'voice_note', description: 'QUEUE a voice note: the phone will record Abbas speaking and send the recording to that chat after his yes.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } },
+  { name: 'find_messages', description: 'Search one chat/channel for messages containing a word (a customer name, a design number, "receipt"…) and SHOW them on the phone with their photos. Use for "show me the last invoices of X" (channel #sales-new), receipts, bills.', input_schema: { type: 'object', properties: { chat: { type: 'string', description: 'channel or chat name, e.g. "#sales-new", "#sales", "#cash"' }, text: { type: 'string', description: 'what to look for (case does not matter)' }, n: { type: 'integer', description: 'how many latest matches, default 3' } }, required: ['chat', 'text'] } },
+  { name: 'ledger', description: 'The SJ VENDOR LEDGER sheet: one tab per vendor / person / account (NADEEM, TUSHAR, RUSA, MATIULLAH, MANJAY, MAIN CASH, BUSINESS ACCOUNT…). Returns the current balance and the latest lines (date, description, amount). Use for "balance of…", "last payment to…", "what did we pay…".', input_schema: { type: 'object', properties: { name: { type: 'string' }, n: { type: 'integer', description: 'latest lines, default 8' } }, required: ['name'] } },
+  { name: 'customer', description: 'A CUSTOMER of SJ Stock (the order memo app): opening balance, invoices and receipts, current balance, and the saved bills (INV-…, RV-…) with totals and status. Use for customer balances and "last invoices of <customer>".', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
+  { name: 'trello_card', description: 'Where a design card is on the AL MUTAGADED Trello board: its list (stage), labels, last activity. Needs the Trello key/token in Settings.', input_schema: { type: 'object', properties: { design: { type: 'string', description: 'e.g. 48188 or SJ-48188' } }, required: ['design'] } },
+  { name: 'timo_add', description: 'QUEUE adding a task / reminder to Timo (his day planner) for Abbas to confirm: text like "pay Nadeem 1000 #T1 today" — a #tag puts it inside that block, "tomorrow"/"mon" picks the day, "15 min" the length.', input_schema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } }
 ];
+var LEDGER_ID = '1SdVRWsmmZSdBMXFCfBlxRNQftT59mIAzzPj-ohOQr5c', CUST_ID = '1TJfwlodlnFslGDMzXZMtNnkn4ZoQOY1X4x2SOdaY3GI', ALM_BOARD = '6527c52485d9627f63157296';
+function sheetsOn() { return typeof SpreadsheetApp !== 'undefined' && !!SpreadsheetApp; }
+function fuzzy(list, q, get) { q = String(q || '').trim().toUpperCase(); if (!q) return null; var ex = list.filter(function (x) { return get(x).toUpperCase() === q; })[0]; if (ex) return ex;
+  var st = list.filter(function (x) { return get(x).toUpperCase().indexOf(q) === 0; })[0]; if (st) return st; var qs = q.split(/\s+/)[0];
+  return list.filter(function (x) { return get(x).toUpperCase().indexOf(q) >= 0; })[0] || list.filter(function (x) { return get(x).toUpperCase().indexOf(qs) >= 0 || qs.indexOf(get(x).toUpperCase().split(/\s+/)[0]) === 0; })[0] || null; }
+function ledgerTool(name, n) {
+  if (!sheetsOn()) return 'Sheets not allowed for this script yet';
+  var ss; try { ss = SpreadsheetApp.openById(P_().getProperty('AS_LEDGER') || LEDGER_ID); } catch (e) { return 'could not open the vendor ledger: ' + e.message; }
+  var tabs = ss.getSheets(), sh = fuzzy(tabs, name, function (t) { return t.getName(); }); if (!sh) return 'No ledger tab like "' + name + '". Tabs: ' + tabs.map(function (t) { return t.getName(); }).join(', ');
+  var V = sh.getDataRange().getDisplayValues(), rows = V.filter(function (r) { return r[0] && /\d/.test(r[0]) && (r[1] || r[2] || r[3]); }), last = rows[rows.length - 1] || [];
+  var bal = ''; for (var i = rows.length - 1; i >= 0 && !bal; i--) bal = rows[i][3];
+  return 'LEDGER ' + sh.getName() + ' — balance now: ' + (bal || '?') + ' AED (last line ' + (last[0] || '-') + ')\n' + rows.slice(-(n || 8)).map(function (r) { return r[0] + ' | ' + r[1] + ' | ' + r[2] + ' | bal ' + r[3]; }).join('\n');
+}
+function customerTool(name) {
+  if (!sheetsOn()) return 'Sheets not allowed for this script yet';
+  var ss; try { ss = SpreadsheetApp.openById(P_().getProperty('AS_CUST') || CUST_ID); } catch (e) { return 'could not open the customer balances sheet: ' + e.message; }
+  var C = ss.getSheetByName('CUSTOMERS'), E = ss.getSheetByName('ENTRIES'), B = ss.getSheetByName('BILLS'); if (!C || !E) return 'no CUSTOMERS / ENTRIES tabs';
+  var cs = C.getDataRange().getDisplayValues().slice(1).filter(function (r) { return r[0] && !r[6]; }), c = fuzzy(cs, name, function (r) { return r[1] || r[0]; });
+  var bills = B ? B.getDataRange().getDisplayValues().slice(1).filter(function (r) { return r[0] && r[3] !== 'deleted'; }) : [];
+  var bl = c ? bills.filter(function (r) { return String(r[2] || '').toUpperCase() === String(c[0]).toUpperCase(); }) : bills.filter(function (r) { return String(r[2] || '').toUpperCase().indexOf(String(name).toUpperCase()) >= 0; });
+  if (!c && !bl.length) return 'No customer like "' + name + '". Known: ' + cs.map(function (r) { return r[1]; }).slice(0, 60).join(', ');
+  var o = '';
+  if (c) { var es = E.getDataRange().getDisplayValues().slice(1).filter(function (r) { return r[1] === c[0] && !r[12]; }), num = function (v) { var x = parseFloat(String(v || '').replace(/[,\s]/g, '')); return isFinite(x) ? x : 0; };
+    var bal = es.reduce(function (a, r) { return a + num(r[6]) - num(r[7]) + num(r[8]); }, num(c[2]));
+    o += 'CUSTOMER ' + c[1] + ' — balance now ' + Math.round(bal) + ' AED (opening ' + c[2] + ' on ' + c[3] + ', ' + es.length + ' entries)\n' + es.slice(-8).map(function (r) { return r[5] + ' | ' + r[3] + ' ' + r[4] + ' | sale ' + r[6] + ' | received ' + r[7] + (r[8] ? ' | adjust ' + r[8] : ''); }).join('\n'); }
+  if (bl.length) { bl.sort(function (a, b) { return a[6] < b[6] ? 1 : -1; }); o += (o ? '\n' : '') + 'SAVED BILLS (newest first):\n' + bl.slice(0, 6).map(function (r) { return r[0] + ' | ' + r[1] + ' | ' + r[3] + ' | ' + r[4] + ' AED | ' + r[5] + ' | by ' + r[7]; }).join('\n'); }
+  return o;
+}
+function trelloTool(design) {
+  var P = P_(), key = P.getProperty('AS_TRELLO_KEY'), tok = P.getProperty('AS_TRELLO_TOKEN'); if (!key || !tok) return 'No Trello key/token in Settings yet';
+  var num = String(design || '').replace(/[^0-9A-Z-]/gi, '').replace(/^SJ-?/i, ''); if (!num) return 'which design?';
+  var c = C_(), h = c.get('TRELLO_CARDS'), cards = h ? JSON.parse(h) : null, auth = 'key=' + key + '&token=' + tok, board = P.getProperty('AS_BOARD') || ALM_BOARD;
+  if (!cards) { try { var lists = JSON.parse(UrlFetchApp.fetch('https://api.trello.com/1/boards/' + board + '/lists?fields=name&' + auth, { muteHttpExceptions: true }).getContentText()), LN = {}; lists.forEach(function (l) { LN[l.id] = l.name; });
+      var cs = JSON.parse(UrlFetchApp.fetch('https://api.trello.com/1/boards/' + board + '/cards?fields=name,idList,labels,dateLastActivity,shortUrl&limit=1000&' + auth, { muteHttpExceptions: true }).getContentText());
+      if (!Array.isArray(cs)) return 'Trello said: ' + JSON.stringify(cs).slice(0, 120);
+      cards = cs.map(function (x) { return { n: x.name, l: LN[x.idList] || x.idList, lb: (x.labels || []).map(function (y) { return y.name; }).join(', '), a: x.dateLastActivity, u: x.shortUrl }; }); try { c.put('TRELLO_CARDS', JSON.stringify(cards), 120); } catch (e) {} }
+    catch (e) { return 'Trello: ' + e.message; } }
+  var hit = cards.filter(function (x) { return new RegExp('(^|[^0-9])' + num + '([^0-9]|$)').test(x.n); });
+  if (!hit.length) return 'No card with ' + num + ' on the board';
+  return hit.slice(0, 4).map(function (x) { return 'CARD "' + x.n + '" — list: ' + x.l + (x.lb ? ' — labels: ' + x.lb : '') + ' — last activity ' + String(x.a || '').slice(0, 10) + ' — ' + x.u; }).join('\n');
+}
+function findMsgs(L, chat, text, n, who, P) {
+  var c = findChatSrv(L, chat); if (!c) return { res: 'No chat called "' + chat + '"' };
+  var k = parseKey(c.k), q = String(text || '').toLowerCase().trim(), msgs = [];
+  if (k.ws === 'e') { var r = emailOp('thread', k, { k: c.k }, who, P); msgs = r.ok ? r.msgs : []; }
+  else { var tok = P.getProperty('AS_TOK_' + k.ws), users = names(k.ws, tok), raw = k.ts ? replies(tok, k.ch, k.ts, '', false) : chHist(tok, k.ch, false); msgs = raw.map(function (m) { return msgOut(m, users, k.ts); }); }
+  var hits = msgs.filter(function (m) { return !m.sys && (String(m.text || '').toLowerCase().indexOf(q) >= 0 || (m.files || []).some(function (f) { return String(f.name || '').toLowerCase().indexOf(q) >= 0; })); });
+  hits.sort(function (a, b) { return +b.ts - +a.ts; }); hits = hits.slice(0, n || 3);
+  var shown = hits.map(function (m) { return { k: c.k, chat: c.title, ts: m.ts, who: m.who, text: String(m.text || '').slice(0, 1500), files: m.files || [] }; });
+  return { res: hits.length ? 'Found ' + hits.length + ' in ' + c.title + ' (shown on the phone):\n' + hits.map(function (m) { return Utilities.formatDate(new Date(+m.ts * 1000), 'Asia/Dubai', 'd MMM') + ' ' + m.who + ': ' + String(m.text || '').replace(/\s+/g, ' ').slice(0, 300) + ((m.files || []).length ? ' [' + fileWord(m.files) + ']' : ''); }).join('\n') : 'Nothing with "' + text + '" in the last ' + msgs.length + ' messages of ' + c.title, shown: shown };
+}
 function aiCall(key, P, messages, system, tools, maxTok) {
   var body = { model: P.getProperty('AS_MODEL') || AI_MODEL, max_tokens: maxTok || 900, system: system, messages: messages }; if (tools && tools.length) body.tools = tools;
   var r, j; try { r = UrlFetchApp.fetch(AI_URL, { method: 'post', contentType: 'application/json', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' }, payload: JSON.stringify(body), muteHttpExceptions: true }); j = JSON.parse(r.getContentText()); }
@@ -219,7 +278,7 @@ function askAI(req, who, P) {
     (req.mode === 'drive' ? '\n\nHe is DRIVING and listening by voice: keep every answer under 60 words unless he asks for more, no lists, no symbols.' : '');
   var msgs = []; (Array.isArray(req.hist) ? req.hist.slice(-8) : []).forEach(function (h) { if (h && (h.role === 'user' || h.role === 'assistant') && h.text) msgs.push({ role: h.role, content: String(h.text).slice(0, 2000) }); });
   msgs.push({ role: 'user', content: q });
-  var actions = [], text = '', notes = P.getProperty('AS_NOTES') || '';
+  var actions = [], text = '', notes = P.getProperty('AS_NOTES') || '', shown = [];
   for (var round = 0; round < AI_ROUNDS; round++) {
     var j = aiCall(key, P, msgs, system, AI_TOOLS, 900); if (j.error) return { ok: false, error: j.error };
     var parts = j.content || [], uses = parts.filter(function (p) { return p.type === 'tool_use'; }); parts.forEach(function (p) { if (p.type === 'text' && p.text) text += (text ? '\n' : '') + p.text; });
@@ -227,6 +286,11 @@ function askAI(req, who, P) {
     msgs.push({ role: 'assistant', content: parts }); var results = [];
     uses.forEach(function (u) { var inp = u.input || {}, res = '';
       if (u.name === 'read_chat') { var c = findChatSrv(idx.list, inp.chat); res = c ? 'CHAT ' + c.title + ':\n' + readChatSrv(c, +inp.n || 25, who, P) : 'No chat called "' + inp.chat + '". Names available are in the CHATS list.'; }
+      else if (u.name === 'find_messages') { var fm = findMsgs(idx.list, inp.chat, inp.text, +inp.n || 3, who, P); res = fm.res; (fm.shown || []).forEach(function (x) { shown.push(x); }); }
+      else if (u.name === 'ledger') { try { res = ledgerTool(inp.name, +inp.n || 8); } catch (e) { res = 'ledger: ' + e.message; } }
+      else if (u.name === 'customer') { try { res = customerTool(inp.name); } catch (e) { res = 'customer: ' + e.message; } }
+      else if (u.name === 'trello_card') { try { res = trelloTool(inp.design); } catch (e) { res = 'trello: ' + e.message; } }
+      else if (u.name === 'timo_add') { actions.push({ type: 'timo_add', text: String(inp.text || '').slice(0, 200) }); res = 'queued — Abbas will confirm on the phone'; }
       else if (u.name === 'remember') { notes = (notes + '\n' + Utilities.formatDate(new Date(), 'Asia/Dubai', 'd MMM') + ': ' + String(inp.text || '').slice(0, 300)).trim().slice(-8000); P.setProperty('AS_NOTES', notes); res = 'noted'; }
       else if (/^(send_message|send_email|forward_last|open_chat|mark_done|voice_note)$/.test(u.name)) {
         var a = { type: u.name, chat: inp.chat || inp.from_chat || '', text: inp.text || '', to: inp.to || '', subject: inp.subject || '', kind: inp.kind || '' };
@@ -237,7 +301,7 @@ function askAI(req, who, P) {
     msgs.push({ role: 'user', content: results });
     if (j.stop_reason === 'end_turn') break;
   }
-  return { ok: true, text: text.trim() || (actions.length ? 'Ready.' : '…'), actions: actions, notes: notes };
+  return { ok: true, text: text.trim() || (actions.length ? 'Ready.' : '…'), actions: actions, notes: notes, shown: shown.slice(0, 8) };
 }
 function emType(n) { n = String(n || '').toLowerCase(); return /\.(jpe?g)$/.test(n) ? 'image/jpeg' : /\.png$/.test(n) ? 'image/png' : /\.webp$/.test(n) ? 'image/webp' : /\.pdf$/.test(n) ? 'application/pdf' : /\.(m4a|mp4)$/.test(n) ? 'audio/mp4' : /\.webm$/.test(n) ? 'audio/webm' : /\.mp4$/.test(n) ? 'video/mp4' : 'application/octet-stream'; }
 function mailNew(req, who, P) {                                   // op mail: { to, subject, text, files[] }

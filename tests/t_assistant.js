@@ -10,10 +10,13 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 
 // ---- two Slack workspaces ----
 const S = F.makeWorld(), FW = F.makeWorld();
-S.slack.ch = {}; ['C0CUST0001:customer', 'C0GODN0001:godown'].forEach(x => { const [id, name] = x.split(':'); S.slack.ch[id] = { id, name, msgs: [], member: true, priv: true }; });
+S.slack.ch = {}; ['C0CUST0001:customer', 'C0GODN0001:godown', 'C0SALE0001:sales-new'].forEach(x => { const [id, name] = x.split(':'); S.slack.ch[id] = { id, name, msgs: [], member: true, priv: true }; });
 Object.values(FW.slack.ch).forEach(c => { c.member = true; });
 const memo = F.postSlack(S, 'C0CUST0001', { text: '*ORDER MEMO* — NASIR (LIBYA)\n24 Oct 2026 · 6 designs · 215 pcs', bot_id: 'B9' });
 F.postSlack(S, 'C0CUST0001', { text: '*Muhammad:* Kal tak bhej denge, Insha Allah', bot_id: 'B9', thread_ts: memo.ts });
+S.slack.files.FINV1 = { id: 'FINV1', name: 'INV-0007.jpg', mimetype: 'image/jpeg', size: PNG.length, bytes: PNG, url_private: 'https://files.slack.com/dl/FINV1', url_private_download: 'https://files.slack.com/dl/FINV1' };
+F.postSlack(S, 'C0SALE0001', { text: 'INVOICE INV-0003 — MATIULLAH NAIF — 1,850 AED', user: 'U1' }); F.postSlack(S, 'C0SALE0001', { text: 'INVOICE INV-0005 — RUSA — 900 AED', user: 'U1' });
+F.postSlack(S, 'C0SALE0001', { text: 'INVOICE INV-0007 — MATIULLAH NAIF — 4,200 AED', user: 'U1', files: [S.slack.files.FINV1] });
 const pick = F.postSlack(S, 'C0GODN0001', { text: '*GODOWN PICK LIST* — NASIR (LIBYA)\nPick: SJ-20713', bot_id: 'B9' });
 F.postSlack(S, 'C0GODN0001', { text: 'Picking started', user: 'U1', thread_ts: pick.ts });
 FW.slack.files.FPH1 = { id: 'FPH1', name: 'lace.jpg', mimetype: 'image/jpeg', size: PNG.length, bytes: PNG, url_private: 'https://files.slack.com/dl/FPH1', url_private_download: 'https://files.slack.com/dl/FPH1' };
@@ -39,14 +42,30 @@ const fetchSync = (url, o) => { o = o || {}; const auth = String((o.headers || {
     if (/^Say OK/.test(q)) content = [{ type: 'text', text: 'OK' }];
     else if (/status of 48188/i.test(q)) content = [{ type: 'tool_use', id: 'tu1', name: 'read_chat', input: { chat: '48188' } }];
     else if (Array.isArray(last.content) && last.content[0].type === 'tool_result' && /Lace short/.test(last.content[0].content)) content = [{ type: 'text', text: 'SJ-48188: Rifat says lace is short, 20 metres more needed; cutting with Ibrahim.' }, { type: 'tool_use', id: 'tu2', name: 'open_chat', input: { chat: '48188' } }];
-    else if (Array.isArray(last.content) && last.content[0].type === 'tool_result') content = [{ type: 'text', text: 'Opened.' }];
     else if (/tell rifat/i.test(q)) content = [{ type: 'text', text: 'Ready to send to SJ-48188 — say yes.' }, { type: 'tool_use', id: 'tu3', name: 'send_message', input: { chat: 'SJ-48188', text: 'Rifat, 20 m lace ordered, aa raha hai.' } }];
+    else if (/invoices of matiullah/i.test(q)) content = [{ type: 'tool_use', id: 'tu5', name: 'find_messages', input: { chat: '#sales-new', text: 'matiullah', n: 2 } }, { type: 'tool_use', id: 'tu6', name: 'customer', input: { name: 'Matiullah' } }];
+    else if (Array.isArray(last.content) && last.content.some(c => /Found 2 in #sales-new/.test(c.content))) content = [{ type: 'text', text: 'Two invoices of Matiullah: INV-0007 (4,200) and INV-0003 (1,850). Balance 12,650 AED.' }];
+    else if (/balance of nadeem/i.test(q)) content = [{ type: 'tool_use', id: 'tu7', name: 'ledger', input: { name: 'nadeem' } }];
+    else if (Array.isArray(last.content) && last.content.some(c => /LEDGER NADEEM/.test(c.content))) content = [{ type: 'text', text: 'Nadeem: balance 1,100 AED; last line 14 Sep purchase bill 1,100.' }];
+    else if (/where is 48188/i.test(q)) content = [{ type: 'tool_use', id: 'tu8', name: 'trello_card', input: { design: '48188' } }];
+    else if (Array.isArray(last.content) && last.content.some(c => /CARD "SJ-48188/.test(c.content))) content = [{ type: 'text', text: 'SJ-48188 is in IRON CHECKING.' }];
+    else if (/remind me/i.test(q)) content = [{ type: 'text', text: 'Ready to add to Timo — say yes.' }, { type: 'tool_use', id: 'tu9', name: 'timo_add', input: { text: 'pay Nadeem 1000 today' } }];
     else if (/remember/i.test(q)) content = [{ type: 'tool_use', id: 'tu4', name: 'remember', input: { text: 'keep 48188 at 100' } }, { type: 'text', text: 'Noted.' }];
+    else if (Array.isArray(last.content) && last.content[0].type === 'tool_result') content = [{ type: 'text', text: 'Opened.' }];
     else content = [{ type: 'text', text: 'Nothing new.' }];
     return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ content, stop_reason: content.some(c => c.type === 'tool_use') ? 'tool_use' : 'end_turn' }) }; }
+  if (/api\.trello\.com/.test(url)) { if (!/key=tk1&token=tt1/.test(url)) return { getResponseCode: () => 401, getContentText: () => 'invalid key' }; if (/members\/me/.test(url)) return { getResponseCode: () => 200, getContentText: () => '{"username":"abbas"}' };
+    if (/\/lists/.test(url)) return { getResponseCode: () => 200, getContentText: () => JSON.stringify([{ id: 'L1', name: 'IRON CHECKING' }, { id: 'L2', name: 'READY' }]) };
+    return { getResponseCode: () => 200, getContentText: () => JSON.stringify([{ name: 'SJ-48188 (172) pcs', idList: 'L1', labels: [{ name: 'COUNT' }], dateLastActivity: '2026-10-24T10:00:00Z', shortUrl: 'https://trello.com/c/x' }, { name: 'SJ-20713', idList: 'L2', labels: [], dateLastActivity: '', shortUrl: '' }]) }; }
   if (/slack\.com\/api\//.test(url)) SLACKCALLS.push(url.split('/api/')[1].split('?')[0]);
   const r = F.handle(W, o.method || 'get', url, body, o.headers || {}); return { getResponseCode: () => r.status, getContentText: () => r.body.toString(), getBlob: () => blob(r.body, r.type) }; };
-const ctx = vm.createContext({ PropertiesService: { getScriptProperties: () => props }, CacheService: { getScriptCache: () => cache }, UrlFetchApp: { fetch: fetchSync },
+const SHEETS = { '1SdVRWsmmZSdBMXFCfBlxRNQftT59mIAzzPj-ohOQr5c': { MASTER: [['x']], NADEEM: [['NADEEM'], ['Date', 'Description', 'Amount (AED)', 'Balance (AED)'], ['17/07/26', 'Opening Balance', '', '-2915'], ['14/09/26', 'Purchase bill - Fuzhong', '1100', '1100']] },
+  '1TJfwlodlnFslGDMzXZMtNnkn4ZoQOY1X4x2SOdaY3GI': { CUSTOMERS: [['KEY', 'CUSTOMER', 'OPENING', 'OPENING DATE', 'ADDED', 'BY'], ['MATIULLAH NAIF', 'Matiullah naif', '10000', '1/10/26', '', 'Abbas']],
+    ENTRIES: [['ID', 'KEY', 'CUSTOMER', 'TYPE', 'REF', 'DATE', 'SALE', 'RECEIVED', 'ADJUST', 'BY', 'DEVICE', 'SAVED', 'VOID'], ['inv:INV-0003:p1', 'MATIULLAH NAIF', 'Matiullah naif', 'inv', 'INV-0003', '12/10/26', '1850', '', '', 'Abbas', 'p1', 'x', ''], ['inv:INV-0007:p1', 'MATIULLAH NAIF', 'Matiullah naif', 'inv', 'INV-0007', '18/10/26', '4200', '', '', 'Abbas', 'p1', 'x', ''], ['rv:RV-0002:p1', 'MATIULLAH NAIF', 'Matiullah naif', 'rv', 'RV-0002', '20/10/26', '', '3400', '', 'Abbas', 'p1', 'x', '']],
+    BILLS: [['REF', 'TYPE', 'CUSTOMER', 'STATUS', 'TOTAL', 'DATE', 'UPDATED', 'BY', 'DEVICE'], ['INV-0007', 'invoice', 'MATIULLAH NAIF', 'included', '4200', '18/10/26', '2026-10-18', 'Abbas', 'p1'], ['INV-0003', 'invoice', 'MATIULLAH NAIF', 'included', '1850', '12/10/26', '2026-10-12', 'Abbas', 'p1']] } };
+const fakeSheet = (name, rows) => ({ getName: () => name, getDataRange: () => ({ getDisplayValues: () => rows.map(r => r.concat(Array(13).fill('')).slice(0, 13)) }) });
+const SpreadsheetApp = { openById: id => { const b = SHEETS[id]; if (!b) throw new Error('no such sheet'); return { getSheets: () => Object.keys(b).map(n => fakeSheet(n, b[n])), getSheetByName: n => (b[n] ? fakeSheet(n, b[n]) : null) }; } };
+const ctx = vm.createContext({ SpreadsheetApp, PropertiesService: { getScriptProperties: () => props }, CacheService: { getScriptCache: () => cache }, UrlFetchApp: { fetch: fetchSync },
   ContentService: { MimeType: { JSON: 'json' }, createTextOutput: s => { const x = { getContent: () => s, setMimeType: () => x }; return x; } },
   Utilities: { Charset: { UTF_8: 'utf8' }, computeHmacSha256Signature: (v, k) => sbytes(crypto.createHmac('sha256', bytesOf(k)).update(bytesOf(v)).digest()), base64Encode: x => bytesOf(x).toString('base64'),
     base64Decode: s => sbytes(Buffer.from(String(s), 'base64')), sleep: () => {}, formatDate: (d, tz, f) => d.toISOString().slice(0, 16), newBlob: (b, t, n) => blob(b, t, n) }, JSON, Math, Date, String, Number, Object, Array, RegExp, Error, encodeURIComponent });
@@ -84,7 +103,7 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0], f = 
   ok('godown pick list NASIR: ibrahim said "Picking started"', cards.some(c => /NASIR/.test(c) && /godown/.test(c) && /ibrahim/.test(c) && /Picking started/.test(c)));
   ok('factory SJ-48188: Rifat\'s line, move line left out', cards.some(c => /SJ-48188/.test(c) && /Rifat/.test(c) && /Lace short/.test(c) && !/CUTTING · Ibrahim/.test(c)));
   ok('factory #cash channel post', cards.some(c => /#cash/.test(c) && /Paid 400/.test(c)));
-  ok('stats: SJTC 2 chats, Factory 2 chats', (await t(pg, '#ss')) === '2' && (await t(pg, '#sf')) === '2');
+  ok('stats: SJTC 3 chats, Factory 2 chats', (await t(pg, '#ss')) === '3' && (await t(pg, '#sf')) === '2');
 
   // 3. open the NASIR order chat → reply
   await pg.click('.card:has-text("order memo") [data-open]'); await pg.waitForSelector('#chat .m', { timeout: 8000 });
@@ -210,6 +229,27 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0], f = 
   await pg.click('#aYes'); await pg.waitForTimeout(1500); ok('yes → sent to the card thread as Abbas', replies(FW, 'C09S552KD7T', card.ts).some(m => /\*Abbas:\* Rifat, 20 m lace ordered/.test(m.text)));
   await pg.fill('#atxt', 'remember keep 48188 at 100'); await pg.click('#ago'); await pg.waitForFunction(() => /Noted/.test(document.querySelector('#aout').textContent), null, { timeout: 8000 }).catch(() => {});
   ok('remember → notebook in the script', /keep 48188 at 100/.test(P.AS_NOTES || ''));
+
+  // 9. lookups (25 Oct): invoices from #sales-new shown with their photo, customer balance from the sheet, vendor ledger, Trello card stage, Timo add
+  await pg.fill('#atxt', 'show me the last two invoices of Matiullah'); await pg.click('#ago'); await pg.waitForFunction(() => /Two invoices/.test(document.querySelector('#aout').textContent), null, { timeout: 12000 }).catch(() => {});
+  const ans = await t(pg, '#aout .ans'); ok('"last two invoices of Matiullah" → answer + the two #sales-new posts shown', /Two invoices/.test(ans) && /INV-0007/.test(ans) && /INV-0003/.test(ans) && !/INV-0005/.test(ans) && (await pg.$$('#aout .ans .sh')).length === 2);
+  await pg.waitForFunction(() => { const i = document.querySelector('#aout .ans .sh img'); return i && i.src; }, null, { timeout: 8000 }).catch(() => {}); ok('the invoice photo loads in the answer', !!(await pg.$('#aout .ans .sh img[src^="blob:"]')));
+  const tr = AICALLS[AICALLS.length - 1].messages.filter(m => Array.isArray(m.content)).flatMap(m => m.content).filter(c => c.type === 'tool_result').map(c => c.content).join('\n');
+  ok('customer tool: balance 10000+1850+4200-3400 = 12650 and the saved bills', /balance now 12650/.test(tr) && /INV-0007 \| invoice \| included \| 4200/.test(tr));
+  await pg.fill('#atxt', 'balance of Nadeem'); await pg.click('#ago'); await pg.waitForFunction(() => /Nadeem: balance/.test(document.querySelector('#aout').textContent), null, { timeout: 12000 }).catch(() => {});
+  const tr2 = AICALLS[AICALLS.length - 1].messages.filter(m => Array.isArray(m.content)).flatMap(m => m.content).filter(c => c.type === 'tool_result').map(c => c.content).join('\n');
+  ok('ledger tool reads the NADEEM tab: balance 1100, last lines', /LEDGER NADEEM — balance now: 1100/.test(tr2) && /Purchase bill - Fuzhong/.test(tr2));
+  await pg.fill('#atxt', 'where is 48188'); await pg.click('#ago'); await pg.waitForFunction(() => /No Trello key|IRON CHECKING/.test(document.querySelector('#aout').textContent), null, { timeout: 12000 }).catch(() => {});
+  await pg.click('#gear'); await pg.waitForSelector('#stk', { timeout: 5000 }); await pg.fill('#stk', 'tk1'); await pg.fill('#stt', 'bad'); await pg.click('#stgo'); await pg.waitForFunction(() => /refused|connected/.test(document.querySelector('#sterr').textContent), null, { timeout: 8000 }).catch(() => {});
+  ok('bad Trello token refused', /refused/.test(await t(pg, '#sterr')) && !P.AS_TRELLO_TOKEN);
+  await pg.fill('#stt', 'tt1'); await pg.click('#stgo'); await pg.waitForFunction(() => /connected/.test(document.querySelector('#sterr').textContent), null, { timeout: 8000 }).catch(() => {}); ok('Trello key/token kept in the script', P.AS_TRELLO_TOKEN === 'tt1'); await pg.click('#sheet [data-x]');
+  await pg.fill('#atxt', 'where is 48188'); await pg.click('#ago'); await pg.waitForFunction(() => /IRON CHECKING/.test(document.querySelector('#aout').textContent), null, { timeout: 12000 }).catch(() => {});
+  ok('trello_card → list name of the card', /IRON CHECKING/.test(await t(pg, '#aout .ans')));
+  await pg.evaluate(() => localStorage.setItem('timo-state', JSON.stringify({ acts: [], todos: [], done: {}, checks: {}, stepAt: {}, at: Date.now() })));
+  await pg.fill('#atxt', 'remind me to pay Nadeem 1000 today'); await pg.click('#ago'); await pg.waitForSelector('#aYes', { timeout: 10000 });
+  ok('timo_add is queued until yes', /Add to Timo/.test(await t(pg, '#aout .ans')));
+  await pg.click('#aYes'); await pg.waitForFunction(() => /To-do|added|Added|put in/i.test(document.querySelector('#aout').textContent), null, { timeout: 12000 }).catch(() => {});
+  const ts = await pg.evaluate(() => JSON.parse(localStorage.getItem('timo-state') || '{}')); ok('yes → Timo (in its frame) took the task', /To-do|put in/i.test(await t(pg, '#aout')) && ((ts.todos || []).some(x => /pay Nadeem 1000/.test(x.title)) || (ts.acts || []).some(x => /pay Nadeem 1000/.test(x.title))));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); await br.close(); srv.close(); process.exit(fail ? 1 : 0);
 })();

@@ -820,6 +820,7 @@ window.addEventListener("message",e=>{const m=e.data||{};if(m.timo==="refresh")r
   else if(m.op==="open"){sel=k;tab="today";view="day";render();openTask(m.id)}
   else if(m.op==="focus"){sel=k;tab="today";view="day";render();openFocus(m.id,k)}
   else if(m.op==="new"){sel=todayK();tab="today";view="day";render();openSheet(null)}
+  else if(m.op==="quick"){const r=quickTask(String(m.text||""));if(r.ok)render();try{(e.source||parent).postMessage({timo:"quick",ok:!!r.ok,msg:r.msg||""},"*")}catch(x){}}   // 25 Oct 2026: the Assistant adds a task by voice ("remind me to pay Nadeem 1000 #T1 today")
   else if(m.op==="task"){const r=quickTask(m.text||"");render();try{window.parent.postMessage({timo:"toast",text:r.msg},"*")}catch(e){}}
   else if(m.op==="wa"){S.wa=S.wa||[];
     if(m.add&&(m.add.name||m.add.text))S.wa.unshift({id:uid(),name:String(m.add.name||"").slice(0,60),text:String(m.add.text||"").slice(0,300),at:Date.now(),done:false});
