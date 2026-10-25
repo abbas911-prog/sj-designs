@@ -26,19 +26,30 @@ F.postSlack(FW, 'C0CASH00001', { text: 'Paid 400 AED to the lace man', user: 'U1
 function bytesOf(x) { if (Buffer.isBuffer(x)) return x; if (Array.isArray(x)) return Buffer.from(x.map(b => b & 255)); return Buffer.from(String(x), 'utf8'); }
 function sbytes(buf) { return Array.from(buf).map(b => (b > 127 ? b - 256 : b)); }
 function blob(buf, type, name) { const b = { _b: bytesOf(buf), _t: type || 'application/octet-stream', _n: name || '' }; b.getBytes = () => sbytes(b._b); b.getContentType = () => b._t; return b; }
-const P = {}, CACHE = new Map(), SLACKCALLS = [];
+const P = {}, CACHE = new Map(), SLACKCALLS = [], AICALLS = [];
 const cget = k => { const e = CACHE.get(k); if (!e || e.exp < Date.now()) return null; return e.v; };
 const cache = { get: cget, put: (k, v, ttl) => { if (String(v).length > 100000) throw new Error('Argument too large'); CACHE.set(k, { v: String(v), exp: Date.now() + (ttl || 600) * 1000 }); }, putAll: (o, ttl) => Object.keys(o).forEach(k => cache.put(k, o[k], ttl)),
   getAll: ks => { const r = {}; ks.forEach(k => { const v = cget(k); if (v != null) r[k] = v; }); return r; }, remove: k => CACHE.delete(k) };
-const props = { getProperty: k => (k in P ? P[k] : null), setProperty: (k, v) => { if (String(v).length > 9000) throw new Error('property too large'); P[k] = String(v); return props; }, getProperties: () => Object.assign({}, P) };
+const props = { getProperty: k => (k in P ? P[k] : null), setProperty: (k, v) => { if (String(v).length > 9000) throw new Error('property too large'); P[k] = String(v); return props; }, getProperties: () => Object.assign({}, P), deleteProperty: k => { delete P[k]; return props; } };
 const fetchSync = (url, o) => { o = o || {}; const auth = String((o.headers || {}).Authorization || ''), W = /xoxb-fac/.test(auth) ? FW : S; let body = o.payload; if (body && body._b) body = body._b;
   if (/slack\.com\/api\/auth\.test/.test(url)) { const ok = /xoxb-(sjtc|fac)/.test(auth); return { getResponseCode: () => 200, getContentText: () => JSON.stringify(ok ? { ok: true, team: W === FW ? 'AL MUTAGADED' : 'SJTC' } : { ok: false, error: 'invalid_auth' }) }; }
+  if (/api\.anthropic\.com/.test(url)) { const rq = JSON.parse(body), last = rq.messages[rq.messages.length - 1]; AICALLS.push(rq); const key = (o.headers || {})['x-api-key'];
+    if (key !== 'sk-ant-test') return { getResponseCode: () => 401, getContentText: () => JSON.stringify({ error: { type: 'authentication_error', message: 'invalid x-api-key' } }) };
+    let content; const q = typeof last.content === 'string' ? last.content : '';
+    if (/^Say OK/.test(q)) content = [{ type: 'text', text: 'OK' }];
+    else if (/status of 48188/i.test(q)) content = [{ type: 'tool_use', id: 'tu1', name: 'read_chat', input: { chat: '48188' } }];
+    else if (Array.isArray(last.content) && last.content[0].type === 'tool_result' && /Lace short/.test(last.content[0].content)) content = [{ type: 'text', text: 'SJ-48188: Rifat says lace is short, 20 metres more needed; cutting with Ibrahim.' }, { type: 'tool_use', id: 'tu2', name: 'open_chat', input: { chat: '48188' } }];
+    else if (Array.isArray(last.content) && last.content[0].type === 'tool_result') content = [{ type: 'text', text: 'Opened.' }];
+    else if (/tell rifat/i.test(q)) content = [{ type: 'text', text: 'Ready to send to SJ-48188 — say yes.' }, { type: 'tool_use', id: 'tu3', name: 'send_message', input: { chat: 'SJ-48188', text: 'Rifat, 20 m lace ordered, aa raha hai.' } }];
+    else if (/remember/i.test(q)) content = [{ type: 'tool_use', id: 'tu4', name: 'remember', input: { text: 'keep 48188 at 100' } }, { type: 'text', text: 'Noted.' }];
+    else content = [{ type: 'text', text: 'Nothing new.' }];
+    return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ content, stop_reason: content.some(c => c.type === 'tool_use') ? 'tool_use' : 'end_turn' }) }; }
   if (/slack\.com\/api\//.test(url)) SLACKCALLS.push(url.split('/api/')[1].split('?')[0]);
   const r = F.handle(W, o.method || 'get', url, body, o.headers || {}); return { getResponseCode: () => r.status, getContentText: () => r.body.toString(), getBlob: () => blob(r.body, r.type) }; };
 const ctx = vm.createContext({ PropertiesService: { getScriptProperties: () => props }, CacheService: { getScriptCache: () => cache }, UrlFetchApp: { fetch: fetchSync },
   ContentService: { MimeType: { JSON: 'json' }, createTextOutput: s => { const x = { getContent: () => s, setMimeType: () => x }; return x; } },
   Utilities: { Charset: { UTF_8: 'utf8' }, computeHmacSha256Signature: (v, k) => sbytes(crypto.createHmac('sha256', bytesOf(k)).update(bytesOf(v)).digest()), base64Encode: x => bytesOf(x).toString('base64'),
-    base64Decode: s => sbytes(Buffer.from(String(s), 'base64')), sleep: () => {}, newBlob: (b, t, n) => blob(b, t, n) }, JSON, Math, Date, String, Number, Object, Array, RegExp, Error, encodeURIComponent });
+    base64Decode: s => sbytes(Buffer.from(String(s), 'base64')), sleep: () => {}, formatDate: (d, tz, f) => d.toISOString().slice(0, 16), newBlob: (b, t, n) => blob(b, t, n) }, JSON, Math, Date, String, Number, Object, Array, RegExp, Error, encodeURIComponent });
 vm.runInContext(fs.readFileSync(path.join(DIR, 'tools/assistant.gs'), 'utf8'), ctx, { filename: 'assistant.gs' });
 const bodies = [];
 
@@ -183,6 +194,22 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0], f = 
   await pg.click('#cback'); await pg.click('#nav button[data-v="ask"]'); await pg.fill('#atxt', 'send invoice ready to arqam@tax.ae'); await pg.click('#ago'); await pg.waitForSelector('#aYes', { timeout: 5000 });
   ok('Ask: send … to an email address → asks first', /arqam@tax\.ae/.test(await t(pg, '#aout')));
   await pg.click('#aYes'); await pg.waitForTimeout(1200); ok('… then mails it', SENT.length === 2 && SENT[1].to === 'arqam@tax.ae');
+
+  // 8. AI brain (25 Oct): key in ⚙️ Settings (checked with a test call), free-text questions read chats and open them with a summary, sends are queued until yes, notebook
+  await pg.click('#nav button[data-v="ask"]'); ok('no key yet → Ask warns', !(await pg.$eval('#aikey', e => e.hidden)));
+  await pg.click('#gear'); await pg.waitForSelector('#skey', { timeout: 5000 }); await pg.fill('#skey', 'sk-ant-wrong'); await pg.click('#skgo'); await pg.waitForFunction(() => /check the key|AI said/.test(document.querySelector('#skerr').textContent), null, { timeout: 8000 }).catch(() => {});
+  ok('a bad key is refused', /check the key/.test(await t(pg, '#skerr')) && !P.AS_AI);
+  await pg.fill('#skey', 'sk-ant-test'); await pg.click('#skgo'); await pg.waitForFunction(() => /Key works/.test(document.querySelector('#skerr').textContent), null, { timeout: 8000 }).catch(() => {});
+  ok('the key is tested and kept in the script only', P.AS_AI === 'sk-ant-test' && (await pg.evaluate(() => localStorage.getItem('as2_ai'))) === '1' && !(await pg.evaluate(() => Object.values(localStorage).some(v => /sk-ant/.test(v)))));
+  await pg.fill('#sbrain', 'Abbas test brain'); await pg.click('#sbgo'); await pg.waitForTimeout(400); ok('brain saved', P.AS_BRAIN === 'Abbas test brain'); await pg.click('#sheet [data-x]');
+  await pg.fill('#atxt', 'status of 48188'); await pg.click('#ago'); await pg.waitForSelector('#chat:not([hidden])', { timeout: 10000 }).catch(() => {});
+  ok('"status of 48188" → the AI read the card chat → opened it with a summary on top', await pg.isVisible('#csum') && /lace is short/.test(await t(pg, '#csumt')) && /SJ-48188/.test(await t(pg, '#ct')));
+  const sys = AICALLS[AICALLS.length - 1].system; ok('the brain, chat list and new lines go with every ask', /Abbas test brain/.test(sys) && /SJ-48188 \[/.test(sys) && /CHATS/.test(sys));
+  await pg.click('#cback'); await pg.fill('#atxt', 'tell Rifat 20 m lace ordered'); await pg.click('#ago'); await pg.waitForSelector('#aYes', { timeout: 10000 });
+  const before = replies(FW, 'C09S552KD7T', card.ts).length; ok('a send is queued, not sent, until yes', /aa raha hai/.test(await t(pg, '#aout')) && replies(FW, 'C09S552KD7T', card.ts).length === before);
+  await pg.click('#aYes'); await pg.waitForTimeout(1500); ok('yes → sent to the card thread as Abbas', replies(FW, 'C09S552KD7T', card.ts).some(m => /\*Abbas:\* Rifat, 20 m lace ordered/.test(m.text)));
+  await pg.fill('#atxt', 'remember keep 48188 at 100'); await pg.click('#ago'); await pg.waitForFunction(() => /Noted/.test(document.querySelector('#aout').textContent), null, { timeout: 8000 }).catch(() => {});
+  ok('remember → notebook in the script', /keep 48188 at 100/.test(P.AS_NOTES || ''));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); await br.close(); srv.close(); process.exit(fail ? 1 : 0);
 })();

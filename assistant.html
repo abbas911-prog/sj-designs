@@ -120,6 +120,11 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 .ans{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--sh);margin-top:12px;white-space:pre-wrap}
 .ans.err{border-left:4px solid var(--red)}
 .ans .acts{margin-top:10px}
+.ans .act{background:var(--soft);border-radius:14px;padding:10px 12px;margin-top:10px;font-size:14px}.ans .act b{display:block;font-size:12px;color:var(--sub);margin-bottom:3px}
+#csum{background:var(--me);border-left:4px solid var(--pri);margin:10px 12px 0;padding:10px 12px;border-radius:14px;font-size:14px;white-space:pre-wrap;position:relative}#csum button{position:absolute;top:6px;right:10px;color:var(--sub);font-weight:700}
+.hero .gear{font-size:18px;background:rgba(255,255,255,.18);border-radius:20px;width:32px;height:32px;display:flex;align-items:center;justify-content:center}
+.ask .bar button.drv{background:var(--f);color:#fff}.ask .bar button.drv.on{background:var(--red);animation:pulse 1.2s infinite}
+.setup textarea{width:100%;min-height:120px;border:1.5px solid var(--line);border-radius:14px;padding:10px;background:var(--bg);outline:none;font-size:13px}
 #cbody{flex:1;overflow-y:auto;padding:12px 12px 18px;-webkit-overflow-scrolling:touch}
 .day{text-align:center;margin:12px 0 8px}
 .day span{font-size:11px;font-weight:700;color:var(--sub);background:var(--soft);padding:4px 10px;border-radius:20px}
@@ -190,7 +195,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <div id="app" hidden>
   <div class="hero">
-    <div class="top"><span class="hi" id="hdate"></span><span class="live" id="live"><i></i><span id="lvt">Connecting</span></span></div>
+    <div class="top"><span class="hi" id="hdate"></span><span class="live" id="live"><i></i><span id="lvt">Connecting</span></span><button class="gear" id="gear" type="button" aria-label="Settings">⚙️</button></div>
     <h1 id="hello">Good morning</h1>
     <p id="hsum">Getting your chats…</p>
   </div>
@@ -206,8 +211,8 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
     <section id="v-ask" hidden>
       <div class="h2"><h2>✨ Ask your assistant</h2></div>
       <div class="ask"><textarea id="atxt" placeholder="Type a command or a question…&#10;e.g. send 20 m lace ordered to #cash&#10;open 48188 · what's new · forward last photo of 48188 to whatsapp"></textarea>
-        <div class="bar"><button type="button" id="amic" aria-label="Speak">🎤 Speak</button><button type="button" class="p" id="ago">Do it ➤</button></div>
-        <div class="ex" id="aex"><button type="button">what's new</button><button type="button">open 48188</button><button type="button">send ok noted to #cash</button><button type="button">forward last photo of 48188 to whatsapp</button><button type="button">mark all done</button></div></div>
+        <div class="bar"><button type="button" id="amic" aria-label="Speak">🎤 Speak</button><button type="button" class="drv" id="adrive" aria-label="Drive mode">🚗 Drive</button><button type="button" class="p" id="ago">Ask ➤</button></div><div id="aikey" class="err" hidden>No AI key yet — add it in ⚙️ Settings to ask anything. Without it only the fixed commands work.</div>
+        <div class="ex" id="aex"><button type="button">what's on my plate</button><button type="button">what's new</button><button type="button">status of 48188</button><button type="button">open 48188</button><button type="button">send ok noted to #cash</button><button type="button">forward last photo of 48188 to whatsapp</button><button type="button">mark all done</button></div></div>
       <div id="aout"></div>
     </section>
   </main>
@@ -221,7 +226,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <section id="chat" hidden>
   <div class="chd"><button class="back" id="cback" type="button" aria-label="Back">‹</button><div class="tt"><b id="ct"></b><small id="cs"></small></div><button class="kp" id="ckeep" type="button" aria-label="Keep unread">🔔</button><button class="nx" id="cnext" type="button" hidden>Next ›</button></div>
-  <div id="cbody"></div>
+  <div id="csum" hidden><button type="button" id="csumx">✕</button><span id="csumt"></span></div><div id="cbody"></div>
   <div class="cft">
     <div id="tgt">Sending to <button id="tgtb" type="button"></button></div>
     <div id="atts"></div>
@@ -242,7 +247,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <script>
 (function(){
-var VER = '2026-10-25a';
+var VER = '2026-10-25b';
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -282,7 +287,7 @@ function dayName(ts){ var d = new Date(+ts * 1000), now = new Date(); if (d.toDa
   return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }); }
 
 // ---------- data ----------
-var CH = {}, ORDER = [], ZERO = {}, EMAIL = ls('as2_email') || '';      // EMAIL = the Gmail address the script reads (empty until the script allows Gmail)
+var CH = {}, ORDER = [], ZERO = {}, EMAIL = ls('as2_email') || '', AI = ls('as2_ai') === '1', HIST = [], DRIVE = false, PENDA = null;      // EMAIL = the Gmail address the script reads (empty until the script allows Gmail)
 function wsName(w){ return w === 's' ? 'SJTC' : w === 'e' ? 'Email' : 'Factory'; }
 function tagOf(c){ return c.ws === 'e' ? 'Email · ' + c.chn : wsName(c.ws) + ' · #' + c.chn; }
 function chIcon(c){ return c.ws === 'e' ? '✉️' : c.kind === 'channel' ? '💬' : /order memo|customer/.test(c.kind) ? '👤' : /godown/.test(c.kind) ? '📦' : c.ws === 'f' ? '🏭' : '💬'; }
@@ -291,7 +296,7 @@ async function loadFeed(fresh){
   if (loadFeed.busy) return; loadFeed.busy = true;
   try { var j = await api({ op: 'feed', fresh: fresh ? 1 : 0 }, 2); if (!j.ok) { if (/wrong password/.test(j.error)) { PW = ''; ls('as2_pw', null); setup(); } return; }
     var M = {}; (j.chats || []).forEach(function(c){ if (ZERO[c.k] && +(c.lines.length ? c.lines[c.lines.length - 1].ts : c.last) <= ZERO[c.k]) { c.un = 0; c.lines = []; } M[c.k] = c; });
-    CH = M; ORDER = j.chats.map(function(c){ return c.k; }); if (j.email !== undefined && j.email !== EMAIL) { EMAIL = j.email || ''; ls('as2_email', EMAIL); } draw();
+    CH = M; ORDER = j.chats.map(function(c){ return c.k; }); if (j.email !== undefined && j.email !== EMAIL) { EMAIL = j.email || ''; ls('as2_email', EMAIL); } if (j.ai !== undefined && !!j.ai !== AI) { AI = !!j.ai; ls('as2_ai', AI ? '1' : '0'); } $('aikey').hidden = AI; draw();
   } finally { loadFeed.busy = false; } }
 function liveLine(){ var bad = !!LASTERR || navigator.onLine === false; $('live').classList.toggle('bad', bad); $('lvt').textContent = navigator.onLine === false ? 'Offline' : LASTERR ? 'Problem' : LASTOK ? 'Live' : 'Connecting'; $('live').title = LASTERR; }
 
@@ -364,7 +369,7 @@ var CUR = null, MSGS = [], ATT = [], TGT = null, PEND = [], MEDIA = {};
 function openChat(k, fwPick){ var c = CH[k]; if (!c) return; if (CUR && CUR !== c) leaveChat(CUR); CUR = c; TGT = null; ATT = []; MSGS = []; PEND = []; readChat.sig = ''; c.keep = false; c.since = c.un > 0 && c.lines.length ? c.lines[0].ts : ''; $('ckeep').classList.remove('on'); $('ckeep').textContent = '🔔';
   if (c.un) { ZERO[k] = Date.now() / 1000; c.un = 0; c.lines = []; draw(); }
   $('ct').textContent = chIcon(c) + ' ' + c.title; $('ctxt').placeholder = c.ws === 'e' ? 'Reply by email…' : 'Message…'; $('cs').textContent = (CU.on ? 'Catch up ' + (CU.i + 1) + ' of ' + CU.q.length + ' · ' : '') + subOf(c); if (!CU.on) $('cnext').hidden = true; $('cbody').innerHTML = '<div class="zero"><b>⏳</b>Loading…</div>';
-  $('chat').hidden = false; drawTgt(); drawAtt(); readChat(false).then(function(){ if (fwPick) { var last = MSGS.filter(function(m){ return !m.sys; }).pop(); if (last) forward(last); } });
+  $('chat').hidden = false; if (!openChat.sum) { $('csum').hidden = true; } openChat.sum = false; drawTgt(); drawAtt(); readChat(false).then(function(){ if (fwPick) { var last = MSGS.filter(function(m){ return !m.sys; }).pop(); if (last) forward(last); } });
   clearInterval(openChat.t); openChat.t = setInterval(function(){ if (!document.hidden && CUR) readChat(true); }, 5000); }
 function leaveChat(c){ if (!c || !c.keep) return; c.keep = false; delete ZERO[c.k]; api({ op: 'unseen', k: c.k, since: c.since || '' }, 2).then(function(){ loadFeed(false); }); toast('🔔 ' + c.title + ' stays unread'); }
 $('ckeep').onclick = function(){ if (!CUR) return; CUR.keep = !CUR.keep; $('ckeep').classList.toggle('on', CUR.keep); $('ckeep').textContent = CUR.keep ? '🔔 Stays unread' : '🔔'; toast(CUR.keep ? '🔔 This chat will come back in Catch-up' : 'Marked as read'); };
@@ -510,23 +515,77 @@ function findChat(q){ q = String(q || '').trim().toLowerCase().replace(/^#/, '')
   var hit = L.filter(function(c){ return c.title.toLowerCase().replace(/^#/, '') === q || (c.kind === 'channel' && c.chn.toLowerCase() === q); })[0] || L.filter(function(c){ return (c.title + ' ' + c.chn).toLowerCase().indexOf(q) >= 0; })[0];
   if (hit && !CH[hit.k]) CH[hit.k] = hit; return hit || null; }
 function digest(n){ return list().filter(function(c){ return c.un && c.lines.length; }).slice(0, n || 12).map(function(c){ return '• ' + c.title + ' (' + subOf(c) + '): ' + c.lines.map(function(l){ return l.who + ': ' + l.text; }).join(' / '); }).join('\n'); }
-function aOut(h, err){ $('aout').innerHTML = '<div class="ans' + (err ? ' err' : '') + '">' + h + '</div>' + $('aout').innerHTML; }
+function aOut(h, err){ var d = document.createElement('div'); d.className = 'ans' + (err ? ' err' : ''); d.innerHTML = h; $('aout').insertBefore(d, $('aout').firstChild); return d; }
 async function ask(q){ q = String(q || '').trim(); if (!q) return; var l = q.toLowerCase(), m;
-  if (/^(what'?s new|catch ?up|new\??|kya naya hai)$/.test(l)) { var d = digest(20); aOut(d ? '<b>New right now</b>\n' + esc(d) + '<div class="acts"><button class="p" type="button" id="aCu">▶ Catch up</button></div>' : '✨ Nothing new.'); if ($('aCu')) $('aCu').onclick = function(){ show('catch'); cuStart(); }; return; }
+  if (/^(what'?s new|new\??|kya naya hai)$/.test(l) || (!AI && /^(catch ?up|what'?s on my plate)$/.test(l))) { var d = digest(20); aOut(d ? '<b>New right now</b>\n' + esc(d) + '<div class="acts"><button class="p" type="button" id="aCu">▶ Catch up</button></div>' : '✨ Nothing new.'); if ($('aCu')) $('aCu').onclick = function(){ show('catch'); cuStart(); }; say(d ? 'New right now. ' + d : 'Nothing new.'); return; }
   if (/^mark all (done|read)$/.test(l)) { list().filter(function(c){ return c.un; }).forEach(function(c){ markDone(c.k); }); aOut('✓ All marked done.'); return; }
   if ((m = l.match(/^(?:open|show|go to)\s+(.+)$/))) { var c1 = findChat(m[1]); if (!c1) { aOut('I could not find a chat called “' + esc(m[1]) + '”.', 1); return; } openChat(c1.k); return; }
   if ((m = q.match(/^(?:send|tell|post|write)\s+(.+?)\s+(?:to|in|into|on)\s+(#?\S.*)$/i))) { var c2 = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m[2].trim()) ? emTarget(m[2]) : findChat(m[2]); if (!c2) { aOut('I could not find a chat called “' + esc(m[2]) + '”. Say the name as it is in the list (e.g. #cash, 48188, NASIR).', 1); return; }
     aOut('Send to <b>' + esc(c2.em ? c2.title : chIcon(c2) + ' ' + c2.title) + '</b>:\n“' + esc(m[1]) + '”<div class="acts"><button class="p" type="button" id="aYes">Send</button><button type="button" id="aNo">Cancel</button></div>');
-    $('aYes').onclick = function(){ $('aYes').disabled = true; doSend({ to: c2, text: m[1], files: [], rid: rid() }); aOut('✓ Sent to ' + esc(c2.title)); }; $('aNo').onclick = function(){ $('aout').firstChild.remove(); }; return; }
+    PENDA = { acts: [{ type: c2.em ? 'send_email' : 'send_message', k: c2.k, chat: c2.title, to: c2.to || '', subject: c2.subject || '', text: m[1] }], card: $('aout').firstChild }; if (c2.k && !CH[c2.k]) CH[c2.k] = c2;
+    $('aYes').onclick = function(){ runActs(); }; $('aNo').onclick = function(){ PENDA = null; $('aout').firstChild.remove(); }; say('Send to ' + c2.title + ': ' + m[1] + '. Say yes to send.'); return; }
   if ((m = q.match(/^(?:forward|fwd|share)\s+(?:the\s+)?(?:last|latest)\s+(photo|picture|voice|file|message|line)\s+(?:of|from|in)\s+(.+?)\s+(?:to|on)\s+(.+)$/i))) { var c3 = findChat(m[2]); if (!c3) { aOut('I could not find “' + esc(m[2]) + '”.', 1); return; }
     var toWa = /^(whats?app|wa)$/i.test(m[3].trim()), c4 = toWa ? { wa: true, title: 'WhatsApp' } : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m[3].trim()) ? emTarget(m[3]) : findChat(m[3]); if (!c4) { aOut('I could not find “' + esc(m[3]) + '”.', 1); return; }
     var j = await api({ op: 'thread', k: c3.k, look: 0 }, 2); if (!j.ok) { aOut(esc(j.error), 1); return; } var want = /photo|picture/i.test(m[1]) ? 'img' : /voice/i.test(m[1]) ? 'audio' : /file/i.test(m[1]) ? 'file' : '';
     var pickM = (j.msgs || []).slice().reverse().filter(function(x){ return !x.sys && (!want || (x.files || []).some(function(f){ return fileKind(f) === want; })); })[0]; if (!pickM) { aOut('No ' + esc(m[1]) + ' found in ' + esc(c3.title) + '.', 1); return; }
     CUR = c3; forward(pickM, c4); return; }
-  // anything else → Claude, with the latest lines attached so it can answer about them
-  var ctx = digest(15), prompt = 'You are Abbas\'s business assistant for SJ Trading (SJTC, Dubai) and the AL MUTAGADED factory. Latest new chat lines (Urdu / Arabic / Bengali may appear — translate when useful):\n' + (ctx || '(nothing new)') + '\n\nAbbas asks: ' + q;
-  aOut('I cannot do that inside the app yet — opening Claude with your question and the latest lines attached.<div class="acts"><button class="p" type="button" id="aCl">Open Claude ↗</button></div>');
-  $('aCl').onclick = function(){ window.open('https://claude.ai/new?q=' + encodeURIComponent(prompt), '_blank'); }; }
+  // anything else → the AI brain in the script (Abbas's key), with the chat list + new lines; it may queue actions, each confirmed here first
+  if (!AI) { var ctx = digest(15), prompt = 'You are Abbas\'s business assistant for SJ Trading (SJTC, Dubai) and the AL MUTAGADED factory. Latest new chat lines (Urdu / Arabic / Bengali may appear — translate when useful):\n' + (ctx || '(nothing new)') + '\n\nAbbas asks: ' + q;
+    aOut('No AI key yet (⚙️ Settings) — opening Claude with your question and the latest lines attached.<div class="acts"><button class="p" type="button" id="aCl">Open Claude ↗</button></div>');
+    $('aCl').onclick = function(){ window.open('https://claude.ai/new?q=' + encodeURIComponent(prompt), '_blank'); }; return; }
+  var th = aOut('<span style="color:var(--sub)">Thinking…</span>');
+  var r = await api({ op: 'ask', q: q, hist: HIST.slice(-8), timo: timoText(), mode: DRIVE ? 'drive' : '' }, 1); th.remove();
+  if (!r.ok) { if (r.nokey) { AI = false; ls('as2_ai', '0'); $('aikey').hidden = false; } aOut(esc(r.error), 1); say(r.error); return; }
+  HIST.push({ role: 'user', text: q }); HIST.push({ role: 'assistant', text: r.text }); if (HIST.length > 16) HIST = HIST.slice(-16);
+  var acts = r.actions || [], opened = acts.filter(function(a){ return a.type === 'open_chat' && a.k; })[0];
+  var h = esc(r.text); acts.forEach(function(a, i){ if (a.type === 'open_chat' || a.type === 'mark_done') return; h += '<div class="act" data-ai="' + i + '"><b>' + esc(actLabel(a)) + '</b>' + esc(a.text || (a.type === 'forward_last' ? 'latest ' + a.kind + ' of ' + a.chat + ' → ' + a.to : a.type === 'voice_note' ? 'record now' : '')) + '</div>'; });
+  var todo = acts.filter(function(a){ return a.type !== 'open_chat' && a.type !== 'mark_done'; });
+  if (todo.length) h += '<div class="acts"><button class="p" type="button" id="aYes">' + (todo.length > 1 ? 'Yes, do all ' + todo.length : todo[0].type === 'voice_note' ? '🎤 Start' : 'Yes, send') + '</button><button type="button" id="aNo">Cancel</button></div>';
+  var card = aOut(h); PENDA = todo.length ? { acts: todo, card: card } : null;
+  if ($('aYes')) $('aYes').onclick = function(){ runActs(); }; if ($('aNo')) $('aNo').onclick = function(){ PENDA = null; card.querySelector('.acts').remove(); say('Cancelled'); };
+  acts.forEach(function(a){ if (a.type === 'mark_done') { if (a.chat.toLowerCase() === 'all') list().filter(function(c){ return c.un; }).forEach(function(c){ markDone(c.k); }); else if (a.k) markDone(a.k); } });
+  if (opened) { openChat.sum = true; openChat(opened.k); $('csumt').textContent = r.text; $('csum').hidden = false; }
+  say(r.text + (todo.length ? (todo[0].type === 'voice_note' ? ' Say start to record.' : ' Say yes to send.') : '')); }
+function actLabel(a){ return a.type === 'send_message' ? 'Send to ' + a.chat : a.type === 'send_email' ? 'Email to ' + a.to + (a.subject ? ' · ' + a.subject : '') : a.type === 'forward_last' ? 'Forward' : a.type === 'voice_note' ? 'Voice note to ' + a.chat : a.type; }
+async function runActs(){ var p = PENDA; if (!p) return; PENDA = null; var ac = p.card.querySelector('.acts'); if (ac) ac.remove();
+  for (var i = 0; i < p.acts.length; i++) { var a = p.acts[i];
+    try { if (a.type === 'send_message') { if (!a.k) throw new Error('chat not found'); var c = CH[a.k]; if (!c) throw new Error('chat not found'); await doSendWait({ to: c, text: a.text, files: [], rid: rid() }); toast('✓ Sent to ' + c.title); }
+      else if (a.type === 'send_email') { await doSendWait({ to: emTarget(a.to, a.subject), text: a.text, files: [], rid: rid() }); toast('✓ Emailed ' + a.to); }
+      else if (a.type === 'forward_last') { var from = a.k && CH[a.k]; if (!from) throw new Error('chat not found'); var toT = /^whats?app$/i.test(a.to) ? { wa: true, title: 'WhatsApp' } : /@/.test(a.to) ? emTarget(a.to) : findChat(a.to); if (!toT) throw new Error('"' + a.to + '" not found');
+        var jj = await api({ op: 'thread', k: from.k, look: 0 }, 2); if (!jj.ok) throw new Error(jj.error); var want = a.kind === 'photo' ? 'img' : a.kind === 'voice' ? 'audio' : a.kind === 'file' ? 'file' : '';
+        var pm = (jj.msgs || []).slice().reverse().filter(function(x){ return !x.sys && (!want || (x.files || []).some(function(f){ return fileKind(f) === want; })); })[0]; if (!pm) throw new Error('no ' + a.kind + ' in ' + from.title); CUR = from; forward(pm, toT); }
+      else if (a.type === 'voice_note') { if (!a.k) throw new Error('chat not found'); openChat(a.k); await sleep(400); $('bmic').onclick(); }
+    } catch(e){ aOut('⚠ ' + esc(e.message), 1); say(e.message); } }
+  if (p.acts.every(function(a){ return a.type !== 'voice_note' && a.type !== 'forward_last'; })) say('Done.'); }
+function doSendWait(p){ return new Promise(function(ok, no){ var t = setInterval(function(){ if (p.done) { clearInterval(t); ok(); } else if (p.fail) { clearInterval(t); no(new Error(p.fail)); } }, 200); doSend(p); }); }
+function timoText(){ var S = tState(); if (!S) return ''; var k = tK(), L = tDay(S, k), done = function(a){ return !!(S.done || {})[a.id + '@' + k]; };
+  return L.map(function(a){ return tT(a.start) + '–' + tT(a.start + (a.dur || 30)) + ' ' + (a.name || '') + (done(a) ? ' ✓' : '') + ((a.items || []).length ? ' (' + a.items.map(function(x){ return typeof x === 'string' ? x : x.t || x.text || ''; }).join(', ') + ')' : ''); }).join('\n'); }
+// ---------- voice out (the phone's own voice, free) + Drive mode: speak → listen → act, hands free ----------
+function say(t){ if (!DRIVE || !window.speechSynthesis) return; try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(String(t).replace(/[*_#•→↪✓⚠✨🟢📎🎤📷]/g, ' ').slice(0, 1500)); u.lang = 'en-IN'; u.rate = 1.05; u.onend = function(){ if (DRIVE) setTimeout(listen, 300); }; speechSynthesis.speak(u); } catch(e){} }
+function listen(){ if (!DRIVE || !SR || srec) return; try { srec = new SR(); srec.lang = 'en-IN'; srec.interimResults = false; $('amic').classList.add('rec'); $('amic').textContent = '👂 Listening';
+    srec.onresult = function(ev){ var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; heard(t.trim()); };
+    srec.onend = function(){ srec = null; $('amic').classList.remove('rec'); $('amic').textContent = '🎤 Speak'; if (DRIVE && !speechSynthesis.speaking && !heard.busy) setTimeout(listen, 800); }; srec.onerror = srec.onend; srec.start(); } catch(e){ srec = null; } }
+async function heard(t){ if (!t) return; heard.busy = true; var l = t.toLowerCase();
+  try { if (/^(stop|stop driving|exit|bye|band karo)\b/.test(l)) { drive(false); return; }
+    if (PENDA && /^(yes|yeah|yep|ok|okay|haan|han|ji|send|go|start|do it|confirm)\b/.test(l)) { await runActs(); return; }
+    if (PENDA && /^(no|nope|cancel|nahi|nahin|stop)\b/.test(l)) { PENDA = null; aOut('Cancelled'); say('Cancelled'); return; }
+    if (REC && /^(stop|done|send|bas|finish)\b/.test(l)) { stopRec(false); await sleep(600); $('csend').onclick(); say('Voice note sent'); return; }
+    if (CU.on && /^(next|skip|aage)\b/.test(l)) { cuNext(); var c = CUR; say((c ? c.title : '') + '. ' + (c && c.lines ? '' : '')); return; }
+    $('atxt').value = t; await ask(t); } finally { heard.busy = false; if (DRIVE && !speechSynthesis.speaking && !srec) setTimeout(listen, 600); } }
+function drive(on){ DRIVE = on; $('adrive').classList.toggle('on', on); $('adrive').textContent = on ? '■ Stop' : '🚗 Drive'; if (!on) { try { speechSynthesis.cancel(); } catch(e){} if (srec) srec.stop(); return; }
+  if (!SR) { toast('⚠ This phone cannot listen here'); DRIVE = false; $('adrive').classList.remove('on'); $('adrive').textContent = '🚗 Drive'; return; }
+  show('ask'); say('Drive mode. Ask me anything, say stop to leave.'); }
+$('adrive').onclick = function(){ drive(!DRIVE); };
+$('csumx').onclick = function(){ $('csum').hidden = true; };
+// ---------- settings: the AI key (Abbas pastes it himself), the brain file, the notebook ----------
+$('gear').onclick = async function(){ sheet('<h3>⚙️ Settings</h3><div class="zero"><b>⏳</b></div>'); var h = await api({ op: 'hello' }, 1); if (!h.ok) { sheet('<h3>⚙️ Settings</h3><p>' + esc(h.error) + '</p>'); return; }
+  sheet('<h3>⚙️ Settings</h3><div class="setup" style="padding:0"><label for="skey">AI key (Anthropic, sk-ant-…) — ' + (h.ai ? '✅ set' : 'not set') + '</label><input id="skey" type="password" autocomplete="off" placeholder="' + (h.ai ? 'paste a new key to change it' : 'paste the key here') + '"><div class="acts"><button class="p" type="button" id="skgo">' + (h.ai ? 'Change key' : 'Save key') + '</button>' + (h.ai ? '<button type="button" id="skrm">Remove</button>' : '') + '</div><div class="err" id="skerr"></div>' +
+    '<label for="sbrain">Brain — what the assistant knows about you (edit freely)</label><textarea id="sbrain">' + esc(h.brain || '') + '</textarea><div class="acts"><button class="p" type="button" id="sbgo">Save brain</button></div>' +
+    '<label for="snotes">Notebook — things you told it to remember</label><textarea id="snotes">' + esc(h.notes || '') + '</textarea><div class="acts"><button class="p" type="button" id="sngo">Save notebook</button><button type="button" data-x="1">Close</button></div></div>');
+  $('skgo').onclick = async function(){ var k = $('skey').value.trim(); if (!k) { $('skerr').textContent = 'Paste the key first'; return; } $('skerr').textContent = 'Checking the key…'; var r = await api({ op: 'aikey', key: k }, 1); $('skey').value = ''; if (!r.ok) { $('skerr').textContent = r.error; return; } AI = true; ls('as2_ai', '1'); $('aikey').hidden = true; $('skerr').textContent = '✅ Key works — the assistant is on'; toast('✨ AI on'); };
+  if ($('skrm')) $('skrm').onclick = async function(){ var r = await api({ op: 'aikey', key: '' }, 1); if (r.ok) { AI = false; ls('as2_ai', '0'); $('aikey').hidden = false; closeSheet(); toast('AI key removed'); } };
+  $('sbgo').onclick = async function(){ var r = await api({ op: 'brain', text: $('sbrain').value }, 1); toast(r.ok ? '✓ Brain saved' : '⚠ ' + r.error); };
+  $('sngo').onclick = async function(){ var r = await api({ op: 'notes', text: $('snotes').value }, 1); toast(r.ok ? '✓ Notebook saved' : '⚠ ' + r.error); }; };
 $('ago').onclick = function(){ var q = $('atxt').value; $('atxt').value = ''; ask(q); };
 $('atxt').onkeydown = function(e){ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('ago').onclick(); } };
 $('aex').onclick = function(e){ var b = e.target.closest('button'); if (b) { $('atxt').value = b.textContent; $('ago').onclick(); } };

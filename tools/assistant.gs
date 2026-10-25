@@ -49,8 +49,13 @@ function setup(s, P) {
 
 function run(req, who, P) {
   var op = req.op;
-  if (op === 'hello') return { ok: true, ver: AS_VER, teams: { s: P.getProperty('AS_TEAM_s') || '', f: P.getProperty('AS_TEAM_f') || '' }, email: gmailOn() ? myMail() : '' };
+  if (op === 'hello') return { ok: true, ver: AS_VER, teams: { s: P.getProperty('AS_TEAM_s') || '', f: P.getProperty('AS_TEAM_f') || '' }, email: gmailOn() ? myMail() : '', ai: !!P.getProperty('AS_AI'), brain: P.getProperty('AS_BRAIN') || BRAIN_DEFAULT, notes: P.getProperty('AS_NOTES') || '' };
   if (op === 'mail') return mailNew(req, who, P);                  // a new email to an address (text + files), e.g. a Slack photo sent on by email
+  if (op === 'aikey') { var kk = String(req.key || '').trim(); if (!kk) { P.deleteProperty('AS_AI'); return { ok: true, ai: false }; } if (!/^sk-ant-/.test(kk)) return { ok: false, error: 'that does not look like an Anthropic key (sk-ant-…)' };
+    var tst = aiCall(kk, P, [{ role: 'user', content: 'Say OK' }], 'Reply with the single word OK.', [], 20); if (tst.error) return { ok: false, error: tst.error }; P.setProperty('AS_AI', kk); return { ok: true, ai: true }; }
+  if (op === 'brain') { P.setProperty('AS_BRAIN', String(req.text || '').slice(0, 8000)); return { ok: true }; }
+  if (op === 'notes') { if (req.text !== undefined) P.setProperty('AS_NOTES', String(req.text || '').slice(0, 8000)); return { ok: true, notes: P.getProperty('AS_NOTES') || '' }; }
+  if (op === 'ask') return askAI(req, who, P);
   if (op === 'tokens') {                                         // change a token later from the app (signed)
     var tt = { s: String(req.s || '').trim(), f: String(req.f || '').trim() }, teams = {};
     for (var i = 0; i < WS.length; i++) { var w = WS[i]; if (!tt[w]) continue; var a = slack(tt[w], 'auth.test', {}); if (!a.ok) return { ok: false, error: 'Slack said ' + a.error }; P.setProperty('AS_TOK_' + w, tt[w]); P.setProperty('AS_TEAM_' + w, a.team || ''); C_().remove('CHANS_' + w); teams[w] = a.team; }
@@ -157,6 +162,82 @@ function emailOp(op, k, req, who, P) {
     return { ok: true, b64: Utilities.base64Encode(a.getBytes()), type: a.getContentType() || '', name: a.getName() || 'file' };
   }
   return { ok: false, error: 'unknown op ' + op };
+}
+// ---------- the AI brain (25 Oct 2026): Abbas's own key (AS_AI), pasted once in the app's settings; the small fast model by default ----------
+// The phone sends a question (typed or spoken) + what it knows (Timo day); the script adds the brain file, the notebook, the chat list and the
+// new lines, and lets the model READ chats itself (tool read_chat). Anything that SENDS is never done here: the model asks for it with an
+// action tool, the script queues it, and the phone shows it to Abbas and sends only after his yes.
+var AI_MODEL = 'claude-haiku-5-5', AI_URL = 'https://api.anthropic.com/v1/messages', AI_ROUNDS = 4;
+var BRAIN_DEFAULT = [
+  'You are the assistant of Abbas (Dubai). He runs SJ Trading / SJTC (Sayed Jamal Trading Co.): wholesale jalabiya and lace, and the AL MUTAGADED garment factory.',
+  'Sources you see: Slack SJTC (customer order memos, godown pick lists, direct chats), Slack Factory (one chat per design card, #cash, #expenses, #laisfactory = lace), Email (his Gmail), and later WhatsApp.',
+  'Design numbers look like SJ-48188 (also written 48188). A card chat in the factory workspace is that design\'s production thread.',
+  'People often write Urdu, Hindi, Arabic or Bengali in Latin letters. Always answer Abbas in short plain English; translate any foreign line you quote.',
+  'Style: brief, direct, no flattery. When reading out what is new, go chat by chat: who said what, newest first, and say which ones need his reply.',
+  'Never claim something was sent. You only QUEUE sends (send_message, send_email, forward_last); Abbas confirms on the phone. Say "ready to send — say yes".',
+  'Money: AED unless said otherwise. Dates: Dubai time.'
+].join('\n');
+var AI_TOOLS = [
+  { name: 'read_chat', description: 'Read the last messages of one chat (Slack channel, card thread, order memo, email thread) by its name as it appears in the chat list. Use it before answering about what someone said, a status, a balance written in a chat.', input_schema: { type: 'object', properties: { chat: { type: 'string', description: 'the chat name, e.g. "SJ-48188", "#cash", "NASIR (LIBYA)", "Lace shipment"' }, n: { type: 'integer', description: 'how many latest messages, default 25' } }, required: ['chat'] } },
+  { name: 'remember', description: 'Write a short note into the notebook for later (things Abbas tells you to keep: "keep 48188 at 100", "Nadeem price 12.5").', input_schema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } },
+  { name: 'send_message', description: 'QUEUE a message to a chat (Slack channel / thread / email thread) for Abbas to confirm. Write the message in the language Abbas wants (default English, Roman Urdu if he says so).', input_schema: { type: 'object', properties: { chat: { type: 'string' }, text: { type: 'string' } }, required: ['chat', 'text'] } },
+  { name: 'send_email', description: 'QUEUE a new email to an address for Abbas to confirm.', input_schema: { type: 'object', properties: { to: { type: 'string' }, subject: { type: 'string' }, text: { type: 'string' } }, required: ['to', 'text'] } },
+  { name: 'forward_last', description: 'QUEUE forwarding the latest photo / voice / file / message of one chat to another chat, to WhatsApp, or to an email address.', input_schema: { type: 'object', properties: { from_chat: { type: 'string' }, kind: { type: 'string', enum: ['photo', 'voice', 'file', 'message'] }, to: { type: 'string', description: 'a chat name, "whatsapp", or an email address' } }, required: ['from_chat', 'kind', 'to'] } },
+  { name: 'open_chat', description: 'Open a chat on the phone screen.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } },
+  { name: 'mark_done', description: 'Mark one chat (or all, chat = "all") as read in the Catch-up.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } },
+  { name: 'voice_note', description: 'QUEUE a voice note: the phone will record Abbas speaking and send the recording to that chat after his yes.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } }
+];
+function aiCall(key, P, messages, system, tools, maxTok) {
+  var body = { model: P.getProperty('AS_MODEL') || AI_MODEL, max_tokens: maxTok || 900, system: system, messages: messages }; if (tools && tools.length) body.tools = tools;
+  var r, j; try { r = UrlFetchApp.fetch(AI_URL, { method: 'post', contentType: 'application/json', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' }, payload: JSON.stringify(body), muteHttpExceptions: true }); j = JSON.parse(r.getContentText()); }
+  catch (e) { return { error: 'AI: ' + String(e.message || e).slice(0, 160) }; }
+  if (j.error) return { error: 'AI said: ' + (j.error.message || j.error.type || 'error').slice(0, 200) + (r.getResponseCode() === 401 ? ' — check the key' : r.getResponseCode() === 400 && /credit|balance/i.test(j.error.message || '') ? ' — top up the balance at console.anthropic.com' : '') };
+  return j;
+}
+function chatIndex(who, P) {                                      // the chats the model may name: from the feed (cached 25 s inside)
+  var f; try { f = feed(who, P, false); } catch (e) { return { list: [], digest: '' }; }
+  var L = (f.chats || []).slice(0, 120), dg = [];
+  L.forEach(function (c) { if (c.un > 0 && c.lines.length) dg.push('• ' + c.title + ' [' + (c.ws === 'e' ? 'Email' : c.team + ' #' + c.chn) + ']: ' + c.lines.map(function (l) { return l.who + ': ' + l.text; }).join(' / ')); });
+  return { list: L, digest: dg.slice(0, 40).join('\n') };
+}
+function findChatSrv(L, q) { q = String(q || '').trim().toLowerCase().replace(/^#/, '').replace(/^sj-?/, ''); if (!q) return null;
+  var norm = function (c) { return String(c.title || '').toLowerCase().replace(/^#/, '').replace(/^sj-?/, ''); };
+  return L.filter(function (c) { return norm(c) === q || (c.kind === 'channel' && c.chn.toLowerCase() === q); })[0] || L.filter(function (c) { return norm(c).indexOf(q) >= 0 || String(c.chn || '').toLowerCase().indexOf(q) >= 0; })[0] || null; }
+function readChatSrv(c, n, who, P) {
+  var k = parseKey(c.k), msgs; if (!k) return 'bad chat';
+  if (k.ws === 'e') { var r = emailOp('thread', k, { k: c.k }, who, P); if (!r.ok) return r.error; msgs = r.msgs; }
+  else { var tok = P.getProperty('AS_TOK_' + k.ws); if (!tok) return 'no token'; var raw = k.ts ? replies(tok, k.ch, k.ts, '', false) : chHist(tok, k.ch, false).slice().reverse(); var users = names(k.ws, tok); msgs = raw.map(function (m) { return msgOut(m, users, k.ts); }); }
+  return msgs.slice(-(n || 25)).map(function (m) { var d = new Date(+m.ts * 1000), ds = Utilities.formatDate(d, 'Asia/Dubai', 'd MMM HH:mm'); return ds + ' ' + (m.sys ? '→ ' : (m.who || '?') + ': ') + String(m.text || '').replace(/\s+/g, ' ').slice(0, 400) + ((m.files || []).length ? ' [' + fileWord(m.files) + ']' : ''); }).join('\n') || '(empty)';
+}
+function askAI(req, who, P) {
+  var key = P.getProperty('AS_AI'); if (!key) return { ok: false, error: 'no AI key yet — add it in Settings', nokey: true };
+  var q = String(req.q || '').trim().slice(0, 4000); if (!q) return { ok: false, error: 'empty' };
+  var idx = chatIndex(who, P), now = Utilities.formatDate(new Date(), 'Asia/Dubai', 'EEEE d MMM yyyy HH:mm');
+  var system = (P.getProperty('AS_BRAIN') || BRAIN_DEFAULT) + '\n\nNow: ' + now + ' (Dubai).\n\nNOTEBOOK:\n' + (P.getProperty('AS_NOTES') || '(empty)') +
+    '\n\nCHATS (name [source] · unread):\n' + idx.list.map(function (c) { return c.title + ' [' + (c.ws === 'e' ? 'Email ' + c.chn : c.team + ' #' + c.chn) + ']' + (c.un > 0 ? ' · ' + c.un + ' new' : ''); }).join('\n') +
+    '\n\nNEW LINES RIGHT NOW:\n' + (idx.digest || '(nothing new)') + (req.timo ? '\n\nTIMO (his day plan, from the phone):\n' + String(req.timo).slice(0, 2000) : '') +
+    (req.mode === 'drive' ? '\n\nHe is DRIVING and listening by voice: keep every answer under 60 words unless he asks for more, no lists, no symbols.' : '');
+  var msgs = []; (Array.isArray(req.hist) ? req.hist.slice(-8) : []).forEach(function (h) { if (h && (h.role === 'user' || h.role === 'assistant') && h.text) msgs.push({ role: h.role, content: String(h.text).slice(0, 2000) }); });
+  msgs.push({ role: 'user', content: q });
+  var actions = [], text = '', notes = P.getProperty('AS_NOTES') || '';
+  for (var round = 0; round < AI_ROUNDS; round++) {
+    var j = aiCall(key, P, msgs, system, AI_TOOLS, 900); if (j.error) return { ok: false, error: j.error };
+    var parts = j.content || [], uses = parts.filter(function (p) { return p.type === 'tool_use'; }); parts.forEach(function (p) { if (p.type === 'text' && p.text) text += (text ? '\n' : '') + p.text; });
+    if (!uses.length) break;
+    msgs.push({ role: 'assistant', content: parts }); var results = [];
+    uses.forEach(function (u) { var inp = u.input || {}, res = '';
+      if (u.name === 'read_chat') { var c = findChatSrv(idx.list, inp.chat); res = c ? 'CHAT ' + c.title + ':\n' + readChatSrv(c, +inp.n || 25, who, P) : 'No chat called "' + inp.chat + '". Names available are in the CHATS list.'; }
+      else if (u.name === 'remember') { notes = (notes + '\n' + Utilities.formatDate(new Date(), 'Asia/Dubai', 'd MMM') + ': ' + String(inp.text || '').slice(0, 300)).trim().slice(-8000); P.setProperty('AS_NOTES', notes); res = 'noted'; }
+      else if (/^(send_message|send_email|forward_last|open_chat|mark_done|voice_note)$/.test(u.name)) {
+        var a = { type: u.name, chat: inp.chat || inp.from_chat || '', text: inp.text || '', to: inp.to || '', subject: inp.subject || '', kind: inp.kind || '' };
+        if (a.chat) { var cc = findChatSrv(idx.list, a.chat); if (cc) { a.k = cc.k; a.chat = cc.title; } else if (u.name !== 'mark_done' || a.chat.toLowerCase() !== 'all') { res = 'No chat called "' + a.chat + '" — pick a name from the CHATS list.'; } }
+        if (!res) { if (/^(open_chat|mark_done)$/.test(u.name)) res = 'done on the phone'; else res = 'queued — Abbas will confirm on the phone; tell him it is ready and say what it contains'; actions.push(a); } }
+      else res = 'unknown tool';
+      results.push({ type: 'tool_result', tool_use_id: u.id, content: res.slice(0, 12000) }); });
+    msgs.push({ role: 'user', content: results });
+    if (j.stop_reason === 'end_turn') break;
+  }
+  return { ok: true, text: text.trim() || (actions.length ? 'Ready.' : '…'), actions: actions, notes: notes };
 }
 function emType(n) { n = String(n || '').toLowerCase(); return /\.(jpe?g)$/.test(n) ? 'image/jpeg' : /\.png$/.test(n) ? 'image/png' : /\.webp$/.test(n) ? 'image/webp' : /\.pdf$/.test(n) ? 'application/pdf' : /\.(m4a|mp4)$/.test(n) ? 'audio/mp4' : /\.webm$/.test(n) ? 'audio/webm' : /\.mp4$/.test(n) ? 'video/mp4' : 'application/octet-stream'; }
 function mailNew(req, who, P) {                                   // op mail: { to, subject, text, files[] }
