@@ -86,9 +86,18 @@ async function signed(url, o, lim){
   catch(e){ clearTimeout(tm); return { ok: false, error: e.name === 'AbortError' ? 'no answer in time' : 'no connection — is the bridge running on the PC? (' + e.message + ')' }; }
 }
 function state(s, t){ document.body.className = s || ''; $('st').textContent = t || ''; }
-function log(k, t){ var d = document.createElement('div'); d.className = 'm ' + k; d.textContent = t; $('log').appendChild(d); $('log').scrollTop = 1e9; }
+function log(k, t){ var d = document.createElement('div'); d.className = 'm ' + k; d.textContent = t; $('log').appendChild(d); $('log').scrollTop = 1e9; if (k === 'j') files(d, t); }
+async function files(d, t){ var re = /\[\[file:([^\]]+)\]\]/g, m, names = []; while ((m = re.exec(t))) names.push(m[1].trim());
+  if (!names.length) return; d.textContent = t.replace(re, '').replace(/\n{3,}/g, '\n\n').trim();
+  for (var i = 0; i < names.length; i++) { var n = names[i], u = BR + '/f/' + encodeURIComponent(n) + '?s=' + (await hmacHex(PW, n)), ext = n.split('.').pop().toLowerCase(), el;
+    if (/^(jpg|jpeg|png|gif)$/.test(ext)) { el = document.createElement('img'); el.src = u; el.style.cssText = 'max-width:100%;border-radius:10px;display:block;margin-top:8px'; }
+    else if (/^(mp4)$/.test(ext)) { el = document.createElement('video'); el.src = u; el.controls = true; el.playsInline = true; el.style.cssText = 'max-width:100%;border-radius:10px;display:block;margin-top:8px'; }
+    else if (/^(m4a|mp3|ogg|webm|wav|aac|opus)$/.test(ext)) { el = document.createElement('audio'); el.src = u; el.controls = true; el.style.cssText = 'width:100%;margin-top:8px'; }
+    else { el = document.createElement('a'); el.href = u; el.textContent = '📎 ' + n; el.target = '_blank'; el.style.cssText = 'display:block;margin-top:8px;color:var(--b)'; }
+    d.appendChild(el); }
+  $('log').scrollTop = 1e9; }
 function unlockAudio(){ if (!AUD) { AUD = new Audio(); try { AUD.play().catch(function(){}); } catch(e){} } }
-function clean(t){ return String(t).replace(/```[\s\S]*?```/g, ' ').replace(/[*_#`>|•→↪✓⚠✨🟢📎🎤📷🗓]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500); }
+function clean(t){ return String(t).replace(/\[\[file:[^\]]+\]\]/g, ' ').replace(/```[\s\S]*?```/g, ' ').replace(/[*_#`>|•→↪✓⚠✨🟢📎🎤📷🗓]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500); }
 function say(t, cb){ var txt = clean(t); if (!txt) { cb && cb(); return; }
   state('speaking', 'Speaking…');
   if (TTS && AS_URL && PW && AUD) { signed(AS_URL, { op: 'tts', text: txt }, 30000).then(function(r){ if (!r.ok || !r.b64) return fallback();

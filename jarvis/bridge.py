@@ -15,6 +15,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = os.path.dirname(os.path.abspath(__file__))
 AGENT = os.path.dirname(HERE)                       # my-agent
 PORT = 8792   # 8790/8791 are used by the face / voice
+OUT = os.path.join(HERE, 'out')                      # files Jarvis fetched for the phone (voice notes, photos)
+os.makedirs(OUT, exist_ok=True)
+PHONE = ('[From the PHONE page, not the PC screen. Rules for this answer: no sj.py show, no start, nothing opened on the PC screen. '
+         'To let Abbas hear or see a file: sj.py file "<chat>" <fileId> jarvis/out/<short-name.ext> and then put [[file:<short-name.ext>]] on its own line in the answer; '
+         'the phone shows a player/photo there. Answer in plain short sentences — it is read aloud.] ')
 cfg = json.load(open(os.path.join(HERE, 'config.json'), encoding='utf-8'))
 PW = cfg['pw']
 SEEN = set()
@@ -23,7 +28,7 @@ STATE = {'started': False, 'tunnel': ''}
 
 def jarvis(text):
     """One turn with Jarvis. --continue keeps the conversation (memory of the last turns) between calls."""
-    cmd = ['claude', '-p', text, '--output-format', 'text']
+    cmd = ['claude', '-p', PHONE + text, '--output-format', 'text']
     if STATE['started']: cmd.append('--continue')
     try:
         r = subprocess.run(cmd, cwd=AGENT, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=240, shell=(os.name == 'nt'))
@@ -46,7 +51,18 @@ class H(BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(b)))
         self.end_headers(); self.wfile.write(b)
     def do_OPTIONS(self): self._send(200, {'ok': True})
-    def do_GET(self): self._send(200, {'ok': True, 'jarvis': 'bridge', 'tunnel': STATE['tunnel']})
+    def do_GET(self):
+        from urllib.parse import urlparse, parse_qs, unquote
+        u = urlparse(self.path)
+        if not u.path.startswith('/f/'): return self._send(200, {'ok': True, 'jarvis': 'bridge', 'tunnel': STATE['tunnel']})
+        name = os.path.basename(unquote(u.path[3:])); want = hmac.new(PW.encode('utf-8'), name.encode('utf-8'), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(want, (parse_qs(u.query).get('s') or [''])[0]): return self._send(403, {'ok': False, 'error': 'bad link'})
+        fp = os.path.join(OUT, name)
+        if not os.path.isfile(fp): return self._send(404, {'ok': False, 'error': 'no such file'})
+        ext = name.rsplit('.', 1)[-1].lower()
+        ct = {'m4a': 'audio/mp4', 'mp4': 'video/mp4', 'mp3': 'audio/mpeg', 'ogg': 'audio/ogg', 'webm': 'audio/webm', 'wav': 'audio/wav', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'pdf': 'application/pdf'}.get(ext, 'application/octet-stream')
+        with open(fp, 'rb') as f: b = f.read()
+        self.send_response(200); self.send_header('Content-Type', ct); self.send_header('Access-Control-Allow-Origin', '*'); self.send_header('Content-Length', str(len(b))); self.end_headers(); self.wfile.write(b)
     def do_POST(self):
         try:
             n = int(self.headers.get('Content-Length') or 0)
