@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 AGENT = os.path.dirname(HERE)                       # my-agent
-PORT = 8791
+PORT = 8792   # 8790/8791 are used by the face / voice
 cfg = json.load(open(os.path.join(HERE, 'config.json'), encoding='utf-8'))
 PW = cfg['pw']
 SEEN = set()
