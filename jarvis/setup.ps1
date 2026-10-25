@@ -48,7 +48,7 @@ else {
 # 3. Jarvis folder: brain file, SJ tool, config
 Say "Putting the Jarvis files in $JARVIS ..."
 New-Item -ItemType Directory -Force -Path $JARVIS | Out-Null
-foreach ($f in @('CLAUDE.md','README.md','sj.py','config.example.json')) {
+foreach ($f in @('CLAUDE.md','README.md','sj.py','bridge.py','phone.bat','config.example.json')) {
   Invoke-WebRequest "$RAW/$f" -OutFile (Join-Path $JARVIS $f) -UseBasicParsing
 }
 $cfg = Join-Path $JARVIS 'config.json'

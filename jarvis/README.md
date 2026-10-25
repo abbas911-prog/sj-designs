@@ -25,3 +25,10 @@ Double-click **Jarvis Talk** on the Desktop (the wizard makes it). Hold the push
 ## Not yet
 - WhatsApp from Jarvis (needs a bridge or desktop control — next step once this runs).
 - Hands-free listening (the base is push-to-talk).
+
+## Jarvis on the phone (26 Oct 2026)
+The brain stays on the PC; the phone talks to it.
+1. PC: double-click `my-agent\jarvis\phone.bat` (or in PowerShell: `cd $env:USERPROFILE\my-agent` → `python jarvis\bridge.py`). First time it installs cloudflared. It prints **PHONE LINK: https://….trycloudflare.com**. Keep the window open.
+2. Phone: open https://abbas911-prog.github.io/sj-designs/jarvis.html → paste the link → Connect. Add to Home Screen. (It uses the Assistant app's password and OpenAI voice already on the phone — open assistant.html once if it says no password.)
+3. Hold the green mic and talk, or type. Jarvis answers in text and speaks it.
+The link changes every time the bridge restarts — tap ⚙︎ and paste the new one. Only `sj.py send` still asks; Jarvis says so and you confirm in the next message.

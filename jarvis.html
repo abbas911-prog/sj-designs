@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#06101a">
+<link rel="apple-touch-icon" href="memo-icon-180.png">
+<title>Jarvis</title>
+<style>
+:root{--bg:#06101a;--fg:#e6f1ff;--dim:#7f98b3;--g:#22d3a0;--b:#38bdf8;--o:#f59e0b;--r:#f87171}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 700px at 50% 30%,#0b2238 0%,var(--bg) 60%);color:var(--fg);font:16px/1.4 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;display:flex;flex-direction:column;min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+header b{letter-spacing:.18em;font-weight:700}
+header small{color:var(--dim)}
+#gear{background:none;border:0;color:var(--dim);font-size:20px}
+#face{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:8px 0 4px}
+.orb{width:min(58vw,240px);height:min(58vw,240px);border-radius:50%;position:relative;background:radial-gradient(circle at 40% 35%,#1e3a5f,#06101a 70%);box-shadow:0 0 60px rgba(56,189,248,.18),inset 0 0 40px rgba(56,189,248,.15);transition:box-shadow .4s}
+.orb:before,.orb:after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid rgba(56,189,248,.35);animation:spin 9s linear infinite}
+.orb:after{inset:14%;border-color:rgba(34,211,160,.35);animation-duration:6s;animation-direction:reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.orb i{position:absolute;left:50%;top:50%;width:26%;height:26%;margin:-13% 0 0 -13%;border-radius:50%;background:var(--b);filter:blur(2px);opacity:.85;transition:all .3s}
+body.listening .orb{box-shadow:0 0 90px rgba(34,211,160,.45),inset 0 0 50px rgba(34,211,160,.3)}
+body.listening .orb i{background:var(--g);animation:pulse .9s ease-in-out infinite}
+body.thinking .orb i{background:var(--o);animation:pulse .5s ease-in-out infinite}
+body.speaking .orb i{background:var(--b);animation:pulse .35s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
+#st{text-align:center;color:var(--dim);min-height:1.4em;padding:0 16px}
+#log{flex:1 1 auto;overflow:auto;padding:8px 16px 0;-webkit-overflow-scrolling:touch}
+.m{max-width:92%;margin:6px 0;padding:10px 12px;border-radius:14px;white-space:pre-wrap;word-break:break-word;font-size:15px}
+.m.y{margin-left:auto;background:#1d3b5a;border-bottom-right-radius:4px}
+.m.j{background:#0d1f31;border:1px solid rgba(56,189,248,.18);border-bottom-left-radius:4px}
+.m.e{color:var(--r);background:none;font-size:13px}
+#bar{display:flex;gap:8px;align-items:center;padding:10px 12px 12px}
+#txt{flex:1;background:#0d1f31;border:1px solid rgba(127,152,179,.3);color:var(--fg);border-radius:22px;padding:11px 14px;font-size:16px;outline:none}
+#talk{width:56px;height:56px;border-radius:50%;border:0;background:var(--g);color:#06101a;font-size:24px;flex:0 0 auto;touch-action:none;user-select:none;-webkit-user-select:none}
+#talk:active,#talk.on{background:#86efac;transform:scale(1.08)}
+#send{width:44px;height:44px;border-radius:50%;border:0;background:var(--b);color:#06101a;font-size:18px;flex:0 0 auto}
+#setup{position:fixed;inset:0;background:rgba(6,16,26,.96);display:none;flex-direction:column;justify-content:center;padding:24px;gap:10px}
+#setup.show{display:flex}
+#setup input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(127,152,179,.4);background:#0d1f31;color:var(--fg);font-size:15px}
+#setup button{padding:12px;border-radius:10px;border:0;background:var(--g);color:#06101a;font-weight:700;font-size:16px}
+#setup p{color:var(--dim);font-size:14px;margin:4px 0}
+#setup a{color:var(--b)}
+</style>
+</head>
+<body>
+<header><b>JARVIS</b><small id="hb">·</small><button id="gear" type="button" aria-label="Settings">⚙︎</button></header>
+<div id="face"><div class="orb"><i></i></div></div>
+<div id="st">Hold the green button and talk, or type.</div>
+<div id="log"></div>
+<div id="bar">
+  <input id="txt" type="text" placeholder="Type to Jarvis…" autocomplete="off" enterkeyhint="send">
+  <button id="send" type="button" aria-label="Send">➤</button>
+  <button id="talk" type="button" aria-label="Hold to talk">🎤</button>
+</div>
+<div id="setup">
+  <h2 style="margin:0 0 6px">Connect to the PC</h2>
+  <p>On the PC, <b>python jarvis\bridge.py</b> prints a PHONE LINK (https://…trycloudflare.com). Paste it here. It changes each time the bridge restarts.</p>
+  <input id="s_url" type="url" placeholder="https://xxxx.trycloudflare.com" inputmode="url">
+  <p id="s_pw_p">The voice and the password come from the Assistant app on this phone — <a href="assistant.html">open it once and sign in</a> if it says no password.</p>
+  <button id="s_ok" type="button">Connect</button>
+  <p id="s_err" style="color:var(--r)"></p>
+</div>
+<script>
+function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
+function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function $(i){ return document.getElementById(i); }
+async function hmacHex(key, msg){
+  var k = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(msg)))).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
+}
+var AS_URL = ls('as2_url') || '', PW = ls('as2_pw') || '', WHO = ls('as2_who') || 'Abbas', BR = ls('jv_bridge') || '', TTS = ls('as2_tts') || '', AUD = null, BUSY = false;
+function rid(){ return Math.random().toString(36).slice(2, 14); }
+async function signed(url, o, lim){
+  o.t = Date.now(); o.who = WHO; o.rid = o.rid || ''; var req = JSON.stringify(o), sig = await hmacHex(PW, req);
+  var ac = window.AbortController ? new AbortController() : null, tm = ac ? setTimeout(function(){ ac.abort(); }, lim || 30000) : null;
+  try { var r = await fetch(url, { method: 'POST', body: JSON.stringify({ req: req, sig: sig }), cache: 'no-store', credentials: 'omit', signal: ac ? ac.signal : undefined }); var t = await r.text(); clearTimeout(tm);
+    try { return JSON.parse(t); } catch(e){ return { ok: false, error: 'not JSON (' + r.status + ')' }; } }
+  catch(e){ clearTimeout(tm); return { ok: false, error: e.name === 'AbortError' ? 'no answer in time' : 'no connection — is the bridge running on the PC? (' + e.message + ')' }; }
+}
+function state(s, t){ document.body.className = s || ''; $('st').textContent = t || ''; }
+function log(k, t){ var d = document.createElement('div'); d.className = 'm ' + k; d.textContent = t; $('log').appendChild(d); $('log').scrollTop = 1e9; }
+function unlockAudio(){ if (!AUD) { AUD = new Audio(); try { AUD.play().catch(function(){}); } catch(e){} } }
+function clean(t){ return String(t).replace(/```[\s\S]*?```/g, ' ').replace(/[*_#`>|•→↪✓⚠✨🟢📎🎤📷🗓]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500); }
+function say(t, cb){ var txt = clean(t); if (!txt) { cb && cb(); return; }
+  state('speaking', 'Speaking…');
+  if (TTS && AS_URL && PW && AUD) { signed(AS_URL, { op: 'tts', text: txt }, 30000).then(function(r){ if (!r.ok || !r.b64) return fallback();
+      var done = false, fin = function(){ if (done) return; done = true; state('', ''); cb && cb(); };
+      try { AUD.onended = fin; AUD.onerror = fin; AUD.src = 'data:audio/mpeg;base64,' + r.b64; var p = AUD.play(); if (p && p.catch) p.catch(fin); } catch(e){ fin(); } }); return; }
+  fallback();
+  function fallback(){ try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(txt); var L = speechSynthesis.getVoices(), v = L.filter(function(x){ return /en-(US|GB)/.test(x.lang) && /premium|enhanced|natural|siri|google/i.test(x.name); })[0] || L.filter(function(x){ return /en-(US|GB)/.test(x.lang); })[0]; if (v) u.voice = v; u.onend = u.onerror = function(){ state('', ''); cb && cb(); }; speechSynthesis.speak(u); } catch(e){ state('', ''); cb && cb(); } }
+}
+async function ask(text){ text = String(text || '').trim(); if (!text || BUSY) return; if (!BR) { setup(); return; }
+  BUSY = true; log('y', text); state('thinking', 'Jarvis is thinking…'); $('txt').value = '';
+  var r = await signed(BR, { op: 'ask', text: text, rid: rid() }, 250000); BUSY = false;
+  if (!r.ok) { state('', ''); log('e', r.error || 'failed'); if (/wrong password/.test(r.error || '')) setup(r.error); return; }
+  log('j', r.text); say(r.text);
+}
+// ---- hold to talk (phone mic) ----
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null, heard = '';
+function recStart(){ unlockAudio(); try { speechSynthesis.cancel(); } catch(e){} if (AUD) { try { AUD.pause(); } catch(e){} }
+  if (!SR) { state('', 'This browser has no speech input — type instead (or open in Safari / Chrome).'); return; }
+  if (rec) return; heard = ''; rec = new SR(); rec.lang = 'en-IN'; rec.interimResults = true; rec.continuous = true;
+  rec.onresult = function(ev){ var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; heard = t.trim(); $('st').textContent = heard ? '“' + heard + '”' : 'Listening…'; };
+  rec.onerror = function(ev){ state('', 'Mic: ' + ev.error + (ev.error === 'not-allowed' ? ' — allow the microphone, or add this page to the Home Screen' : '')); rec = null; $('talk').classList.remove('on'); };
+  rec.onend = function(){ rec = null; $('talk').classList.remove('on'); if (heard) ask(heard); else if (!BUSY) state('', ''); };
+  try { rec.start(); state('listening', 'Listening…'); $('talk').classList.add('on'); } catch(e){ rec = null; state('', 'Mic failed: ' + e.message); }
+}
+function recStop(){ if (rec) { try { rec.stop(); } catch(e){} } }
+var tb = $('talk');
+tb.addEventListener('pointerdown', function(e){ e.preventDefault(); tb.setPointerCapture && tb.setPointerCapture(e.pointerId); recStart(); });
+tb.addEventListener('pointerup', function(e){ e.preventDefault(); recStop(); });
+tb.addEventListener('pointercancel', recStop);
+tb.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+$('send').onclick = function(){ unlockAudio(); ask($('txt').value); };
+$('txt').addEventListener('keydown', function(e){ if (e.key === 'Enter') { unlockAudio(); ask($('txt').value); } });
+// ---- setup ----
+function setup(err){ $('s_url').value = BR; $('s_err').textContent = err || ''; $('s_pw_p').style.color = PW ? '' : 'var(--r)'; $('setup').classList.add('show'); }
+$('gear').onclick = function(){ setup(); };
+$('s_ok').onclick = async function(){ var u = $('s_url').value.trim().replace(/\/+$/, ''); if (!/^https?:\/\//.test(u)) { $('s_err').textContent = 'Paste the https://… link the bridge printed.'; return; }
+  if (!PW) { $('s_err').textContent = 'No Assistant password on this phone yet — open assistant.html, sign in, come back.'; return; }
+  $('s_err').textContent = 'Checking…'; var r = await signed(u, { op: 'ping', rid: rid() }, 15000);
+  if (!r.ok) { $('s_err').textContent = r.error || 'The bridge did not answer.'; return; }
+  BR = u; ls('jv_bridge', BR); $('setup').classList.remove('show'); $('hb').textContent = '● connected'; };
+async function hello(){ if (!BR) { $('hb').textContent = '○ not connected'; setup(); return; }
+  var r = await signed(BR, { op: 'ping', rid: rid() }, 12000); $('hb').textContent = r.ok ? '● connected' : '○ ' + (r.error || 'offline'); if (!r.ok && /no connection|no answer/.test(r.error || '')) state('', 'Bridge not reachable — restart it on the PC and paste the new link (⚙︎).'); }
+hello();
+</script>
+</body>
+</html>
