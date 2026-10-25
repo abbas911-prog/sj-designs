@@ -10,14 +10,21 @@ $JARVIS = Join-Path $AGENT 'jarvis'
 function Say($t) { Write-Host ""; Write-Host "==> $t" -ForegroundColor Cyan }
 
 # 1. Claude Code
-$bin = Join-Path $HOME '.local\bin'
-if (Test-Path (Join-Path $bin 'claude.exe')) { $env:Path = "$bin;$env:Path" }
+function AddClaudePath {
+  $jbin = Join-Path $HOME '.local\bin'
+  if (Test-Path (Join-Path $jbin 'claude.exe')) {
+    if ($env:Path -notlike "*$jbin*") { $env:Path = "$jbin;$env:Path" }
+    $u = [Environment]::GetEnvironmentVariable('Path','User')
+    if ($u -notlike "*$jbin*") { [Environment]::SetEnvironmentVariable('Path', "$jbin;$u", 'User') }
+  }
+}
+AddClaudePath
 if (Get-Command claude -ErrorAction SilentlyContinue) {
   Say "Claude Code is already installed ($(claude --version))."
 } else {
   Say "Installing Claude Code (about 330 MB, prints nothing while it downloads - leave it alone)..."
   irm https://claude.ai/install.ps1 | iex
-  if (Test-Path (Join-Path $bin 'claude.exe')) { $env:Path = "$bin;$env:Path" }
+  AddClaudePath
 }
 
 # 2. Python (the memory, face and sj.py need a real interpreter; the Store placeholder does not count)
@@ -70,6 +77,7 @@ if (-not (Test-Path 'fullstack-agent\fullstack-agent.md')) {
   Remove-Item fsa.zip
 }
 
+AddClaudePath
 if (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
   Write-Host "Claude Code is not on this PC yet. Close this window, open a NEW PowerShell, and paste the setup line again." -ForegroundColor Yellow
   return
