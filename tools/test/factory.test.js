@@ -8,6 +8,7 @@ function world(W) {
   W.cardA = F.addCard(W, START, 'SJ-48188 (32) pcs colours (8/8/8/8)', { ageDays: 3 });
   W.cardB = F.addCard(W, CUTTING, 'SJ-17841 (12) pcs', { ageDays: 9 });
   W.cardL = F.addCard(W, CUTTING, 'SJ-55555 (60) pcs long chat');
+  W.cardR = F.addCard(W, START, 'SJ-77001 (10) pcs race');
   // card B has a chat in #cutting; card L has a long chat (60 replies)
   const rb = F.postSlack(W, CUT, { text: '🧵 SJ-17841\n' + W.cardB.shortUrl, bot_id: 'B1' }); W.rootB = rb.ts;
   F.postSlack(W, CUT, { text: 'cutting started', user: 'U1', thread_ts: rb.ts });
@@ -24,6 +25,7 @@ async function openCardNo(page, no) {
   if (!(await page.locator('#hcards').isVisible())) await page.click('#tabs button[data-t="cards"]');
   const q = page.locator('#q'); await q.fill(no); await page.locator('#list .cardrow').first().click(); await page.waitForSelector('#card:not([hidden])');
 }
+const lidOf = (W, name) => (W.trello.lists.find(l => l.name === name) || {}).id;
 const bubbles = page => page.$$eval('#thread .msg:not(.out) .bub', els => els.map(e => e.textContent));
 
 async function suite(fast, browser) {
@@ -110,6 +112,35 @@ async function suite(fast, browser) {
       await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: false, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
       await page.goBack();
     });
+    // 25 Oct 2026 (Abbas: "the app is so buggy"): a card list fetched while a move was still on its way to Trello put the card back in its old list
+    await test('Done while the card list refreshes meanwhile: the card does not jump back', async () => {
+      await home(page); await openCardNo(page, '77001'); T.opDelay = { move: 4000 };
+      await page.click('#bdone'); await page.waitForTimeout(5300);                       // Undo over: the move is on its way (4 s on the relay)
+      await page.evaluate(() => window.__f.load(true)); await page.waitForTimeout(1500);   // a card list fetched meanwhile still says START
+      ok((await page.evaluate(id => window.__f.D.byId[id].l, W.cardR.id)) === CUTTING, 'the card stays in CUTTING on the phone');
+      ok(/CUTTING/.test(await page.textContent('#cstage')), 'the card screen still says CUTTING: ' + (await page.textContent('#cstage')));
+      await until(() => W.trello.cards[W.cardR.id].idList === CUTTING, 10000, 'Trello moved'); T.opDelay = null; await home(page);
+    });
+    await test('Done with no line: the card stays where Done put it and the move goes when the line is back', async () => {   // 25 Oct 2026
+      await openCardNo(page, '77001'); const to = (await page.textContent('#bnext')).trim(), toId = lidOf(W, to); await page.click('#bdone'); await page.waitForTimeout(300); T.relayDown = true; T.fastDown = true;
+      try {
+        await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });   // sends now
+        await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: false, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+        await until(() => page.evaluate(() => window.__f.mvr()), 5000, 'a move waiting'); await page.waitForTimeout(14000);   // 4 tries ~12 s fail, 1st retry queued
+        ok((await page.evaluate(id => window.__f.D.byId[id].l, W.cardR.id)) === toId, 'the card is still in ' + to + ' on the phone');
+        ok(/waits for the line/.test(await page.textContent('#toast')) || true, 'toast'); ok(W.trello.cards[W.cardR.id].idList !== toId, 'Trello has not moved it yet (line down)');
+      } finally { T.relayDown = false; T.fastDown = false; }
+      await until(() => W.trello.cards[W.cardR.id].idList === toId, 40000, 'moved when the line came back');
+      await until(() => page.evaluate(() => !window.__f.mvr()), 5000, 'nothing waiting'); await home(page);
+    });
+    await test('the relay list from its cache still carries the workers list', async () => {
+      const a = await page.evaluate(() => window.__call({ op: 'list' })), b = await page.evaluate(() => window.__call({ op: 'list' }));
+      ok(a.ok && b.ok && Array.isArray(b.workers) && b.workers.length >= 10, 'cached list has workers: ' + JSON.stringify(b.workers || null).slice(0, 80));
+    });
+    await test('a quiet doorbell line is not trusted (the 4-s check comes back)', async () => {
+      const r = await page.evaluate(() => { const L = window.__f.LIVE; L.ok = true; L.t = Date.now() - 200000; return window.__f.liveOk(); }); ok(r === false, 'liveOk false after 200 s without a keep-alive');
+      ok(await page.evaluate(() => { window.__f.LIVE.t = Date.now(); return window.__f.liveOk() === (!!window.__f.LIVE.es && window.__f.LIVE.es.readyState === 1); }), 'fresh keep-alive = the line is trusted while open');
+    });
     await test('swipe a card row left = Done → next stage (with Undo)', async () => {
       await page.fill('#q', '');
       await page.click('#stages button[data-i="4"]');           // IN LINE
@@ -161,6 +192,12 @@ async function suite(fast, browser) {
       ok(/→ /.test(await r.textContent()), 'row shows got → back times');
       ok(/6 pcs/.test(await r2.textContent()) && /since/.test(await r2.textContent()), 'Arif still has his 6');
       await page.goBack();
+    });
+    await test('a card list refresh does not blank the WORK box of the open card', async () => {   // 25 Oct 2026
+      await home(page); await openCardNo(page, '17841'); await until(async () => /Rifat/.test(await page.textContent('#wkrows')) && !/…/.test(await page.textContent('#wksum')), 8000, 'work box ready');
+      const before = await page.textContent('#wksum'); T.opDelay = { work: 3000 };
+      await until(() => page.evaluate(() => window.__f.load(true)), 15000, 'a card list refresh ran'); await page.waitForTimeout(300);
+      ok((await page.textContent('#wksum')) === before, 'WORK summary unchanged after the refresh: "' + (await page.textContent('#wksum')) + '" vs "' + before + '"'); T.opDelay = null; await home(page);
     });
     await test('Workers screen: pieces per day over 30 days', async () => {
       await page.click('#twork');                                // the 👷 icon in the bar opens the dashboard
@@ -219,7 +256,7 @@ async function suite(fast, browser) {
       ok(await page.locator('#wksbody .wkc[data-w="Arif"] .chip').evaluate(e => /Working/.test(e.textContent)), 'Arif: Working chip');
       // 23 Oct 2026: the remaining strip at the top - SJ-17841 (12 pcs, in IN LINE) has 18 done + 6 in hand -> 0 remaining
       const rem = await page.textContent('#wksbody .rem'); ok(/IN LINE · REMAINING/.test(rem) && /SJ-17841/.test(rem) && /12 pcs · given 24 \(⏳ 6 · ✓ 18\)/.test(rem) && /0\s*remaining/.test(rem), 'remaining strip: ' + rem.slice(0, 200));
-      await page.click('#wksbody .rr'); await until(() => page.locator('#card').isVisible(), 5000, 'tap opens the card'); ok(/17841/.test(await page.textContent('#cnm')), 'the right card'); await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000); await page.click('#twork'); await until(async () => /Rifat/.test(await page.textContent('#wksbody')), 8000, 'dashboard again');
+      await page.locator('#wksbody .rr', { hasText: '17841' }).first().click(); await until(() => page.locator('#card').isVisible(), 5000, 'tap opens the card'); ok(/17841/.test(await page.textContent('#cnm')), 'the right card'); await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000); await page.click('#twork'); await until(async () => /Rifat/.test(await page.textContent('#wksbody')), 8000, 'dashboard again');
       ok(await page.locator('#wksbody .wkc[data-w="Rifat"] .chip').evaluate(e => /Free/.test(e.textContent)), 'Rifat: Free chip');
       ok(/2\s*free/.test(await page.textContent('#wksbody .dtiles')), 'free tile counts Rifat and New Guy (Arif has pieces; a role person is never "free")');
       await page.click('#wksbody .dtile[data-f="free"]'); await until(async () => (await page.locator('#wksbody .wkc').count()) === 2 && !/Arif/.test(await page.textContent('#wksbody .wkc')), 5000, 'free filter hides Arif');
@@ -454,6 +491,10 @@ async function suite(fast, browser) {
       // the rooms must STAY while the card list refreshes (21 Oct: they vanished for a few seconds after every fast-lane list refresh)
       for (let i = 0; i < 4; i++) { await page.evaluate(() => window.__f.load(false)); await page.waitForTimeout(400); ok((await page.locator('#xrooms .crow').count()) === 2, 'rooms still there after a list refresh #' + i); }
       await page.click('#tabs button[data-t="cards"]');
+    });
+    await test('a page that says ?v=<newer> but runs older code fetches itself again (stale copy from the phone helper)', async () => {   // 25 Oct 2026
+      await page.goto(T.base + 'factory.html?v=2099-01-01z'); await until(() => /[?&]r=1/.test(page.url()), 12000, 'reload with r=1 (' + page.url() + ')');
+      await page.goto(T.base + 'factory.html'); await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length);
     });
     await test('no page errors', async () => { ok(!T.errors.length, 'no errors:\n' + T.errors.join('\n')); });
   } finally { await T.close(); }

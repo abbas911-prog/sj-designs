@@ -32,7 +32,7 @@ async function boot(opts) {
     let op = '', rq = {}; try { rq = JSON.parse(JSON.parse(body).req); op = rq.op; } catch (e) {}
     T.trace.push([Date.now(), 'send', op, rq.look, rq.since || rq.ts || '']);
     if (T.relayDown) { await route.abort('failed'); return; }
-    T.relayCalls.push(op); if (opts.relayDelay) await new Promise(r => setTimeout(r, opts.relayDelay));
+    T.relayCalls.push(op); if (opts.relayDelay) await new Promise(r => setTimeout(r, opts.relayDelay)); if (T.opDelay && T.opDelay[op]) await new Promise(r => setTimeout(r, T.opDelay[op]));
     T.trace.push([Date.now(), 'run', op, rq.look]); let txt; try { txt = relay.post(body); } catch (e) { txt = JSON.stringify({ ok: false, error: 'TEST RELAY CRASH ' + e.message }); T.errors.push('relay crash: ' + e.stack); }
     await route.fulfill({ status: 200, contentType: 'application/json', body: txt }); });
   await ctx.route(FASTURL + '/**', async route => { const rq = route.request();

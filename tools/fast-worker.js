@@ -54,7 +54,7 @@ async function tmove(env, q, ctx) {                             // Done -> next 
   const id = String(q.card || '').replace(/[^0-9a-f]/g, ''), to = String(q.to || ''), lists = Array.isArray(q.lists) ? q.lists : [], who = String(q.who || '').slice(0, 40) || 'factory';
   const tl = lists.filter(l => l[1] === to)[0]; if (!id || !tl) return { ok: false, error: 'bad request' };
   const now = await trello(env, 'get', '/cards/' + id, { fields: 'idList,idBoard' }); if (now.idBoard !== BOARD) return { ok: false, error: 'not an ALM card' };
-  if (q.from && now.idList !== q.from) { const nm = lists.filter(l => l[1] === now.idList)[0]; return { ok: false, moved: true, error: 'This card was already moved to ' + (nm ? nm[0] : 'another list') + ' - press ↻ to refresh' }; }
+  if (q.from && now.idList !== q.from && now.idList !== to) { const nm = lists.filter(l => l[1] === now.idList)[0]; return { ok: false, moved: true, error: 'This card was already moved to ' + (nm ? nm[0] : 'another list') + ' - press ↻ to refresh' }; }
   if (now.idList !== to) {
     await trello(env, 'put', '/cards/' + id, { idList: to, pos: 'top' });
     ctx.waitUntil(trello(env, 'post', '/cards/' + id + '/actions/comments', { text: '→ ' + tl[0] + ' · ' + who + ' (factory app)' }).catch(() => {}));

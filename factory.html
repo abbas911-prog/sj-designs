@@ -269,7 +269,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-24c';
+var VER = '2026-10-25a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -300,17 +300,17 @@ async function hmacHex(key, msg){
 }
 // 15 Oct 2026 (Abbas: "still lagging"): at most 4 relay requests at a time from this phone, and the chat / sending / "anything new?" always go
 // before photos and attachments - before, a queue of cover-photo and chat-photo downloads could hold every connection and the chat waited behind them.
-var NET = { busy: 0, heavy: 0, hi: [], lo: [], log: [] };
+var NET = { busy: 0, heavy: 0, lob: 0, hi: [], lo: [], log: [] };
 function netPick(q){ for (var i = 0; i < q.length; i++) if (!q[i].h || q[i].top || NET.heavy < 2) return q.splice(i, 1)[0]; return null; }   // big transfers: at most 2 at once, so chat requests always get through
-function netGo(){ while (NET.busy < 4) { var f = netPick(NET.hi) || netPick(NET.lo); if (!f) break; NET.busy++; if (f.h) NET.heavy++; f(); } }
+function netGo(){ while (NET.busy < 4) { var f = (NET.lo.length && !NET.lob && NET.busy) ? netPick(NET.lo) : (netPick(NET.hi) || netPick(NET.lo)); if (!f) break; NET.busy++; if (f.h) NET.heavy++; if (f.lo) NET.lob++; f(); } }   // 25 Oct 2026: one slot is always there for a photo / voice note (the low queue) - on a slow relay they waited behind the 4-s checks
 var ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|workset|report|workers)$/;
 async function call(obj, pw, top){
   if (ONCE.test(obj.op) && !obj.rid) obj.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);   // a retry of the same action is answered once, never done twice
   var heavy = /^(up|attach|sample)$/.test(obj.op) || (obj.op === 'media' && obj.full && !obj.pre);
   var now = /^(post|up|upurl|move)$/.test(obj.op);                // 15 Oct 2026 ("taking this long just for OK"): a send never waits behind downloads
-  var lo = !top && /^(img|media|atts)$/.test(obj.op); if (!now) await new Promise(function(ok){ ok.h = heavy; ok.top = !!top; obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
+  var lo = !top && /^(img|media|atts)$/.test(obj.op); if (!now) await new Promise(function(ok){ ok.h = heavy; ok.top = !!top; ok.lo = lo; obj._q = ok; if (top) NET.hi.unshift(ok); else (lo ? NET.lo : NET.hi).push(ok); netGo(); });
   var t0 = Date.now(), res;
-  if (now) { try { res = await call0(obj, pw); } catch(e){ res = { ok: false, error: e.message }; } } else { try { res = await call0(obj, pw); } finally { NET.busy--; if (heavy) NET.heavy--; netGo(); } }
+  if (now) { try { res = await call0(obj, pw); } catch(e){ res = { ok: false, error: e.message }; } } else { try { res = await call0(obj, pw); } finally { NET.busy--; if (heavy) NET.heavy--; if (lo) NET.lob--; netGo(); } }
   if (res && res.ok) LASTOK = Date.now();
   NET.log.unshift({ op: obj.op, ms: Date.now() - t0, ok: !!(res && res.ok), e: res && !res.ok ? String(res.error || '').slice(0, 60) : '', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
   return res;
@@ -405,10 +405,10 @@ function loadCached(){ try { var j = JSON.parse(ls('sj_fac_list') || 'null'); if
 // long done-lists (RETURNS BACK, FINISH, SAMPLE DONE, FINISH SAMPLES — Cloudflare's CPU limit); the phone kept them from the relay's list, but the
 // 5-minute background relay list only refreshed the counts, never those cards — so a card moved there (Done) was in Trello but not in the app.
 // Now every relay list replaces the cards of those lists, and a "list changed" ring fetches the relay list on the next refresh.
-function relCards(rj){ var lim = rj.limit || D.limit || {}; if (!rj.cards || !D.cards) return; var keep = D.cards.filter(function(c){ return !lim[c.l]; }), have = {};
+function relCards(rj){ var lim = rj.limit || D.limit || {}; if (!rj.cards || !D.cards) return; var nowm = Date.now(), keep = D.cards.filter(function(c){ return !lim[c.l] || (MVD[c.id] && MVD[c.id].until > nowm); }), have = {};   // 25 Oct 2026: a card just moved to FINISH stays even when an older relay list lacks it
   keep.forEach(function(c){ have[c.id] = 1; });
   D.cards = keep.concat(rj.cards.filter(function(c){ return lim[c.l] && !have[c.id]; })); D.byId = {}; D.cards.forEach(function(c){ D.byId[c.id] = c; }); D.byId.dm = DMC; D.byId.lais = LAISC; xrooms().forEach(function(c){ D.byId[c.id] = c; }); loSync();
-  if (open && D.byId[open.id] && open !== D.byId[open.id]) { var oc = open; open = D.byId[open.id]; ['_atts', '_cover', 'desc'].forEach(function(k){ if (oc[k] !== undefined) open[k] = oc[k]; }); if (TH.card && TH.card.id === open.id) TH.card = open; }
+  if (open && D.byId[open.id] && open !== D.byId[open.id]) { var oc = open; open = D.byId[open.id]; ['_atts', '_cover', 'desc', '_wk', '_sheet', '_wkAt'].forEach(function(k){ if (oc[k] !== undefined) open[k] = oc[k]; }); if (TH.card && TH.card.id === open.id) TH.card = open; }
   RETSIG = ''; try { var sv = JSON.parse(ls('sj_fac_list') || 'null'); if (sv) { sv.cards = D.cards; ls('sj_fac_list', JSON.stringify(sv)); } } catch(e){} }
 async function load(fresh){
   if (LOADING && Date.now() - LOADING < 30000) return false; LOADING = Date.now();
@@ -426,7 +426,7 @@ async function load(fresh){
   if (!j.ok) { $('msg').className = ''; $('msg').textContent = j.error === 'wrong password' ? 'Wrong password · ভুল পাসওয়ার্ড' : '⚠ Could not load · লোড হয়নি'; if (j.error === 'wrong password') showLogin(); return false; }
   applyList(j); if (j.live) liveStart(j.live); j.t = Date.now(); try { ls('sj_fac_list', JSON.stringify(j)); } catch(e){}
   var tnow = new Date(); $('msg').className = 'ok'; $('msg').textContent = D.w ? '● Up to date ' + tnow.getHours().toString().padStart(2, '0') + ':' + tnow.getMinutes().toString().padStart(2, '0') + ' · আপডেট' : '⚠ View only · শুধু দেখা';
-  draw(); liveMark(); if (open && D.byId[open.id] && open !== D.byId[open.id]) { var oc = open; open = D.byId[open.id]; ['_atts', '_cover', 'desc'].forEach(function(k){ if (oc[k] !== undefined) open[k] = oc[k]; }); if (TH.card && TH.card.id === open.id) TH.card = open; paintCard(); }
+  draw(); liveMark(); if (open && D.byId[open.id] && open !== D.byId[open.id]) { var oc = open; open = D.byId[open.id]; ['_atts', '_cover', 'desc', '_wk', '_sheet', '_wkAt'].forEach(function(k){ if (oc[k] !== undefined) open[k] = oc[k]; }); if (TH.card && TH.card.id === open.id) TH.card = open; paintCard(); }
   if (!open) openFromHash();
   return true;
 }
@@ -999,18 +999,28 @@ function move(toName, card){
   MV = { id: c.id, from: c.l, to: to, name: toName, no: parse(c.name).no, at: Date.now(), t: setTimeout(mvGo, 5000) };
   mvApply(); if (open && open.id === c.id) paintCard(); draw(); undoShow();
 }
-function mvApply(){ if (!MV) return; var c = D.byId && D.byId[MV.id]; if (c) { c.l = MV.to; c.pos = -1; } if (open && open.id === MV.id) { open.l = MV.to; open.pos = -1; } }
+var MVD = {};   // 25 Oct 2026: a card moved in the last 25 s keeps its new list even when an older card list arrives meanwhile (the move was still on its way to Trello) - it used to jump back for up to 32 s
+function mvApply(){ if (MV) { var c = D.byId && D.byId[MV.id]; if (c) { c.l = MV.to; c.pos = -1; } if (open && open.id === MV.id) { open.l = MV.to; open.pos = -1; } }
+  var now = Date.now(); Object.keys(MVD).forEach(function(id){ var d = MVD[id]; if (d.until < now) { delete MVD[id]; return; } if (MV && MV.id === id) return; var c2 = D.byId && D.byId[id]; if (c2 && c2.l !== d.to) { c2.l = d.to; c2.pos = -1; } if (open && open.id === id && open.l !== d.to) { open.l = d.to; open.pos = -1; } }); }
 function undoShow(){ var el = $('undo'), m = MV; if (!m) return;
   el.innerHTML = '<span>✓ ' + (m.no ? 'SJ-' + esc(m.no) + ' ' : '') + '→ <b>' + esc(m.name) + '</b><small>' + esc(UR[m.name] || '') + ' -এ পাঠানো হয়েছে</small></span><button id="undob">↩ Undo · ফেরত</button><i></i>';
   el.hidden = false; el.classList.remove('run'); void el.offsetWidth; el.classList.add('run'); }
 function mvUndo(){ if (!MV) return; var m = MV; MV = null; clearTimeout(m.t); $('undo').hidden = true;
   var c = D.byId[m.id]; if (c) c.l = m.from; if (open && open.id === m.id) { open.l = m.from; paintCard(); } draw(); toast('↩ Not moved · সরানো হয়নি'); }
 $('undo').onclick = function(e){ if (e.target.closest('#undob')) mvUndo(); };
-async function mvGo(){ var m = MV; if (!m) return; MV = null; clearTimeout(m.t); $('undo').hidden = true;
-  var j = null, mrid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+async function mvGo(){ var m = MV; if (!m) return; MV = null; clearTimeout(m.t); $('undo').hidden = true; mvSend(m); }
+// 25 Oct 2026 (Abbas: "so buggy"): a Done whose send failed (no line for a moment) used to jump the card back with a 2-s "✗" toast - easy to miss, the
+// move was lost. Now the card stays where Done put it and the move is sent again every 10 s (same once-only id, so it can never move twice),
+// for up to 1.5 min; only "someone moved it meanwhile" or a final failure puts it back. MVR = moves still waiting.
+var MVR = 0;
+async function mvSend(m){ MVD[m.id] = { to: m.to, until: Date.now() + 25000 }; if (!m.tries) MVR++;
+  var j = null, mrid = m.rid || (m.rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
   if (fastTr()) { j = await fast({ op: 'tmove', card: m.id, from: m.from, to: m.to, who: WHO, rid: mrid, lists: D.lists, ref: FAST.refs[m.id] || null, topic: LIVE.topic }, true); if (j && !j.ok && !j.moved) j = null; }
-  if (!j) j = await call({ op: 'move', card: m.id, to: m.to, who: WHO, rid: mrid });   // the relay (no "from": if the worker did move it, this is a no-op)
-  if (!j.ok) { var c = D.byId[m.id]; if (c) c.l = m.from; if (open && open.id === m.id) { open.l = m.from; paintCard(); } draw(); toast('✗ ' + (m.no ? 'SJ-' + m.no + ' ' : '') + j.error); if (j.moved) load(false); return; }
+  if (!j) j = await call({ op: 'move', card: m.id, to: m.to, who: WHO, rid: mrid, from: m.tries ? m.from : '' });   // the relay (no "from" on the first try: if the worker did move it, this is a no-op)
+  if (!j.ok && !j.moved && (m.tries = (m.tries || 0) + 1) <= 9) { MVD[m.id].until = Date.now() + 25000; if (m.tries === 1) toast('⏳ ' + (m.no ? 'SJ-' + m.no + ' ' : '') + 'move waits for the line… · লাইন ফিরলে পাঠানো হবে'); setTimeout(function(){ mvSend(m); }, 10000); return; }
+  MVR = Math.max(0, MVR - 1);
+  if (!j.ok) { delete MVD[m.id]; var c = D.byId[m.id]; if (c) c.l = m.from; if (open && open.id === m.id) { open.l = m.from; paintCard(); } draw(); toast('✗ ' + (m.no ? 'SJ-' + m.no + ' ' : '') + j.error); if (j.moved) load(false); return; }
+  MVD[m.id] = { to: m.to, until: Date.now() + 25000 };
   setTimeout(thPull, 800); setTimeout(function(){ load(false); }, 1200);
   if (/^(FINISH|FINISH SAMPLES)$/.test(m.name)) setTimeout(function(){ call({ op: 'reportauto', card: m.id, who: WHO }).then(function(){ if (open && open.id === m.id) { TH.force = true; thPull(); } }); }, 1500);   // 21 Oct 2026: the production report (the relay posts it once)
 }
@@ -1045,7 +1055,7 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
 window.__LOOK = LOOK; window.__call = function(o, pw, t){ return call(o, pw, t); };
 function looking(){ return !document.hidden && Date.now() - LOOK.vis > 1500 && Date.now() - LOOK.act < 60000; }
 var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
-function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); replySet(null); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (document.hidden) return; TH.tick = (TH.tick || 0) + 1; if (LIVE.ok && TH.tick % 3) return; if (!LIVE.ok && fastOn() && TH.tick % 2) return; thPull(); }, 4000); }
+function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); replySet(null); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (document.hidden) return; TH.tick = (TH.tick || 0) + 1; if (liveOk() && TH.tick % 3) return; if (!liveOk() && fastOn() && TH.tick % 2) return; thPull(); }, 4000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 
 // ===== FAST LANE (16 Oct 2026, Abbas: "you have to think better and do something about this chat .. not flawless at all"). The Google relay
@@ -1521,12 +1531,17 @@ function thcSave(){ CHATSIG = ''; if (TAB === 'chats' && $('card').hidden) chats
 // ---- LIVE (15 Oct 2026, Abbas: "just make my existing chats more flawless"): the relay rings a free doorbell (ntfy.sh, private topic, only
 // "card X changed" - no text) the moment anything is written; the app listens and pulls that chat at once. Polling stays as the safety net.
 var LIVE = { es: null, topic: '', ok: false, t: 0, pt: null };
+// 25 Oct 2026: a doorbell line can die quietly (phone changes network, iOS freezes the page) and still look "open" - then the app trusted it and
+// checked only every 16 s, so messages came late. Now the line counts as live only while ntfy's keep-alives (every 45 s) keep arriving; a quiet
+// line is reconnected, and until then the app checks every 4 s as it does without a doorbell.
+function liveOk(){ return !!(LIVE.ok && LIVE.es && LIVE.es.readyState === 1 && Date.now() - (LIVE.t || 0) < 150000); }
+setInterval(function(){ if (PW && LIVE.topic && !document.hidden && !liveOk()) liveStart(LIVE.topic, true); }, 60000);
 function liveStart(topic, force){ if (!topic || !window.EventSource) return; if (!force && LIVE.es && LIVE.topic === topic && LIVE.es.readyState !== 2) return;
   try { if (LIVE.es) LIVE.es.close(); } catch(e){} LIVE.topic = topic; LIVE.ok = false;
   var es = LIVE.es = new EventSource('https://ntfy.sh/' + topic + '/sse');
-  es.onopen = function(){ LIVE.ok = true; liveMark(); };
+  es.onopen = function(){ LIVE.ok = true; LIVE.t = Date.now(); liveMark(); }; es.addEventListener('keepalive', function(){ LIVE.ok = true; LIVE.t = Date.now(); });
   es.onerror = function(){ LIVE.ok = false; };
-  es.onmessage = function(e){ var d = null; try { d = JSON.parse(e.data); } catch(x){} if (!d || d.event !== 'message') return; LIVE.ok = true; liveNudge(String(d.message || '').replace(/^c=/, '')); }; }
+  es.onmessage = function(e){ var d = null; try { d = JSON.parse(e.data); } catch(x){} if (!d) return; LIVE.t = Date.now(); if (d.event !== 'message') return; LIVE.ok = true; liveNudge(String(d.message || '').replace(/^c=/, '')); }; }
 function liveNudge(c){ LIVE.t = Date.now();
   if (/^s:/.test(c)) { liveSlack(c.slice(2)); return; }
   if (/^list:/.test(c)) { FAST.relAt = 0; setTimeout(function(){ load(false); }, 400); c = c.slice(5); }
@@ -1568,13 +1583,14 @@ var ACX = null; document.addEventListener('pointerdown', function(){ try { if (!
 function beep(){ try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); if (!ACX) return; var o = ACX.createOscillator(), g = ACX.createGain(); o.type = 'sine'; o.frequency.value = 880; g.gain.setValueAtTime(0.0001, ACX.currentTime); g.gain.exponentialRampToValueAtTime(0.25, ACX.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ACX.currentTime + 0.35); o.connect(g); g.connect(ACX.destination); o.start(); o.stop(ACX.currentTime + 0.4); } catch(e){} }
 setInterval(function(){ POLLN++; if (!PW || document.hidden) return; var home = $('card').hidden;
   if (POLLN % 8 === 0) { load(false).then(alertNew); return; }          // every 32 s: the cards themselves
-  if (LIVE.ok && POLLN % 4 !== 0) return;                             // doorbell working: a safety check every 16 s is enough
+  if (liveOk() && POLLN % 4 !== 0) return;                            // doorbell working: a safety check every 16 s is enough
   if (home || POLLN % 3 === 0) ping(false); }, 4000);
 setInterval(function(){ if (!document.hidden && $('card').hidden) checkVer(); }, 300000);
+var VBUSY = 0;
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { if (LIVE.topic) liveStart(LIVE.topic, true); ping(true); checkVer(); if (open) thPull(); } });
 window.addEventListener('pageshow', function(){ if (PW) ping(true); });
-function busyWork(){ return MV || OUT.length || PEND.length || SP.length || $('txt').value.trim() || NET.busy > 1 || REC.r || Array.from(document.querySelectorAll('.sheet')).some(function(x){ return !x.hidden; }); }
-async function checkVer(){ if (busyWork()) return; try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
+function busyWork(){ return MV || MVR || OUT.length || PEND.length || SP.length || $('txt').value.trim() || NET.busy > 1 || REC.r || Array.from(document.querySelectorAll('.sheet')).some(function(x){ return !x.hidden; }); }
+async function checkVer(){ if (busyWork()) { if (!VBUSY) VBUSY = setTimeout(function(){ VBUSY = 0; checkVer(); }, 20000); return; } try { var t = await (await fetch('factory.html?t=' + Date.now(), { cache: 'no-store' })).text(), m = t.match(/var VER = '([^']+)'/);
   if (m && m[1] !== VER && location.search.indexOf('v=' + m[1]) < 0) location.replace('factory.html?v=' + m[1]); } catch(e){} }
 
 $('who').textContent = WHO;
@@ -1585,11 +1601,15 @@ function rvSet(v){ D.rv = String(v || ''); ls('sj_fac_rv', D.rv); verLine(); }
 function rvOk(k){ return !RV_NEED[k] || (D.rv || ls('sj_fac_rv') || '') >= RV_NEED[k]; }
 function verLine(){ var rv = D.rv || ls('sj_fac_rv') || ''; $('verline').textContent = 'AL MUTAGADED GARMENTS · app ' + VER + (rv ? ' · relay ' + rv : ' · relay ?'); }
 setTab(TAB); verLine();
+// 25 Oct 2026: on a weak line the phone's helper (fac-sw.js) can hand over the OLD copy of the app while the URL already says ?v=<new version> - the
+// phone then believed it was up to date and ran old code against the new relay. Now such a page fetches itself again (up to 3 times).
+(function(){ var m = location.search.match(/[?&]v=([0-9a-z-]+)/), r = +((location.search.match(/[?&]r=(\d)/) || [0, 0])[1]); if (!m || m[1] === VER || m[1] < VER || r >= 3) return;
+  toast('⏳ Updating the app… · আপডেট হচ্ছে'); setTimeout(function(){ location.replace('factory.html?v=' + m[1] + '&r=' + (r + 1)); }, 6000); })();
 if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } load(false); }
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load };
+window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, mvr: function(){ return MVR; } };
 })();
 </script>
 </body></html>

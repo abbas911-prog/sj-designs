@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-10-24b';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-10-25a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -894,7 +894,7 @@ function fac0(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.lo = facLaisOrders(P, who0, false); hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.rv = RELAY_VER; hv.wroles = facRoles(P, P.getProperty('TRELLO') || P.getProperty('TRELLO_W')); hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.lo = facLaisOrders(P, who0, false); hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.rv = RELAY_VER; hv.wroles = facRoles(P, P.getProperty('TRELLO') || P.getProperty('TRELLO_W')); try { hv.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} /* 25 Oct 2026 (Abbas: "no workers list"): the cached answer had no workers */ hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -1285,7 +1285,7 @@ function fac0(reqText, P) {
       if (!card || ids.indexOf(to) < 0) return out({ ok: false, error: 'bad request' });
       var now = trApi('get', '/cards/' + card, { fields: 'idList,name,idBoard' }, wtok);
       if (now.idBoard !== FAC.BOARD) return out({ ok: false, error: 'not an ALM card' });
-      if (req.from && now.idList !== req.from) {             // someone moved it meanwhile: say where it is, do nothing
+      if (req.from && now.idList !== req.from && now.idList !== to) {   // someone moved it meanwhile: say where it is, do nothing (already at "to" = a retry after a lost answer: fine)
         var nm = FAC.LISTS.filter(function (l) { return l[1] === now.idList; })[0];
         return out({ ok: false, moved: true, error: 'This card was already moved to ' + (nm ? nm[0] : 'another list') + ' - press ↻ to refresh' });
       }
