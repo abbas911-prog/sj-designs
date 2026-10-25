@@ -250,6 +250,14 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0], f = 
   ok('timo_add is queued until yes', /Add to Timo/.test(await t(pg, '#aout .ans')));
   await pg.click('#aYes'); await pg.waitForFunction(() => /To-do|added|Added|put in/i.test(document.querySelector('#aout').textContent), null, { timeout: 12000 }).catch(() => {});
   const ts = await pg.evaluate(() => JSON.parse(localStorage.getItem('timo-state') || '{}')); ok('yes → Timo (in its frame) took the task', /To-do|put in/i.test(await t(pg, '#aout')) && ((ts.todos || []).some(x => /pay Nadeem 1000/.test(x.title)) || (ts.acts || []).some(x => /pay Nadeem 1000/.test(x.title))));
+
+  // 10. Talk mode (25 Oct): one tap → a conversation screen; it greets, takes a typed/spoken line, answers in the log, queued sends get Yes / No there
+  await pg.click('#tkopen'); await pg.waitForSelector('#talk:not([hidden])', { timeout: 5000 });
+  ok('Talk opens and greets', /Abbas/.test(await t(pg, '#tklog')) && /What do you need/.test(await t(pg, '#tklog')));
+  await pg.fill('#tktxt', 'tell Rifat 20 m lace ordered'); await pg.click('#tksend'); await pg.waitForSelector('#tkyn:not([hidden])', { timeout: 12000 }).catch(() => {});
+  ok('a send asked by voice/typing waits for Yes on the Talk screen', !(await pg.$eval('#tkyn', e => e.hidden)) && /aa raha hai/.test(await t(pg, '#tklog')));
+  await pg.click('#tkno'); ok('No → cancelled', (await pg.$eval('#tkyn', e => e.hidden)) && /Cancelled/.test(await t(pg, '#tklog')));
+  await pg.click('#tkx'); ok('Close leaves Talk', await pg.$eval('#talk', e => e.hidden));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); await br.close(); srv.close(); process.exit(fail ? 1 : 0);
 })();
