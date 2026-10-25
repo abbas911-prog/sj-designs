@@ -273,7 +273,7 @@ nav i{position:absolute;top:2px;left:calc(50% + 8px);background:var(--red);color
 
 <script>
 (function(){
-var VER = '2026-10-25g';
+var VER = '2026-10-25h';
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -569,10 +569,12 @@ async function ask(q){ q = String(q || '').trim(); if (!q) return; var l = q.toL
     aOut('No AI key yet (⚙️ Settings) — opening Claude with your question and the latest lines attached.<div class="acts"><button class="p" type="button" id="aCl">Open Claude ↗</button></div>');
     $('aCl').onclick = function(){ window.open('https://claude.ai/new?q=' + encodeURIComponent(prompt), '_blank'); }; return; }
   var th = aOut('<span style="color:var(--sub)">Thinking…</span>');
-  var r = await api({ op: 'ask', q: q, hist: HIST.slice(-8), timo: timoText(), mode: DRIVE ? 'drive' : '' }, 1); th.remove();
+  var r = await api({ op: 'ask', q: q, hist: HIST.slice(-8), timo: timoText(), mode: DRIVE ? 'drive' : '', screen: screenCtx() }, 1); th.remove();
   if (!r.ok) { if (r.nokey) { AI = false; ls('as2_ai', '0'); $('aikey').hidden = false; } aOut(esc(r.error), 1); if (DRIVE) tkLog('e', r.error); say(r.error); return; }
   HIST.push({ role: 'user', text: q }); HIST.push({ role: 'assistant', text: r.text }); if (HIST.length > 16) HIST = HIST.slice(-16);
-  var acts = r.actions || [], opened = acts.filter(function(a){ return a.type === 'open_chat' && a.k; })[0];
+  var acts = r.actions || [], opened = acts.filter(function(a){ return a.type === 'open_chat' && a.k; })[0], IMM = /^(walk_start|next_chat|skip_chat|close_chat|play_voice|open_chat|mark_done)$/;
+  var walk = acts.some(function(a){ return a.type === 'walk_start'; });
+  acts = acts.filter(function(a){ return !IMM.test(a.type) || a.type === 'open_chat' || a.type === 'mark_done'; });
   var h = esc(r.text); (r.shown || []).forEach(function(m){ var fs = (m.files || []).map(function(f){ var kd = fileKind(f); return kd === 'img' ? '<img data-f="' + esc(f.id) + '" data-k="' + esc(m.k) + '" alt="photo">' : '<button class="fl" type="button" data-open="' + esc(m.k) + '">' + (kd === 'audio' ? '🎤 voice note' : kd === 'video' ? '🎬 video' : '📎 ' + esc(f.name || 'file')) + '</button>'; }).join('');
     h += '<div class="sh"><small>' + esc(m.chat + ' · ' + m.who + ' · ' + when(m.ts)) + '</small>' + (m.text ? '<div style="white-space:pre-wrap">' + fmt(m.text) + '</div>' : '') + fs + '</div>'; });
   acts.forEach(function(a, i){ if (a.type === 'open_chat' || a.type === 'mark_done') return; h += '<div class="act" data-ai="' + i + '"><b>' + esc(actLabel(a)) + '</b>' + esc(a.text || (a.type === 'forward_last' ? 'latest ' + a.kind + ' of ' + a.chat + ' → ' + a.to : a.type === 'voice_note' ? 'record now' : '')) + '</div>'; });
@@ -583,7 +585,25 @@ async function ask(q){ q = String(q || '').trim(); if (!q) return; var l = q.toL
   if ($('aYes')) $('aYes').onclick = function(){ runActs(); }; if ($('aNo')) $('aNo').onclick = function(){ PENDA = null; card.querySelector('.acts').remove(); say('Cancelled'); };
   acts.forEach(function(a){ if (a.type === 'mark_done') { if (a.chat.toLowerCase() === 'all') list().filter(function(c){ return c.un; }).forEach(function(c){ markDone(c.k); }); else if (a.k) markDone(a.k); } });
   if (opened) { openChat.sum = true; openChat(opened.k); $('csumt').textContent = r.text; $('csum').hidden = false; if (DRIVE) { $('talk').hidden = true; tkState('listening', 'Listening…'); } }
-  say(r.text + (todo.length ? (todo[0].type === 'voice_note' ? ' Say start to record.' : ' Say yes to send.') : '')); }
+  if (walk) { var wac = card.querySelector('.acts'); if (wac) wac.remove(); PENDA = null; }
+  var imm = (r.actions || []).filter(function(a){ return /^(walk_start|next_chat|skip_chat|close_chat|play_voice)$/.test(a.type); });
+  var vn = todo.filter(function(a){ return a.type === 'voice_note'; })[0];
+  if (vn) { PENDA = null; var vac = card.querySelector('.acts'); if (vac) vac.remove(); say(r.text, function(){ startVoiceNote(vn); }); return; }
+  var after = function(){ imm.forEach(function(a){ if (a.type === 'walk_start') { if (!list().filter(function(c){ return c.un; }).length) { say('Nothing new.'); return; } cuStart(); }
+      else if (a.type === 'next_chat') { if (CU.on) cuNext(); else if (CUR) closeChat(); }
+      else if (a.type === 'skip_chat') { if (CUR) CUR.keep = true; if (CU.on) cuNext(); else if (CUR) closeChat(); }
+      else if (a.type === 'close_chat') { if (CUR) closeChat(); }
+      else if (a.type === 'play_voice') { if (a.k && (!CUR || CUR.k !== a.k)) { openChat(a.k); setTimeout(playLastVoice, 1500); } else if (CUR) playLastVoice(); else { say('No chat is open.'); } } }); };
+  if (imm.length) say(r.text, after); else say(r.text + (todo.length ? ' Say yes to send.' : '')); }
+// hands-free voice note: record from now until ~2.5 s of silence (or ■ Done), then ask to send
+function startVoiceNote(a){ if (a.k && (!CUR || CUR.k !== a.k)) openChat(a.k); if (!CUR) { say('No chat is open.'); return; }
+  if (srec) { try { srec.abort(); } catch(e){} srec = null; } try { speechSynthesis.cancel(); } catch(e){}
+  $('bmic').onclick(); $('tkmrec').hidden = false; tkState('thinking', 'Recording… speak, then pause'); tkLog('a', 'Recording — speak, pause when done.');
+  var tries = 0, arm = function(){ if (!REC) { if (tries++ < 20) return setTimeout(arm, 150); return; } silenceStop(REC, function(){ stopRec(false); $('tkmrec').hidden = true; setTimeout(function(){ if (ATT.length) { PENDA = { acts: [{ type: 'send_att' }], card: null }; tkLog('a', 'Voice note ready for ' + CUR.title + '. Say send, or no.'); say('Voice note ready. Send?'); } }, 500); }); }; arm(); }
+function silenceStop(rec, cb){ try { var s = rec.r.stream, AC = window.AudioContext || window.webkitAudioContext; if (!AC) { rec.sil = setTimeout(cb, 20000); return; } var ac = new AC(), src = ac.createMediaStreamSource(s), an = ac.createAnalyser(); an.fftSize = 512; src.connect(an); var buf = new Uint8Array(an.fftSize), quiet = 0, spoke = false, t0 = Date.now();
+    rec.sil = setInterval(function(){ if (!REC) { clearInterval(rec.sil); try { ac.close(); } catch(e){} return; } an.getByteTimeDomainData(buf); var peak = 0; for (var i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128)); if (peak > 10) { spoke = true; quiet = 0; } else quiet += 100;
+      if ((spoke && quiet >= 2500) || Date.now() - t0 > 120000) { clearInterval(rec.sil); try { ac.close(); } catch(e){} cb(); } }, 100); } catch(e){ rec.sil = setTimeout(cb, 20000); } }
+
 function actLabel(a){ return a.type === 'send_message' ? 'Send to ' + a.chat : a.type === 'send_email' ? 'Email to ' + a.to + (a.subject ? ' · ' + a.subject : '') : a.type === 'forward_last' ? 'Forward' : a.type === 'voice_note' ? 'Voice note to ' + a.chat : a.type === 'timo_add' ? 'Add to Timo' : a.type; }
 async function runActs(){ var p = PENDA; if (!p) return; PENDA = null; $('tkyn').hidden = true; var ac = p.card && p.card.querySelector('.acts'); if (ac) ac.remove();
   for (var i = 0; i < p.acts.length; i++) { var a = p.acts[i];
@@ -591,7 +611,8 @@ async function runActs(){ var p = PENDA; if (!p) return; PENDA = null; $('tkyn')
       else if (a.type === 'send_email') { await doSendWait({ to: emTarget(a.to, a.subject), text: a.text, files: [], rid: rid() }); toast('✓ Emailed ' + a.to); }
       else if (a.type === 'forward_last') { var from = a.k && CH[a.k]; if (!from) throw new Error('chat not found'); var toT = /^whats?app$/i.test(a.to) ? { wa: true, title: 'WhatsApp' } : /@/.test(a.to) ? emTarget(a.to) : findChat(a.to); if (!toT) throw new Error('"' + a.to + '" not found');
         var jj = await api({ op: 'thread', k: from.k, look: 0 }, 2); if (!jj.ok) throw new Error(jj.error); var want = a.kind === 'photo' ? 'img' : a.kind === 'voice' ? 'audio' : a.kind === 'file' ? 'file' : '';
-        var pm = (jj.msgs || []).slice().reverse().filter(function(x){ return !x.sys && (!want || (x.files || []).some(function(f){ return fileKind(f) === want; })); })[0]; if (!pm) throw new Error('no ' + a.kind + ' in ' + from.title); CUR = from; forward(pm, toT); }
+        var pms = (jj.msgs || []).slice().reverse().filter(function(x){ return !x.sys && !x.root && (!want || (x.files || []).some(function(f){ return fileKind(f) === want; })); }).slice(0, a.n || 1); if (!pms.length) throw new Error('no ' + a.kind + ' in ' + from.title);
+        if (pms.length === 1) { CUR = from; forward(pms[0], toT); } else { var merged = { who: pms[0].who, text: pms.slice().reverse().map(function(x){ return (x.who ? x.who + ': ' : '') + (x.text || ''); }).join('\n'), files: [].concat.apply([], pms.map(function(x){ return x.files || []; })), ts: pms[0].ts }; CUR = from; forward(merged, toT); } }
       else if (a.type === 'voice_note') { if (!a.k) throw new Error('chat not found'); openChat(a.k); await sleep(400); $('bmic').onclick(); }
       else if (a.type === 'timo_add') { var rr = await timoQuick(a.text); if (!rr.ok) throw new Error(rr.msg || 'Timo could not add it'); toast('🗓 ' + (rr.msg || 'Added to Timo')); aOut('🗓 ' + esc(rr.msg || 'Added to Timo')); draw(); }
     } catch(e){ aOut('⚠ ' + esc(e.message), 1); if (DRIVE) tkLog('e', e.message); say(e.message); } }
@@ -630,22 +651,21 @@ function listen(){ if (!DRIVE || !SR || srec || heard.busy || REC) return;
       if (er === 'no-speech' || er === 'aborted' || !er) { setTimeout(listen, 500); return; }
       tkLog('e', 'Could not hear (' + er + ')'); setTimeout(listen, 1500); }; srec.start(); }
   catch(e){ srec = null; tkLog('e', 'Could not start listening: ' + e.message); } }
-async function heard(t){ if (!t) return; heard.busy = true; var l = t.toLowerCase().trim(), m; tkLog('u', t);
-  try { if (/^(stop|close|exit|bye|band karo|bas)\b/.test(l) && !REC) { drive(false); return; }
-    if (PENDA && /^(yes|yeah|yep|ok|okay|haan|han|ji|send|go|start|do it|confirm|theek hai)\b/.test(l)) { await runActs(); return; }
-    if (PENDA && /^(no|nope|cancel|nahi|nahin|don't|dont)\b/.test(l)) { PENDA = null; $('tkyn').hidden = true; tkLog('a', 'Cancelled.'); say('Cancelled'); return; }
-    if (REC && /^(stop|done|send|finish)\b/.test(l)) { stopRec(false); await sleep(600); $('csend').onclick(); tkLog('a', 'Voice note sent.'); say('Voice note sent'); return; }
-    if (PENDA && PENDA.acts[0] && PENDA.acts[0].type === 'send_att') { if (/^(yes|send|ok|okay|haan|go)\b/.test(l)) { PENDA = null; $('csend').onclick(); tkLog('a', 'Sent.'); say('Sent.'); } else { PENDA = null; ATT = []; drawAtt(); say('Dropped.'); } return; }
-    if (/^(go one by one|one by one|start catch ?up|catch ?up|let'?s go|start)\b/.test(l) && !CUR) { if (!list().filter(function(c){ return c.un; }).length) { say('Nothing new.'); tkLog('a', 'Nothing new.'); return; } cuStart(); return; }
-    if (CUR && /^(next|skip|aage|done|mark (as )?(done|read))\b/.test(l)) { if (/^skip/.test(l)) CUR.keep = true; if (CU.on) cuNext(); else closeChat(); return; }
-    if (CUR && /^(play|play it|play (the |that )?(voice|audio|note|voice note)|play again|sunao)\b/.test(l)) { playLastVoice(); return; }
-    if (CUR && /^(voice ?note|record|record (a )?voice ?note|take (a )?voice ?note)\b/.test(l)) { if (srec) { try { srec.abort(); } catch(e){} srec = null; } $('bmic').onclick(); $('tkmrec').hidden = false; tkState('thinking', 'Recording… tap ■ Done'); tkLog('a', 'Recording. Tap ■ Done when finished.'); return; }
-    if (CUR && /^(translate|translation|tarjuma)\b/.test(l)) { tkState('thinking', 'Thinking…'); await ask('Translate the latest messages of the chat "' + CUR.title + '" into short plain English, one line each, newest last.'); return; }
-    if (CUR && (m = l.match(/^(?:forward|send|share)\s+(?:this|it|that|the (?:photo|message|voice|file))?\s*(?:to|on)\s+(whats?app|wa)\b/))) { var lastM = MSGS.filter(function(x){ return !x.sys; }).pop(); if (lastM) forward(lastM, { wa: true, title: 'WhatsApp' }); return; }
-    if (CUR && (m = t.match(/^(?:reply|say|tell (?:him|her|them)|answer|write)\s*[:,]?\s+(.+)$/i)) && !/\s(?:to|in)\s+#?\w+$/.test(m[1])) { var rt = m[1].trim(); PENDA = { acts: [{ type: 'send_message', k: CUR.k, chat: CUR.title, text: rt }], card: null }; tkLog('a', 'Reply to ' + CUR.title + ': “' + rt + '” — say yes to send.'); say('Reply: ' + rt + '. Say yes to send.'); return; }
-    if (CU.on && /^(next|skip|aage)\b/.test(l)) { cuNext(); return; }
-    tkState('thinking', 'Thinking…'); await ask(t); }
-  finally { heard.busy = false; if (DRIVE && !speechSynthesis.speaking && !srec) setTimeout(listen, 400); } }
+async function heard(t){ if (!t) return; heard.busy = true; var l = t.toLowerCase().trim(); tkLog('u', t);
+  try { if (/^(stop|close talk|exit|bye|band karo)\b/.test(l) && !REC && !PENDA) { drive(false); return; }
+    if (PENDA && PENDA.acts[0] && PENDA.acts[0].type === 'send_att') { if (/^(yes|send|ok|okay|haan|go|bhej)\b/.test(l)) { PENDA = null; $('csend').onclick(); tkLog('a', 'Sent.'); say('Sent.'); } else if (/^(no|nope|cancel|nahi|nahin|drop)\b/.test(l)) { PENDA = null; ATT = []; drawAtt(); tkLog('a', 'Dropped.'); say('Dropped.'); } else { tkLog('a', 'Say send, or no.'); say('Say send, or no.'); } return; }
+    if (PENDA && /^(yes|yeah|yep|ok|okay|haan|han|ji|send|go|do it|confirm|theek hai|bhej do)\b/.test(l)) { await runActs(); return; }
+    if (PENDA && /^(no|nope|cancel|nahi|nahin|don't|dont|drop)\b/.test(l)) { PENDA = null; $('tkyn').hidden = true; tkLog('a', 'Cancelled.'); say('Cancelled'); return; }
+    if (REC) { stopRec(false); await sleep(500); return; }                                   // he spoke while recording stopped itself — nothing else to do
+    if (AI) { tkState('thinking', 'Thinking…'); await ask(t); return; }
+    // no AI key: the few fixed commands
+    if (/^(go one by one|one by one|catch ?up|start)\b/.test(l) && !CUR) { cuStart(); return; }
+    if (CUR && /^(next|skip|done)\b/.test(l)) { if (/^skip/.test(l)) CUR.keep = true; if (CU.on) cuNext(); else closeChat(); return; }
+    if (CUR && /^play/.test(l)) { playLastVoice(); return; }
+    await ask(t); }
+  finally { heard.busy = false; if (DRIVE && !REC && !speechSynthesis.speaking && !srec) setTimeout(listen, 400); } }
+function screenCtx(){ if (!CUR) return null; var L = MSGS.filter(function(m){ return !m.sys; }).slice(-6).map(function(m){ return (m.who || '') + ': ' + String(m.text || '').replace(/\s+/g, ' ').slice(0, 160) + ((m.files || []).length ? ' [' + (m.files || []).map(function(f){ return fileKind(f); }).join(', ') + ']' : ''); }).join('\n');
+  return { chat: CUR.title, k: CUR.k, lines: L, walk: CU.on ? (CU.i + 1) + ' of ' + CU.q.length : '' }; }
 function drive(on){ DRIVE = on; $('adrive').classList.toggle('on', on); $('adrive').textContent = on ? '■ Stop' : '🎙 Talk'; $('talk').hidden = !on; $('tkyn').hidden = true;
   if (!on) { try { speechSynthesis.cancel(); } catch(e){} if (srec) { try { srec.stop(); } catch(e){} } tkState('', ''); return; }
   $('tklog').innerHTML = ''; TKERR = 0; try { if (!AUD) { AUD = new Audio(); AUD.setAttribute('playsinline', ''); } AUD.src = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OACDDxbaJKVfAJ0u9wCaE5EDHgGyKEV/kvTCo4IwJn+1GRxCHgYa4NmL9x9ug+bwbWRgQBgJwY6AAiq4HsAgFSCEAAALgAACAAABAAAEhhdHNCBgC/'; var pr0 = AUD.play(); if (pr0 && pr0.catch) pr0.catch(function(){}); } catch(e){} try { var u0 = new SpeechSynthesisUtterance(' '); speechSynthesis.speak(u0); } catch(e){}

@@ -3,7 +3,7 @@
 // the Assistant app's setup screen; they are kept in THIS script's properties only (never in the repo, never in a chat).
 // Every chat the bots can see = one channel chat (its top-level posts) + one chat per thread (an order memo, a pick list, a card…).
 // Lines written from any SJ app are "*Name:* text" posted by a bot — shown as Name. Read marks ("seen") are the Assistant's own.
-var AS_VER = '2026-10-25c';
+var AS_VER = '2026-10-25d';
 var WS = ['s', 'f'];                                               // s = SJTC workspace, f = factory workspace; e = Email (the Gmail this script runs as — see below)
 // EMAIL (25 Oct 2026): a third source. The script reads the Gmail inbox of the Google account it is deployed under (abbassayed033@gmail.com);
 // the other addresses auto-forward into it. No tokens: Google asks Abbas once to allow Gmail when the new version is deployed.
@@ -179,14 +179,15 @@ function emailOp(op, k, req, who, P) {
 // The phone sends a question (typed or spoken) + what it knows (Timo day); the script adds the brain file, the notebook, the chat list and the
 // new lines, and lets the model READ chats itself (tool read_chat). Anything that SENDS is never done here: the model asks for it with an
 // action tool, the script queues it, and the phone shows it to Abbas and sends only after his yes.
-var AI_MODEL = 'claude-haiku-5-5', AI_URL = 'https://api.anthropic.com/v1/messages', AI_ROUNDS = 4;
+var AI_MODEL = 'claude-sonnet-5-5', AI_URL = 'https://api.anthropic.com/v1/messages', AI_ROUNDS = 4;
 var BRAIN_DEFAULT = [
   'You are the assistant of Abbas (Dubai). He runs SJ Trading / SJTC (Sayed Jamal Trading Co.): wholesale jalabiya and lace, and the AL MUTAGADED garment factory.',
   'Sources you see: Slack SJTC (customer order memos, godown pick lists, direct chats), Slack Factory (one chat per design card, #cash, #expenses, #laisfactory = lace), Email (his Gmail), and later WhatsApp.',
   'Design numbers look like SJ-48188 (also written 48188). A card chat in the factory workspace is that design\'s production thread.',
   'People often write Urdu, Hindi, Arabic or Bengali in Latin letters. Always answer Abbas in short plain English; translate any foreign line you quote.',
   'Style: brief, direct, no flattery. When reading out what is new, go chat by chat: who said what, newest first, and say which ones need his reply.',
-  'Never claim something was sent. You only QUEUE sends (send_message, send_email, forward_last); Abbas confirms on the phone. Say "ready to send — say yes".',
+  'HARD RULES: 1) Say only what a tool returned or what is in CHATS / NEW LINES / SCREEN below. If you have not read it, say "I have not read that yet" and read it with read_chat. Never invent names, numbers, times or figures. 2) Never claim something was sent: sends are QUEUED (send_message, send_email, forward_last, voice_note); Abbas confirms with "yes" on the phone. 3) WhatsApp is not connected yet: you can only forward_last to "whatsapp" (opens his share sheet) — say so when he asks to message someone on WhatsApp.',
+  'THE SCREEN: Abbas talks to you by voice while looking at the phone. You control the screen with tools: walk_start (go through every chat with new messages one by one — each opens on screen and is read aloud by the phone), next_chat, skip_chat, open_chat (open one chat fully: for a design card this shows the card details at the top), close_chat, play_voice (play the latest voice note / video in the open chat), voice_note (hands-free: the phone records him from "start" until he stops speaking, then asks to send), forward_last (last N messages of a chat, with files, to a chat / whatsapp / email), mark_done. When he says "one by one", "go through them", "show me each message" → walk_start. When he says "next" → next_chat. "Play it" → play_voice. "Reply …" / "tell him …" while a chat is open → send_message to that chat. Keep spoken answers short; the screen shows the details.',
   'Money: AED unless said otherwise. Dates: Dubai time.',
   'Lookups: customer balances and saved bills = tool customer; vendors / cash accounts = tool ledger; invoices posted to Slack #sales-new or receipts = tool find_messages (they are shown on the phone with photos); card stage = tool trello_card; his day plan = TIMO below, add with timo_add. Use a lookup before answering a money or status question; never guess figures.'
 ].join('\n');
@@ -195,14 +196,20 @@ var AI_TOOLS = [
   { name: 'remember', description: 'Write a short note into the notebook for later (things Abbas tells you to keep: "keep 48188 at 100", "Nadeem price 12.5").', input_schema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } },
   { name: 'send_message', description: 'QUEUE a message to a chat (Slack channel / thread / email thread) for Abbas to confirm. Write the message in the language Abbas wants (default English, Roman Urdu if he says so).', input_schema: { type: 'object', properties: { chat: { type: 'string' }, text: { type: 'string' } }, required: ['chat', 'text'] } },
   { name: 'send_email', description: 'QUEUE a new email to an address for Abbas to confirm.', input_schema: { type: 'object', properties: { to: { type: 'string' }, subject: { type: 'string' }, text: { type: 'string' } }, required: ['to', 'text'] } },
-  { name: 'forward_last', description: 'QUEUE forwarding the latest photo / voice / file / message of one chat to another chat, to WhatsApp, or to an email address.', input_schema: { type: 'object', properties: { from_chat: { type: 'string' }, kind: { type: 'string', enum: ['photo', 'voice', 'file', 'message'] }, to: { type: 'string', description: 'a chat name, "whatsapp", or an email address' } }, required: ['from_chat', 'kind', 'to'] } },
+  { name: 'forward_last', description: 'QUEUE forwarding the latest message(s) of one chat (with their photos / voice notes / files) to another chat, to "whatsapp" (his share sheet), or to an email address. from_chat defaults to the open chat.', input_schema: { type: 'object', properties: { from_chat: { type: 'string' }, kind: { type: 'string', enum: ['photo', 'voice', 'file', 'message', 'any'], description: 'what to pick, default any' }, n: { type: 'integer', description: 'how many latest messages, default 1' }, to: { type: 'string', description: 'a chat name, "whatsapp", or an email address' } }, required: ['to'] } },
   { name: 'open_chat', description: 'Open a chat on the phone screen.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } },
   { name: 'mark_done', description: 'Mark one chat (or all, chat = "all") as read in the Catch-up.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } },
-  { name: 'voice_note', description: 'QUEUE a voice note: the phone will record Abbas speaking and send the recording to that chat after his yes.', input_schema: { type: 'object', properties: { chat: { type: 'string' } }, required: ['chat'] } },
+  { name: 'voice_note', description: 'Record a voice note hands-free: the phone starts recording Abbas, stops when he goes quiet, then asks to send it to that chat (default: the open chat).', input_schema: { type: 'object', properties: { chat: { type: 'string' } } } },
   { name: 'find_messages', description: 'Search one chat/channel for messages containing a word (a customer name, a design number, "receipt"…) and SHOW them on the phone with their photos. Use for "show me the last invoices of X" (channel #sales-new), receipts, bills.', input_schema: { type: 'object', properties: { chat: { type: 'string', description: 'channel or chat name, e.g. "#sales-new", "#sales", "#cash"' }, text: { type: 'string', description: 'what to look for (case does not matter)' }, n: { type: 'integer', description: 'how many latest matches, default 3' } }, required: ['chat', 'text'] } },
   { name: 'ledger', description: 'The SJ VENDOR LEDGER sheet: one tab per vendor / person / account (NADEEM, TUSHAR, RUSA, MATIULLAH, MANJAY, MAIN CASH, BUSINESS ACCOUNT…). Returns the current balance and the latest lines (date, description, amount). Use for "balance of…", "last payment to…", "what did we pay…".', input_schema: { type: 'object', properties: { name: { type: 'string' }, n: { type: 'integer', description: 'latest lines, default 8' } }, required: ['name'] } },
   { name: 'customer', description: 'A CUSTOMER of SJ Stock (the order memo app): opening balance, invoices and receipts, current balance, and the saved bills (INV-…, RV-…) with totals and status. Use for customer balances and "last invoices of <customer>".', input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } },
   { name: 'trello_card', description: 'Where a design card is on the AL MUTAGADED Trello board: its list (stage), labels, last activity. Needs the Trello key/token in Settings.', input_schema: { type: 'object', properties: { design: { type: 'string', description: 'e.g. 48188 or SJ-48188' } }, required: ['design'] } },
+  { name: 'walk_start', description: 'Start going through every chat with new messages one by one on the phone (each opens on screen and is read aloud). Returns how many.', input_schema: { type: 'object', properties: {} } },
+  { name: 'next_chat', description: 'Move to the next chat in the walk (marks the current one read).', input_schema: { type: 'object', properties: {} } },
+  { name: 'skip_chat', description: 'Next chat in the walk but keep the current one unread.', input_schema: { type: 'object', properties: {} } },
+  { name: 'close_chat', description: 'Close the open chat and return to the assistant screen.', input_schema: { type: 'object', properties: {} } },
+  { name: 'play_voice', description: 'Play the latest voice note or video in the open chat (or in the named chat).', input_schema: { type: 'object', properties: { chat: { type: 'string' } } } },
+  { name: 'factory_status', description: 'What happened at the AL MUTAGADED factory since a time: cards that moved on the Trello board (needs Trello in Settings) and the new lines in the factory Slack. Use for "what is going on in the factory".', input_schema: { type: 'object', properties: { hours: { type: 'integer', description: 'look back this many hours, default 24' } } } },
   { name: 'timo_add', description: 'QUEUE adding a task / reminder to Timo (his day planner) for Abbas to confirm: text like "pay Nadeem 1000 #T1 today" — a #tag puts it inside that block, "tomorrow"/"mon" picks the day, "15 min" the length.', input_schema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } }
 ];
 var LEDGER_ID = '1SdVRWsmmZSdBMXFCfBlxRNQftT59mIAzzPj-ohOQr5c', CUST_ID = '1TJfwlodlnFslGDMzXZMtNnkn4ZoQOY1X4x2SOdaY3GI', ALM_BOARD = '6527c52485d9627f63157296';
@@ -246,6 +253,17 @@ function trelloTool(design) {
   if (!hit.length) return 'No card with ' + num + ' on the board';
   return hit.slice(0, 4).map(function (x) { return 'CARD "' + x.n + '" — list: ' + x.l + (x.lb ? ' — labels: ' + x.lb : '') + ' — last activity ' + String(x.a || '').slice(0, 10) + ' — ' + x.u; }).join('\n');
 }
+function factoryStatus(idx, hours, who, P) {
+  var h = hours || 24, since = Date.now() - h * 3600 * 1000, out = [];
+  var key = P.getProperty('AS_TRELLO_KEY'), tok = P.getProperty('AS_TRELLO_TOKEN');
+  if (key && tok) { try { var c = C_(), hh = c.get('TRELLO_CARDS'), cards = hh ? JSON.parse(hh) : null; if (!cards) { trelloTool('000000'); hh = c.get('TRELLO_CARDS'); cards = hh ? JSON.parse(hh) : []; }
+      var moved = cards.filter(function (x) { return x.a && new Date(x.a).getTime() > since; }).sort(function (a, b) { return a.a < b.a ? 1 : -1; });
+      out.push('TRELLO (last ' + h + ' h): ' + (moved.length ? moved.slice(0, 15).map(function (x) { return x.n + ' → ' + x.l; }).join('; ') : 'no card changed')); } catch (e) { out.push('Trello: ' + e.message); } }
+  else out.push('Trello not connected (no key in Settings) — card moves unknown');
+  var fac = idx.list.filter(function (c) { return c.ws === 'f' && +c.last * 1000 > since; });
+  out.push('FACTORY SLACK (last ' + h + ' h): ' + (fac.length ? fac.slice(0, 20).map(function (c) { return c.title + (c.un > 0 ? ' (' + c.un + ' new: ' + c.lines.map(function (l) { return l.who + ': ' + l.text; }).join(' / ') + ')' : ''); }).join('; ') : 'nothing new'));
+  return out.join('\n');
+}
 function findMsgs(L, chat, text, n, who, P) {
   var c = findChatSrv(L, chat); if (!c) return { res: 'No chat called "' + chat + '"' };
   var k = parseKey(c.k), q = String(text || '').toLowerCase().trim(), msgs = [];
@@ -285,7 +303,8 @@ function askAI(req, who, P) {
   var system = (P.getProperty('AS_BRAIN') || BRAIN_DEFAULT) + '\n\nNow: ' + now + ' (Dubai).\n\nNOTEBOOK:\n' + (P.getProperty('AS_NOTES') || '(empty)') +
     '\n\nCHATS (name [source] · unread):\n' + idx.list.map(function (c) { return c.title + ' [' + (c.ws === 'e' ? 'Email ' + c.chn : c.team + ' #' + c.chn) + ']' + (c.un > 0 ? ' · ' + c.un + ' new' : ''); }).join('\n') +
     '\n\nNEW LINES RIGHT NOW:\n' + (idx.digest || '(nothing new)') + (req.timo ? '\n\nTIMO (his day plan, from the phone):\n' + String(req.timo).slice(0, 2000) : '') +
-    (req.mode === 'drive' ? '\n\nHe is DRIVING and listening by voice: keep every answer under 60 words unless he asks for more, no lists, no symbols.' : '');
+    (req.screen && req.screen.chat ? '\n\nSCREEN: the chat "' + String(req.screen.chat).slice(0, 80) + '" is OPEN now' + (req.screen.walk ? ' (walk ' + req.screen.walk + ')' : '') + '. Its latest lines:\n' + String(req.screen.lines || '').slice(0, 1500) : '\n\nSCREEN: the assistant screen (no chat open).') +
+    (req.mode === 'drive' ? '\n\nHe is listening by voice: answer in one or two short spoken sentences, no lists, no symbols; the screen shows the details.' : '');
   var msgs = []; (Array.isArray(req.hist) ? req.hist.slice(-8) : []).forEach(function (h) { if (h && (h.role === 'user' || h.role === 'assistant') && h.text) msgs.push({ role: h.role, content: String(h.text).slice(0, 2000) }); });
   msgs.push({ role: 'user', content: q });
   var actions = [], text = '', notes = P.getProperty('AS_NOTES') || '', shown = [];
@@ -302,9 +321,14 @@ function askAI(req, who, P) {
       else if (u.name === 'trello_card') { try { res = trelloTool(inp.design); } catch (e) { res = 'trello: ' + e.message; } }
       else if (u.name === 'timo_add') { actions.push({ type: 'timo_add', text: String(inp.text || '').slice(0, 200) }); res = 'queued — Abbas will confirm on the phone'; }
       else if (u.name === 'remember') { notes = (notes + '\n' + Utilities.formatDate(new Date(), 'Asia/Dubai', 'd MMM') + ': ' + String(inp.text || '').slice(0, 300)).trim().slice(-8000); P.setProperty('AS_NOTES', notes); res = 'noted'; }
+      else if (u.name === 'factory_status') { try { res = factoryStatus(idx, +inp.hours || 24, who, P); } catch (e) { res = 'factory: ' + e.message; } }
+      else if (/^(walk_start|next_chat|skip_chat|close_chat)$/.test(u.name)) { actions.push({ type: u.name }); res = u.name === 'walk_start' ? (idx.list.filter(function (c) { return c.un; }).length + ' chats with new messages — the phone opens them one by one and reads each aloud; you need not repeat their content') : 'done on the phone'; }
+      else if (u.name === 'play_voice') { var pc = inp.chat ? findChatSrv(idx.list, inp.chat) : null; actions.push({ type: 'play_voice', k: pc ? pc.k : '', chat: pc ? pc.title : '' }); res = 'the phone plays it'; }
       else if (/^(send_message|send_email|forward_last|open_chat|mark_done|voice_note)$/.test(u.name)) {
-        var a = { type: u.name, chat: inp.chat || inp.from_chat || '', text: inp.text || '', to: inp.to || '', subject: inp.subject || '', kind: inp.kind || '' };
-        if (a.chat) { var cc = findChatSrv(idx.list, a.chat); if (cc) { a.k = cc.k; a.chat = cc.title; } else if (u.name !== 'mark_done' || a.chat.toLowerCase() !== 'all') { res = 'No chat called "' + a.chat + '" — pick a name from the CHATS list.'; } }
+        var a = { type: u.name, chat: inp.chat || inp.from_chat || '', text: inp.text || '', to: inp.to || '', subject: inp.subject || '', kind: inp.kind || 'any', n: Math.max(1, Math.min(5, +inp.n || 1)) };
+        if (!a.chat && req.screen && req.screen.k && /^(forward_last|voice_note|send_message|mark_done)$/.test(u.name)) { a.chat = req.screen.chat; a.k = req.screen.k; }
+        if (a.chat && !a.k) { var cc = findChatSrv(idx.list, a.chat); if (cc) { a.k = cc.k; a.chat = cc.title; } else if (u.name !== 'mark_done' || a.chat.toLowerCase() !== 'all') { res = 'No chat called "' + a.chat + '" — pick a name from the CHATS list.'; } }
+        if (!res && !a.k && /^(forward_last|voice_note|send_message)$/.test(u.name)) res = 'Which chat? None is open and none was named.';
         if (!res) { if (/^(open_chat|mark_done)$/.test(u.name)) res = 'done on the phone'; else res = 'queued — Abbas will confirm on the phone; tell him it is ready and say what it contains'; actions.push(a); } }
       else res = 'unknown tool';
       results.push({ type: 'tool_result', tool_use_id: u.id, content: res.slice(0, 12000) }); });
