@@ -1,0 +1,35 @@
+{
+ "ok": true,
+ "page": "sj-1027.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sj-1027.html?v=1",
+ "cover": "og-sj-1027.jpg",
+ "name": "",
+ "country": "",
+ "designs": [
+  "58273",
+  "18634",
+  "82554",
+  "63491",
+  "48188"
+ ],
+ "report": [
+  "SJ-58273 COMPLETE  4+8+8+8 = 28 ✓ (card: 28) → 1 complete sets + 12 pcs",
+  "SJ-18634 COMPLETE  20+20+20+24 = 84 ✓ (card: 84) → 5 complete sets + 4 pcs",
+  "SJ-82554 SETS  10+9+10+9+10+14+14+12 = 88 ✓ (card: 88) → 8 colours",
+  "SJ-63491 COMPLETE  14+14+12+16 = 56 ✓ (card: 56) → 3 complete sets + 8 pcs",
+  "SJ-48188 SETS  28+15+0+0+8+8+6+0+0+0+0+20+16+12 = 113 ✓ (card: 113) → 8 colours"
+ ],
+ "flags": [
+  "SJ-58273: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-48188: 6 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo."
+ ],
+ "videos": [
+  "18634",
+  "48188",
+  "58273",
+  "63491",
+  "82554"
+ ],
+ "bytes": 2088611,
+ "id": "cmvqpv7vhvzye"
+}
