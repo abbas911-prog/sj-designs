@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-10-27a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-10-28a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -556,7 +556,7 @@ function facWorkMs(a, b) {                                     // ms of working 
   return tot;
 }
 function facRate(pcs, workMs) { return Math.round(pcs / Math.max(0.25, workMs / WORK_DAY_MS)); }   // pieces per work day (12 h 20 net); a tiny batch counts as a quarter day at least
-function facWorkDur(ms) { var h = ms / 3600000; return h < 1 ? Math.max(1, Math.round(ms / 60000)) + ' min work' : (h >= 10 ? (Math.round(h / (WORK_TO - WORK_FROM) * 10) / 10) + ' work days' : (Math.round(h * 10) / 10) + ' work h'); }
+function facWorkDur(ms) { var h = ms / 3600000; return h < 1 ? Math.max(1, Math.floor(ms / 60000)) + ' min work' : (h >= 10 ? (Math.round(ms / WORK_DAY_MS * 10) / 10) + ' work days' : (Math.round(h * 10) / 10) + ' work h'); }   // 28 Oct 2026: a work day = 12 h 20 net (was divided by 14 h: 1.4 days showed as 1.2); minutes rounded down like the clock time (54 min clock showed 55 min work)
 function facWhen(ms) { var u = new Date(ms + 4 * 3600000); return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][u.getUTCDay()] + ' ' + facDay(ms) + ' ' + ('0' + u.getUTCHours()).slice(-2) + ':' + ('0' + u.getUTCMinutes()).slice(-2); }   // "Tue 21 Oct 14:05" Dubai
 function facDay(ms) { var u = new Date(ms + 4 * 3600000); return u.getUTCDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][u.getUTCMonth()]; }   // Dubai
 var WK_RE = /^👷 (IN|OUT|PART) · (.+?) · (\d+) pcs(?: · ([^·]+?))? · (.+?) \(factory app\)/;   // 23 Oct 2026: PART = some pieces came back, the rest stays with him

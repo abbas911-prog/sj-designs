@@ -388,12 +388,24 @@ async function suite(fast, browser) {
       if (await page.locator('#card').isVisible()) await page.goBack();
       F.postSlack(W, CUT, { text: '→ *WORK* · Abbas · :construction_worker: *Islam* ← *5 pcs* given · :clock3: Tue 27 Oct 17:26\n_Islam · 5 পিস দেওয়া হয়েছে · Tue 27 Oct 17:26_', bot_id: 'B1', thread_ts: W.rootB });
       F.postSlack(W, CUT, { text: '→ *IN LINE (2)* · Md ibrahimmiah · :clock3: Tue 27 Oct 17:25', bot_id: 'B1', thread_ts: W.rootB });
+      F.postSlack(W, CUT, { text: '→ *WORK* · Abbas · 👷 *Rifat* ← *4 pcs* given · 🕒 Tue 27 Oct 18:00 · now *24 pcs* in hand (first 20 on Mon 26 Oct 12:41)\n_Rifat · 4 পিস দেওয়া হয়েছে · Tue 27 Oct 18:00_', bot_id: 'B1', thread_ts: W.rootB });
+      T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'EW' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));   // Slack's push, as in real life
       await openCardNo(page, '17841'); await until(async () => (await page.$$('#thread .xev.k-work')).length, 10000, 'WORK event card');
+      const g = page.locator('#thread .msg.evm', { hasText: 'Tue 27 Oct 18:00' }).last(); await until(async () => await g.count(), 20000, 'give card');
+      ok((await g.locator('.xevt').textContent()) === 'Rifat ← 4 pcs given', 'give title only: ' + (await g.locator('.xevt').textContent()));
+      ok(/by Abbas · 🕒 Tue 27 Oct 18:00/.test(await g.locator('.xevs').textContent()) && /now 24 pcs in hand/.test(await g.textContent()), 'time on the who line, in-hand below: ' + (await g.textContent()));
       const t = await page.textContent('#thread'); ok(!/:clock3:|:construction_worker:/.test(t), 'no raw shortcodes left');
       const w = page.locator('#thread .msg.evm', { hasText: 'Islam' }).last(); ok((await w.locator('.xevt').textContent()) === 'Islam ← 5 pcs given', 'title: ' + (await w.locator('.xevt').textContent()));
       ok(/by Abbas · 🕒 Tue 27 Oct 17:26/.test(await w.locator('.xevs').textContent()), 'who + time line: ' + (await w.locator('.xevs').textContent())); ok(/পিস/.test(await w.locator('.xevx').textContent()), 'Bengali line under it');
       const mv = page.locator('#thread .msg.evm', { hasText: 'IN LINE (2)' }).last(); ok(/→ IN LINE \(2\) · লাইন \(2\)/.test(await mv.locator('.xevt').textContent()) && /Md ibrahimmiah · 🕒 Tue 27 Oct 17:25/.test(await mv.locator('.xevs').textContent()), 'move card: ' + (await mv.textContent()));
       await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
+    });
+    await test('work time maths: a work day is 12 h 20 net, minutes never above the clock, row text reads cleanly', async () => {   // 28 Oct 2026
+      const r = T.relay.ctx, H = 3600000, mon = Date.UTC(2026, 9, 26, 8, 43), tue = Date.UTC(2026, 9, 27, 14, 43);   // Mon 26 Oct 12:43 -> Tue 27 Oct 18:43 Dubai (Sajjad, SJ-27846)
+      const ms = r.facWorkMs(mon, tue); ok(Math.abs(ms - (17 * H + 20 * 60000)) < 60000, 'net work time 17 h 20: ' + ms / H);
+      ok(r.facWorkDur(ms) === '1.4 work days', 'shown as 1.4 work days: ' + r.facWorkDur(ms));
+      ok(r.facWorkDur(54 * 60000 + 40000) === '54 min work', '54 min 40 s -> 54 min (as the clock shows): ' + r.facWorkDur(54 * 60000 + 40000));
+      ok(await page.evaluate(() => [window.__f.wdTxt('3.5 work h'), window.__f.wdTxt('1.4 work days'), window.__f.wdTxt('4 min work')].join('|')) === 'work time 3.5 h|work time 1.4 days|4 min work time', 'row text');
     });
     await test('a chat with new messages opens with a "▼ N NEW" divider before the first unread line', async () => {   // 27 Oct 2026
       F.postSlack(W, CUT, { text: 'unread one', user: 'U1', thread_ts: W.rootB }); F.postSlack(W, CUT, { text: 'unread two', user: 'U1', thread_ts: W.rootB });
@@ -416,6 +428,7 @@ async function suite(fast, browser) {
       try { await until(async () => (await page.$$('#thread audio')).length, 10000, 'voice note ready as a player, without a tap'); }
       catch (e) { const st = await page.evaluate(() => ({ ph: Array.from(document.querySelectorAll('#thread .fph')).map(x => x.dataset.k + ':' + x.dataset.busy + ':' + x.textContent.slice(0, 40)), n: document.querySelectorAll('#thread .msg').length, sc: [document.getElementById('cbody').scrollTop, document.getElementById('cbody').scrollHeight, document.getElementById('cbody').clientHeight], net: window.__f.NET.log.slice(0, 10).map(l => l.op + ' ' + l.ms + 'ms ' + (l.ok ? 'ok' : 'FAIL ' + l.e)), q: [window.__f.NET.busy, window.__f.NET.lob, window.__f.NET.hi.length, window.__f.NET.lo.length], last: (document.querySelector('#thread .msg:last-child') || {}).textContent })); throw new Error(e.message + ' :: ' + JSON.stringify(st)); }
       ok(await page.$eval('#thread audio', a => a.paused), 'not playing by itself');
+      await page.evaluate(() => { const el = document.getElementById('cbody'); el.scrollTop = el.scrollHeight; });   // 27 Oct 2026: a chat with new lines opens at the NEW divider; photos load as they come on screen
       await until(async () => (await page.$$('#thread .bub img')).length, 10000, 'photo loaded');
       await page.click('#thread .bub img'); await until(() => page.locator('#viewer').isVisible(), 3000, 'viewer open');
       await page.goBack(); await until(async () => await page.locator('#viewer').isHidden(), 3000, 'viewer closed by Back');

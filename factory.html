@@ -273,7 +273,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-27b';
+var VER = '2026-10-28a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -683,7 +683,7 @@ function workDraw(c){
   $('wkprog').innerHTML = (given || tot) ? '<div class="pbar"><i class="d" style="width:' + pd + '%"></i><i class="h" style="width:' + ph + '%"></i></div><div class="pleg">' + (tot ? '<span><b>' + tot + '</b> pcs</span>' : '') + '<span class="d">✓ ' + done + ' done</span><span class="h">⏳ ' + inh + ' in hand</span>' + (tot ? '<span>' + left + ' left · বাকি</span>' : '') + (rej ? '<span class="r">✗ ' + rej + ' rejected</span>' : '') + '</div>' : '';
   var wlist = D.workers.filter(function(w){ return !wrole(w); }).concat(D.workers.filter(function(w){ return wrole(w); })), nrole = D.workers.filter(wrole).length;
   $('wkrows').innerHTML = wlist.map(function(w, wi){ var bs = wk[w.toUpperCase()] || [], o = bs.filter(function(b){ return !b.out; })[0], done = bs.filter(function(b){ return b.out; }), dsum = done.reduce(function(a, b){ return a + b.d; }, 0);
-    var orem = o ? o.g - (o.pd || 0) : 0, stt = o ? '<span class="st on">⏱ ' + wkDur(now - o.in) + ' since ' + wkWhen(o.in) + (o.wd ? ' · ' + esc(o.wd) + ' time' : '') + ' · <b>' + orem + ' pcs in hand</b>' + (o.pd ? ' · ✓ ' + o.pd + ' done so far' : '') + ' · ' + o.g + ' given' + (o.adds && o.adds.length ? ' (' + [o.g - o.adds.reduce(function(a, b){ return a + b; }, 0)].concat(o.adds).join('+') + ')' : '') + ' by ' + esc(o.by) + '</span>' : done.length ? '<span class="st">' + done.map(function(b){ return '✓ ' + b.d + ' pcs · ' + wkWhen(b.in) + ' → ' + wkWhen(b.out) + ' · ' + (b.wd || wkDur(b.out - b.in)) + (b.rate ? ' · ≈' + b.rate + '/day' : ''); }).join('<br>') + '</span>' : '';
+    var orem = o ? o.g - (o.pd || 0) : 0, stt = o ? '<span class="st on">⏱ ' + wkDur(now - o.in) + ' since ' + wkWhen(o.in) + (o.wd ? ' · ' + esc(wdTxt(o.wd)) : '') + ' · <b>' + orem + ' pcs in hand</b>' + (o.pd ? ' · ✓ ' + o.pd + ' done so far' : '') + ' · ' + o.g + ' given' + (o.adds && o.adds.length ? ' (' + [o.g - o.adds.reduce(function(a, b){ return a + b; }, 0)].concat(o.adds).join('+') + ')' : '') + ' by ' + esc(o.by) + '</span>' : done.length ? '<span class="st">' + done.map(function(b){ return '✓ ' + b.d + ' pcs · ' + wkWhen(b.in) + ' → ' + wkWhen(b.out) + ' · ' + (b.wd || wkDur(b.out - b.in)) + (b.rate ? ' · ≈' + b.rate + '/day' : ''); }).join('<br>') + '</span>' : '';
     return (nrole && wi === wlist.length - nrole ? '<div class="wdiv">Checking · iron · other jobs · চেকিং · ইস্ত্রি</div>' : '') + '<div class="wr' + (wrole(w) ? ' role' : '') + '" data-w="' + esc(w) + '"><div><b>' + avHtml(w, 's') + esc(w) + (wrole(w) ? ' <em>' + esc(wrole(w)) + '</em>' : '') + '</b>' + stt + '</div><input type="number" inputmode="numeric" min="1" placeholder="pcs"><button class="in" data-k="in"' + (D.w ? '' : ' disabled') + '>▶ ' + (o ? 'More · আরও' : 'Give · দিন') + '</button>' + (o ? '<button class="part" data-k="part" data-g="' + orem + '"' + (D.w ? '' : ' disabled') + '>✓ Part<small>অংশ</small></button><button class="out" data-k="out" data-g="' + orem + '"' + (D.w ? '' : ' disabled') + '>■ All done<small>সব</small></button>' : '') + '</div>'; }).join('');
   Object.keys(typed).forEach(function(w){ var r = $('wkrows').querySelector('.wr[data-w="' + w.replace(/"/g, '') + '"] input'); if (r && !r.value) r.value = typed[w]; });
 }
@@ -741,6 +741,7 @@ var AVC = ['#1f8a4c', '#b8860b', '#c4561a', '#2b6cb0', '#7b4fa0', '#0e8a8a', '#a
 function avc(n){ var h = 0; String(n).toUpperCase().split('').forEach(function(ch){ h = (h * 31 + ch.charCodeAt(0)) % 9973; }); return AVC[h % AVC.length]; }
 function avHtml(n, cls){ return '<span class="av' + (cls ? ' ' + cls : '') + '" style="background:' + avc(n) + '">' + esc(String(n).trim().charAt(0).toUpperCase()) + '</span>'; }
 function isoDay(ms){ return new Date(ms + 4 * 3600000).toISOString().slice(0, 10); }   // the Dubai date
+function wdTxt(wd){ return String(wd || '').replace(/^([\d.]+) work (h|days)$/, 'work time $1 $2').replace(/ min work$/, ' min work time'); }   // 28 Oct 2026: was "3.5 work h time" / "1.2 work days time"
 function wkStatus(w, now){ var h = w.hand || []; if (h.length) return h.some(function(x){ return parseFloat(x.wd) >= 2 && /work days/.test(x.wd || ''); }) ? 'long' : 'busy'; if (!w.pcs && !w.last) return 'free'; return now - (w.last || 0) > 2 * 86400000 ? 'idle' : 'free'; }
 var WKCHIP = { busy: ['Working', 'কাজে', 'g'], long: ['⚠ Long', 'অনেকদিন', 'a'], free: ['Free', 'ফাঁকা', ''], idle: ['Idle 2+ d', 'বসে আছে', 'r'] };
 function attRec(v){ return v && typeof v === 'object' ? v : v === 1 ? { p: 1 } : v === 0 ? { a: 1 } : null; }
@@ -1144,10 +1145,10 @@ function qstrip(t){ return String(t || '').split('\n').filter(function(l){ retur
 // "→ *WORK* · who · 👷 *Islam* ← *5 pcs* given · 🕒 …") is shown as a small card: icon, bold title, who + time on a grey line, the Bengali under it.
 function sysHtml(m){ var raw = emo(sdec(String(m.text || ''))), lines = raw.split('\n'), first = lines[0].replace(/\*/g, '').trim();
   var rest = lines.slice(1).map(function(l){ return l.replace(/\*/g, '').replace(/^_+|_+$/g, '').trim(); }).filter(Boolean);
-  var parts = first.replace(/^→\s*/, '').split(' · '), head = parts[0] || '', who = parts[1] || '', tail = parts.slice(2), time = '';
-  if (tail.length && /^🕒/.test(tail[tail.length - 1])) time = tail.pop().replace(/^🕒\s*/, '');
+  var parts = first.replace(/^→\s*/, '').split(' · '), head = parts[0] || '', who = parts[1] || '', tail = parts.slice(2), time = '', ti = -1;
+  tail.forEach(function(x, i){ if (/^🕒/.test(x)) ti = i; }); if (ti >= 0) { time = tail[ti].replace(/^🕒\s*/, ''); tail.splice(ti, 1); }   // 28 Oct 2026: the time can sit in the middle (Give / Part lines)
   var kind = head === 'WORK' ? 'work' : head === 'SHEET' ? 'sheet' : head === 'NEW' ? 'new' : 'move', icon = kind === 'work' ? '👷' : kind === 'sheet' ? '📋' : kind === 'new' ? '🆕' : '🔀', title, sub;
-  if (kind === 'work' || kind === 'sheet') { title = tail.join(' · ').replace(/^(👷|📋)\s*/, ''); sub = who ? 'by ' + who : ''; }
+  if (kind === 'work' || kind === 'sheet') { title = (tail.shift() || '').replace(/^(👷|📋)\s*/, ''); if (tail.length) rest.unshift(tail.join(' · ')); sub = who ? 'by ' + who : ''; }
   else { title = '→ ' + head + (UR[head] ? ' · ' + UR[head] : ''); sub = who + (tail.length ? ' · ' + tail.join(' · ') : ''); }
   if (time) sub += (sub ? ' · ' : '') + '🕒 ' + time;
   return '<div class="xev k-' + kind + '"><span class="xevi">' + icon + '</span><div class="xevb"><b class="xevt">' + esc(title) + '</b>' + (sub ? '<small class="xevs">' + esc(sub) + '</small>' : '') + rest.map(function(l){ return '<i class="xevx">' + esc(l) + '</i>'; }).join('') + '</div></div>'; }
@@ -1633,7 +1634,7 @@ if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } 
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, mvr: function(){ return MVR; } };
+window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, mvr: function(){ return MVR; }, wdTxt: wdTxt };
 })();
 </script>
 </body></html>
