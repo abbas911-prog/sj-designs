@@ -24,7 +24,8 @@ json.dump([{'id': '6a324a6384a02f213399fefe', 'name': 'SJ = **(79623)** (96) pcs
   {'id': 'abc123abc123abc123abc203', 'name': 'Sj 6668 (70 pcs) 5 colors (14/14/14/14/14)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
   {'id': 'abc123abc123abc123abc202', 'name': 'Sj = **(6668)**(65pcs) 5 color (13/13/13/13/13)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
   {'id': 'abc123abc123abc123abc204', 'name': 'Sj 6668 (pcs67) 5 colors.     (14/13/14/14/12/)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
-  {'id': 'abc123abc123abc123abc205', 'name': 'SJ = **6668** (60) pcs ,,, colors = (5) ,,,,,,', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]}], open('${L}/cards.json', 'w'))
+  {'id': 'abc123abc123abc123abc205', 'name': 'SJ = **6668** (60) pcs ,,, colors = (5) ,,,,,,', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
+  {'id': 'abc123abc123abc123abc301', 'name': 'Sj = **(57027)** (38) pcs __ Colour= (6)__(0-3/14-3/16-3/0-3/8-3//0-3)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]}], open('${L}/cards.json', 'w'))
 `]);
 const env = Object.assign({}, process.env, { CAT_LOCAL: L, PYTHONPATH: path.join(DIR, 'tools') + ':' + path.join(DIR, 'tools/catalog'), REQ: JSON.stringify({ id: 't1', name: 'TEST CUSTOMER', items: [{ no: '57026', mode: 'S' }] }), SIG: '' });
 let out = execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env }).toString();
@@ -52,10 +53,12 @@ const r2 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t2.json')));
 const h2 = r2.ok ? fs.readFileSync(path.join(T, r2.page), 'utf8') : '';
 ok('sizes page: colours keep the card numbers 2 and 5, photo cut to two', r2.ok && /data-c="57026:2"/.test(h2) && /data-c="57026:5"/.test(h2) && !/data-c="57026:1"/.test(h2) && /<span>2<\/span><span>5<\/span>/.test(h2));
 // "6668 all" (23 Oct 2026): every READY card of that number, each its own design, oldest card first
-const env3 = Object.assign({}, env, { REQ: JSON.stringify({ id: 't3', name: 'ALL TEST', items: [{ no: '6668 all', mode: 'S' }, { no: '57026', mode: 'S' }] }) });
+const env3 = Object.assign({}, env, { REQ: JSON.stringify({ id: 't3', name: 'ALL TEST', items: [{ no: '6668 all', mode: 'S' }, { no: '57026', mode: 'S' }, { no: '57027', mode: 'S' }] }) });
 execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: env3 });
 const r3 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t3.json'))); const h3 = r3.ok ? fs.readFileSync(path.join(T, r3.page), 'utf8') : '';
-ok('"6668 all" → designs 6668_01…_04 + 57026; the card with no colour counts (_05) is left out, the page is still made', r3.ok && (h3.match(/<article class="design" data-no="([^"]+)"/g) || []).map(x => x.match(/data-no="([^"]+)"/)[1]).join() === '6668_01,6668_02,6668_03,6668_04,57026');
+ok('"6668 all" → designs 6668_01…_04 + 57026 + 57027; the card with no colour counts (_05) is left out, the page is still made', r3.ok && (h3.match(/<article class="design" data-no="([^"]+)"/g) || []).map(x => x.match(/data-no="([^"]+)"/)[1]).join() === '6668_01,6668_02,6668_03,6668_04,57026,57027');
+// 27 Oct 2026 (Abbas, 57026 "(0-3/14-3/16-3/0-3/8-3//0-3)": "why 7 when colours are 6?"): the double slash is not a colour — 6 colours, kept 2, 3, 5
+ok('"(8-3//0-3)" = 6 colours: kept dresses 2, 3, 5', /data-no="57027"[\s\S]*?data-nums="2,3,5" data-n="3"/.test(h3) && (r3.report || []).some(l => /57027 SETS +0\+14\+16\+0\+8\+0 = 38 ✓ \(card: 38\) → 3 colours/.test(l)));
 ok('oldest card is _01 (40 pcs), _03 (70 pcs)', /data-no="6668_01"[\s\S]*?data-k="6668_01:1"/.test(h3) && (r3.report || []).some(l => /6668 all: 5 READY cards/.test(l)) && /data-c="6668_03:1"|data-k="6668_03:1"/.test(h3));
 // 23 Oct 2026 (Abbas: "the numbers add up, why does it say they don't?"): "(pcs67)" reads as 67, the stray slash in "(14/13/14/14/12/)" is not a 6th colour
 ok('"(pcs67) … (14/13/14/14/12/)" = 5 colours, 67 pcs, photo NOT cut', /data-no="6668_04"[\s\S]*?data-nums="1,2,3,4,5" data-n="5"><img/.test(h3) && (r3.report || []).some(l => /6668_04 SETS +14\+13\+14\+14\+12 = 67 ✓ \(card: 67\) → 5 colours/.test(l)));

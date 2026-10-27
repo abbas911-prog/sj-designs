@@ -38,8 +38,8 @@ def parse(t):
         groups += 1
         pos = g.start(1)
         toks = g.group(1).split('/')
-        while len(toks) > 1 and not toks[-1].strip(): toks.pop()      # "(14/14/14/14/14/)" - a stray slash at the end is not a 6th colour (23 Oct 2026)
         for tok in toks:
+            if not tok.strip() and len(toks) > 1: pos += len(tok) + 1; continue   # "(14/14/14/14/14/)" or "(8-3//0-3)": a stray slash is not a colour (23 + 27 Oct 2026)
             d = re.search(r'\d+', tok)
             if d:
                 a, b = off + pos + d.start(), off + pos + d.end()

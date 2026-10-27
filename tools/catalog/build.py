@@ -346,7 +346,7 @@ def group_sizes(title):
     s = title.replace('**', '  ').replace('{', '(').replace('}', ')')
     s = re.sub(r'\(\s*rows?\b[^)]*\)', lambda m: ' ' * len(m.group()), s, flags=re.I)   # '(row 3)' = godown row, not a colour count
     ci = re.search(r'colou?rs?', s, re.I); tail = (s[ci.start():] if ci else s) + ')'
-    return [len(g.group(1).split('/')) for g in re.finditer(r'\(([^()]*/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)', tail)]
+    return [max(1, sum(1 for t in g.group(1).split('/') if t.strip())) for g in re.finditer(r'\(([^()]*/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)', tail)]   # a stray slash ("//", "/)") is not a colour
 
 def page_stem(name):
     slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')[:30] or 'sj'

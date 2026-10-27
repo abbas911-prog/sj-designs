@@ -8,9 +8,10 @@ const att = (id, date) => ({ id, mimeType: 'image/jpeg', date, name: 'photo.jpeg
 const cards = [
   { id: 'c1', idShort: 1, list: 'r', name: 'SJ = **(79623)** (96) pcs color = (9) ,,,, (16/8/8/8/16/16)..(8/8/8)', attachments: [att('shot1', '2026-06-20T12:47:42Z'), att('shop3', '2026-06-21T16:50:32Z'), att('shop6', '2026-06-21T16:51:24Z'), att('jam3', '2026-07-16T14:50:48Z'), att('jam6', '2026-07-16T14:51:02Z')] },
   { id: 'c2', idShort: 2, list: 'r', name: 'SJ-11111 (12) colour = (3) (4/4/4)', attachments: [att('jamA', '2026-07-01T00:00:00Z'), att('coverA', '2026-07-02T00:00:00Z')] },
-  { id: 'c3', idShort: 3, list: 'r', name: 'SJ-22222 (8) colour = (2) (4/4)', attachments: [att('coverB', '2026-07-02T00:00:00Z'), att('detB', '2026-07-03T00:00:00Z')] }
+  { id: 'c3', idShort: 3, list: 'r', name: 'SJ-22222 (8) colour = (2) (4/4)', attachments: [att('coverB', '2026-07-02T00:00:00Z'), att('detB', '2026-07-03T00:00:00Z')] },
+  { id: 'c4', idShort: 4, list: 'r', name: 'Sj = **(57026)** (38) pcs __ Colour= (6)__(0-3/14-3/16-3/0-3/8-3//0-3)', attachments: [att('shopC', '2026-07-02T00:00:00Z')] }
 ];
-const roles = { shot1: ['shot'], shop3: ['lineup'], shop6: ['lineup', 0.7], jam3: ['lineup', 0.973, 'jamal'], jam6: ['lineup', 1.0, 'jamal'], jamA: ['lineup', 0.9, 'jamal'], coverA: ['cover', 0.9], coverB: ['cover', 0.9], detB: ['detail'] };
+const roles = { shopC: ['lineup'], shot1: ['shot'], shop3: ['lineup'], shop6: ['lineup', 0.7], jam3: ['lineup', 0.973, 'jamal'], jam6: ['lineup', 1.0, 'jamal'], jamA: ['lineup', 0.9, 'jamal'], coverA: ['cover', 0.9], coverB: ['cover', 0.9], detB: ['detail'] };
 const enc = lock({ updated: new Date().toISOString(), cards });
 const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0];
   if (u === '/memo-data.enc') { rs.setHeader('content-type', 'application/json'); return rs.end(JSON.stringify(enc)); }
@@ -25,11 +26,13 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0];
   await pg.waitForSelector('#feed .design', { timeout: 15000 });
   // what the app built: the numbers under each photo of a design, in order
   const got = {};
-  for (const no of ['79623', '11111', '22222']) got[no] = await pg.$$eval('.design[data-no="' + no + '"] .ph', L => L.map(e => [...e.querySelectorAll('.nums span')].map(s => s.textContent).join(',')));
+  for (const no of ['79623', '11111', '22222', '57026']) got[no] = await pg.$$eval('.design[data-no="' + no + '"] .ph', L => L.map(e => [...e.querySelectorAll('.nums span')].map(s => s.textContent).join(',')));
   const out = []; const ok = (n, v) => out.push([n, !!v]);
   ok('79623: two photos carry the numbers 1-6 and 7-9 (the shop photos), the JAMAL photos stay hidden', got['79623'].length === 2 && got['79623'][0] === '1,2,3,4,5,6' && got['79623'][1] === '7,8,9');
   ok('11111: no shop photo → the JAMAL photo carries 1-3, the AI cover stays hidden', got['11111'].length === 1 && got['11111'][0] === '1,2,3');
   ok('22222: nothing real → the AI cover carries 1-2, the detail photo follows without numbers', got['22222'].length === 2 && got['22222'][0] === '1,2' && got['22222'][1] === '');
+  // 27 Oct 2026 (Abbas, 57026: "why is this 7 when colours are 6?"): the double slash in "(8-3//0-3)" is not a colour
+  ok('57026 "(0-3/14-3/16-3/0-3/8-3//0-3)" = 6 colours, 38 pcs, 6 numbers on the photo', got['57026'].length === 1 && got['57026'][0] === '1,2,3,4,5,6' && (await pg.$eval('.design[data-no="57026"] .meta, .design[data-no="57026"]', e => e.textContent)).indexOf('6 colours') >= 0);
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   // which attachments got the numbers for 79623: the article's signature ends with the photo ids in order
   const ids = await pg.evaluate(() => { const a = document.querySelector('.design[data-no="79623"]'); return a ? a.dataset.sig : ''; });

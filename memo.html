@@ -712,6 +712,7 @@ function parseTitle(t){
   // Selling 4 of colour 1 makes it (4-1/8-2). A single colour may be written (8-1).
   (tail + ')').replace(/\(([^()]*\/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)/g, function(_, g){
     var toks = g.split('/').map(function(x){ return x.trim(); });
+    if (toks.length > 1) toks = toks.filter(function(x){ return x; });   // 27 Oct 2026 (57026 "(8-3//0-3)" showed 7 colours): a stray slash is not a colour
     groups.push(toks.map(function(x){
       var pr = x.match(/^(\d+)\s*-\s*([A-Za-z0-9]+)$/); rows.push(pr ? pr[2] : '');
       if (pr) return +pr[1];
@@ -919,7 +920,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-24a';
+var VER = '2026-10-27a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
