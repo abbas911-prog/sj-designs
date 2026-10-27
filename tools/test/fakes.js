@@ -14,7 +14,7 @@ function makeWorld() {
     slack: { ch: {}, users: { U1: { id: 'U1', name: 'ibrahim', real_name: 'Md Ibrahim', profile: { real_name: 'Md Ibrahim', display_name: 'ibrahim' } },
       U2: { id: 'U2', name: 'abbas_911', real_name: 'Abbas', profile: { real_name: 'Abbas', display_name: 'abbas' } } }, files: {} },
     ntfy: [], log: [], slackDelay: 0 };
-  const L = [['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'], ['START', '6527c572b12b208471c080cb'], ['CUTTING', '6527c57751007e81a43f55a6'],
+  const L = [['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'], ['START', '6527c572b12b208471c080cb'], ['Cutting///START', '6ae07f38a77a2321736ef9da'], ['CUTTING', '6527c57751007e81a43f55a6'],
     ['IN LINE', '6527c57cd7e267fbf2a602b4'], ['READY FOR HAND WORK', '6527c585b9300f804906d9bd'], ['IN HAND WORK', '6527c59b796865bd9639b0c3'], ['CAME FROM HAND WORK', '6602ad25e74db40a25ab0296'],
     ['IN LINE (2)', '6527c5a3964596815651a97f'], ['IRON/CHECKING', '6527c5a93db4d8b8e91a8be9'], ['READY', '6527c5b13129a9ba37acd3ad'], ['READY 2', '699b35ceb77292db0289c473'],
     ['FINISH', '6527c5b41e630c094b619f5e'], ['FINISH SAMPLES', '68b77a221eef6fbb9a305e0e']];

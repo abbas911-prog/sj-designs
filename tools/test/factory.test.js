@@ -91,24 +91,30 @@ async function suite(fast, browser) {
       await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '48188');
       const start = W.trello.cards[W.cardA.id].idList, nLog = W.log.length;
       await page.click('#bdone');
-      await until(async () => /CUTTING/.test(await page.textContent('#cstage')), 1000, 'moved on screen at once');
+      await until(async () => /Cutting\/\/\/START/.test(await page.textContent('#cstage')), 1000, 'moved on screen at once (to Cutting///START, 27 Oct 2026)');
       ok(await page.locator('#undo').isVisible(), 'undo bar'); ok(!(await page.locator('.sheet:not([hidden])').count()), 'no question asked');
       await page.waitForTimeout(1500); ok(W.trello.cards[W.cardA.id].idList === start, 'Trello not moved yet');
       await page.click('#undob');
       await until(async () => /START/.test(await page.textContent('#cstage')), 1000, 'back on START');
       await page.waitForTimeout(5500);
       ok(W.trello.cards[W.cardA.id].idList === start, 'Trello never moved');
-      ok(!W.log.slice(nLog).some(l => l[0] === 'comment' || (l[0] === 'slack' && /→ \*CUTTING/.test(l[3] || ''))), 'no comment, no chat line');
+      ok(!W.log.slice(nLog).some(l => l[0] === 'comment' || (l[0] === 'slack' && /→ \*Cutting/.test(l[3] || ''))), 'no comment, no chat line');
       await page.click('#bdone');
-      await until(() => W.trello.cards[W.cardA.id].idList === '6527c57751007e81a43f55a6', 9000, 'moved after 5 s');
+      await until(() => W.trello.cards[W.cardA.id].idList === '6ae07f38a77a2321736ef9da', 9000, 'moved after 5 s');
       await until(async () => await page.locator('#undo').isHidden(), 2000, 'undo bar gone');
+      await page.goBack();
+    });
+    await test('the new stage CUTTING START (Trello list Cutting///START) is a chip of its own and holds the card', async () => {   // 27 Oct 2026
+      await page.click('#tabs button[data-t="cards"]'); const st = await page.textContent('#stages'); ok(/CUTTING START/.test(st) && /কাটিং শুরু/.test(st), 'chip with the Bengali label: ' + st.slice(0, 120));
+      await page.click('#stages button[data-i="3"]'); await until(async () => /48188/.test(await page.textContent('#list')), 5000, 'the card is under CUTTING START');
+      await openCardNo(page, '48188'); ok((await page.textContent('#bnext')).trim() === 'CUTTING', 'next after it = CUTTING');
       await page.goBack();
     });
     await test('Done then leaving the app: the move is sent at once', async () => {
       await page.click('#stages button[data-i="3"]'); await openCardNo(page, '48188');
       await page.click('#bdone'); await page.waitForTimeout(300);
       await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
-      await until(() => W.trello.cards[W.cardA.id].idList === '6527c57cd7e267fbf2a602b4', 3000, 'sent on going to the background');
+      await until(() => W.trello.cards[W.cardA.id].idList === '6527c57751007e81a43f55a6', 3000, 'sent on going to the background (Cutting///START → CUTTING)');
       await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: false, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
       await page.goBack();
     });
@@ -117,9 +123,9 @@ async function suite(fast, browser) {
       await home(page); await openCardNo(page, '77001'); T.opDelay = { move: 4000 };
       await page.click('#bdone'); await page.waitForTimeout(5300);                       // Undo over: the move is on its way (4 s on the relay)
       await page.evaluate(() => window.__f.load(true)); await page.waitForTimeout(1500);   // a card list fetched meanwhile still says START
-      ok((await page.evaluate(id => window.__f.D.byId[id].l, W.cardR.id)) === CUTTING, 'the card stays in CUTTING on the phone');
-      ok(/CUTTING/.test(await page.textContent('#cstage')), 'the card screen still says CUTTING: ' + (await page.textContent('#cstage')));
-      await until(() => W.trello.cards[W.cardR.id].idList === CUTTING, 10000, 'Trello moved'); T.opDelay = null; await home(page);
+      ok((await page.evaluate(id => window.__f.D.byId[id].l, W.cardR.id)) === '6ae07f38a77a2321736ef9da', 'the card stays in Cutting///START on the phone');
+      ok(/Cutting\/\/\/START/.test(await page.textContent('#cstage')), 'the card screen still says Cutting///START: ' + (await page.textContent('#cstage')));
+      await until(() => W.trello.cards[W.cardR.id].idList === '6ae07f38a77a2321736ef9da', 10000, 'Trello moved'); T.opDelay = null; await home(page);
     });
     await test('Done with no line: the card stays where Done put it and the move goes when the line is back', async () => {   // 25 Oct 2026
       await openCardNo(page, '77001'); const to = (await page.textContent('#bnext')).trim(), toId = lidOf(W, to); await page.click('#bdone'); await page.waitForTimeout(300); T.relayDown = true; T.fastDown = true;
@@ -143,7 +149,7 @@ async function suite(fast, browser) {
     });
     await test('swipe a card row left = Done → next stage (with Undo)', async () => {
       await page.fill('#q', '');
-      await page.click('#stages button[data-i="4"]');           // IN LINE
+      await page.click('#stages button[data-i="4"]');           // CUTTING (27 Oct 2026: index 3 = CUTTING START)
       const row = page.locator('#list .cardrow', { hasText: '48188' }); await row.waitFor();
       const b = await row.boundingBox(), y = b.y + b.height / 2;
       await page.mouse.move(b.x + b.width - 20, y); await page.mouse.down();
@@ -151,7 +157,7 @@ async function suite(fast, browser) {
       await page.mouse.up();
       await until(async () => await page.locator('#undo').isVisible(), 2000, 'undo bar after swipe');
       ok(await page.locator('#card').isHidden(), 'the card did not open');
-      await until(() => W.trello.cards[W.cardA.id].idList === '6527c5a93db4d8b8e91a8be9', 9000, 'IRON/CHECKING in Trello');
+      await until(() => W.trello.cards[W.cardA.id].idList === '6527c57cd7e267fbf2a602b4', 9000, 'IN LINE in Trello');
     });
     await test('work: give pieces to a worker, timer runs, Done stops it - Trello comment, field and chat line', async () => {
       await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '17841');
@@ -370,6 +376,14 @@ async function suite(fast, browser) {
       await until(async () => (await bubbles(page)).some(t => /hello from Ibrahim/.test(t)), 8000, 'dm line');
       await page.goBack(); await page.click('#tabs button[data-t="cards"]');
     });
+    await test('after scrolling up in one chat, the next chat still opens at its newest line', async () => {   // 27 Oct 2026
+      if (await page.locator('#card').isVisible()) await page.goBack();
+      await openCardNo(page, '55555'); await until(async () => (await page.$$('#thread .msg')).length > 20, 10000, 'long chat');
+      await page.evaluate(() => { document.getElementById('cbody').scrollTop = 0; }); await page.waitForTimeout(300); await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
+      await openCardNo(page, '17841'); await page.waitForTimeout(800);
+      const sc = await page.evaluate(() => { const el = document.getElementById('cbody'); return [el.scrollTop, el.scrollHeight, el.clientHeight]; });
+      ok(sc[1] - sc[0] - sc[2] < 160, 'chat opened at the bottom: ' + sc.join('/')); await page.goBack();
+    });
     await test('voice note plays and the photo viewer opens and closes with Back', async () => {
       if (await page.locator('#card').isVisible()) await page.goBack();
       W.slack.files.FVOICE1 = { id: 'FVOICE1', name: 'voice-1.m4a', mimetype: 'audio/mp4', size: 3000, bytes: Buffer.alloc(3000, 1), url_private: 'https://files.slack.com/dl/FVOICE1', url_private_download: 'https://files.slack.com/dl/FVOICE1' };
@@ -377,7 +391,8 @@ async function suite(fast, browser) {
       F.postSlack(W, CUT, { text: '', user: 'U1', thread_ts: W.rootB, files: [W.slack.files.FVOICE1, W.slack.files.FPHOTO1] });
       T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'EV' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));   // Slack's push, as in real life
       await openCardNo(page, '17841');
-      await until(async () => (await page.$$('#thread audio')).length, 10000, 'voice note ready as a player, without a tap');
+      try { await until(async () => (await page.$$('#thread audio')).length, 10000, 'voice note ready as a player, without a tap'); }
+      catch (e) { const st = await page.evaluate(() => ({ ph: Array.from(document.querySelectorAll('#thread .fph')).map(x => x.dataset.k + ':' + x.dataset.busy + ':' + x.textContent.slice(0, 40)), n: document.querySelectorAll('#thread .msg').length, sc: [document.getElementById('cbody').scrollTop, document.getElementById('cbody').scrollHeight, document.getElementById('cbody').clientHeight], net: window.__f.NET.log.slice(0, 10).map(l => l.op + ' ' + l.ms + 'ms ' + (l.ok ? 'ok' : 'FAIL ' + l.e)), q: [window.__f.NET.busy, window.__f.NET.lob, window.__f.NET.hi.length, window.__f.NET.lo.length], last: (document.querySelector('#thread .msg:last-child') || {}).textContent })); throw new Error(e.message + ' :: ' + JSON.stringify(st)); }
       ok(await page.$eval('#thread audio', a => a.paused), 'not playing by itself');
       await until(async () => (await page.$$('#thread .bub img')).length, 10000, 'photo loaded');
       await page.click('#thread .bub img'); await until(() => page.locator('#viewer').isVisible(), 3000, 'viewer open');
@@ -459,7 +474,7 @@ async function suite(fast, browser) {
       W.trello.actions.find(a => a.type === 'createCard' && a.data.card.id === c.id).date = new Date(born - 9 * D).toISOString(); const b0 = born - 9 * D;
       mv('START', 'CUTTING', b0 + 1 * D + 3 * H); mv('CUTTING', 'IN LINE', b0 + 3 * D); mv('IN LINE', 'IRON/CHECKING', b0 + 7 * D); mv('IRON/CHECKING', 'READY', b0 + 8 * D);
       W.trello.cards[c.id].idList = '6527c5b13129a9ba37acd3ad'; await page.click('#tabs button[data-t="more"]'); await page.click('#rf'); await page.waitForTimeout(1500); await page.click('#tabs button[data-t="cards"]');
-      await page.click('#stages button[data-i="10"]'); await openCardNo(page, '55555');
+      await page.click('#stages button[data-i="11"]'); await openCardNo(page, '55555');
       await page.click('#bdone');                                 // READY → FINISH (Undo bar, then sent)
       await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootL && /PRODUCTION REPORT/.test(m.text || '')), 15000, 'report in the chat');
       const rp = W.slack.ch[CUT].msgs.find(m => /PRODUCTION REPORT/.test(m.text || '')).text;

@@ -269,7 +269,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-25a';
+var VER = '2026-10-27a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -280,14 +280,14 @@ var PW = ls('sj_fac_pw') || '', WHO = ls('sj_fac_who') || '';
 
 // ----- stages: the ALM production lists (ids come from the relay); hand-work lists are one chip -----
 var CHIPS = [['SAMPLES', ['SAMPLES'], 'স্যাম্পল'], ['SAMPLE DONE', ['SAMPLE DONE'], 'স্যাম্পল হয়ে গেছে'],
-  ['START', ['START'], 'শুরু'], ['CUTTING', ['CUTTING'], 'কাটিং'], ['IN LINE', ['IN LINE'], 'লাইন'],
+  ['START', ['START'], 'শুরু'], ['CUTTING START', ['Cutting///START'], 'কাটিং শুরু'], ['CUTTING', ['CUTTING'], 'কাটিং'], ['IN LINE', ['IN LINE'], 'লাইন'],   // 27 Oct 2026 (Abbas): the new Trello list Cutting///START = the cutting has started
   ['READY FOR HAND WORK', ['READY FOR HAND WORK'], 'হ্যান্ড ওয়ার্কের জন্য রেডি'], ['IN HAND WORK', ['IN HAND WORK'], 'হ্যান্ড ওয়ার্কে'],
   ['CAME FROM HAND WORK', ['CAME FROM HAND WORK'], 'হ্যান্ড ওয়ার্ক থেকে এসেছে'], ['IN LINE (2)', ['IN LINE (2)'], 'লাইন (2)'],
   ['IRON / CHECK', ['IRON/CHECKING'], 'ইস্ত্রি · চেকিং'], ['READY', ['READY'], 'রেডি'], ['READY 2', ['READY 2'], 'রেডি 2'], ['FINISH', ['FINISH'], 'শেষ'], ['FINISH SAMPLES', ['FINISH SAMPLES'], 'স্যাম্পল শেষ'],
   ['RETURNS', ['RETURNS'], 'ফেরত'], ['RETURNS BACK', ['RETURNS BACK'], 'ফেরত এসেছে']];
-var NEXT = { 'SAMPLES': 'SAMPLE DONE', 'START': 'CUTTING', 'CUTTING': 'IN LINE', 'IN LINE': 'IRON/CHECKING', 'READY FOR HAND WORK': 'IN HAND WORK', 'IN HAND WORK': 'CAME FROM HAND WORK',
+var NEXT = { 'SAMPLES': 'SAMPLE DONE', 'START': 'Cutting///START', 'Cutting///START': 'CUTTING', 'CUTTING': 'IN LINE', 'IN LINE': 'IRON/CHECKING', 'READY FOR HAND WORK': 'IN HAND WORK', 'IN HAND WORK': 'CAME FROM HAND WORK',
   'CAME FROM HAND WORK': 'IN LINE (2)', 'IN LINE (2)': 'IRON/CHECKING', 'IRON/CHECKING': 'READY', 'READY': 'FINISH', 'READY 2': 'FINISH', 'SAMPLE DONE': 'FINISH SAMPLES', 'RETURNS': 'RETURNS BACK' };
-var UR = { 'SAMPLES': 'স্যাম্পল', 'SAMPLE DONE': 'স্যাম্পল হয়ে গেছে', 'START': 'শুরু', 'CUTTING': 'কাটিং', 'IN LINE': 'লাইন', 'READY FOR HAND WORK': 'হ্যান্ড ওয়ার্কের জন্য রেডি', 'IN HAND WORK': 'হ্যান্ড ওয়ার্কে', 'CAME FROM HAND WORK': 'হ্যান্ড ওয়ার্ক থেকে এসেছে',
+var UR = { 'SAMPLES': 'স্যাম্পল', 'SAMPLE DONE': 'স্যাম্পল হয়ে গেছে', 'START': 'শুরু', 'Cutting///START': 'কাটিং শুরু', 'CUTTING': 'কাটিং', 'IN LINE': 'লাইন', 'READY FOR HAND WORK': 'হ্যান্ড ওয়ার্কের জন্য রেডি', 'IN HAND WORK': 'হ্যান্ড ওয়ার্কে', 'CAME FROM HAND WORK': 'হ্যান্ড ওয়ার্ক থেকে এসেছে',
   'IN LINE (2)': 'লাইন (2)', 'IRON/CHECKING': 'ইস্ত্রি · চেকিং', 'READY': 'রেডি', 'READY 2': 'রেডি 2', 'FINISH': 'শেষ', 'FINISH SAMPLES': 'স্যাম্পল শেষ', 'RETURNS': 'ফেরত', 'RETURNS BACK': 'ফেরত এসেছে' };
 var D = { lists: [], cards: [], byId: {}, w: true, later: {} }, cur = +(ls('sj_fac_chip') || 2), open = null; if (!CHIPS[cur] || /^RETURNS/.test(CHIPS[cur][0])) cur = 2;
 function lname(id){ var l = D.lists.filter(function(x){ return x[1] === id; })[0]; return l ? l[0] : '?'; }
@@ -662,7 +662,7 @@ function paintCard(){
 // starts, when it goes out we stop it". One row per worker: pieces box + ▶ Give; while the pieces are with them the row shows the running time and
 // the button becomes ✓ Done (the box then holds the pieces that came back). Every give / done = a Trello comment on the card + a line in its chat
 // (the relay keeps nothing itself - Trello's comments are the record), and the worker's field on the Trello card shows "58 ✓".
-var WKOPEN = {}, WKLIST = /^(CUTTING|IN LINE|IN LINE \(2\)|READY FOR HAND WORK|IN HAND WORK|CAME FROM HAND WORK|IRON\/CHECKING)$/;
+var WKOPEN = {}, WKLIST = /^(Cutting\/\/\/START|CUTTING|IN LINE|IN LINE \(2\)|READY FOR HAND WORK|IN HAND WORK|CAME FROM HAND WORK|IRON\/CHECKING)$/;
 function wkWhen(ms){ var d = new Date(+ms), n = new Date(); return (d.toDateString() === n.toDateString() ? 'today' : DAYN[d.getDay()] + ' ' + d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]) + ' ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
 function wkDur(ms){ ms = Math.max(0, ms); var h = Math.floor(ms / 3600000), d = Math.floor(h / 24); return d ? d + ' d' + (h % 24 ? ' ' + (h % 24) + ' h' : '') : h ? h + ' h' : Math.max(1, Math.floor(ms / 60000)) + ' min'; }
 async function workLoad(c){ if (!c || c.dm || c.lo) return; var j = await call({ op: 'work', card: c.id }); if (!j.ok || !open || open.id !== c.id) return; open._wk = j.batches || {}; open._sheet = j.sheet || open._sheet || {}; open._wkAt = Date.now(); if (j.workers && j.workers.length) D.workers = j.workers; if (j.roles) D.wroles = j.roles; workDraw(open); sheetDraw(open); }
@@ -1055,7 +1055,7 @@ document.addEventListener('visibilitychange', function(){ if (!document.hidden) 
 window.__LOOK = LOOK; window.__call = function(o, pw, t){ return call(o, pw, t); };
 function looking(){ return !document.hidden && Date.now() - LOOK.vis > 1500 && Date.now() - LOOK.act < 60000; }
 var THC = {};                                                   // last seen thread per card (this session) - shown at once when the card is reopened
-function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); replySet(null); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (document.hidden) return; TH.tick = (TH.tick || 0) + 1; if (liveOk() && TH.tick % 3) return; if (!liveOk() && fastOn() && TH.tick % 2) return; thPull(); }, 4000); }
+function thStart(c){ if (TH.card && TH.msgs.length) THC[TH.card.id] = TH.msgs.filter(function(m){ return !m.pend; }); TH.card = c; TH.msgs = (THC[c.id] || []).slice(); TH.opened = Date.now(); TH.stick = true; /* 27 Oct 2026: every chat opens at its newest line (the flag stayed false after scrolling up in another chat -> the next chat opened at the TOP, newest lines hidden, voice notes not loading) */ replySet(null); if (DRAFT[c.id]) { $('txt').value = DRAFT[c.id]; delete DRAFT[c.id]; } PEND.length = 0; pendDraw(); LOOK.act = Date.now(); seen(c); draw(); TH.none = false; $('tmsg').textContent = ''; if (TH.msgs.length) thDraw(); else { $('thread').innerHTML = '<div class="empty" style="padding:14px">Loading chat… · লোড হচ্ছে</div>'; $('tcount').textContent = ''; } thPull(); clearInterval(TH.timer); TH.timer = setInterval(function(){ if (document.hidden) return; TH.tick = (TH.tick || 0) + 1; if (liveOk() && TH.tick % 3) return; if (!liveOk() && fastOn() && TH.tick % 2) return; thPull(); }, 4000); }
 function thStop(){ clearInterval(TH.timer); TH.timer = null; TH.card = null; }
 
 // ===== FAST LANE (16 Oct 2026, Abbas: "you have to think better and do something about this chat .. not flawless at all"). The Google relay
