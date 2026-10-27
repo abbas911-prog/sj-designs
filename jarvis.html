@@ -47,7 +47,7 @@ body.speaking .orb i{background:var(--b);animation:pulse .35s ease-in-out infini
 </style>
 </head>
 <body>
-<header><b>JARVIS</b><small id="hb">·</small><button id="gear" type="button" aria-label="Settings">⚙︎</button></header>
+<header><b>JARVIS</b><small id="hb" style="cursor:pointer;border:1px solid rgba(127,152,179,.4);border-radius:12px;padding:3px 10px">·</small><button id="gear" type="button" aria-label="Settings">⚙︎</button></header>
 <div id="face"><div class="orb"><i></i></div></div>
 <div id="st">Hold the green button and talk, or type.</div>
 <div id="log"></div>
@@ -58,7 +58,7 @@ body.speaking .orb i{background:var(--b);animation:pulse .35s ease-in-out infini
 </div>
 <div id="setup">
   <h2 style="margin:0 0 6px">Connect to the PC</h2>
-  <p>On the PC, <b>python jarvis\bridge.py</b> prints a PHONE LINK (https://…trycloudflare.com). Paste it here. It changes each time the bridge restarts.</p>
+  <p><b>Deep mode only</b> (optional): the PHONE LINK the PC bridge prints (https://…trycloudflare.com). Fast mode needs only the two boxes below.</p>
   <input id="s_url" type="url" placeholder="https://xxxx.trycloudflare.com" inputmode="url">
   <div id="s_as">
     <p>Assistant link (the …/exec one) and the Assistant password — same as the Assistant app. Needed for the voice and to sign requests.</p>
@@ -106,12 +106,25 @@ function say(t, cb){ var txt = clean(t); if (!txt) { cb && cb(); return; }
   fallback();
   function fallback(){ try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(txt); var L = speechSynthesis.getVoices(), v = L.filter(function(x){ return /en-(US|GB)/.test(x.lang) && /premium|enhanced|natural|siri|google/i.test(x.name); })[0] || L.filter(function(x){ return /en-(US|GB)/.test(x.lang); })[0]; if (v) u.voice = v; u.onend = u.onerror = function(){ state('', ''); cb && cb(); }; speechSynthesis.speak(u); } catch(e){ state('', ''); cb && cb(); } }
 }
-async function ask(text){ text = String(text || '').trim(); if (!text || BUSY) return; if (!BR) { setup(); return; }
-  BUSY = true; log('y', text); state('thinking', 'Jarvis is thinking…'); $('txt').value = '';
-  var r = await signed(BR, { op: 'ask', text: text, rid: rid() }, 250000); BUSY = false;
+var MODE = ls('jv_mode') || 'cloud', HIST = [];
+async function ask(text){ text = String(text || '').trim(); if (!text || BUSY) return;
+  if (MODE === 'pc' && !BR) { setup('Deep mode needs the PC link — or switch to Fast.'); return; }
+  if (MODE === 'cloud' && !(AS_URL && PW)) { setup('Fast mode needs the Assistant link and password.'); return; }
+  BUSY = true; log('y', text); state('thinking', MODE === 'cloud' ? 'Thinking…' : 'Jarvis on the PC is thinking (deep)…'); $('txt').value = '';
+  var r = MODE === 'cloud'
+    ? await signed(AS_URL, { op: 'ask', q: text, hist: HIST.slice(-8), mode: 'drive' }, 90000)
+    : await signed(BR, { op: 'ask', text: text, rid: rid() }, 250000);
+  BUSY = false;
   if (!r.ok) { state('', ''); log('e', r.error || 'failed'); if (/wrong password/.test(r.error || '')) setup(r.error); return; }
-  log('j', r.text); say(r.text);
+  var t = r.text || '(no answer)'; HIST.push({ role: 'user', text: text }, { role: 'assistant', text: t });
+  log('j', t);
+  if (r.shown && r.shown.length) log('j', r.shown.map(function(m){ return (m.chat ? m.chat + ' · ' : '') + (m.who ? m.who + ': ' : '') + (m.text || '').slice(0, 300) + ((m.files || []).length ? ' 📎' : ''); }).join('\n\n'));
+  var sends = (r.actions || []).filter(function(a){ return /^(send_message|send_email|forward_last|voice_note|timo_add)$/.test(a.type); });
+  if (sends.length) log('e', 'Not sent yet — sending happens in the Assistant app (it asks Yes first): ' + sends.map(function(a){ return a.type.replace('_', ' ') + (a.chat ? ' → ' + a.chat : a.to ? ' → ' + a.to : '') + (a.text ? ': “' + String(a.text).slice(0, 80) + '”' : ''); }).join(' · '));
+  say(t);
 }
+function modeDraw(){ $('hb').textContent = MODE === 'cloud' ? '⚡ Fast' : '🧠 Deep (PC)'; }
+$('hb').onclick = function(){ MODE = MODE === 'cloud' ? 'pc' : 'cloud'; ls('jv_mode', MODE); modeDraw(); hello(); };
 // ---- hold to talk (phone mic) ----
 var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null, heard = '';
 function recStart(){ unlockAudio(); try { speechSynthesis.cancel(); } catch(e){} if (AUD) { try { AUD.pause(); } catch(e){} }
@@ -133,15 +146,22 @@ $('txt').addEventListener('keydown', function(e){ if (e.key === 'Enter') { unloc
 // ---- setup ----
 function setup(err){ $('s_url').value = BR; $('s_err').textContent = err || ''; $('s_asurl').value = AS_URL; $('s_aspw').value = PW; $('setup').classList.add('show'); }
 $('gear').onclick = function(){ setup(); };
-$('s_ok').onclick = async function(){ var u = $('s_url').value.trim().replace(/\/+$/, ''); if (!/^https?:\/\//.test(u)) { $('s_err').textContent = 'Paste the https://… link the bridge printed.'; return; }
-  var au = $('s_asurl').value.trim(), ap = $('s_aspw').value; if (!ap) { $('s_err').textContent = 'The Assistant password is needed (it signs every request).'; return; }
-  if (au && !/\/exec$/.test(au)) { $('s_err').textContent = 'The Assistant link should end in /exec.'; return; }
-  PW = ap; ls('as2_pw', PW); if (au) { AS_URL = au; ls('as2_url', AS_URL); if (!TTS) { TTS = 'x'; ls('as2_tts', TTS); } }
-  $('s_err').textContent = 'Checking…'; var r = await signed(u, { op: 'ping', rid: rid() }, 15000);
-  if (!r.ok) { $('s_err').textContent = r.error || 'The bridge did not answer.'; return; }
-  BR = u; ls('jv_bridge', BR); $('setup').classList.remove('show'); $('hb').textContent = '● connected'; };
-async function hello(){ if (!BR) { $('hb').textContent = '○ not connected'; setup(); return; }
-  var r = await signed(BR, { op: 'ping', rid: rid() }, 12000); $('hb').textContent = r.ok ? '● connected' : '○ ' + (r.error || 'offline'); if (!r.ok && /no connection|no answer/.test(r.error || '')) state('', 'Bridge not reachable — restart it on the PC and paste the new link (⚙︎).'); }
+$('s_ok').onclick = async function(){ var u = $('s_url').value.trim().replace(/\/+$/, '');
+  var au = $('s_asurl').value.trim(), ap = $('s_aspw').value;
+  if (!au || !/\/exec$/.test(au)) { $('s_err').textContent = 'The Assistant link (ending in /exec) is needed.'; return; }
+  if (!ap) { $('s_err').textContent = 'The Assistant password is needed.'; return; }
+  PW = ap; ls('as2_pw', PW); AS_URL = au; ls('as2_url', AS_URL); if (!TTS) { TTS = 'x'; ls('as2_tts', TTS); }
+  $('s_err').textContent = 'Checking…'; var a = await signed(AS_URL, { op: 'hello' }, 20000);
+  if (!a.ok) { $('s_err').textContent = 'Assistant: ' + (a.error || 'no answer'); return; }
+  if (u) { if (!/^https?:\/\//.test(u)) { $('s_err').textContent = 'The PC link must start with https://'; return; }
+    var r = await signed(u, { op: 'ping', rid: rid() }, 15000); if (!r.ok) { $('s_err').textContent = 'Fast mode is ready. PC link: ' + (r.error || 'no answer') + ' — leave it empty if the PC is off.'; BR = ''; ls('jv_bridge', null); return; }
+    BR = u; ls('jv_bridge', BR); } else { BR = ''; ls('jv_bridge', null); }
+  $('setup').classList.remove('show'); modeDraw(); state('', 'Ready. Hold the green button and talk, or type.'); };
+async function hello(){ modeDraw();
+  if (!(AS_URL && PW)) { setup(); return; }
+  if (MODE === 'pc') { if (!BR) { state('', 'Deep mode: no PC link — tap ⚙︎, or tap the badge for Fast.'); return; }
+    var r = await signed(BR, { op: 'ping', rid: rid() }, 12000); if (!r.ok) state('', 'PC not reachable (' + (r.error || 'offline') + ') — tap the badge for Fast mode.'); else state('', 'Deep mode: PC connected.'); }
+}
 hello();
 </script>
 </body>
