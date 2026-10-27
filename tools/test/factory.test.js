@@ -384,6 +384,28 @@ async function suite(fast, browser) {
       const sc = await page.evaluate(() => { const el = document.getElementById('cbody'); return [el.scrollTop, el.scrollHeight, el.clientHeight]; });
       ok(sc[1] - sc[0] - sc[2] < 160, 'chat opened at the bottom: ' + sc.join('/')); await page.goBack();
     });
+    await test('system lines are clean event cards: no raw :shortcodes:, who + time on their own line', async () => {   // 27 Oct 2026
+      if (await page.locator('#card').isVisible()) await page.goBack();
+      F.postSlack(W, CUT, { text: '→ *WORK* · Abbas · :construction_worker: *Islam* ← *5 pcs* given · :clock3: Tue 27 Oct 17:26\n_Islam · 5 পিস দেওয়া হয়েছে · Tue 27 Oct 17:26_', bot_id: 'B1', thread_ts: W.rootB });
+      F.postSlack(W, CUT, { text: '→ *IN LINE (2)* · Md ibrahimmiah · :clock3: Tue 27 Oct 17:25', bot_id: 'B1', thread_ts: W.rootB });
+      await openCardNo(page, '17841'); await until(async () => (await page.$$('#thread .xev.k-work')).length, 10000, 'WORK event card');
+      const t = await page.textContent('#thread'); ok(!/:clock3:|:construction_worker:/.test(t), 'no raw shortcodes left');
+      const w = page.locator('#thread .msg.evm', { hasText: 'Islam' }).last(); ok((await w.locator('.xevt').textContent()) === 'Islam ← 5 pcs given', 'title: ' + (await w.locator('.xevt').textContent()));
+      ok(/by Abbas · 🕒 Tue 27 Oct 17:26/.test(await w.locator('.xevs').textContent()), 'who + time line: ' + (await w.locator('.xevs').textContent())); ok(/পিস/.test(await w.locator('.xevx').textContent()), 'Bengali line under it');
+      const mv = page.locator('#thread .msg.evm', { hasText: 'IN LINE (2)' }).last(); ok(/→ IN LINE \(2\) · লাইন \(2\)/.test(await mv.locator('.xevt').textContent()) && /Md ibrahimmiah · 🕒 Tue 27 Oct 17:25/.test(await mv.locator('.xevs').textContent()), 'move card: ' + (await mv.textContent()));
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
+    });
+    await test('a chat with new messages opens with a "▼ N NEW" divider before the first unread line', async () => {   // 27 Oct 2026
+      F.postSlack(W, CUT, { text: 'unread one', user: 'U1', thread_ts: W.rootB }); F.postSlack(W, CUT, { text: 'unread two', user: 'U1', thread_ts: W.rootB });
+      T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'EU' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));
+      await page.click('#tabs button[data-t="cards"]'); await page.fill('#q', '17841'); await until(async () => /NEW 2/.test(await page.textContent('#list')), 20000, 'NEW 2 on the row');
+      await page.locator('#list .cardrow').first().click(); await page.waitForSelector('#card:not([hidden])');
+      await until(async () => (await page.$$('#thread .undiv')).length === 1, 10000, 'the divider'); ok(/2 NEW/.test(await page.textContent('#thread .undiv')), 'says 2 NEW');
+      const un = await page.$$eval('#thread .msg.un .bub', els => els.map(e => e.textContent.replace(/\s+/g, ' ')));
+      ok(un.length === 2 && /unread one/.test(un[0]) && /unread two/.test(un[1]), 'exactly the two unread lines are marked: ' + JSON.stringify(un));
+      ok(await page.$eval('#thread .undiv', d => d.nextElementSibling && /unread one/.test(d.nextElementSibling.textContent)), 'the divider sits right before the first unread line');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000); await page.fill('#q', '');
+    });
     await test('voice note plays and the photo viewer opens and closes with Back', async () => {
       if (await page.locator('#card').isVisible()) await page.goBack();
       W.slack.files.FVOICE1 = { id: 'FVOICE1', name: 'voice-1.m4a', mimetype: 'audio/mp4', size: 3000, bytes: Buffer.alloc(3000, 1), url_private: 'https://files.slack.com/dl/FVOICE1', url_private_download: 'https://files.slack.com/dl/FVOICE1' };
