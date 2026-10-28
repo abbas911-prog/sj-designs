@@ -1,0 +1,24 @@
+{
+ "id": "smvrwujiecikx",
+ "op": "sell",
+ "ref": "INV-0032",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6a840174bb3b472535b50ee2",
+   "no": "71352",
+   "before": "Sj = **(71352)** (52) pcs colour = (5) ,,,,,(12/8/12/12/8)",
+   "after": "Sj = **(71352)** (32) pcs colour = (5) ,,,,,(8/4/8/8/4)",
+   "left": 32,
+   "lines": [
+    "colour 1: 12 → 8 (−4)",
+    "colour 2: 8 → 4 (−4)",
+    "colour 3: 12 → 8 (−4)",
+    "colour 4: 12 → 8 (−4)",
+    "colour 5: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
