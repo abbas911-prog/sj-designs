@@ -101,6 +101,16 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0]; if (
   ok('8 refused copy: no "Copied ✓", no page error', !/Copied/.test(await pg.$eval('#bellst', e => e.textContent)) && errs.length === e8);
   // 9 — cash box: a line of only signs no longer stops the preview
   { const r9 = await pg.evaluate(() => { try { window.__sj.cashRead('-'); window.__sj.cashRead(' / '); return 'ok'; } catch (e) { return e.message; } }); if (r9 !== 'ok') console.log('9:', r9); ok('9 cash line "-" reads without an error', r9 === 'ok'); }
+  // 10 — "All" is saved as the exact pieces it showed (28 Oct 2026, Abbas: "do whatever you feel is good"); opened when READY has less → cut + alert
+  await pg.click('#nav button[data-nv="stock"]'); await pg.waitForTimeout(300);
+  const r10 = await pg.evaluate(c => { const S = window.__sj, B = S.B(); B.inv = null; S.liveApply(c); S.st({ '46209:1': { sets: 0, all: true }, '18634:1': { sets: 0, all: true } });
+    const dr = S.drSnap('md'); S.setMode('inv'); const bs = S.bsSnap('inv'); return { dr: dr.state, bs: bs && bs.state, live: S.st()['46209:1'] }; }, cards);
+  ok('10 a saved draft / bill keeps "All" as the pieces it showed (2 and 8), the screen keeps "All"', r10.dr['46209:1'].pcs === 2 && !r10.dr['46209:1'].all && r10.dr['18634:1'].pcs === 8 && r10.bs && r10.bs['18634:1'].pcs === 8 && r10.live.all === true);
+  BILLS['DR-0001'] = { ref: 'DR-0001', type: 'md', name: 'X', status: 'draft', total: '', date: '2026-10-28', updated: '2026-10-28T10:00:00Z', data: JSON.stringify(Object.assign({ v: 1, k: 'md', state: r10.dr, prices: {}, cards: { '46209': 'c2', '18634': 'c1' }, name: 'X' })) };
+  const c10 = cards.map(x => x.id === 'c2' ? Object.assign({}, x, { name: 'SJ-46209 (5) colour = (3) (1/2/2)' }) : x);
+  const a10 = alerts.length; await pg.evaluate(c => { const S = window.__sj; S.st({}); S.liveApply(c); S.drOpen('DR-0001'); }, c10); await pg.waitForTimeout(2000);
+  const st10 = await pg.evaluate(() => window.__sj.st());
+  ok('10 opened when READY has 1 left: cut 2 → 1 with an alert; 18634 stays 8', st10['46209:1'] && st10['46209:1'].pcs === 1 && st10['18634:1'] && st10['18634:1'].pcs === 8 && alerts.slice(a10).some(x => /Less in READY/.test(x) && /46209 colour 1: 2 → 1/.test(x)));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

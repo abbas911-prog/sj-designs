@@ -927,7 +927,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-28a';
+var VER = '2026-10-28b';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1531,9 +1531,12 @@ $('bills').onclick = function(){ custNames(); custFlush(); $('done').hidden = fa
 var BS = { t: null, last: {}, list: null, open: false };
 function bsCall(o, tries){ o.t = Date.now(); o.by = me(); o.dev = devId(); return relayJson('bills', o, tries || 2); }
 function bsMark(t, bad){ var el = $('bsv'); if (!el) return; el.textContent = t || ''; el.className = bad ? 'bad' : ''; }
+// 28 Oct 2026 (Abbas: "do whatever you feel is good"): a saved bill / draft / order keeps "All" as the exact pieces it showed when saved — what the
+// customer saw. Opened later: less in READY → cut with an alert (as typed numbers); more in READY → it stays what was sent. The live screen keeps "All".
+function frozen(k){ var s = state[k]; if (!s || !s.all) return s; var p = k.split(':'), d = byNo(p[0]); var q = d ? lab(s, colPcs(d, +p[1])).pcs : 0; return q > 0 ? { sets: 0, all: false, pcs: q } : null; }
 function bsSnap(k){ var d = B[k]; if (!d || !d.ref || k === 'memo' || k === 'cat') return null;
   var st = {}, pr = {}, c = null, lines = [];
-  if (k === 'inv') { c = invCalc(d); if (!c.lines.length) return null; Object.keys(state).forEach(function(x){ st[x] = state[x]; }); Object.keys(byDesign()).forEach(function(no){ if (prices[no] > 0) pr[no] = prices[no]; });
+  if (k === 'inv') { c = invCalc(d); if (!c.lines.length) return null; Object.keys(state).forEach(function(x){ var f = frozen(x); if (f) st[x] = f; }); Object.keys(byDesign()).forEach(function(no){ if (prices[no] > 0) pr[no] = prices[no]; });
     lines = c.lines.map(function(l){ return { no: l.no, desc: l.desc, sub: l.sub, qty: l.qty, rate: l.rate, amount: l.amount, manual: !!l.manual }; }); }
   else if (k === 'rn') { c = rnCalc(d); if (!(d.items || []).length) return null; }
   else if (!n2(d.amount) && !(d.name || '').trim()) return null;
@@ -3635,7 +3638,8 @@ async function ordBill(o, how){
       if (x.c === 'sample') sn.state[d.no + ':1'] = { pcs: 1, sets: 0, all: false }; }); }
   if (how === 'memo') { if (Object.keys(byDesign()).length && !confirm('Replace what is picked now with this order?')) return; snapApply(sn); ls('sj_oid', o.id); navCloseAll(); $('ok').click(); uiToast('Order opened as memo — change it and send it again'); return; }
   if (Object.keys(byDesign()).length && !confirm('Replace what is picked now with this order to make its bill?')) return;
-  snapApply(sn); ls('sj_oid', o.id);
+  snapApply(sn); ls('sj_oid', o.id); var cutO = (reapply.cut || []).slice();
+  if (cutO.length) setTimeout(function(){ alert('Less in READY than when this order was made — changed on the bill: ' + cutO.join(', ') + '. Check the bill before sending it. · تحقق من الفاتورة'); }, 700);
   var gone = (o.items || []).filter(function(x){ return x.card ? !designs.some(function(z){ return z.id === x.card; }) : !designs.some(function(z){ return z.no === x.no || z.base === x.no || shown(z.no) === x.no; }); });   // 28 Oct 2026: by its own card when the order knows it
   B.inv = freshDoc('inv'); B.inv.name = sn.name || o.name || ''; B.inv.oid = o.id; B.back = o.id;
   if (gone.length) B.inv.man = gone.map(function(x){ return { d: 'SJ-' + x.no + (x.c ? ' · ' + x.c : ''), q: String(x.pcs || ''), r: '' }; });
@@ -3660,7 +3664,7 @@ function ccOpenOrder(o){ if (!o) return; navCloseAll(); $('cc').hidden = false; 
   if (o.ts) { if (!(CC.orders || []).some(function(x){ return x.ts === o.ts; })) CC.orders = [{ k: 'O' + o.ts, ts: o.ts, name: o.name, head: 'just sent', chat: 0, last: o.ts }].concat(CC.orders || []); ccChat(o.name, o.ts); uiToast('💬 This order\'s chat is open — anything you write here goes under the memo in #customer'); }
   else { ccList(); uiToast('Memo sent — its chat is in the list (tap it)'); }
   setTimeout(function(){ ccPoll(true); }, 1500); navSync(); }
-window.__sj = { ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: ccDraw, st: function(x){ if (x) state = x; return state; }, snapApply: snapApply, setMode: setMode, liveApply: liveApply, reapply: reapply, keyRemap: keyRemap, cardNo: cardNo, rnPaint: rnPaint, cashRead: cashRead };   // hooks for the headless test (t_shell.js)
+window.__sj = { ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: ccDraw, st: function(x){ if (x) state = x; return state; }, snapApply: snapApply, setMode: setMode, liveApply: liveApply, reapply: reapply, keyRemap: keyRemap, cardNo: cardNo, rnPaint: rnPaint, cashRead: cashRead, bsSnap: function(k){ return bsSnap(k); }, drSnap: drSnap, drOpen: drOpen };   // hooks for the headless test (t_shell.js)
 
 
 // ===== DRAFTS (Abbas, 20 Oct 2026: "when I am in the process of making a bill or order memo, give a small option beside OK that says MEMO, with two
@@ -3670,7 +3674,7 @@ window.__sj = { ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: cc
 // to a group, or that bill is Included, the draft is removed by itself. Saving again while a draft is open updates the same draft.
 var DR = { cur: null, list: null };
 try { DR.cur = JSON.parse(ls('sj_draft') || 'null'); } catch(e){ DR.cur = null; }
-function drSnap(type){ var st = {}; Object.keys(state).forEach(function(k){ st[k] = state[k]; }); var pr = {}; Object.keys(byDesign()).forEach(function(no){ if (prices[no] > 0) pr[no] = prices[no]; });
+function drSnap(type){ var st = {}; Object.keys(state).forEach(function(k){ var f = frozen(k); if (f) st[k] = f; }); var pr = {}; Object.keys(byDesign()).forEach(function(no){ if (prices[no] > 0) pr[no] = prices[no]; });
   return { v: 1, k: type, state: st, prices: pr, loc: LOC, cards: cardsOf(), dl: dlv(), name: $('name').value.trim(), q: $('q').value, inv: type === 'bd' ? B.inv : null }; }
 function drWhat(){ var bd = byDesign(), nos = Object.keys(bd); return nos.length + (nos.length === 1 ? ' design · ' : ' designs · ') + nos.reduce(function(a, no){ return a + designPcs(no); }, 0) + ' pcs'; }
 async function drSave(type){ var nos = Object.keys(byDesign()); if (!nos.length) { alert('Pick some colours first · اختر الألوان أولاً'); return; }
@@ -3706,7 +3710,8 @@ function snapApply(sn){
 async function drOpen(ref){ var el = $('drst'); if (el) el.textContent = 'Opening ' + ref + '…';
   if (Object.keys(byDesign()).length && !(DR.cur && DR.cur.ref === ref) && !confirm('Replace what is picked now with this draft? (save it as a draft first if you need it)')) { if (el) el.textContent = ''; return; }
   try { var j = await bsCall({ op: 'get', ref: ref }); if (!j.ok) throw new Error(j.error); var sn = JSON.parse(j.data || '{}');
-    snapApply(sn); DR.cur = { ref: ref, type: sn.k, t: Date.now() }; ls('sj_draft', JSON.stringify(DR.cur)); ls('sj_oid', null); $('drs').hidden = true;
+    snapApply(sn); var cutD = (reapply.cut || []).slice(); if (cutD.length) setTimeout(function(){ alert('Less in READY than when this draft was saved — changed: ' + cutD.join(', ') + '. · تحقق'); }, 700);
+    DR.cur = { ref: ref, type: sn.k, t: Date.now() }; ls('sj_draft', JSON.stringify(DR.cur)); ls('sj_oid', null); $('drs').hidden = true;
     if (sn.k === 'bd') { B.inv = sn.inv && sn.inv.ref ? sn.inv : freshDoc('inv'); if (!B.inv.name) B.inv.name = sn.name || ''; custNames(); $('done').hidden = false; window.scrollTo(0, 0); setMode('inv'); }
     else { $('ok').click(); }
     uiToast('📝 Draft ' + ref + ' opened — change anything, then carry on'); }
