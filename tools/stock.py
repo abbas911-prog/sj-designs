@@ -123,6 +123,10 @@ def run(req):
                 r.update(err='card title does not add up (%s = %d, card says %s) — not changed' %
                          ('+'.join(str(c[0]) for c in p['cells']), p['sum'], p['total'][0] if p['total'] else '?')); out.append(r); continue
             new = [c[0] for c in p['cells']]; desc = []
+            miss = sorted(set(c for c, pcs, _ in lines if not 1 <= c <= len(new) or not p['cells'][c - 1][1]))
+            if miss and op != 'check':                                    # 28 Oct 2026: was only a note in the comment, the card marked done and the phone told ✓
+                r.update(err='colour %s not on the card (it has %d colours) — nothing changed on this card; fix the colour number and try again'
+                         % (', '.join(map(str, miss)), len(new))); out.append(r); continue
             for c, pcs, _ in sorted(lines):
                 if not 1 <= c <= len(new) or not p['cells'][c - 1][1]:
                     desc.append('colour %d: not on the card' % c); continue

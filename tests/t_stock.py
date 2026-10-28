@@ -34,3 +34,12 @@ for t, want in [('Sj 6668 (pcs67) 5 colors.      (14/13/14/14/12)', (67, [14, 13
 for t in ['Sj = **(6668) ', 'SJ = **6668** (60) pcs ,,, colors = (5) ,,,,,,']:
     assert not st.parse(t)['ok'], t
 print('parse: shop-typed titles ok')
+# 28 Oct 2026: a return line whose colour is not on the card (colour 3 on a 2-colour card) changes nothing and comes back as an error —
+# before, the card was marked done for that return and the phone showed "Back on Trello ✓" although nothing went back
+cards['D'] = {'id': 'D', 'name': 'SJ-61111 (12) colour = (2) (6/6)', 'idList': st.READY, 'closed': False}; comments['D'] = []
+r3 = st.run({'op': 'retbill', 'ref': 'RET-0009', 'dev': 'd1', 'lines': [{'card': 'D', 'no': '61111', 'c': 1, 'pcs': 2}, {'card': 'D', 'no': '61111', 'c': 3, 'pcs': 2}]})
+assert any('not on the card' in (x.get('err') or '') for x in r3), r3
+assert cards['D']['name'] == 'SJ-61111 (12) colour = (2) (6/6)' and comments['D'] == [], (cards['D'], comments['D'])
+r4 = st.run({'op': 'retbill', 'ref': 'RET-0009', 'dev': 'd1', 'lines': [{'card': 'D', 'no': '61111', 'c': 1, 'pcs': 2}]})   # fixed line: goes through, not skipped
+assert not any(x.get('err') or x.get('skip') for x in r4) and cards['D']['name'] == 'SJ-61111 (14) colour = (2) (8/6)', (r4, cards['D'])
+print('retbill: colour not on the card → error, card untouched; fixed line then goes through — ok')

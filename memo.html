@@ -891,10 +891,17 @@ function render(){
 // 21 Oct 2026 (Abbas: SJ-85974 showed 4 pcs instead of 12 when its bill was opened again): a bill that already took its pieces off Trello
 // is history — its colours are never cut down to what is left in READY now. Only a draft is re-checked, and then it says which colour was cut.
 function billLocked(){ var d = B.inv; return !!(d && (d.status === 'included' || ((STK[stkKey(d.ref)] || {}).st === 'ok'))); }
+// 28 Oct 2026: the open sold bill's card sold out (its own stock job moved it to FINISH) — the bill keeps that design as a typed line with the
+// pieces and price it sold (as on another device), so Share PDF and the saved copy stay exactly what was sold.
+function soldKeep(no){ var d = B.inv; if (!d || !Array.isArray(d.sold)) return false; var ls3 = d.sold.filter(function(l){ return cardNo(l.no, l.card) === no || l.no === no; }); if (!ls3.length) return false;
+  d.man = d.man || []; if (!d.man.some(function(m){ return m.fz === no; })) { var q3 = ls3.reduce(function(a, l){ return a + l.pcs; }, 0);
+    d.man.push({ d: 'SJ-' + no.replace(/~$/, '').replace(/-S$/, '') + ' · ' + ls3.map(function(l){ return 'C' + l.c + ' ' + l.pcs + ' pcs'; }).join(' · '), q: String(q3), r: String(ls3[0].rate || ''), fz: no });
+    if (!$('done').hidden && B.mode === 'inv') setTimeout(redraw, 0); }
+  return true; }
 function reapply(){
   var gone = [], cut = [], lock = billLocked();
   Object.keys(state).forEach(function(k){ var p = k.split(':'), d = byNo(p[0]), c = +p[1], pcs = d ? colPcs(d, c) : 0;
-    if (!d) { if (gone.indexOf('SJ-' + p[0]) < 0) gone.push('SJ-' + p[0]); delete state[k]; return; }
+    if (!d) { if (lock && soldKeep(p[0])) { delete state[k]; return; } if (gone.indexOf('SJ-' + p[0].replace(/~$/, '')) < 0) gone.push('SJ-' + p[0].replace(/~$/, '')); delete state[k]; return; }
     if (lock) return;
     var s = state[k], had = lab(s, pcs).pcs;
     if (!pcs) { cut.push('SJ-' + shown(p[0]) + ' colour ' + c + ': ' + (s.pcs || (s.sets ? s.sets * 4 : '?')) + ' → 0'); delete state[k]; return; }
@@ -920,7 +927,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-27a';
+var VER = '2026-10-28a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -935,8 +942,8 @@ var NOIX = { of: null, m: {} };   // 20 Oct 2026: design by number in one step (
 // key follows its card — in the memo, in drafts, in orders and in bills.
 function cardsOf(){ var m = {}; Object.keys(state).concat(Object.keys(prices), Object.keys(LOC)).forEach(function(k){ var no = k.split(':')[0], d = byNo(no); if (d) m[no] = d.id; }); return m; }
 function keyRemap(obj, cards){ if (!cards || !obj) return obj || {}; var out = {}; Object.keys(obj).forEach(function(k){ var p = k.split(':'), no = p[0], id = cards[no], d = byNo(no);
-  if (id && (!d || d.id !== id)) { var d2 = designs.filter(function(x){ return x.id === id; })[0]; if (d2) no = d2.no; } out[no + (p.length > 1 ? ':' + p.slice(1).join(':') : '')] = obj[k]; }); return out; }
-function cardNo(no, card){ if (!card) return no; var d = byNo(no); if (d && d.id === card) return no; var d2 = designs.filter(function(x){ return x.id === card; })[0]; return d2 ? d2.no : no; }
+  if (id && (!d || d.id !== id)) { var d2 = designs.filter(function(x){ return x.id === id; })[0]; if (d2) no = d2.no; else if (d) no = no + '~'; } out[no + (p.length > 1 ? ':' + p.slice(1).join(':') : '')] = obj[k]; }); return out; }
+function cardNo(no, card){ if (!card) return no; var d = byNo(no); if (d && d.id === card) return no; var d2 = designs.filter(function(x){ return x.id === card; })[0]; return d2 ? d2.no : (d ? no + '~' : no); }   // 28 Oct 2026: "~" = its card left READY — never the other card with that number
 function byNo(no){ if (NOIX.of !== designs || NOIX.n !== designs.length) { var m = {}; designs.forEach(function(d){ if (!(d.no in m)) m[d.no] = d; }); NOIX = { of: designs, n: designs.length, m: m }; } return Object.prototype.hasOwnProperty.call(NOIX.m, no) ? NOIX.m[no] : undefined; }
 // 9 Oct 2026 (Abbas: "you mentioned S in front of it by yourself"): the -S is only the memo's own key for a SAMPLES card; bills, PDFs and texts print the real design number
 function shown(no){ var d = byNo(no); return d && d.sample ? d.base : no; }
@@ -1442,7 +1449,12 @@ async function preview(){
   B.pdf = new File([pdfB], (d.ref + '-' + (d.name || 'customer')).replace(/[^A-Za-z0-9؀-ۿ-]+/g, '-') + '.pdf', { type: 'application/pdf' });
   bsSoon();
 }
+function soldSame(d){ if (!d || !Array.isArray(d.sold)) return true; var a = {}, b = {};   // the picks on screen = what this sold bill sold?
+  d.sold.forEach(function(l){ var k = cardNo(l.no, l.card) + ':' + l.c; a[k] = (a[k] || 0) + l.pcs; });
+  Object.keys(state).forEach(function(k){ var p = k.split(':'), dz = byNo(p[0]); var q = dz ? lab(state[k], colPcs(dz, +p[1])).pcs : (state[k].pcs || 0); if (q > 0) b[k] = q; });
+  var ka = Object.keys(a).filter(function(k){ return byNo(k.split(':')[0]); }), kb = Object.keys(b); return ka.length === kb.length && ka.every(function(k){ return b[k] === a[k]; }); }
 function setMode(m){
+  if (m === 'inv' && billLocked() && !soldSame(B.inv)) { var old = B.inv.ref; B.inv = null; setTimeout(function(){ uiToast(old + ' is already sold — this is a new invoice · فاتورة جديدة'); }, 50); }   // 28 Oct 2026: new picks changed the sold bill (auto-saved over it)
   B.mode = m; document.querySelectorAll('#mode button').forEach(function(b){ b.classList.toggle('on', b.dataset.m === m); });
   $('p-memo').hidden = m !== 'memo'; $('p-doc').hidden = m === 'memo' || m === 'cat'; $('p-cat').hidden = m !== 'cat';
   if (m === 'cat') { catOpen(); return; }
@@ -1569,14 +1581,14 @@ function bsRestore(snap){ var k = snap.k;
       state = st2; sk = null; gone = Object.keys(byDesign()).filter(function(no){ return !byNo(no); });
       snap.d.man = snap.d.man || []; gone.forEach(function(no){ if (snap.d.man.some(function(m){ return m.fz === no; })) return;   // sold out since: a typed line with the sold pieces and price
         var ls3 = sold2.filter(function(l){ return l.no === no; }), q3 = ls3.reduce(function(a, l){ return a + l.pcs; }, 0);
-        snap.d.man.push({ d: 'SJ-' + no.replace(/-S$/, '') + ' · ' + ls3.map(function(l){ return 'C' + l.c + ' ' + l.pcs + ' pcs'; }).join(' · '), q: String(q3), r: String(ls3[0].rate || ''), fz: no }); }); }                // 21 Oct 2026: this phone sent these exact lines to Trello — put them back if the saved copy lost some
+        snap.d.man.push({ d: 'SJ-' + no.replace(/~$/, '').replace(/-S$/, '') + ' · ' + ls3.map(function(l){ return 'C' + l.c + ' ' + l.pcs + ' pcs'; }).join(' · '), q: String(q3), r: String(ls3[0].rate || ''), fz: no }); }); }                // 21 Oct 2026: this phone sent these exact lines to Trello — put them back if the saved copy lost some
     if (snap.d.status === 'included' && sk && sk.op === 'sell' && sk.st === 'ok' && Array.isArray(sk.lines)) sk.lines.forEach(function(l){ var k = l.no + ':' + l.c, d2 = byNo(l.no); if (!d2) return; var cur = state[k] ? lab(state[k], colPcs(d2, l.c)).pcs : 0; if (cur !== l.pcs && l.pcs > 0) { state[k] = { sets: 0, all: false, pcs: l.pcs }; fixed.push('SJ-' + shown(l.no) + ' colour ' + l.c + ': ' + l.pcs + ' pcs'); } });
     reapply();                                                   // paints the rows; designs no longer in READY are taken off (and told)
     if (fixed.length) setTimeout(function(){ alert('This bill already took its pieces off Trello. Lines put back as they were sold: ' + fixed.join(', ') + '.'); bsSoon(); }, 300);
     else if (reapply.cut && reapply.cut.length) setTimeout(function(){ alert('Less in READY than when this draft was made — taken off the bill: ' + reapply.cut.join(', ') + '. Check the bill before sending it.'); }, 300);
     snap.d.man = snap.d.man || [];
     (snap.lines || []).forEach(function(l){ if (!l.manual && gone.indexOf(l.no) >= 0 && !snap.d.man.some(function(m){ return m.fz === l.no; })) snap.d.man.push({ d: l.desc + ' · ' + l.sub, q: l.qty, r: l.rate, fz: l.no }); });
-    if (gone.length) setTimeout(function(){ alert(gone.map(function(x){ return 'SJ-' + shown(x); }).join(', ') + ' — no longer in READY (sold or moved). Kept on this bill as typed lines with the same quantity and price, without photo.'); }, 400);
+    if (gone.length) setTimeout(function(){ alert(gone.map(function(x){ return 'SJ-' + shown(x).replace(/~$/, ''); }).join(', ') + ' — no longer in READY (sold or moved). Kept on this bill as typed lines with the same quantity and price, without photo.'); }, 400);
     refresh();
   }
   if (snap.dl) Object.keys(snap.dl).forEach(function(x){ if ($('dl_' + x)) $('dl_' + x).value = snap.dl[x] || ''; });
@@ -1703,6 +1715,7 @@ async function rnFrom(ref){ var d = B.rn, el = $('rnlist'); if (!d) return; el.i
   } catch(e){ el.innerHTML = '<div class="stk bad">Could not open ' + esc(ref) + ' — ' + esc(e.message) + '</div>'; } }
 function rnStk(){ var d = B.rn; return d ? STK[stkKey(d.ref)] : null; }
 function rnPaint(){ var el = $('stk'), d = B.rn; if (!d) { el.hidden = true; return; } var s = rnStk(); el.hidden = false;
+  if (!s && d.status === 'included' && d.doneDev && d.doneDev !== devId()) { el.className = 'stk ok'; el.innerHTML = '<b>' + esc(d.ref) + ' was shared on another phone.</b><small>Its pieces go back on Trello from that phone. To send the PDF again use Send PDF. · تم من هاتف آخر</small>'; return; }
   if ((!s || (s.st === 'ok' && !s.lines.length)) && d.status === 'included') { el.className = 'stk bad'; el.innerHTML = '<b>' + esc(d.ref) + ' was shared, but its pieces are NOT back on Trello yet.</b><small>Check each line has the colour NUMBER, then press the button — it only changes Trello (the PDF and the balance are not sent again).</small><button type="button" data-rn="again">Put the pieces back on Trello now · أرجع القطع</button>'; return; }
   if (!s) { el.className = 'stk'; el.innerHTML = '<b>Send PDF</b> is only a draft. <b>Return &amp; share</b> shares the return, takes its amount off the customer\'s balance and puts the pieces back on Trello (colour by colour). <small>فقط «تأكيد المرتجع» يرجع القطع إلى تريلو</small>'; return; }
   var pcs = s.lines.reduce(function(a, l){ return a + l.pcs; }, 0);
@@ -1710,7 +1723,11 @@ function rnPaint(){ var el = $('stk'), d = B.rn; if (!d) { el.hidden = true; ret
   if (s.st === 'bad') { el.className = 'stk bad'; el.innerHTML = 'Trello NOT fully updated for ' + esc(s.ref) + '<small>' + esc(s.err) + '</small>' + cardLines(s.res) + '<button type="button" data-rn="again">Try again · أعد المحاولة</button>'; return; }
   el.className = 'stk ok'; el.innerHTML = 'Back on Trello ✓ ' + pcs + ' pcs for ' + esc(s.ref) + cardLines(s.res); }
 async function rnInclude(){
-  var d = B.rn; if (!d) return; clearTimeout(B.timer); await preview(); if (!B.pdf) return;
+  var d = B.rn; if (!d) return; var s0 = rnStk();
+  if (d.status === 'included' && !(s0 && s0.st === 'bad')) {   // 28 Oct 2026: a second phone could share it again — the customer was credited twice and the pieces went back twice
+    alert(d.ref + ' was already shared' + (d.doneDev && d.doneDev !== devId() ? ' on another phone' : '') + ' — the customer\'s balance and Trello already have it.\n\nTo send it again use Send PDF. Nothing changes.\n\n' + d.ref + ' تم تأكيده مسبقاً — استخدم إرسال PDF فقط'); return; }
+  await bsNext('rn', d);   // 28 Oct 2026: one number series for the shop, as the invoice
+  clearTimeout(B.timer); await preview(); if (!B.pdf) return;
   var c = rnCalc(d), bad = (d.items || []).filter(function(it){ return n2(it.pcs) > 0 && (!String(it.no || '').trim() || !rnColOk(it.c)); });
   if (!c.lines.length) { alert('Type how many pieces came back (Pcs back) on at least one line.'); return; }
   if (bad.length) { alert('Every line needs the design number and the colour NUMBER (1, 2, 3… as on the card photo) — tap the colour under the design. Trello counts colours by number, not by name.'); return; }
@@ -1722,7 +1739,7 @@ async function rnInclude(){
   var f = B.pdf, txt = shareText('rn', d), shared = false;
   try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
   if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
-  d.status = 'included'; bsSave(true);
+  d.status = 'included'; d.doneDev = devId(); bsSave(true);
   rnCust(d, c);
   rnStock(d, c);
 }
@@ -3242,6 +3259,7 @@ function cashRead2(t, lines, low, n, A, nameOf){
     return cashFirst ? { cls: '', h: '→ <b>CASH OUT to ' + esc(who) + '</b> ' + A + ' · purchase account down, ' + esc(who) + ' tab down' + (who === 'AL-MU' ? ' · also posted to #al-mutageded' : who === 'USMAN' ? ' · also posted to #usman-hand-work' : '') + '.' }
       : { cls: '', h: '→ <b>CASH IN from ' + esc(who) + '</b> ' + A + ' (name first, cash second) · purchase account up.' };
   }
+  if (!lines.length) return { cls: '', h: 'Type the line, or tap the buttons above.' };   // 28 Oct 2026: a line of only signs ("-", "/") stopped the preview
   var first = nameOf(lines[0]), v = cashVendor(first);
   if (v) return { cls: '', h: '→ <b>BILL from ' + esc(v) + '</b> ' + A + ' on credit — added to what we owe ' + esc(v) + ', no cash moves.' + (CSH.photos.length ? '' : ' <span class="miss">Attach the bill photo.</span>') };
   if (CASH_EXPW.some(function(w){ return first.toLowerCase().indexOf(w) >= 0; })) return { cls: '', h: '→ <b>EXPENSE</b> "' + esc(first) + '" ' + A + ' · business account down · also listed in #matiexpense.' };
@@ -3528,6 +3546,7 @@ $('ccsend').onclick = function(){ var name = CC.cur, txt = $('cctxt').value.trim
   CCO.q.push(it); ccOSave(); ccORun(); };
 // ---- 🔔 phone notifications through the free ntfy app (same way as the factory app): a secret topic made on this phone, kept by the relay for this person
 $('ccbell').onclick = ccBellOpen;
+function bst(t){ var e = $('bellst'); if (e) e.textContent = t; }   // 28 Oct 2026: the relay's answer may come back after the screen was left
 function ccBellOpen(){ CC.bell = true; if (!me()) askMe(); $('cc').hidden = false; var tp = ls('sj_cc_ntfy') || ('sjstock-' + Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 8)); ls('sj_cc_ntfy', tp); CC.cur = ''; clearInterval(CC.timer); $('cccomp').hidden = true; $('cccu').hidden = true;
   $('cct').innerHTML = 'Notifications · الإشعارات<small>for ' + esc(ccWho()) + ' on this phone</small>';
   $('ccbody').innerHTML = '<div class="bell"><p>Get a real phone notification when a customer message arrives, even when the app is closed. It uses the free <b>ntfy</b> app (no account).</p>' +
@@ -3535,10 +3554,10 @@ function ccBellOpen(){ CC.bell = true; if (!me()) askMe(); $('cc').hidden = fals
     '<div class="bstep"><b>2</b><span>In ntfy tap <b>＋</b> and paste this topic:<br><code id="belltp">' + esc(tp) + '</code> <button type="button" id="bellcopy">📋 Copy</button><br><small>Keep it private — anyone with it can read your notifications.</small></span></div>' +
     '<div class="bstep"><b>3</b><span><button type="button" class="gold" id="bellon">' + (CC.nt ? '✓ On for ' + esc(ccWho()) + ' — turn on again' : 'Turn on for ' + esc(ccWho())) + '</button> <button type="button" id="belltest">Send a test</button> <button type="button" id="belloff">Turn off</button></span></div>' +
     '<div id="bellst" class="sub"></div>' + (CC.ev ? '' : '<p class="sub">Tip: for instant notifications, Slack should push to the relay — SJ Memo app → Event Subscriptions → Request URL = the relay link, bot events message.channels + message.groups. Without it, the check runs every minute while any phone has the app open.</p>') + '</div>';
-  $('bellcopy').onclick = function(){ try { navigator.clipboard.writeText(tp); $('bellst').textContent = 'Copied ✓'; } catch(e){ $('bellst').textContent = tp; } };
-  $('bellon').onclick = async function(){ $('bellst').textContent = 'Turning on…'; try { var j = await ccCall({ op: 'ntfyset', topic: tp }); if (!j.ok) throw new Error(j.error); CC.nt = true; $('bellst').textContent = '✓ On. Now press "Send a test" — a notification should arrive in ntfy.'; } catch(e){ $('bellst').textContent = 'Not on: ' + e.message; } };
-  $('belltest').onclick = async function(){ $('bellst').textContent = 'Sending…'; try { var j = await ccCall({ op: 'ntfytest' }); $('bellst').textContent = j.ok ? '✓ Test sent — check ntfy.' : 'Not sent: ' + (j.error || 'ntfy did not answer'); } catch(e){ $('bellst').textContent = 'Not sent: ' + e.message; } };
-  $('belloff').onclick = async function(){ try { var j = await ccCall({ op: 'ntfyoff' }); CC.nt = false; $('bellst').textContent = j.ok ? 'Off.' : 'Not changed: ' + j.error; } catch(e){ $('bellst').textContent = e.message; } }; }
+  $('bellcopy').onclick = async function(){ try { await navigator.clipboard.writeText(tp); bst('Copied ✓'); } catch(e){ bst(tp); prompt('Copy:', tp); } };   // 28 Oct 2026: said Copied ✓ also when the phone refused
+  $('bellon').onclick = async function(){ bst('Turning on…'); try { var j = await ccCall({ op: 'ntfyset', topic: tp }); if (!j.ok) throw new Error(j.error); CC.nt = true; bst('✓ On. Now press "Send a test" — a notification should arrive in ntfy.'); } catch(e){ bst('Not on: ' + e.message); } };
+  $('belltest').onclick = async function(){ bst('Sending…'); try { var j = await ccCall({ op: 'ntfytest' }); bst(j.ok ? '✓ Test sent — check ntfy.' : 'Not sent: ' + (j.error || 'ntfy did not answer')); } catch(e){ bst('Not sent: ' + e.message); } };
+  $('belloff').onclick = async function(){ try { var j = await ccCall({ op: 'ntfyoff' }); CC.nt = false; bst(j.ok ? 'Off.' : 'Not changed: ' + j.error); } catch(e){ bst(e.message); } }; }
 // ---- deep link from a notification: memo.html#dm=NAME (direct chat) — opened once the chat list has arrived
 (function(){ var m = location.hash.match(/^#dm=([^&]*)/); if (!m) return; CC.openDm = decodeURIComponent(m[1] || ''); history.replaceState(null, '', location.pathname + location.search); })();
 function ccOpenDmIfAsked(){ if (!CC.openDm || !CC.dms) return; var nm = CC.openDm, r = CC.dms.filter(function(x){ return ccK(x.name) === ccK(nm); })[0]; CC.openDm = ''; if (!r) return; navCloseAll(); $('cc').hidden = false; CC.touched = Date.now(); ccChat(r.name, r.root, 'direct'); navSync(); }
@@ -3617,7 +3636,7 @@ async function ordBill(o, how){
   if (how === 'memo') { if (Object.keys(byDesign()).length && !confirm('Replace what is picked now with this order?')) return; snapApply(sn); ls('sj_oid', o.id); navCloseAll(); $('ok').click(); uiToast('Order opened as memo — change it and send it again'); return; }
   if (Object.keys(byDesign()).length && !confirm('Replace what is picked now with this order to make its bill?')) return;
   snapApply(sn); ls('sj_oid', o.id);
-  var gone = (o.items || []).filter(function(x){ return !designs.some(function(z){ return z.no === x.no || z.base === x.no || shown(z.no) === x.no; }); });
+  var gone = (o.items || []).filter(function(x){ return x.card ? !designs.some(function(z){ return z.id === x.card; }) : !designs.some(function(z){ return z.no === x.no || z.base === x.no || shown(z.no) === x.no; }); });   // 28 Oct 2026: by its own card when the order knows it
   B.inv = freshDoc('inv'); B.inv.name = sn.name || o.name || ''; B.inv.oid = o.id; B.back = o.id;
   if (gone.length) B.inv.man = gone.map(function(x){ return { d: 'SJ-' + x.no + (x.c ? ' · ' + x.c : ''), q: String(x.pcs || ''), r: '' }; });
   custNames(); navCloseAll(); $('done').hidden = false; window.scrollTo(0, 0); setMode('inv');
@@ -3641,7 +3660,7 @@ function ccOpenOrder(o){ if (!o) return; navCloseAll(); $('cc').hidden = false; 
   if (o.ts) { if (!(CC.orders || []).some(function(x){ return x.ts === o.ts; })) CC.orders = [{ k: 'O' + o.ts, ts: o.ts, name: o.name, head: 'just sent', chat: 0, last: o.ts }].concat(CC.orders || []); ccChat(o.name, o.ts); uiToast('💬 This order\'s chat is open — anything you write here goes under the memo in #customer'); }
   else { ccList(); uiToast('Memo sent — its chat is in the list (tap it)'); }
   setTimeout(function(){ ccPoll(true); }, 1500); navSync(); }
-window.__sj = { ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: ccDraw };   // hooks for the headless test (t_shell.js)
+window.__sj = { ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: ccDraw, st: function(x){ if (x) state = x; return state; }, snapApply: snapApply, setMode: setMode, liveApply: liveApply, reapply: reapply, keyRemap: keyRemap, cardNo: cardNo, rnPaint: rnPaint, cashRead: cashRead };   // hooks for the headless test (t_shell.js)
 
 
 // ===== DRAFTS (Abbas, 20 Oct 2026: "when I am in the process of making a bill or order memo, give a small option beside OK that says MEMO, with two
@@ -3679,6 +3698,7 @@ $('drs').addEventListener('click', async function(e){ if (e.target === $('drs'))
   var op = e.target.closest('[data-dro]'); if (op) drOpen(op.dataset.dro); });
 // put a saved selection (draft / order) back: colours, pieces, prices, where it is, delivery, name
 function snapApply(sn){
+  if (billLocked()) B.inv = null;   // 28 Oct 2026: the last sold invoice switched the stock check off for the next order / draft
   state = keyRemap(sn.state || {}, sn.cards); var pr2 = keyRemap(sn.prices || {}, sn.cards); Object.keys(pr2).forEach(function(no){ prices[no] = pr2[no]; });
   LOC = keyRemap(sn.loc || {}, sn.cards); if (sn.name != null) $('name').value = sn.name; if (sn.dl) Object.keys(sn.dl).forEach(function(x){ if ($('dl_' + x)) $('dl_' + x).value = sn.dl[x] || ''; });
   document.querySelectorAll('#feed .row[data-k]').forEach(function(r){ var d = byNo(r.dataset.k.split(':')[0]); if (d && !state[r.dataset.k]) paint(r, { sets: 0, all: false }, Math.floor(colPcs(d, +r.dataset.k.split(':')[1]) / 4)); });
