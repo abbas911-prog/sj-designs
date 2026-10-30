@@ -155,6 +155,10 @@ main{max-width:720px;margin:0 auto;}
 .ffbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .ffbtns button{padding:12px;border-radius:12px;border:1.5px solid var(--gold);background:#fff;font:inherit;font-weight:800}
 .ffbtns button.gold{background:var(--gold);color:#fff}.ffbtns button[disabled]{opacity:.4}
+.ffbtns button small{display:block;font-size:11px;font-weight:600;opacity:.85;margin-top:1px}
+.ffpin{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:736px;bottom:calc(var(--navh) + 8px);z-index:2;margin:0;padding:8px;background:rgba(244,240,233,.97);border-radius:16px;box-shadow:0 8px 24px rgba(40,30,15,.22),0 0 0 1px var(--line)}
+.ffpin button.gold[disabled]{opacity:1;background:#c9bda8;border-color:#c9bda8}
+#ff.pin .in{padding-bottom:calc(var(--navh) + 100px)}
 .ffempty{padding:18px;text-align:center;color:var(--mute);font-size:14px}
 .ffpost{font-size:12px;color:var(--mute);display:grid;gap:4px;margin-top:6px}
 .ffpost button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 8px;font:inherit;font-size:11px;margin-left:6px}
@@ -929,7 +933,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30b';
+var VER = '2026-10-30c';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2414,7 +2418,7 @@ function ffText(lines, date, tot, pcs){
   return t + '**GRAND TOTAL = ' + fmt(tot) + ' AED · ' + pcs + ' pcs**\n\nCustomer\'s Sign: ..........\n\nSignature: ..........';
 }
 function ffDraw(){
-  var el = $('ffbody'); if (!el || $('ff').hidden) return; var E = ffEd(), h = '';
+  var el = $('ffbody'); if (!el || $('ff').hidden) return; var E = ffEd(), h = '', btns = '';
   h += '<div class="ffst">' + (COST ? 'Costs: inventory report ' + esc(COST.d) + ' · ' + Object.keys(COST.c).length + ' designs' : '<span class="miss">Costs are not on this phone — load the inventory report first (Costs, at the bottom of the memo).</span>') +
     (FF.st === 'busy' ? ' · reading bills…' : FF.st === 'ok' ? ' · bills read ' + new Date(FF.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '') + '</div>';
   if (FF.st === 'err') h += '<div class="miss">' + esc(FF.msg) + '</div>';
@@ -2432,13 +2436,17 @@ function ffDraw(){
     h += ffTable(['Design', 'Qty', 'Price', 'Amount'], ml.map(function(l){ return '<tr><td>' + esc(l.lab) + '</td><td>' + l.qty + '</td><td>' + (l.nw == null ? '?' : l.nw) + '</td><td>' + (l.nw == null ? '?' : fmt(l.qty * l.nw)) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + pcs + '</td><td></td><td>' + fmt(tot) + '</td></tr>']), 'one');
     h += '<div class="ffg">GRAND TOTAL = ' + (blocked.length ? '—' : fmt(tot) + ' AED') + ' · ' + pcs + ' pcs<small>as written ' + fmt(wt) + ' AED</small></div>';
     if (blocked.length) h += '<div class="fff"><div class="b">⛔ Fix the red lines first: ' + blocked.map(function(x){ return esc(x.b.ref); }).join(', ') + ' (or Leave out that bill).</div></div>';
-    h += '<div class="ffbtns"><button type="button" class="gold" id="ffmake"' + (blocked.length || FF.busy ? ' disabled' : '') + '>MAKE BILL</button><button type="button" id="ffcopy"' + (blocked.length ? ' disabled' : '') + '>Copy bill text</button></div>';
+    // 30 Oct 2026 (Abbas, video: "I can't press MAKE BILL, it is hidden down below"): the two buttons sit in a bar pinned just above the
+    // bottom tab bar (drawn at the end of #ffbody, outside the card), so a long bill never pushes them under it
+    btns = '<div class="ffbtns ffpin"><button type="button" class="gold" id="ffmake"' + (blocked.length || FF.busy ? ' disabled' : '') + '>MAKE BILL<small>' + (blocked.length ? 'fix the red lines first' : fmt(tot) + ' AED · ' + pcs + ' pcs') + '</small></button><button type="button" id="ffcopy"' + (blocked.length ? ' disabled' : '') + '>Copy bill text</button></div>';
     h += '<div class="ffn">MAKE BILL posts this complete bill to #sales and moves ' + (inc.length > 1 ? 'these ' + inc.length + ' bills' : 'this bill') + ' to Already posted.' + (blocked.length ? ' It stays grey until every red line is fixed or that bill is left out.' : '') + '</div></div>';
     FF.cur = { inc: inc, ml: ml, tot: tot, pcs: pcs, date: date };
   } else FF.cur = null;
   var bs = FF.L && FF.L.batches ? FF.L.batches.slice(-3).reverse() : [];
   if (bs.length) h += '<div class="ffpost"><div class="ffs">Already posted</div>' + bs.map(function(x){ return '<div>' + esc(x.date || '') + ' · ' + x.refs.map(function(r){ return esc(r[0]); }).join(', ') + ' · ' + fmt(x.total) + ' AED · ' + x.pcs + ' pcs <button type="button" data-reopen="' + esc(x.id) + '">Redo</button></div>'; }).join('') + '</div>';
   if (FF.note) h += '<div class="ffst">' + esc(FF.note) + '</div>';
+  if (FF.cur) h += btns;
+  $('ff').classList.toggle('pin', !!FF.cur);
   el.innerHTML = h;
 }
 function ffOpen(draft){ if (!isBoss()) return; FF.draft = draft ? ffDraftBill() : null; $('ff').hidden = false; $('mysheet').hidden = true; ffDraw(); ffLoad(); }

@@ -27,6 +27,15 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0];
   const txt = () => pg.$eval('#ffbody', e => e.textContent);
   ok('every design number is an edit box (bill as written + cost)', (await pg.$$('#ffbody .ffno')).length >= 4);
   ok('SJ-18747 has no cost: revised incomplete', /Revised incomplete/.test(await txt()));
+  // 30 Oct 2026 (Abbas, video: "I can't press MAKE BILL — it is hidden down below"): without scrolling, MAKE BILL is on the screen, above the
+  // bottom tab bar, and a tap on it lands on it (on the old app it sat at the end of the long list, under the bar)
+  const tapOk = () => pg.evaluate(() => { const b = document.getElementById('ffmake'), n = document.getElementById('nav'); if (!b) return 'no button'; const r = b.getBoundingClientRect(), nt = n.getBoundingClientRect().top;
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return r.top >= 0 && r.bottom <= nt && !!hit && (hit === b || b.contains(hit)) ? true : 'top ' + Math.round(r.top) + ' bottom ' + Math.round(r.bottom) + ' bar ' + Math.round(nt) + ' hit ' + (hit && (hit.id || hit.className || hit.tagName)); });
+  const t0 = await tapOk(); ok('MAKE BILL on screen above the bottom bar without scrolling (phone) ' + (t0 === true ? '' : t0), t0 === true);
+  await pg.setViewportSize({ width: 1180, height: 820 }); await pg.waitForTimeout(300); const t1i = await tapOk(); ok('… and on the iPad held sideways ' + (t1i === true ? '' : t1i), t1i === true);
+  await pg.evaluate(() => { const i = document.querySelector('#ff .in'); i.scrollTop = i.scrollHeight; }); await pg.waitForTimeout(200);
+  ok('scrolled to the end, the last line is not hidden behind the buttons', await pg.evaluate(() => { const c = document.querySelector('#ffbody .ffb.all'), r = c.getBoundingClientRect(), q = document.querySelector('.ffpin'); if (!q) return false; const p = q.getBoundingClientRect(); return r.bottom <= p.top; }));
+  await pg.setViewportSize({ width: 390, height: 844 }); await pg.evaluate(() => { document.querySelector('#ff .in').scrollTop = 0; }); await pg.waitForTimeout(200);
   const box = (await pg.$$('#ffbody input.ffno[data-i="1"]'))[0];
   await box.fill('SJ-18774'); await box.press('Tab'); await pg.waitForTimeout(900);
   const t1 = await txt();
