@@ -155,6 +155,7 @@ main{max-width:720px;margin:0 auto;}
 .ffbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .ffbtns button{padding:12px;border-radius:12px;border:1.5px solid var(--gold);background:#fff;font:inherit;font-weight:800}
 .ffbtns button.gold{background:var(--gold);color:#fff}.ffbtns button[disabled]{opacity:.4}
+.dfmt{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute);margin:-4px 0 10px;flex-wrap:wrap}.dfmt button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:700;color:var(--mute)}.dfmt button.on{border-color:var(--gold);background:var(--goldbg);color:var(--ink)}
 .ffbtns button small{display:block;font-size:11px;font-weight:600;opacity:.85;margin-top:1px}
 .ffpin{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:736px;bottom:calc(var(--navh) + 8px);z-index:2;margin:0;padding:8px;background:rgba(244,240,233,.97);border-radius:16px;box-shadow:0 8px 24px rgba(40,30,15,.22),0 0 0 1px var(--line)}
 .ffpin button.gold[disabled]{opacity:1;background:#c9bda8;border-color:#c9bda8}
@@ -662,7 +663,8 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
   <div class="bstop"><button type="button" id="dsaved">🗂 Saved bills · الفواتير المحفوظة</button><span id="bsv"></span></div>
   <div id="bsaved" hidden></div>
   <div id="bform"></div>
-  <div class="btns"><button id="dinc" class="inc" type="button" hidden>Include &amp; share · تأكيد وإرسال<small>takes the pieces off Trello</small></button><button id="dsend" class="gold" type="button">Send PDF · أرسل PDF</button><button id="dcopy" type="button">Copy text · نسخ النص</button><button id="dnew" type="button">New number · رقم جديد</button><button id="dff" type="button" hidden>50-50 check · for me</button></div>
+  <div class="btns"><button id="dinc" class="inc" type="button" hidden>Include &amp; share · تأكيد وإرسال<small>takes the pieces off Trello</small></button><button id="dsend" class="gold" type="button">Send photo · أرسل صورة</button><button id="dcopy" type="button">Copy text · نسخ النص</button><button id="dnew" type="button">New number · رقم جديد</button><button id="dff" type="button" hidden>50-50 check · for me</button></div>
+  <div id="dfmt" class="dfmt">Send the bill as <button type="button" data-sa="photo">📷 Photo · صورة</button><button type="button" data-sa="pdf">📄 PDF</button></div>
   <div id="stk" class="stk" hidden></div>
   <div id="szc" class="stk" hidden></div>
   <div id="dprev"></div>
@@ -933,7 +935,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30c';
+var VER = '2026-10-30d';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1452,9 +1454,24 @@ async function preview(){
   var pages = k === 'inv' ? await drawInvoice(d) : k === 'rn' ? drawReturn(d) : drawVoucher(k, d); if (my !== pv) return;
   pvShow('dprev', pages);
   var pdfB = await makePDF(pages); if (my !== pv) return;
-  B.pdf = new File([pdfB], (d.ref + '-' + (d.name || 'customer')).replace(/[^A-Za-z0-9؀-ۿ-]+/g, '-') + '.pdf', { type: 'application/pdf' });
+  B.pdf = new File([pdfB], (d.ref + '-' + (d.name || 'customer')).replace(/[^A-Za-z0-9؀-ۿ-]+/g, '-') + '.pdf', { type: 'application/pdf' }); B.pages = pages;
   bsSoon();
 }
+// 30 Oct 2026 (Abbas: "I sent the PDF bill to the customer — I want it to be a visible photo invoice, just like the catalogue"): a bill goes out as
+// PICTURES (one JPEG per page, the same pages as the PDF) so WhatsApp shows it in the chat; "📄 PDF" under the buttons switches back (sj_sendas)
+function sendAs(){ return ls('sj_sendas') === 'pdf' ? 'pdf' : 'photo'; }
+function sendAsPaint(){ var a = sendAs(); document.querySelectorAll('#dfmt button').forEach(function(b){ b.classList.toggle('on', b.dataset.sa === a); });
+  $('dsend').firstChild.textContent = a === 'pdf' ? 'Send PDF · أرسل PDF' : 'Send photo · أرسل صورة'; }
+async function docFiles(){ if (sendAs() === 'pdf' || !B.pages || !B.pages.length) return [B.pdf];
+  var base = B.pdf.name.replace(/\.pdf$/, ''), n = B.pages.length, out = [];
+  for (var i = 0; i < n; i++) out.push(new File([await jpgOf(B.pages[i], 0.9)], base + (n > 1 ? '-' + (i + 1) : '') + '.jpg', { type: 'image/jpeg' }));
+  return out; }
+async function docShare(txt){   // 0 = the person closed the share sheet, 1 = shared, 2 = no share sheet: saved to the phone instead
+  var fs = await docFiles(); window.__lastShare = fs.map(function(f){ return f.name + ' ' + f.type; });
+  try { if (navigator.canShare && navigator.canShare({ files: fs })) { await navigator.share({ files: fs, text: txt }); return 1; } } catch(e){ if (e && e.name === 'AbortError') return 0; }
+  fs.forEach(function(f){ var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }); return 2; }
+$('dfmt').onclick = function(e){ var b = e.target.closest('[data-sa]'); if (!b) return; ls('sj_sendas', b.dataset.sa); sendAsPaint(); };
+sendAsPaint();
 function soldSame(d){ if (!d || !Array.isArray(d.sold)) return true; var a = {}, b = {};   // the picks on screen = what this sold bill sold?
   d.sold.forEach(function(l){ var k = cardNo(l.no, l.card) + ':' + l.c; a[k] = (a[k] || 0) + l.pcs; });
   Object.keys(state).forEach(function(k){ var p = k.split(':'), dz = byNo(p[0]); var q = dz ? lab(state[k], colPcs(dz, +p[1])).pcs : (state[k].pcs || 0); if (q > 0) b[k] = q; });
@@ -1484,9 +1501,7 @@ $('dsend').onclick = async function(){
   if (k === 'rv' && !custBefore(k, d)) return;
   await bsNext(k, d);
   clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
-  var f = B.pdf, txt = shareText(k, d), done = false;
-  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); done = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
-  if (!done) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+  if (!(await docShare(shareText(k, d)))) return;
   if (k === 'rv') custAfter(k, d);      // a receipt counts once it is sent; an invoice (and a return) only on Include & share
   if (d.status !== 'included') d.status = 'sent'; bsSave(true);
 };
@@ -1510,9 +1525,7 @@ $('dinc').onclick = async function(){
   if (!custBefore('inv', d)) return;
   if (!confirm('Include ' + d.ref + ': share it' + (pcs ? ' and take ' + pcs + ' pcs off Trello?' : ' (typed lines only — nothing comes off Trello)?'))) return;
   keepNo('inv', d.ref);
-  var f = B.pdf, txt = shareText('inv', d), shared = false;
-  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
-  if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+  if (!(await docShare(shareText('inv', d)))) return;
   custAfter('inv', d);
   Object.keys(state).forEach(function(k){ var s = state[k]; if (s && s.all) { var p = k.split(':'); state[k] = { sets: 0, all: false, pcs: lab(s, colPcs(byNo(p[0]), +p[1])).pcs }; } });   // 21 Oct 2026: frozen as sold
   // 21 Oct 2026 (INV-0018 / INV-0021): the bill itself keeps exactly what it sold — every phone and laptop shows these numbers, whatever Trello says later
@@ -1745,9 +1758,7 @@ async function rnInclude(){
   if (!custBefore('rn', d)) return;
   if (!confirm('Return ' + d.ref + ': share it, take ' + amt(c.total) + ' AED off ' + (d.name || 'the customer') + '\'s balance and put ' + c.pcs + ' pcs back on Trello?')) return;
   keepNo('rn', d.ref);
-  var f = B.pdf, txt = shareText('rn', d), shared = false;
-  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: txt }); shared = true; } } catch(e){ if (e && e.name === 'AbortError') return; }
-  if (!shared) { var a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+  if (!(await docShare(shareText('rn', d)))) return;
   d.status = 'included'; d.doneDev = devId(); bsSave(true);
   rnCust(d, c);
   rnStock(d, c);
@@ -2543,7 +2554,7 @@ function ordDraw(){
   if (!show.length) h += '<div class="ffempty">' + (ORD.tab === 'done' ? 'No completed orders yet.' : 'No open orders. An order appears here when its memo PDF is sent.') + '</div>';
   show.forEach(function(o){
     var stg = ordStage(o), dn = ordDone(o), isOpen = !!ORD.open[o.id], nos = (o.items || []).map(function(x){ return 'SJ-' + x.no; });
-    var pvs = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o.id) + '.jpg?v=' + (o.upd || o.created || 0));
+    var pvs = ordPvSrc(o);
     h += '<div class="ocard' + (dn ? ' done' : '') + '"><button type="button" class="ohd" data-ot="' + esc(o.id) + '"><span class="on1"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + '</small></span>' +
       '<span class="on2">' + esc(nos.slice(0, 4).join(' · ')) + (nos.length > 4 ? ' +' + (nos.length - 4) : '') + ' · ' + (o.pcs || 0) + ' pcs</span>' + ordSplit(o) + ordTileRow(o, true) +
       '<span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span>' +
@@ -2599,34 +2610,48 @@ function ordFromMemo(){
 // 10 Oct 2026 (Abbas): "a small preview of the PDF in the orders ... or the photos that have been ordered".
 // One small picture per order - each design's photo with the chosen colours lit and the rest faded, as on the memo PDF -
 // saved on the site (keep/<order>.jpg) by the stock job, so it stays after the cards leave READY. No names or prices on it.
-async function ordPreview(bd){
-  var nos = Object.keys(bd).slice(0, 12), tiles = [];
+async function ordPreview(bd, full){   // full = the phone's own copy for the screen: every design, good quality (the saved copy must fit the relay)
+  var nos = Object.keys(bd), tiles = [];
   for (var i = 0; i < nos.length; i++){
     var no = nos[i], dz = byNo(no); if (!dz) continue;
     var phs = dz.photos.filter(function(p){ return p.nums && p.nums.some(function(n){ return bd[no][n.c]; }); }); if (!phs.length) phs = dz.photos.slice(0, 1);
-    var p = phs[0], u = p ? await getPhoto(p, true) : null, im = u ? await loadImg(u) : null; tiles.push({ no: no, p: p, im: im });
+    var p = phs[0], u = p ? await getPhoto(p, true) : null, im = u ? await loadImg(u) : null; tiles.push({ no: no, p: p, im: im, pcs: bd[no].$pcs });
   }
   if (!tiles.length) return null;
-  var cols = tiles.length <= 3 ? 1 : 2, TW = cols === 1 ? 440 : 230, LH = 26, W = TW * cols, rowsH = [], H = 0;   // each row as tall as its photos need (lineups are wide)
+  var cols = tiles.length <= 3 ? 1 : tiles.length <= 12 ? 2 : 3, TW = (cols === 1 ? 440 : cols === 2 ? 230 : 200) * (full ? 2 : 1), LH = full ? 44 : 26, W = TW * cols, rowsH = [], H = 0;   // each row as tall as its photos need (lineups are wide)
   tiles.forEach(function(t, k){ var r = Math.floor(k / cols), ar = t.im ? Math.min(1.4, t.im.naturalHeight / t.im.naturalWidth) : 0.6; rowsH[r] = Math.max(rowsH[r] || 0, Math.round((TW - 8) * ar) + 4); });
   var rowY = rowsH.map(function(h){ var y = H; H += h + LH; return y; });
   var cv = document.createElement('canvas'); cv.width = W; cv.height = H; var g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
   tiles.forEach(function(t, k){ var r = Math.floor(k / cols), x0 = (k % cols) * TW, y0 = rowY[r], TH = rowsH[r];
-    g.fillStyle = '#1C1A17'; g.font = 'bold 17px Arial'; g.fillText('SJ-' + shown(t.no) + '  ·  ' + designPcs(t.no) + ' pcs', x0 + 6, y0 + 19);
+    g.fillStyle = '#1C1A17'; g.font = 'bold ' + (full ? 30 : 17) + 'px Arial'; g.fillText('SJ-' + shown(t.no) + '  ·  ' + (t.pcs != null ? t.pcs : designPcs(t.no)) + ' pcs', x0 + 6, y0 + (full ? 33 : 19));
     if (!t.im) { g.fillStyle = '#EFE9DF'; g.fillRect(x0 + 4, y0 + LH, TW - 8, TH - 4); return; }
     var sc = Math.min((TW - 8) / t.im.naturalWidth, (TH - 4) / t.im.naturalHeight), dw = t.im.naturalWidth * sc, dh = t.im.naturalHeight * sc, ix = x0 + (TW - dw) / 2, iy = y0 + LH;
     g.drawImage(t.im, ix, iy, dw, dh);
     var nn = t.p && t.p.nums, dz = byNo(t.no);
     if (nn && nn.length && !dz.sample) { var cw = dw / nn.length; nn.forEach(function(n, q){ var x = ix + q * cw, on = !!bd[t.no][n.c];
       if (!on) { g.fillStyle = 'rgba(236,233,226,0.8)'; g.fillRect(x, iy, cw + 1, dh); }
-      g.fillStyle = on ? '#A8864A' : 'rgba(28,26,23,.45)'; g.fillRect(x, iy + dh - 18, cw + 1, 18); g.fillStyle = '#fff'; g.font = 'bold 12px Arial'; g.textAlign = 'center'; g.fillText(String(n.c), x + cw / 2, iy + dh - 5); g.textAlign = 'left'; }); }
+      var bh = full ? 30 : 18; g.fillStyle = on ? '#A8864A' : 'rgba(28,26,23,.45)'; g.fillRect(x, iy + dh - bh, cw + 1, bh); g.fillStyle = '#fff'; g.font = 'bold ' + (full ? 20 : 12) + 'px Arial'; g.textAlign = 'center'; g.fillText(String(n.c), x + cw / 2, iy + dh - (full ? 8 : 5)); g.textAlign = 'left'; }); }
   });
+  if (full) return await new Promise(function(ok){ cv.toBlob(function(b){ ok(b ? URL.createObjectURL(b) : cv.toDataURL('image/jpeg', 0.85)); }, 'image/jpeg', 0.85); });
   for (var z = 0; z < 6; z++) {               // the relay takes up to 20,000 characters: lower the quality, then the size, until it fits
     for (var qv = 0.6; qv >= 0.3; qv -= 0.1) { var url = cv.toDataURL('image/jpeg', qv); if (url.length < 18500) return url; }
     var c2 = document.createElement('canvas'); c2.width = Math.round(cv.width * 0.8); c2.height = Math.round(cv.height * 0.8); c2.getContext('2d').drawImage(cv, 0, 0, c2.width, c2.height); cv = c2;
   }
   return null;
 }
+// 30 Oct 2026 (Abbas: "I added more designs to Nasir's order — when I go back it does not show the complete photos"): the saved order picture held
+// at most 12 designs, squeezed to fit the relay, and after an order was changed the screen kept showing the OLD saved picture (the new one is
+// stored a minute later and nothing redrew). Now every phone draws the picture itself from the order's own lines — all designs, sharp —
+// and draws it again whenever the order changes; the saved picture is only used when a design is no longer in READY.
+function ordBdOf(o){ var bd = {}, all = true;
+  (o.items || []).forEach(function(x){ var d = (x.card ? designs.filter(function(z){ return z.id === x.card; })[0] : null) || designs.filter(function(z){ return z.no === x.no || z.base === x.no || shown(z.no) === x.no; })[0];
+    if (!d) { all = false; return; } var m, re = /C(\d+)\s+(\d+)/g, c = bd[d.no] = { $pcs: x.pcs || 0 }; while ((m = re.exec(x.c || ''))) if (+m[2] > 0) c[m[1]] = true; });
+  return all && Object.keys(bd).length ? bd : null; }
+function ordPvSrc(o){ var keep = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o.id) + '.jpg?v=' + (o.upd || o.created || 0));
+  var bd = ordBdOf(o); if (!bd) return keep; var k = o.id + '|' + JSON.stringify(o.items || []), L = ORD.pvl = ORD.pvl || {};
+  if (L[k]) return L[k] === 1 ? keep : L[k];
+  L[k] = 1; ordPreview(bd, true).then(function(u){ if (!u) return; L[k] = u; ordRedraw(); }).catch(function(){});
+  return keep; }
 async function ordKeep(oid, bd){ var url = await ordPreview(bd); if (!url) return; ORD.pv[oid] = url; if (!$('ords').hidden) ordDraw();
   await relay('stock', { id: jobId('k'), op: 'keep', ref: oid, dev: devId(), lines: [], img: url.split(',')[1] }); }
 // the bill of this memo was included: tick "Bill made" on its order
@@ -3488,7 +3513,7 @@ function ccBubble(m, my){ var mine = !m.memo && my && ccK(m.who) === my;
   var fs = (m.files || []).map(function(f){ return /^image\//.test(f.type) ? '<img class="ccimg" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" alt="">' : '<span class="ccf" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" data-t="' + esc(f.type) + '">' + (/pdf/.test(f.type + f.name) ? '📄 ' + esc(f.name.slice(0, 40)) : /^audio/.test(f.type) || /^voice-/i.test(f.name) ? '▶ voice note · tap to play' : /^video/.test(f.type) ? '🎬 video · tap to play' : '📎 ' + esc(f.name.slice(0, 40))) + '</span>'; }).join('');
   var who = m.memo ? (CC.ch === 'godown' ? '📦 GODOWN PICK LIST' : '📄 ORDER MEMO') : '<i>' + esc(String(m.who || '?').trim().charAt(0).toUpperCase()) + '</i>' + esc(m.who);
   return '<div class="ccm' + (m.memo ? ' memo' : ' ' + ccColor(m.who)) + (mine ? ' me' : '') + (m.pend ? ' pend' : '') + '"><span class="w">' + who + ' <em>' + (m.pend ? (m.err ? '⚠ retrying…' : '🕓 sending…') : ccWhen(m.ts)) + '</em></span>' + esc(fs && /^\s*📎\s*$/.test(m.text || '') ? '' : m.text || '') + fs + '</div>'; }
-function ordPanelSig(o){ return JSON.stringify([o.id, o.name, o.steps, o.bill, o.gts, o.cts, ordUn(o, 'g'), ordUn(o, 'c'), CC.ch, !!CC.ordOpen, !!CC.fullOpen, isBoss(), (o.items || []).length, o.pcs, o.dl]); }
+function ordPanelSig(o){ return JSON.stringify([ordPvSrc(o).length, (o.items || []).map(function(x){ return x.no + x.c; }).join(), o.id, o.name, o.steps, o.bill, o.gts, o.cts, ordUn(o, 'g'), ordUn(o, 'c'), CC.ch, !!CC.ordOpen, !!CC.fullOpen, isBoss(), (o.items || []).length, o.pcs, o.dl]); }
 // 20 Oct 2026 (Abbas: "the chats are not smooth"): a redraw now keeps every bubble that did not change (no flicker, photos and players stay)
 // and keeps the order panel at the top unless something in it changed. Each person has their own colour (ccColor).
 function ccDraw(){ var b = $('ccbody'), atEnd = b.scrollHeight - b.scrollTop - b.clientHeight < 80, my = ccK(ccWho()), lastDay = '', frag = document.createDocumentFragment(), fresh = [];
@@ -3622,7 +3647,7 @@ function ordTiles(o){ var it = o.items || [];
   var h = '<div class="ophead"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + ' · ' + it.length + (it.length === 1 ? ' design' : ' designs') + ' · ' + (o.pcs || 0) + ' pcs</small></div>';
   return it.length ? h + ordTileRow(o, false) : h; }
 function ordPanel(o){ var h = ordTabs(o) + ordTiles(o);
-  var stg = ordStage(o), dn = ordDone(o), pvs = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o.id) + '.jpg?v=' + (o.upd || o.created || 0));
+  var stg = ordStage(o), dn = ordDone(o), pvs = ordPvSrc(o);
   h += '<div class="opanel"><button type="button" class="ophd" data-ofold="1"><span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span><span class="onx">' + (dn ? '✓ Complete' : 'Next: ' + esc(ordNext(o))) + '</span><em>' + (CC.ordOpen ? '▴ hide' : '▾ order & steps') + '</em></button>';
   if (CC.ordOpen) {
     h += '<div class="obills">' + (o.bill ? '<button type="button" class="gold" data-obill="cont">🧾 Continue bill ' + esc(o.bill) + '<small>متابعة الفاتورة</small></button>' : '<button type="button" class="gold" data-obill="new">🧾 Make bill from this order<small>عمل فاتورة</small></button>') + '<button type="button" data-obill="memo">📄 Open as memo<small>edit the order</small></button></div>';
