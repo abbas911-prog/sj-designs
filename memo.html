@@ -740,6 +740,8 @@ function parseTitle(t){
     if (pl.length && gsum() + pl.reduce(function(a, m){ return a + +m[1]; }, 0) === total) {
       pl.forEach(function(m){ gp.push({ at: m.index, rw: [''], v: [+m[1]] }); }); gp.sort(function(a, b){ return a.at - b.at; }); }
   }
+  // 30 Oct 2026 (Abbas, SJ-83942 "Sj 83942 (8pcs) 1 colour": "it has colour 1, I've written it already"): one colour and no count bracket = it holds the whole total
+  if (!gp.length && total != null && /(^|[^\d])1\s*colou?rs?\b|colou?rs?\s*[.=:_\-]*\s*\(?\s*1\s*\)?(?!\s*[\d\/])/i.test(s)) gp.push({ at: tail.length, rw: [''], v: [total] });
   gp.forEach(function(x){ groups.push(x.v); x.rw.forEach(function(r){ rows.push(r); }); });
   var ncol = (tail.match(/colou?rs?\.?\s*=?\s*\(\s*(\d+)\s*\)/i) || [])[1];
   var sum = groups.reduce(function(a, g){ return a + g.reduce(function(x, y){ return x + y; }, 0); }, 0);
@@ -947,7 +949,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30h';
+var VER = '2026-10-30i';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;

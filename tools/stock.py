@@ -57,6 +57,10 @@ def parse(t):
                 a, b = off + m.start(1), off + m.end(1)
                 grp.append((m.start(), [[int(m.group(1)), (a, b) if b <= len(t) else None, True]]))
             grp.sort(key=lambda x: x[0])
+    # 30 Oct 2026 (Abbas, SJ-83942 "Sj 83942 (8pcs) 1 colour": "it has colour 1, I've written it already"): one colour and no count bracket =
+    # that colour holds the whole total (a sale then changes only the total, "(8pcs)" → "(4pcs)")
+    if not grp and total is not None and re.search(r'(?<!\d)1\s*colou?rs?\b|colou?rs?\s*[.=:_\-]*\s*\(?\s*1\s*\)?(?!\s*[\d/])', s, re.I):
+        grp.append((len(tail), [[total[0], None, True]]))
     cells = [c for _, gc in grp for c in gc]
     groups = len(grp)
     ncol = re.search(r'colou?rs?\.?\s*=?\s*\(\s*(\d+)\s*\)', tail, re.I)

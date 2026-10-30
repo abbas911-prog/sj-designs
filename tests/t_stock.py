@@ -31,13 +31,15 @@ for t, want in [('Sj 6668 (pcs67) 5 colors.      (14/13/14/14/12)', (67, [14, 13
                 ('Sj = **(57026)** (38) pcs __ Colour= (6)__(0-3/14-3/16-3/0-3/8-3//0-3)', (38, [0, 14, 16, 0, 8, 0])),   # 27 Oct 2026: "//" showed 7 colours
                 ('Sj= (40032) ..(60) pcs colour= 1 ___(60)', (60, [60])),                                          # 30 Oct 2026: a plain "(60)" is the one colour
                 ('Sj = **(51862)** (48) pcs __ colour _(5)__(8/4/12/8)_(16)', (48, [8, 4, 12, 8, 16])),            # …and "(16)" the 5th colour, "(5)" the colour number
-                ('Sj = **(71352)** (32) pcs colour = (5) ,,,,,(8/4/8/8/4)', (32, [8, 4, 8, 8, 4]))]:
+                ('Sj = **(71352)** (32) pcs colour = (5) ,,,,,(8/4/8/8/4)', (32, [8, 4, 8, 8, 4])),
+                ('Sj 83942 (8pcs) 1 colour', (8, [8])), ('Sj = (12345) (20) pcs colour = (1)', (20, [20]))]:   # 30 Oct 2026: one colour, no count bracket = the total
     p = st.parse(t); got = (p['total'] and p['total'][0], [c[0] for c in p['cells']])
     assert p['ok'] and got == want, (t, got)
-for t in ['Sj = **(6668) ', 'SJ = **6668** (60) pcs ,,, colors = (5) ,,,,,,']:
+for t in ['Sj = **(6668) ', 'SJ = **6668** (60) pcs ,,, colors = (5) ,,,,,,', 'Sj = (12345) (20) pcs colour = 10']:
     assert not st.parse(t)['ok'], t
 for t, sold, want in [('Sj= (40032) ..(60) pcs colour= 1 ___(60)', [56], 'Sj= (40032) ..(56) pcs colour= 1 ___(56)'),
-                      ('Sj = **(51862)** (48) pcs __ colour _(5)__(8/4/12/8)_(16)', [8, 4, 12, 8, 12], 'Sj = **(51862)** (44) pcs __ colour _(5)__(8/4/12/8)_(12)')]:
+                      ('Sj = **(51862)** (48) pcs __ colour _(5)__(8/4/12/8)_(16)', [8, 4, 12, 8, 12], 'Sj = **(51862)** (44) pcs __ colour _(5)__(8/4/12/8)_(12)'),
+                      ('Sj 83942 (8pcs) 1 colour', [4], 'Sj 83942 (4pcs) 1 colour')]:
     assert st.rewrite(t, st.parse(t), sold) == want, (t, st.rewrite(t, st.parse(t), sold))   # a sale changes only that colour's number and the total
 print('parse: shop-typed titles ok')
 # 28 Oct 2026: a return line whose colour is not on the card (colour 3 on a 2-colour card) changes nothing and comes back as an error —

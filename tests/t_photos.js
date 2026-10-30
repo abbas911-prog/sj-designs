@@ -11,9 +11,10 @@ const cards = [
   { id: 'c3', idShort: 3, list: 'r', name: 'SJ-22222 (8) colour = (2) (4/4)', attachments: [att('coverB', '2026-07-02T00:00:00Z'), att('detB', '2026-07-03T00:00:00Z')] },
   { id: 'c4', idShort: 4, list: 'r', name: 'Sj = **(57026)** (38) pcs __ Colour= (6)__(0-3/14-3/16-3/0-3/8-3//0-3)', attachments: [att('shopC', '2026-07-02T00:00:00Z')] },
   { id: 'c5', idShort: 5, list: 'r', name: 'Sj= (40032) ..(60) pcs colour= 1 ___(60)', attachments: [att('shopD', '2026-07-02T00:00:00Z')] },
-  { id: 'c6', idShort: 6, list: 'r', name: 'Sj = **(51862)** (48) pcs __ colour _(5)__(8/4/12/8)_(16)', attachments: [att('shopE', '2026-07-02T00:00:00Z')] }
+  { id: 'c6', idShort: 6, list: 'r', name: 'Sj = **(51862)** (48) pcs __ colour _(5)__(8/4/12/8)_(16)', attachments: [att('shopE', '2026-07-02T00:00:00Z')] },
+  { id: 'c7', idShort: 7, list: 'r', name: 'Sj 83942 (8pcs) 1 colour', attachments: [att('shopF', '2026-07-02T00:00:00Z')] }
 ];
-const roles = { shopC: ['lineup'], shopD: ['lineup'], shopE: ['lineup'], shot1: ['shot'], shop3: ['lineup'], shop6: ['lineup', 0.7], jam3: ['lineup', 0.973, 'jamal'], jam6: ['lineup', 1.0, 'jamal'], jamA: ['lineup', 0.9, 'jamal'], coverA: ['cover', 0.9], coverB: ['cover', 0.9], detB: ['detail'] };
+const roles = { shopC: ['lineup'], shopD: ['lineup'], shopE: ['lineup'], shopF: ['lineup'], shot1: ['shot'], shop3: ['lineup'], shop6: ['lineup', 0.7], jam3: ['lineup', 0.973, 'jamal'], jam6: ['lineup', 1.0, 'jamal'], jamA: ['lineup', 0.9, 'jamal'], coverA: ['cover', 0.9], coverB: ['cover', 0.9], detB: ['detail'] };
 const enc = lock({ updated: new Date().toISOString(), cards });
 const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0];
   if (u === '/memo-data.enc') { rs.setHeader('content-type', 'application/json'); return rs.end(JSON.stringify(enc)); }
@@ -38,6 +39,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0];
   // 30 Oct 2026 (Abbas, SJ-40032 "60 pcs · 0 colours · check card": "why can't I select this design?"): a colour's count written as a plain "(60)"
   const meta = no => pg.$eval('.design[data-no="' + no + '"] .meta, .design[data-no="' + no + '"]', e => e.textContent).catch(() => '');
   ok('40032 "colour= 1 ___(60)" = 1 colour of 60, no "check card", pickable', /60 pcs · 1 colour/.test(await meta('40032')) && !/check card/.test(await meta('40032')) && !!(await pg.$('.design[data-no="40032"] .step button')));
+  ok('83942 "(8pcs) 1 colour" = 1 colour of 8, no "check card", pickable', /8 pcs · 1 colour/.test(await meta('83942')) && !/check card/.test(await meta('83942')) && !!(await pg.$('.design[data-no="83942"] .step button')));
   ok('51862 "colour _(5)__(8/4/12/8)_(16)" = 5 colours, 48 pcs (the (16) is the 5th colour; the (5) is not)', /5 colours/.test(await meta('51862')) && !/check card/.test(await meta('51862')));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   // which attachments got the numbers for 79623: the article's signature ends with the photo ids in order
