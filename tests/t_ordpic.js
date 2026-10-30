@@ -100,6 +100,25 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^
   await pg.$eval('[data-obill="new"]', e => e.click()).catch(() => {}); await pg.waitForTimeout(1500);
   const r3 = await pg.evaluate(() => (__sj.B().inv || {}).ref);
   ok('Make bill from this order again: still ' + r1 + ' (got ' + r3 + '), with all 4 designs', r3 === r1 && (await pg.evaluate(() => new Set(Object.keys(__sj.st()).map(k => k.split(':')[0])).size)) === 4);
+  // 30 Oct 2026 (Abbas: "we just made a new order for Nawroz — it's not showing in ORDERS"): the phone stayed linked to the last order it worked on
+  // (NASSER, from Make bill) until Clear; a new customer's memo then UPDATED that order instead of making a new one
+  await pg.$eval('#nav [data-nv="stock"]', e => e.click()); await pg.waitForTimeout(400);
+  await pg.evaluate(() => { const s = __sj.st(); Object.keys(s).forEach(k => delete s[k]); }); await pg.fill('#name', 'NAWROZ'); await pg.waitForTimeout(200);
+  await pg.reload(); await pg.waitForSelector('#feed .design', { timeout: 15000 }); await pg.evaluate(() => { window.confirm = () => true; });
+  const before = Object.keys(ORDS).length;
+  await pg.fill('#name', 'NAWROZ'); await pick(12);
+  await pg.$eval('#ok', e => e.click()); await pg.waitForFunction(() => !document.querySelector('#sendg').disabled, null, { timeout: 20000 });
+  await pg.$eval('#sendg', e => e.click()); await pg.waitForTimeout(3500);
+  const nw = Object.values(ORDS).filter(o => o.name === 'NAWROZ');
+  ok('a new customer\'s memo makes a NEW order (' + before + ' → ' + Object.keys(ORDS).length + ' orders)', Object.keys(ORDS).length === before + 1 && nw.length === 1);
+  ok('…and NASSER\'s order is untouched', ORDS[NO].name === 'NASSER' && ORDS[NO].items.length === 4);
+  // a NAWROZ bill through the green button with the phone still linked to NASSER's order: no "Bill made" tick / bill link on NASSER's order
+  await pg.evaluate(id => localStorage.setItem('sj_oid', id), NO); await pg.$eval('#nav [data-nv="stock"]', e => e.click()); await pg.waitForTimeout(300);
+  await pg.$eval('#ok', e => e.click()); await pg.waitForTimeout(1000); await pg.$eval('#mode button[data-m="inv"]', e => e.click()); await pg.waitForTimeout(600);
+  await pg.evaluate(() => { __sj.B().inv = null; }); await pg.$eval('#mode button[data-m="inv"]', e => e.click()); await pg.waitForTimeout(600);
+  for (const i of await pg.$$('#bform input[data-p]')) await i.fill('100'); await pg.waitForTimeout(900);
+  await pg.$eval('#dinc', e => e.click()); await pg.waitForTimeout(4000);
+  ok('a NAWROZ bill does not tick "Bill made" on NASSER\'s order', await pg.evaluate(id => { const d = __sj.B().inv || {}; return d.status === 'included' && d.oid !== id; }, NO) && ORDS[NO].bill !== (await pg.evaluate(() => (__sj.B().inv || {}).ref)) && !(ORDS[NO].steps || {}).bill);
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

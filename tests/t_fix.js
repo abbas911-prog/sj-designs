@@ -17,7 +17,7 @@ function relay(b) { const req = JSON.parse(b.req);
   if (b.job === 'live') return { ok: true, cards: LIVE };
   return { ok: false, error: 'not in test' }; }
 
-let HTML_SENT = 0; const ORDS = [{ id: 'o1', name: '#5 Test', created: Date.now(), items: [{ no: '18634', pcs: 8, c: 'C1 8' }], pcs: 8, steps: {} }];
+let HTML_SENT = 0; const ORDS = [{ id: 'o1', name: 'MAMA', created: Date.now(), items: [{ no: '18634', pcs: 8, c: 'C1 8' }], pcs: 8, steps: {} }];
 const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u === '/memo-data.enc') { rs.setHeader('content-type', 'application/json'); return rs.end(JSON.stringify(enc)); } const f = path.join(DIR, u === '/' ? 'memo.html' : u.slice(1)); if (fs.existsSync(f) && fs.statSync(f).isFile()) { rs.setHeader('content-type', 'text/html'); rs.setHeader('etag', '"e1"'); if (rq.headers['if-none-match'] === '"e1"') { rs.statusCode = 304; return rs.end(); } if (/memo\.html$/.test(f)) HTML_SENT++; return rs.end(fs.readFileSync(f)); } rs.statusCode = 404; rs.end('nf'); });
 (async () => {
   await new Promise(r => srv.listen(0, r)); const URL0 = 'http://localhost:' + srv.address().port + '/memo.html';

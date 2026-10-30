@@ -935,7 +935,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30e';
+var VER = '2026-10-30f';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1110,7 +1110,7 @@ $('ok').onclick = async function(){
   slkMsg('');
   // 30 Oct 2026 (Abbas: "bill was 27 — I added something and it says 31"): OK no longer throws away a bill still being made for this order /
   // customer (the Invoice tab then made a new number); a sold bill or another customer's bill is still let go
-  var ki = B.inv, nm0 = $('name').value.trim().toLowerCase(); if (ki && (billLocked() || (ki.oid ? ki.oid !== ls('sj_oid') : (ki.name || '').trim().toLowerCase() !== nm0))) ki = null;
+  var ki = B.inv, nm0 = $('name').value.trim().toLowerCase(); if (ki && (billLocked() || (ki.oid && ki.oid !== curOid()) || (nm0 && ki.name && nmKey(ki.name) !== nmKey(nm0)))) ki = null;
   $('done').hidden = false; setMode('memo'); B.inv = ki; window.scrollTo(0, 0); $('dh').textContent = 'Order memo' + ($('name').value.trim() ? ' · ' + $('name').value.trim() : '');
   $('ds').textContent = 'Preparing…'; $('marks').innerHTML = '';
   SLK = { g: false, c: false }; gdDraw();      // 12 Oct 2026: nothing goes to a group unless ticked
@@ -1140,7 +1140,7 @@ async function grpSend1(which){
   if (memoP) await memoP; if (!pdfFile) return;
   SLK = { g: which === 'g', c: which === 'c' };
   var plan = gdPlan(); SLK = { g: false, c: false };
-  if (which === 'c') { var oc = ls('sj_oid'), pc = oc ? (gdLog()[oc + '|c'] || null) : null; if (pc && !confirm('Already sent to #customer at ' + hhmm(pc.t) + '. Send it again?')) return; }
+  if (which === 'c') { var oc = curOid(), pc = oc ? (gdLog()[oc + '|c'] || null) : null; if (pc && !confirm('Already sent to #customer at ' + hhmm(pc.t) + '. Send it again?')) return; }
   if (!plan.g && !plan.c) return;                   // said no to a repeat
   var oid = ordFromMemo();                          // the memo going out starts / updates its order
   await memoSlack2(oid, plan);
@@ -1533,7 +1533,7 @@ $('dinc').onclick = async function(){
   Object.keys(state).forEach(function(k){ var s = state[k]; if (s && s.all) { var p = k.split(':'); state[k] = { sets: 0, all: false, pcs: lab(s, colPcs(byNo(p[0]), +p[1])).pcs }; } });   // 21 Oct 2026: frozen as sold
   // 21 Oct 2026 (INV-0018 / INV-0021): the bill itself keeps exactly what it sold — every phone and laptop shows these numbers, whatever Trello says later
   d.sold = colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ return { no: l.no, card: (byNo(l.no) || {}).id || '', c: l.c, pcs: l.qty, rate: l.rate }; }); d.soldAt = Date.now(); d.soldBy = me();
-  if (!d.oid) { var so = ls('sj_oid'); if (so) d.oid = so; }   // the order this bill belongs to
+  if (!d.oid) { var so = curOid(d.name || $('name').value); if (so) d.oid = so; }   // the order this bill belongs to
   d.status = 'included'; bsSave(true); drDone('bd');
   if (d.oid && RELAY) ordCall({ op: 'link', id: d.oid, bill: d.ref }).then(function(){ d.linked = d.ref; }).catch(function(){});   // the order's "Continue bill" opens THIS bill
   var szl = lines.slice();
@@ -2531,6 +2531,15 @@ async function ordCall(o){
   if (o.op === 'list' && my < (ORD.wseq || 0)) return j;   // 20 Oct 2026: an older list answer must not wipe a tick made meanwhile
   ORD.list = j.orders; ORD.cached = false; ORD.err = ''; ordBadge(); if (CC.ord) { var co = ORD.list.filter(function(x){ return x.id === CC.ord.id; })[0]; if (co) CC.ord = co; } cKeep('sj_c_ord', function(){ return ORD.list; }); return j;
 }
+// 30 Oct 2026 (Abbas: "we just made a new order for Nawroz — it's not showing in ORDERS"): the phone stayed linked to the last order it worked on
+// (sj_oid, set by Make bill / Open as memo) until Clear, so a new customer's memo UPDATED that order (renamed it, replaced its designs) instead of
+// making a new one, and a new customer's bill ticked "Bill made" on it. The link now holds only while the customer is the same and the order is
+// still open; otherwise it is dropped and the next memo makes a new order.
+function nmKey(x){ return String(x || '').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, ''); }
+function curOid(name){ var oid = ls('sj_oid'); if (!oid) return '';
+  var nm = nmKey(name != null ? name : $('name').value), o = ORD.list ? ORD.list.filter(function(x){ return x.id === oid; })[0] : undefined;
+  if ((o && ordDone(o)) || (o && nm && nmKey(o.name) && nmKey(o.name) !== nm)) { ls('sj_oid', null); return ''; }
+  return oid; }
 function ordDone(o){ var s = o.steps || {}; return OKEYS.every(function(k){ return s[k]; }); }
 function ordStage(o){ var s = o.steps || {}; return (s.s1 ? 1 : 0) + (s.s2 ? 1 : 0) + (s.s3 ? 1 : 0) + (OSUB.every(function(x){ return s[x[0]]; }) ? 1 : 0); }
 function ordNext(o){ var s = o.steps || {}; for (var i = 0; i < OSTEPS.length; i++) if (!s[OSTEPS[i][0]]) return OSTEPS[i][1]; var left = OSUB.filter(function(x){ return !s[x[0]]; }); return left.length ? left.map(function(x){ return x[1]; }).join(', ') : ''; }
@@ -2603,6 +2612,7 @@ function ordItemsNow(bd){ bd = bd || byDesign(); var nos = Object.keys(bd);
 // gets its new colours / pcs. Only for the order this bill belongs to (B.inv.oid), never another customer's.
 function ordAddPicks(oid){
   var o = (ORD.list || []).filter(function(x){ return x.id === oid; })[0]; if (!o || !RELAY) return;
+  var nm = nmKey((B.inv && B.inv.name) || $('name').value); if (nm && nmKey(o.name) && nm !== nmKey(o.name)) return;   // another customer's picks never join it
   var bd = byDesign(); if (!Object.keys(bd).length) return;
   var now = ordItemsNow(bd), have = {}; now.forEach(function(x){ have[x.no] = 1; });
   var merged = (o.items || []).filter(function(x){ return !have[x.no]; }).concat(now);
@@ -2616,7 +2626,7 @@ function ordAddPicks(oid){
 // the memo just went out: make (or update) its order, with step 1 ticked
 function ordFromMemo(){
   if (!RELAY) return ''; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) return '';
-  var oid = ls('sj_oid'); if (!oid) { oid = 'o' + Date.now().toString(36) + devId(); ls('sj_oid', oid); }
+  var oid = curOid(); if (!oid) { oid = 'o' + Date.now().toString(36) + devId(); ls('sj_oid', oid); }
   var items = ordItemsNow(bd);
   var allOff = !gdHas();
   var dv = dlv(), dl = [(dv.od || dv.ot) ? 'Office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '', (dv.cd || dv.ct) ? 'Customer/cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : ''].filter(Boolean).join(' · ');
@@ -2676,7 +2686,7 @@ function ordPvSrc(o){ var keep = ORD.pv[o.id] || ('keep/' + encodeURIComponent(o
 async function ordKeep(oid, bd){ var url = await ordPreview(bd); if (!url) return; ORD.pv[oid] = url; if (!$('ords').hidden) ordDraw();
   await relay('stock', { id: jobId('k'), op: 'keep', ref: oid, dev: devId(), lines: [], img: url.split(',')[1] }); }
 // the bill of this memo was included: tick "Bill made" on its order
-function ordBillMade(ref, oid){ oid = oid || ls('sj_oid'); if (oid && RELAY) ordCall({ op: 'tick', id: oid, step: 'bill', on: true, by: me(), note: ref || '' }).catch(function(){}); }
+function ordBillMade(ref, oid){ oid = oid || curOid(); if (oid && RELAY) ordCall({ op: 'tick', id: oid, step: 'bill', on: true, by: me(), note: ref || '' }).catch(function(){}); }
 setTimeout(ordLoad, 2500);
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && Date.now() - (ORD.last || 0) > 60000) { ORD.last = Date.now(); ordLoad(); } });
 
@@ -2857,7 +2867,7 @@ function gdLog(){ try { return JSON.parse(ls('sj_gdlog') || '{}'); } catch(e){ r
 function hhmm(t){ var d = new Date(t); return d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2); }
 // what goes where on this Send; null = nothing to do and he said no to the repeat
 function gdPlan(){
-  var want = { g: SLK.g && gdHas(), c: SLK.c }, upd = '', chg = '', oid = ls('sj_oid'), prev = oid ? gdLog()[oid] : null, now = gdSig();
+  var want = { g: SLK.g && gdHas(), c: SLK.c }, upd = '', chg = '', oid = curOid(), prev = oid ? gdLog()[oid] : null, now = gdSig();
   if (want.g && prev) {
     var a = prev.sig || {}, ch = [];
     Object.keys(now).forEach(function(no){ if (!a[no]) ch.push('+ SJ-' + shown(no) + ' ' + now[no] + ' pcs'); else if (a[no] !== now[no]) ch.push('SJ-' + shown(no) + ' ' + a[no] + ' → ' + now[no] + ' pcs'); });
