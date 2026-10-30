@@ -87,6 +87,21 @@ async function suite(fast, browser) {
       ok(!(await page.textContent('#outbar')).trim() || await page.locator('#outbar').isHidden(), 'outbox empty');
       await page.goBack();
     });
+    await test('a big video Slack will not take does not hold back the text messages after it; it can be removed', async () => {   // 30 Oct 2026
+      await openCardNo(page, '17841'); await until(async () => /cutting started/.test(await page.textContent('#thread')), 10000, 'chat');
+      T.uploadDown = true;
+      try {
+        await page.setInputFiles('#afiles', { name: 'VID_2026.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(19 * 1024 * 1024, 7) }); await page.click('#send');
+        await page.waitForTimeout(1500); await page.fill('#txt', 'text after the video'); await page.click('#send');
+        await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootB && /text after the video/.test(m.text || '')), 20000, 'the text reached Slack while the video is stuck');
+        await page.evaluate(() => { const v = window.__f.OUT.find(x => x.files.length); v.tries = 4; v.next = 0; return window.__f.outRun(true); }); await page.waitForTimeout(500);
+        await until(async () => (await page.$$('#thread .msg.out.bad .orm')).length === 1, 10000, 'stuck video shows Try again / Remove');
+        ok(/line dropped during the upload \(19 MB\)/.test(await page.textContent('#thread .msg.out.bad')), 'the real reason is shown: ' + (await page.textContent('#thread .msg.out.bad')));
+        await page.click('#thread .msg.out.bad .orm'); await until(() => page.evaluate(() => window.__f.OUT.length === 0), 5000, 'removed from the outbox');
+        ok(!W.slack.ch[CUT].msgs.some(m => (m.files || []).some(f => /VID_2026/.test(f.name || ''))), 'the video was never posted');
+      } finally { T.uploadDown = false; }
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
+    });
     await test('Undo: Done moves on screen at once, Trello only after 5 s; Undo sends nothing', async () => {
       await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '48188');
       const start = W.trello.cards[W.cardA.id].idList, nLog = W.log.length;

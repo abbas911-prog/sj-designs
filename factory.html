@@ -118,7 +118,7 @@ body.co{overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0;width:100%}
 .msg.out .bub{opacity:.75}.msg .bub .q{border-left:3px solid #b9a27a;background:rgba(0,0,0,.05);border-radius:6px;padding:4px 8px;margin:0 0 5px;font-size:13px;color:#5a5047;white-space:pre-wrap}
 .msg .who .rp{border:0;background:none;color:#a8957a;font-size:15px;padding:0 4px;margin-left:4px;line-height:1}
 #rbar{display:flex;align-items:center;gap:8px;padding:8px 12px 0;font-size:13.5px}#rbar[hidden]{display:none}#rbar span{flex:1;border-left:3px solid var(--gold);background:#f7f3ec;border-radius:8px;padding:6px 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#rbar small{display:block;color:var(--mute);font-size:11px}#rbar button{border:0;background:#f0e9dd;border-radius:999px;width:32px;height:32px;font-size:15px;flex:none}
-.msg.out.bad .bub{box-shadow:0 0 0 2px var(--red);opacity:1}
+.msg.out.bad .bub{box-shadow:0 0 0 2px var(--red);opacity:1}.oact{display:flex;gap:6px;margin-top:6px}.oact button{border:0;border-radius:999px;padding:6px 10px;font:inherit;font-size:12.5px;font-weight:800;background:#fff;color:var(--ink);box-shadow:0 0 0 1px var(--line)}.oact .orm{color:var(--red)}
 .compw{background:#fff;border-top:1px solid var(--line)}.chint{display:none}
 .comp{display:flex;gap:6px;padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:#fff;align-items:flex-end}
 .comp textarea{flex:1;border:0;box-shadow:inset 0 0 0 1.5px var(--line);border-radius:14px;padding:11px 12px;font:inherit;font-size:16px;resize:none;max-height:120px;min-height:44px;background:#faf7f1}.comp textarea:focus{outline:0;box-shadow:inset 0 0 0 2px var(--gold)}
@@ -273,7 +273,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-28a';
+var VER = '2026-10-30a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -1235,7 +1235,7 @@ function replySet(m){ if (!m) { REPLY = null; $('rbar').hidden = true; return; }
   $('rbar').innerHTML = '<span>↩ <b style="color:' + pcol(REPLY.who) + '">' + esc(REPLY.who) + '</b> ' + esc(emo(sn)) + '<small>Replying · উত্তর দিচ্ছেন</small></span><button id="rbx">✕</button>';
   $('txt').focus(); }
 $('rbar').onclick = function(e){ if (e.target.closest('#rbx')) replySet(null); };
-$('thread').onclick = function(e){ var rb = e.target.closest('.rp'); if (rb) { var rm = TH.msgs.filter(function(x){ return x.ts === rb.dataset.ts; })[0]; if (rm) replySet(rm); return; } var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var sh = e.target.closest('.mshare'); if (sh) { var sb = MBLOB[sh.dataset.f]; if (sb) shareFile(sb, sh.dataset.n, toast); else toast('⏳ still loading… · লোড হচ্ছে'); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f, im.dataset.n); };
+$('thread').onclick = function(e){ var ob = e.target.closest('.ort, .orm'); if (ob) { if (ob.classList.contains('orm')) { if (confirm('Remove this message from the outbox? It will not be sent.\nএই মেসেজ পাঠানো হবে না।')) outDrop(ob.dataset.oid); } else { var oi = OUT.filter(function(x){ return x.id === ob.dataset.oid; })[0]; if (oi) { oi.next = 0; oi.tries = Math.min(oi.tries, 3); } outRun(true); toast('↻ Trying again · আবার চেষ্টা'); } return; } var rb = e.target.closest('.rp'); if (rb) { var rm = TH.msgs.filter(function(x){ return x.ts === rb.dataset.ts; })[0]; if (rm) replySet(rm); return; } var f = e.target.closest('.fph'); if (f) { loadMedia(f); return; } var sh = e.target.closest('.mshare'); if (sh) { var sb = MBLOB[sh.dataset.f]; if (sb) shareFile(sb, sh.dataset.n, toast); else toast('⏳ still loading… · লোড হচ্ছে'); return; } var im = e.target.closest('.bub img'); if (im) openBig(im.src, im.dataset.f, im.dataset.n); };
 async function openBig(src, fid, nm){ var vn = viewOpen(src, null, nm); if (!fid) { viewSet(vn, src, MBLOB[src] || null); return; } var fj = fastOn() ? await fast({ op: 'file', id: fid, top: 1 }) : null; if (vn !== VIEW.n) return; if (fj && fj.ok && fj.blob && fj.blob.size && /^image/.test(fj.blob.type || 'image')) { viewSet(vn, URL.createObjectURL(fj.blob), fj.blob); return; } var j = await call({ op: 'media', file: fid, full: 1 }); if (j.ok && /^image/.test(j.type || 'image')) viewSet(vn, 'data:' + (j.type || 'image/jpeg') + ';base64,' + j.b64); }
 
 // ===== RETURNS (16 Oct 2026). First version (a form with design number, pieces, reasons) - Abbas: "I want it more simple … no need to write a
@@ -1266,11 +1266,13 @@ async function oload(){ var d = await odb(); if (!d) return; await new Promise(f
 function outLabel(it){ return (it.text ? it.text + (it.files.length ? '\n' : '') : '') + it.files.map(function(x){ return x.kind === 'audio' ? '🎤 voice note' : x.kind === 'photo' ? '📷 photo' : x.kind === 'video' ? '🎬 video' : '📎 ' + x.name; }).join(' · '); }
 function outAdd(c, text, files){ var it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10), card: c.id, cname: c.dm ? c.title : (parse(c.name).no ? 'SJ-' + parse(c.name).no : String(c.name || '').slice(0, 30)), text: text || '', files: files || [], who: WHO, at: Date.now(), tries: 0, err: '' };
   OUT.push(it); oput(it); outPaint(); outRun(); return it; }
-function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(function(x){ return x.tries >= 3; });
+function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(function(x){ return x.tries >= 3; }); if (bad.length) n = bad.length;   // 30 Oct 2026: the banner counts the stuck ones (others are on their way)
   if (!n) { el.hidden = true; } else { el.hidden = false; el.className = bad.length ? 'bad' : ''; el.innerHTML = (bad.length ? '⚠ ' + n + ' message' + (n > 1 ? 's' : '') + ' not sent yet — ' + (bad[0].tries >= 5 ? 'tap to try again' : 'trying again · tap') : '📤 Sending ' + n + ' message' + (n > 1 ? 's' : '') + '… · পাঠানো হচ্ছে') + '<small>' + esc(OUT.map(function(x){ return x.cname; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' · ')) + (bad.length && bad[0].err ? ' — ' + esc(bad[0].err) : '') + '</small>'; }
   if (TH.card && !$('card').hidden && !playing()) thDraw(); }
 $('outbar').onclick = function(){ var it = OUT[0]; if (!it) return; outRun(true); var c = D.byId[it.card]; if (c) openCard(c); };
-function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 600000 && !((TH.lastMine || 0) * 1000 > x.done - 15000); }); return OUT.concat(SENT.filter(function(x){ return x.card === cid; })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + qfmt(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet — retrying · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span></div></div>'; }).join(''); }
+function outBubbles(cid){ SENT = SENT.filter(function(x){ return Date.now() - x.done < 600000 && !((TH.lastMine || 0) * 1000 > x.done - 15000); }); return OUT.concat(SENT.filter(function(x){ return x.card === cid; })).filter(function(x){ return x.card === cid; }).map(function(x){ return '<div class="msg me out' + (x.tries >= 3 ? ' bad' : '') + '"><div class="who">' + esc(x.who) + '</div><div class="bub">' + qfmt(outLabel(x)) + '<span class="tm">' + (x.done ? '✓ sent' : x.tries >= 3 ? '⚠ not sent yet' + (obig(x) && x.tries >= 5 ? '' : ' — retrying') + ' · ' + esc(x.err || '') : x.tries ? '🕓 sending… (try ' + (x.tries + 1) + ')' : '🕓 sending…') + '</span>' + (!x.done && x.tries >= 3 ? '<div class="oact"><button class="ort" data-oid="' + esc(x.id) + '">↻ Try again · আবার</button><button class="orm" data-oid="' + esc(x.id) + '">✕ Remove · বাতিল</button></div>' : '') + '</div></div>'; }).join(''); }
+// 30 Oct 2026: why a big upload failed, in words (was always "Slack did not take the upload")
+function upWhy(e, tot){ var m = String((e && e.message) || e || ''); return (/abort/i.test(m) ? 'the upload took longer than 15 min' : /fetch|network|load failed/i.test(m) ? 'the line dropped during the upload' : m ? 'Slack said: ' + m.replace(/^Slack said\s*/i, '') : 'Slack did not take the upload') + ' (' + mb(tot) + ')'; }
 async function outOne(it){
   if (!it.files.length) { var rc0 = D.byId[it.card], rf = it.card === 'lais' ? null : (rc0 && rc0.dm) ? (roomCh(rc0) ? [roomCh(rc0).ch, ''] : null) : FAST.refs[it.card];
     if (FAST.url && rf && (fastOn() || it.fastTried) && !(it.fastTried && it.tries >= 6)) { it.fastTried = true;
@@ -1278,23 +1280,34 @@ async function outOne(it){
       if (fj && fj.ok) return fj; if (!fj && !(FAST.fail || {}).quick) return { ok: false, error: 'no answer from the fast lane - trying again' }; }   // no answer after a wait: maybe sent - only the fast lane (once-only id) is asked again; refused at once (offline worker): the relay sends it
     return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id }); }
   var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
-  if (!it.fids) { try { it.fids = await slackDirect(it.files, null, it.card); oput(it); } catch(e){ it.fids = null; } }      // originals straight to Slack (full quality)
+  if (!it.fids) { try { it.fids = await slackDirect(it.files, null, it.card); it.derr = ''; oput(it); } catch(e){ it.fids = null; it.derr = upWhy(e, tot); } }      // originals straight to Slack (full quality)
   if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.fset || 0) }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; it.fset = (it.fset || 0) + 1; oput(it); } }   // 20 Oct 2026: the same once-only id on every retry of the same upload (it used to change each try, so an answer lost on a weak line could post the photos twice)
-  if (tot > 18 * 1024 * 1024) return { ok: false, error: 'Slack did not take the upload' };
+  if (tot > 18 * 1024 * 1024) return { ok: false, error: it.derr || 'Slack did not take the upload (' + mb(tot) + ')' };
   var files = []; for (var i = 0; i < it.files.length; i++) files.push({ name: it.files[i].name, b64: await b64of(it.files[i].blob) });
   return await call({ op: 'up', card: it.card, files: files, text: it.text, who: it.who, rid: it.id + 'b' });
 }
+// 30 Oct 2026 (Abbas, screenshot of an employee's phone: "6 messages not sent yet — Slack did not take the upload"; "it receives but does not send"):
+// the outbox sent strictly in order and STOPPED at the first item that failed - one big video Slack would not take held every text behind it, and
+// after 5 tries of a big file it did not even try again by itself. Now each item has its own next-try time: a failing item waits, everything
+// after it still goes. A big file that failed 5 times waits for a tap (or the app coming back to the front) - it no longer blocks anything.
+function obig(it){ return it.files.reduce(function(a, x){ return a + ((x.blob && x.blob.size) || 0); }, 0) > 18 * 1024 * 1024; }
 async function outRun(now){
   if (OUTRUN || !OUT.length || !PW) return; OUTRUN = true; clearTimeout(OUTT);
-  try { while (OUT.length) { var it = OUT[0], j = null; try { j = await outOne(it); } catch(e){ j = { ok: false, error: e.message }; }
-      if (j && j.ok) { OUT.shift(); odel(it.id);
+  try { var list = OUT.slice();
+    for (var i = 0; i < list.length; i++) { var it = list[i], j = null, tnow = Date.now(); if (OUT.indexOf(it) < 0) continue;
+      if (!now && it.next && it.next > tnow) continue; if (!now && obig(it) && it.tries >= 5) continue;
+      try { j = await outOne(it); } catch(e){ j = { ok: false, error: e.message }; }
+      if (j && j.ok) { var k = OUT.indexOf(it); if (k >= 0) OUT.splice(k, 1); odel(it.id);
         if (!it.files.length && j.ts) { var real = { ts: j.ts, who: it.who, app: true, text: it.text, files: [] }; THC[it.card] = (THC[it.card] || []).concat([real]); thcSave(); if (TH.card && TH.card.id === it.card && !TH.msgs.some(function(m){ return m.ts === j.ts; })) TH.msgs.push(real); }
         else { it.done = Date.now(); SENT.push(it); }                 // files: shown as "✓ sent" until the chat brings the real message
         outPaint(); if (TH.card && TH.card.id === it.card) { TH.force = true; setTimeout(thPull, 300); setTimeout(function(){ TH.force = true; thPull(); }, 4000); } continue; }
-      it.tries++; it.err = String((j && j.error) || 'no answer').slice(0, 80); oput(it); outPaint(); break; } }
+      it.tries++; it.err = String((j && j.error) || 'no answer').slice(0, 90); it.next = Date.now() + Math.min(obig(it) ? 60000 : 30000, 4000 * Math.max(1, it.tries)); oput(it); outPaint(); } }
   finally { OUTRUN = false; }
-  if (OUT.length) { var o0 = OUT[0], big = o0.files.reduce(function(a, x){ return a + x.blob.size; }, 0) > 18 * 1024 * 1024; if (big && o0.tries >= 5 && !now) return; OUTT = setTimeout(outRun, Math.min(big ? 60000 : 30000, 4000 * Math.max(1, o0.tries))); }
+  var wait = OUT.filter(function(x){ return !(obig(x) && x.tries >= 5); }).map(function(x){ return x.next || Date.now(); });
+  if (wait.length) OUTT = setTimeout(outRun, Math.max(1000, Math.min.apply(null, wait) - Date.now()));
 }
+// a stuck message can be tried again or removed from its chat
+function outDrop(id){ var k = OUT.findIndex(function(x){ return x.id === id; }); if (k < 0) return; OUT.splice(k, 1); odel(id); outPaint(); toast('🗑 Removed from the outbox · বাতিল করা হয়েছে'); }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) outRun(true); });
 window.addEventListener('online', function(){ outRun(true); });
 window.addEventListener('pagehide', function(){ OUT.forEach(oput); });
@@ -1634,7 +1647,7 @@ if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } 
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, mvr: function(){ return MVR; }, wdTxt: wdTxt };
+window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, mvr: function(){ return MVR; }, wdTxt: wdTxt, outRun: outRun };
 })();
 </script>
 </body></html>
