@@ -949,7 +949,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30i';
+var VER = '2026-10-30j';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1259,7 +1259,7 @@ function invCalc(d){
   var ex = d.extras.filter(function(e){ return e.d.trim() || n2(e.a); }), exSum = ex.reduce(function(a, e){ return a + n2(e.a); }, 0);
   var disc = Math.abs(n2(d.disc)), taxable = sub + exSum - disc, vat = d.vat ? r2(taxable * 0.05) : 0, total = r2(taxable + vat);
   var open = n2(d.open), due = r2(open + total), paid = Math.abs(n2(d.paid));
-  return { lines: lines, sub: r2(sub), ex: ex, exSum: exSum, disc: disc, taxable: r2(taxable), vat: vat, total: total, open: open, due: due, paid: paid, bal: r2(due - paid),
+  return { lines: lines, pcs: lines.reduce(function(a, l){ return a + (+l.qty || 0); }, 0), sub: r2(sub), ex: ex, exSum: exSum, disc: disc, taxable: r2(taxable), vat: vat, total: total, open: open, due: due, paid: paid, bal: r2(due - paid),
     unpriced: Object.keys(byDesign()).filter(function(no){ return !(prices[no] > 0); }) };
 }
 // ----- RETURN BILL (Abbas, 19 Oct 2026: "include return bill in the app, so when it's generated automatically add that specific colour on to Trello
@@ -1332,7 +1332,7 @@ function drawDyn(){   // only the figures change while typing; the boxes being t
   var k = B.mode, d = B[k]; if (!d || !$('btot')) return;
   if (k === 'inv') { var c = invCalc(d);
     $('blines').innerHTML = c.lines.map(function(l){ return '<div class="bl"><b>' + esc(l.desc) + '</b>' + (l.manual ? ' · <i>typed</i>' : ' · ' + l.sub) + '<span>' + l.qty + ' × ' + (l.rate ? amt(l.rate) : '<i>no price</i>') + ' = ' + (l.rate ? amt(l.amount) : '—') + '</span></div>'; }).join('');
-    $('btot').innerHTML = row('Items', c.sub) + c.ex.map(function(e){ return row(esc(e.d || 'Extra'), n2(e.a)); }).join('') + (c.disc ? row('Discount', -c.disc) : '') + (d.vat ? row('VAT 5%', c.vat) : '') + row('Invoice total', c.total, 'b') + row('Old balance', c.open) + row('Total due', c.due) + (c.paid ? row('Received', -c.paid) : '') + row('Balance', c.bal, 'big');
+    $('btot').innerHTML = '<div class="br"><span>Total pieces</span><span>' + c.pcs + ' pcs</span></div>' + row('Items', c.sub) + c.ex.map(function(e){ return row(esc(e.d || 'Extra'), n2(e.a)); }).join('') + (c.disc ? row('Discount', -c.disc) : '') + (d.vat ? row('VAT 5%', c.vat) : '') + row('Invoice total', c.total, 'b') + row('Old balance', c.open) + row('Total due', c.due) + (c.paid ? row('Received', -c.paid) : '') + row('Balance', c.bal, 'big');
     $('bunp').textContent = c.unpriced.length ? 'No price yet: ' + c.unpriced.map(function(x){ return 'SJ-' + shown(x); }).join(', ') : '';
   } else if (k === 'rn') { var rc = rnCalc(d); $('btot').innerHTML = row('Return (' + rc.pcs + ' pcs)', rc.sub) + (d.vat ? row('VAT 5%', rc.vat) : '') + row('Return total', rc.total, 'b') + row('Old balance', rc.open) + row('Balance after return', rc.bal, 'big');
     var bad = (d.items || []).filter(function(it){ return n2(it.pcs) > 0 && (!String(it.no || '').trim() || !rnColOk(it.c)); }).length, over = (d.items || []).filter(function(it){ return it.max && n2(it.pcs) > it.max; }).length;
@@ -1373,10 +1373,10 @@ function head(g, k, d, co){
   g.fillStyle = MUT; g.font = 'bold 20px Arial'; g.fillText((k === 'inv' ? 'BILL TO' : k === 'rn' ? 'RETURNED BY' : (k === 'rv' ? 'RECEIVED FROM' : 'PAID TO')), P, y); y += 40;
   g.fillStyle = INK; g.font = 'bold 34px Arial'; g.fillText(d.name || ' ', P, y); return y + 40;
 }
-function tline(g, y, k2, v2, opt){ opt = opt || {}; var x0 = W - P - 520; g.font = (opt.bold ? 'bold ' : '') + (opt.size || 26) + 'px Arial'; g.fillStyle = opt.lc || MUT; g.textAlign = 'left'; g.fillText(k2, x0, y); g.textAlign = 'right'; g.fillStyle = opt.color || INK; g.fillText(amt(v2) + ' AED', W - P, y); g.textAlign = 'left'; return y + (opt.gap || 42); }
+function tline(g, y, k2, v2, opt){ opt = opt || {}; var x0 = W - P - 520; g.font = (opt.bold ? 'bold ' : '') + (opt.size || 26) + 'px Arial'; g.fillStyle = opt.lc || MUT; g.textAlign = 'left'; g.fillText(k2, x0, y); g.textAlign = 'right'; g.fillStyle = opt.color || INK; g.fillText(opt.txt != null ? opt.txt : amt(v2) + ' AED', W - P, y); g.textAlign = 'left'; return y + (opt.gap || 42); }
 function signs(g, y, a, b){ var half = (W - 2 * P - 80) / 2; g.fillStyle = INK; g.fillRect(P, y, half, 2); g.fillRect(P + half + 80, y, half, 2); g.fillStyle = MUT; g.font = 'bold 20px Arial'; g.fillText(a, P, y + 30); g.fillText(b, P + half + 80, y + 30); }
 async function drawInvoice(d){
-  var co = coGet(), c = invCalc(d), pages = [], H = 1754, RH = 180, noPh = !!d.nophoto, TX = noPh ? P : P + 330, totH = 120 + 42 * (8 + c.ex.length) + 210;
+  var co = coGet(), c = invCalc(d), pages = [], H = 1754, RH = 180, noPh = !!d.nophoto, TX = noPh ? P : P + 330, totH = 120 + 42 * (9 + c.ex.length) + 210;
   var cv, g, y, i = 0;
   function newPage(first){ cv = document.createElement('canvas'); cv.width = W; cv.height = H; g = cv.getContext('2d'); pages.push(cv);
     if (first) y = head(g, 'inv', d, co); else { g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.fillStyle = MUT; g.font = '24px Arial'; g.fillText(co.name + ' · ' + d.ref + ' (continued)', P, P + 30); y = P + 70; }
@@ -1384,7 +1384,8 @@ async function drawInvoice(d){
     y += 14; g.fillStyle = INK; g.fillRect(P, y, W - 2 * P, 2); y += 12; }
   newPage(true);
   for (; i < c.lines.length; i++) {
-    var l = c.lines[i], subL = l.sub ? wrapText((g.font = '21px Arial', g), l.sub, W - P - 560 - TX).slice(0, 4) : [], small = noPh || l.manual, rh = small ? Math.max(76, 66 + 26 * subL.length) : RH;
+    var l = c.lines[i], subL = [],   // 30 Oct 2026 (Abbas: "you don't need to write C2 2 sets etc. for the customer — it looks very messy"): no colour lines on the bill
+        small = noPh || l.manual, rh = small ? Math.max(76, 66 + 26 * subL.length) : RH;
     if (y + rh > H - P - 60) newPage(false);
     var PW = 310, bh = 168;
     if (small) {}
@@ -1407,6 +1408,7 @@ async function drawInvoice(d){
   }
   if (y + totH > H - P) newPage(false);
   y += 36;
+  y = tline(g, y, 'Total pieces · إجمالي القطع', 0, { txt: c.pcs + ' pcs' });   // 30 Oct 2026 (Abbas): the total pieces at the end of the invoice
   y = tline(g, y, 'Items', c.sub); c.ex.forEach(function(e){ y = tline(g, y, e.d || 'Extra', n2(e.a)); });
   if (c.disc) y = tline(g, y, 'Discount', -c.disc); if (d.vat) y = tline(g, y, 'VAT 5%' + (co.trn ? '' : ''), c.vat);
   g.fillStyle = INK; g.fillRect(W - P - 520, y - 26, 520, 2); y += 12;
@@ -1455,8 +1457,8 @@ function shareText(k, d){ return ({ inv: d.vat ? 'TAX INVOICE' : 'INVOICE', rn: 
 function docText(k, d){
   var co = coGet(), L = [co.name];
   if (k === 'inv') { var c = invCalc(d); L.push((d.vat ? 'TAX INVOICE ' : 'INVOICE ') + d.ref + '  ' + dmy(d.date), 'Bill to: ' + (d.name || ''), '');
-    c.lines.forEach(function(l){ L.push(l.desc + ' ' + l.sub + ': ' + l.qty + ' x ' + (l.rate ? amt(l.rate) : '-') + ' = ' + (l.rate ? amt(l.amount) : '-')); });
-    L.push(''); L.push('Items: ' + amt(c.sub)); c.ex.forEach(function(e){ L.push((e.d || 'Extra') + ': ' + amt(n2(e.a))); }); if (c.disc) L.push('Discount: -' + amt(c.disc)); if (d.vat) L.push('VAT 5%: ' + amt(c.vat));
+    c.lines.forEach(function(l){ L.push(l.desc + ': ' + l.qty + ' x ' + (l.rate ? amt(l.rate) : '-') + ' = ' + (l.rate ? amt(l.amount) : '-')); });
+    L.push(''); L.push('Total pieces: ' + c.pcs); L.push('Items: ' + amt(c.sub)); c.ex.forEach(function(e){ L.push((e.d || 'Extra') + ': ' + amt(n2(e.a))); }); if (c.disc) L.push('Discount: -' + amt(c.disc)); if (d.vat) L.push('VAT 5%: ' + amt(c.vat));
     L.push('*Invoice total: ' + amt(c.total) + ' AED*', 'Old balance: ' + amt(c.open), 'Total due: ' + amt(c.due)); if (c.paid) L.push('Received: -' + amt(c.paid)); L.push('*Balance: ' + amt(c.bal) + ' AED*');
   } else if (k === 'rn') { var rc = rnCalc(d); L.push((d.vat ? 'TAX CREDIT NOTE ' : 'SALES RETURN ') + d.ref + '  ' + dmy(d.date), 'Returned by: ' + (d.name || '') + (d.inv ? ' · against ' + d.inv : ''), '');
     rc.lines.forEach(function(l){ L.push('SJ-' + l.no + ' colour ' + (l.c || '-') + ': ' + l.qty + ' x ' + (l.rate ? amt(l.rate) : '-') + ' = ' + (l.rate ? amt(l.amount) : '-')); });

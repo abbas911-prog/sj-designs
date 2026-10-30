@@ -42,7 +42,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^
   pg.on('pageerror', e => errs.push(e.message)); pg.on('dialog', d => d.accept());
   await pg.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) }));
   await pg.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
-  await pg.addInitScript(() => { window.__shared = []; navigator.canShare = () => true; navigator.share = async o => { window.__shared.push((o.files || []).map(f => f.name + ' ' + f.type)); }; });
+  await pg.addInitScript(() => { window.__shared = []; navigator.canShare = () => true; navigator.share = async o => { window.__shared.push((o.files || []).map(f => f.name + ' ' + f.type)); }; try { navigator.clipboard.writeText = async t => { window.__clip = t; }; } catch (e) {} });
   await pg.goto(URL0); await pg.evaluate(pw => { localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas'); }, PW); await pg.reload();
   await pg.waitForSelector('#feed .design', { timeout: 15000 });
   const out = []; const ok = (n, v) => out.push([n, !!v]);
@@ -74,6 +74,10 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^
   ok('Send = the bill pages as JPEG pictures ' + JSON.stringify(s1), s1.length >= 1 && s1.every(x => /^INV-\S+\.jpg image\/jpeg$/.test(x)));
   await pg.$eval('#dfmt [data-sa="pdf"]', e => e.click()).catch(() => {}); await pg.$eval('#dsend', e => e.click()); await pg.waitForFunction(() => window.__shared.length === 2, null, { timeout: 15000 }).catch(() => {});
   const s2 = await pg.evaluate(() => window.__shared[1] || []);
+  // 30 Oct 2026 (Abbas: "you don't need to write 'C2 2 sets' etc. for the customer, it looks messy; mention the total pieces at the end")
+  await pg.$eval('#dcopy', e => e.click()); await pg.waitForTimeout(400); const clip = await pg.evaluate(() => window.__clip || '');
+  ok('the customer\'s invoice: no colour lines, total pieces at the end (' + (clip.match(/Total pieces: \d+/) || ['none'])[0] + ')', /\nTotal pieces: 56\n/.test(clip) && !/\bC\d+ \d|colours ·|sets?\b/.test(clip) && /SJ-30001: 4 x/.test(clip));
+  ok('…and the bill screen shows Total pieces 56', /Total pieces\s*56 pcs/.test(await pg.$eval('#btot', e => e.textContent)));
   ok('📄 PDF switch = one PDF, as before ' + JSON.stringify(s2), s2.length === 1 && /\.pdf application\/pdf$/.test(s2[0]) && /Send PDF/.test(await pg.$eval('#dsend', e => e.textContent)));
   // 30 Oct 2026 (Abbas: "bill was 27 — I added something and it says 31", "nothing is added to the order"): Make bill from the order → Stock tab →
   // more designs → OK → Invoice keeps the SAME number; opening the order again shows the new designs; Make bill again = same number, all designs
