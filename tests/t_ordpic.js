@@ -75,6 +75,31 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^
   await pg.$eval('#dfmt [data-sa="pdf"]', e => e.click()).catch(() => {}); await pg.$eval('#dsend', e => e.click()); await pg.waitForFunction(() => window.__shared.length === 2, null, { timeout: 15000 }).catch(() => {});
   const s2 = await pg.evaluate(() => window.__shared[1] || []);
   ok('📄 PDF switch = one PDF, as before ' + JSON.stringify(s2), s2.length === 1 && /\.pdf application\/pdf$/.test(s2[0]) && /Send PDF/.test(await pg.$eval('#dsend', e => e.textContent)));
+  // 30 Oct 2026 (Abbas: "bill was 27 — I added something and it says 31", "nothing is added to the order"): Make bill from the order → Stock tab →
+  // more designs → OK → Invoice keeps the SAME number; opening the order again shows the new designs; Make bill again = same number, all designs
+  const openOrd = async id => { for (let k = 0; k < 6; k++) { await pg.$eval('#nav [data-nv="orders"]', e => e.click()); await pg.waitForSelector('[data-ot="' + id + '"]', { timeout: 15000 }); await pg.waitForTimeout(400); await pg.$eval('[data-ot="' + id + '"]', e => e.click());
+    if (await pg.waitForFunction(() => !document.querySelector('#cc').hidden && document.querySelector('[data-ofold]'), null, { timeout: 3000 }).then(() => true, () => false)) return; } };
+  const NO = 'oadd'; ORDS[NO] = { id: NO, name: 'NASSER', created: Date.now() - 3600000, items: [{ no: '30001', pcs: 8, c: 'C1 8' }, { no: '30002', pcs: 8, c: 'C1 8' }], pcs: 16, steps: {} };
+  BILLS['ORD-' + NO] = { ref: 'ORD-' + NO, type: 'or', status: 'draft', data: JSON.stringify({ k: 'or', name: 'NASSER', state: { '30001:1': { pcs: 8, sets: 0, all: false }, '30002:1': { pcs: 8, sets: 0, all: false } }, prices: { '30001': 100, '30002': 100 } }) };
+  await pg.evaluate(() => { localStorage.removeItem('sj_oid'); }); await pg.reload(); await pg.waitForSelector('#feed .design', { timeout: 15000 }); await pg.evaluate(() => { window.confirm = () => true; });
+  await openOrd(NO);
+  await pg.waitForSelector('[data-ofold]', { timeout: 10000 }); await pg.$eval('[data-ofold]', e => e.click()); await pg.waitForTimeout(300);
+  await pg.$eval('[data-obill="new"]', e => e.click()); await pg.waitForTimeout(1500);
+  const r1 = await pg.evaluate(() => (__sj.B().inv || {}).ref);
+  for (let k = 0; k < 40 && !BILLS[r1]; k++) await pg.waitForTimeout(250);   // the bill draft is saved by itself (as on the phone) — then a new bill would get the next number
+  await pg.evaluate(r => localStorage.setItem('sj_no_inv', r.replace(/\D/g, '')), r1);   // what the saved-bills list does on the phone: the counter moves past every saved number
+  await pg.$eval('#nav [data-nv="stock"]', e => e.click()); await pg.waitForTimeout(500);
+  for (const n of [4, 5]) await pick(n);
+  await pg.$eval('#ok', e => e.click()); await pg.waitForTimeout(1200); await pg.$eval('#mode button[data-m="inv"]', e => e.click()); await pg.waitForTimeout(1000);
+  const r2 = await pg.evaluate(() => (__sj.B().inv || {}).ref);
+  ok('more designs added after Make bill → OK → Invoice: the SAME bill number (' + r1 + ' → ' + r2 + ', saved: ' + !!BILLS[r1] + ')', r1 === r2 && !!BILLS[r1]);
+  await openOrd(NO); await pg.waitForTimeout(2500);
+  ok('the order now has the 2 new designs too (4 on the order, on the screen and saved) ' + ORDS[NO].items.map(x => x.no).join(','), ORDS[NO].items.length === 4 && (await pg.$$('#ccbody .optile')).length === 4 && ORDS[NO].items.some(x => x.no === '30005'));
+  if (!(await pg.$('#ccbody details.ofull'))) await pg.$eval('[data-ofold]', e => e.click()); await pg.waitForTimeout(2000);
+  const p3 = await pic(); ok('…and its picture shows the 4 designs (2 columns × 2 rows) ' + JSON.stringify(p3), p3 && p3.src === 'blob:' && p3.w === 920);
+  await pg.$eval('[data-obill="new"]', e => e.click()).catch(() => {}); await pg.waitForTimeout(1500);
+  const r3 = await pg.evaluate(() => (__sj.B().inv || {}).ref);
+  ok('Make bill from this order again: still ' + r1 + ' (got ' + r3 + '), with all 4 designs', r3 === r1 && (await pg.evaluate(() => new Set(Object.keys(__sj.st()).map(k => k.split(':')[0])).size)) === 4);
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

@@ -935,7 +935,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30d';
+var VER = '2026-10-30e';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1108,7 +1108,10 @@ var pdfFile = null;
 $('ok').onclick = async function(){
   askMe();   // once per phone: the name that shows on the order steps
   slkMsg('');
-  $('done').hidden = false; setMode('memo'); B.inv = null; window.scrollTo(0, 0); $('dh').textContent = 'Order memo' + ($('name').value.trim() ? ' · ' + $('name').value.trim() : '');
+  // 30 Oct 2026 (Abbas: "bill was 27 — I added something and it says 31"): OK no longer throws away a bill still being made for this order /
+  // customer (the Invoice tab then made a new number); a sold bill or another customer's bill is still let go
+  var ki = B.inv, nm0 = $('name').value.trim().toLowerCase(); if (ki && (billLocked() || (ki.oid ? ki.oid !== ls('sj_oid') : (ki.name || '').trim().toLowerCase() !== nm0))) ki = null;
+  $('done').hidden = false; setMode('memo'); B.inv = ki; window.scrollTo(0, 0); $('dh').textContent = 'Order memo' + ($('name').value.trim() ? ' · ' + $('name').value.trim() : '');
   $('ds').textContent = 'Preparing…'; $('marks').innerHTML = '';
   SLK = { g: false, c: false }; gdDraw();      // 12 Oct 2026: nothing goes to a group unless ticked
   memoP = memoRender(); await memoP;
@@ -2591,12 +2594,30 @@ $('ordbody').addEventListener('click', async function(ev){
   if (ordDone(o) && !was) ORD.open[o.id] = false;
   ordDraw();
 });
+function ordItemsNow(bd){ bd = bd || byDesign(); var nos = Object.keys(bd);
+  return nos.map(function(no){ var d = byNo(no), ls2 = Object.keys(bd[no]).map(function(c){ return locOf(no, c); }), loc = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm';
+    return { no: shown(no), card: d ? d.id : '', pcs: designPcs(no), row: rowsFor(no), loc: loc, c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs + (loc === 'm' ? (locOf(no, c) === 'o' ? ' office' : locOf(no, c) === 's' ? ' (' + offPcs(no, c) + ' office / ' + (colTot(no, c) - offPcs(no, c)) + ' godown)' : ' godown') : ''); }).join(', ') }; });
+}
+// 30 Oct 2026 (Abbas: "I add designs to the same order — it does not show them in the order"): designs picked for an order's bill (Make bill from
+// this order → Stock tab → more designs) join that order when its screen opens again; nothing is taken out of the order, a design already on it
+// gets its new colours / pcs. Only for the order this bill belongs to (B.inv.oid), never another customer's.
+function ordAddPicks(oid){
+  var o = (ORD.list || []).filter(function(x){ return x.id === oid; })[0]; if (!o || !RELAY) return;
+  var bd = byDesign(); if (!Object.keys(bd).length) return;
+  var now = ordItemsNow(bd), have = {}; now.forEach(function(x){ have[x.no] = 1; });
+  var merged = (o.items || []).filter(function(x){ return !have[x.no]; }).concat(now);
+  var sig = function(L){ return L.map(function(x){ return x.no + '|' + x.pcs + '|' + x.c; }).sort().join(';'); };
+  if (sig(merged) === sig(o.items || [])) return;
+  var covers = (o.items || []).every(function(x){ return have[x.no]; });
+  o.items = merged; o.pcs = merged.reduce(function(a, x){ return a + (x.pcs || 0); }, 0); o.upd = Date.now(); ordRedraw();   // shows at once
+  ordCall({ op: 'add', id: oid, name: o.name || $('name').value.trim(), items: merged, pcs: o.pcs, dl: o.dl || '', by: me() }).then(ordRedraw).catch(function(e){ ORD.err = e.message; });
+  if (covers) try { var osn = drSnap('or'); bsCall({ op: 'put', ref: 'ORD-' + oid, type: 'or', name: osn.name || o.name || 'no name', status: 'draft', total: drWhat(), date: today(), data: JSON.stringify(osn), force: 1 }).catch(function(){}); } catch(e){}
+}
 // the memo just went out: make (or update) its order, with step 1 ticked
 function ordFromMemo(){
   if (!RELAY) return ''; var bd = byDesign(), nos = Object.keys(bd); if (!nos.length) return '';
   var oid = ls('sj_oid'); if (!oid) { oid = 'o' + Date.now().toString(36) + devId(); ls('sj_oid', oid); }
-  var items = nos.map(function(no){ var d = byNo(no), ls2 = Object.keys(bd[no]).map(function(c){ return locOf(no, c); }), loc = ls2.every(function(x){ return x === 'o'; }) ? 'o' : ls2.every(function(x){ return x === 'g'; }) ? 'g' : 'm';
-    return { no: shown(no), card: d ? d.id : '', pcs: designPcs(no), row: rowsFor(no), loc: loc, c: d && d.sample ? 'sample' : Object.keys(bd[no]).map(function(c){ return 'C' + c + ' ' + lab(state[no + ':' + c], colPcs(d, +c)).pcs + (loc === 'm' ? (locOf(no, c) === 'o' ? ' office' : locOf(no, c) === 's' ? ' (' + offPcs(no, c) + ' office / ' + (colTot(no, c) - offPcs(no, c)) + ' godown)' : ' godown') : ''); }).join(', ') }; });
+  var items = ordItemsNow(bd);
   var allOff = !gdHas();
   var dv = dlv(), dl = [(dv.od || dv.ot) ? 'Office: ' + [dv.od, dv.ot].filter(Boolean).join(' ') : '', (dv.cd || dv.ct) ? 'Customer/cargo: ' + [dv.cd, dv.ct].filter(Boolean).join(' ') : ''].filter(Boolean).join(' · ');
   // 12 Oct 2026: step 1 ticks itself when the pick list is posted to #godown; with nothing to pick, steps 1 and 2 tick themselves ("all in office")
@@ -3618,6 +3639,7 @@ function ordByTs(ts){ return (ORD.list || []).filter(function(o){ return o.gts =
 function ordRoots(){ return (ORD.list || []).filter(function(o){ return o.gts && !ordDone(o); }).map(function(o){ return o.gts; }).slice(0, 40); }
 function ordUn(o, w){ var u = w === 'g' ? (o.gts ? CC.un['G' + o.gts] : null) : (o.cts ? CC.un['O' + o.cts] : null); return u ? u.n : 0; }
 async function ordChat(oid, which, keepCu){
+  if (B.inv && B.inv.oid === oid) ordAddPicks(oid);
   var o = (ORD.list || []).filter(function(x){ return x.id === oid; })[0];
   if (!o) { for (var w0 = 0; w0 < 40 && ORD.busy; w0++) await sleep(250); await ordLoad(); o = (ORD.list || []).filter(function(x){ return x.id === oid; })[0]; }   // a list already loading made ordLoad return at once
   if (!o) { o = { id: oid, name: $('name').value.trim(), created: Date.now(), items: [], steps: {}, gts: ORD.gts || '' }; }
@@ -3677,10 +3699,15 @@ async function ordBill(o, how){
       if (x.c === 'sample') sn.state[d.no + ':1'] = { pcs: 1, sets: 0, all: false }; }); }
   if (how === 'memo') { if (Object.keys(byDesign()).length && !confirm('Replace what is picked now with this order?')) return; snapApply(sn); ls('sj_oid', o.id); navCloseAll(); $('ok').click(); uiToast('Order opened as memo — change it and send it again'); return; }
   if (Object.keys(byDesign()).length && !confirm('Replace what is picked now with this order to make its bill?')) return;
+  var keepInv = B.inv && B.inv.oid === o.id && !billLocked() ? B.inv : null, oldRef = keepInv ? '' : ls('sj_oinv_' + o.id), old = null;
+  if (oldRef) try { var jb = await bsCall({ op: 'get', ref: oldRef }); var ob = jb.ok ? JSON.parse(jb.data || '{}') : null; if (ob && ob.d && (jb.status || ob.d.status || 'draft') === 'draft') old = ob; } catch(e){}
+  if (old) { var os = keyRemap(old.state || {}, old.cards), op2 = keyRemap(old.prices || {}, old.cards);   // designs added on that bill stay on it
+    Object.keys(os).forEach(function(k){ if (!sn.state[k]) sn.state[k] = os[k]; }); sn.prices = sn.prices || {}; Object.keys(op2).forEach(function(n){ if (!(sn.prices[n] > 0)) sn.prices[n] = op2[n]; }); }
   snapApply(sn); ls('sj_oid', o.id); var cutO = (reapply.cut || []).slice();
   if (cutO.length) setTimeout(function(){ alert('Less in READY than when this order was made — changed on the bill: ' + cutO.join(', ') + '. Check the bill before sending it. · تحقق من الفاتورة'); }, 700);
   var gone = (o.items || []).filter(function(x){ return x.card ? !designs.some(function(z){ return z.id === x.card; }) : !designs.some(function(z){ return z.no === x.no || z.base === x.no || shown(z.no) === x.no; }); });   // 28 Oct 2026: by its own card when the order knows it
-  B.inv = freshDoc('inv'); B.inv.name = sn.name || o.name || ''; B.inv.oid = o.id; B.back = o.id;
+  B.inv = keepInv || (old ? Object.assign(old.d, { status: 'draft' }) : freshDoc('inv')); if (!B.inv.name) B.inv.name = sn.name || o.name || ''; B.inv.oid = o.id; B.back = o.id;
+  ls('sj_oinv_' + o.id, B.inv.ref);   // 30 Oct 2026: the same bill number every time "Make bill" is pressed for this order, until it is sold
   if (gone.length) B.inv.man = gone.map(function(x){ return { d: 'SJ-' + x.no + (x.c ? ' · ' + x.c : ''), q: String(x.pcs || ''), r: '' }; });
   custNames(); navCloseAll(); $('done').hidden = false; window.scrollTo(0, 0); setMode('inv');
   uiToast('🧾 Bill for ' + (o.name || 'this order') + ' — it is saved by itself; Continue bill from the order any time');
