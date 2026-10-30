@@ -399,6 +399,7 @@ header{backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate
 .svback{border:0;background:none;color:var(--gold);font:inherit;font-weight:700;padding:0 2px 8px}
 .svt{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;font-size:12.5px;box-shadow:var(--sh)}
 .svt th{font-size:10.5px;color:var(--mute);text-align:right;padding:7px 5px;border-bottom:1px solid var(--line)}.svt td{padding:7px 5px;border-bottom:1px solid #f0ebe3;text-align:right;white-space:nowrap}
+.cbref{border:0;background:var(--goldbg);color:var(--gold);font:inherit;font-weight:800;padding:3px 7px;border-radius:8px;white-space:nowrap}
 .svt th:nth-child(-n+2),.svt td:nth-child(-n+2){text-align:left}.svt td:nth-child(2){white-space:normal}.svt tr.op td{background:var(--goldbg);font-weight:700}
 .svt td button{border:0;background:#fbe9e6;color:#b4472a;font-size:13px;font-weight:800;width:28px;height:28px;border-radius:8px;padding:0}
 #ccbtn{border:1.5px solid var(--gold);background:#fff;color:var(--gold);border-radius:12px;height:42px;padding:0 10px;font:inherit;font-size:13px;font-weight:700;white-space:nowrap;flex:none;line-height:1.05}#ccbtn small{display:block;font-size:10px;font-weight:500}
@@ -935,7 +936,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30f';
+var VER = '2026-10-30g';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1131,7 +1132,7 @@ function dlChanged(){ clearTimeout(dlT); dlT = setTimeout(function(){ if (!$('do
 document.querySelectorAll('.dlnow').forEach(function(b){ b.onclick = function(){ var d = new Date(), k = b.dataset.dl, h = d.getHours(), m = d.getMinutes();
   $('dl_' + k + 'd').value = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
   $('dl_' + k + 't').value = ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + (h < 12 ? ' AM' : ' PM'); dlChanged(); saveSoon(); }; });
-$('back').onclick = function(){ $('done').hidden = true; if (B.back && (B.mode === 'inv' || B.mode === 'memo')) { var bo = B.back; B.back = null; CC.from = 'orders'; ordChat(bo); } };
+$('back').onclick = function(){ $('done').hidden = true; if (B.cbBack) { var cbn = B.cbBack; B.cbBack = null; bsClose(); navCloseAll(); $('cb').hidden = false; cbView(cbn); return; } if (B.back && (B.mode === 'inv' || B.mode === 'memo')) { var bo = B.back; B.back = null; CC.from = 'orders'; ordChat(bo); } };
 // 12 Oct 2026: GODOWN button -> pick list straight into #godown · CUSTOMER button -> full memo straight into #customer · Share PDF = the phone's share sheet
 async function grpSend(which){
   if (grpSend.busy) return; grpSend.busy = true;   // 20 Oct 2026: a second tap while the PDF uploads posted twice
@@ -3255,7 +3256,7 @@ function cbDraw(){
   h += '<div class="svtot"><small>' + esc(st.name) + ' · balance · الرصيد</small><b class="' + (st.bal < 0 ? 'neg' : '') + '">' + amt(st.bal) + ' AED</b><small>opening ' + amt(st.open) + ' on ' + cbDate(st.odate) + '</small></div>';
   var run = st.open, es = (st.entries || []).slice().sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
   h += '<table class="svt"><tr><th>Date</th><th>Ref</th><th>Sale</th><th>Received</th><th>Balance</th><th></th></tr><tr class="op"><td>' + cbDate(st.odate) + '</td><td>Opening</td><td></td><td></td><td>' + amt(run) + '</td><td></td></tr>';
-  es.forEach(function(e){ run += e.sale - e.recv + e.adj; h += '<tr><td>' + cbDate(e.date) + '</td><td>' + esc(e.ref) + '</td><td>' + (e.sale ? amt(e.sale) : e.adj ? (e.adj > 0 ? '+' : '') + amt(e.adj) : '') + '</td><td>' + (e.recv ? amt(e.recv) : '') + '</td><td><b>' + amt(run) + '</b></td><td>' + (isBoss() ? '<button type="button" data-cbx="' + esc(e.id) + '" data-cbr="' + esc(e.ref) + '" aria-label="delete line">✕</button>' : '') + '</td></tr>'; });
+  es.forEach(function(e){ run += e.sale - e.recv + e.adj; h += '<tr><td>' + cbDate(e.date) + '</td><td>' + (/^(INV|RV|PV|RET)-\d{4,}$/i.test(String(e.ref || '').trim()) ? '<button type="button" class="cbref" data-cbref="' + esc(String(e.ref).trim()) + '">' + esc(e.ref) + ' ›</button>' : esc(e.ref)) + '</td><td>' + (e.sale ? amt(e.sale) : e.adj ? (e.adj > 0 ? '+' : '') + amt(e.adj) : '') + '</td><td>' + (e.recv ? amt(e.recv) : '') + '</td><td><b>' + amt(run) + '</b></td><td>' + (isBoss() ? '<button type="button" data-cbx="' + esc(e.id) + '" data-cbr="' + esc(e.ref) + '" aria-label="delete line">✕</button>' : '') + '</td></tr>'; });
   h += '</table><div class="ffbtns"><button type="button" id="cbcopy">Copy statement</button>' + (isBoss() ? '<button type="button" id="cbopenbal">Change opening</button>' : '') + '</div>' + (isBoss() ? '<button type="button" class="odel" id="cbdel">Delete this customer</button>' : '');   // staff can look and copy; only the owner deletes or changes the opening
   el.innerHTML = h;
 }
@@ -3267,6 +3268,13 @@ function cbText(){ var st = CU.st, run = st.open, L = ['STATEMENT — ' + st.nam
 function cbNew(k, name){ $('cb').hidden = true; navCloseAll(); custNames(); $('done').hidden = false; window.scrollTo(0, 0); setMode(k);
   var d = B[k]; if (d && (String(d.name || '').trim() || d.amount || (k === 'inv' && (d.man || []).length))) $('dnew').click();
   B[k].name = name; B[k].cust = undefined; redraw(); custHint && custHint(); }
+// 30 Oct 2026 (Abbas: "an old bill — I find it in Customer balances, I want to tap it and the bill opens"): every INV / RV / PV / RET number in a
+// customer's statement opens that saved bill (same as Saved bills); ‹ Back returns to this customer's statement
+async function cbBill(ref){
+  if (Object.keys(byDesign()).length && !(B.inv && B.inv.ref === ref) && !confirm('Open ' + ref + '?\n\nWhat is picked on the Stock tab now will be replaced by this bill (the bill open now is saved first). · فتح الفاتورة')) return;
+  var who = CU.view; clearTimeout(BS.t); try { await bsSave(true); } catch(e){}
+  navCloseAll(); custNames(); $('done').hidden = false; window.scrollTo(0, 0); B.back = null; B.cbBack = who;
+  await bsOpen(ref); }
 $('cbopen').onclick = cbOpen;
 $('cbx').onclick = function(){ $('cb').hidden = true; };
 $('cbbody').addEventListener('input', function(e){ if (e.target.id === 'cbq') { CU.q = e.target.value; CU.focus = true; cbDraw(); } });
@@ -3275,6 +3283,7 @@ $('cbbody').addEventListener('click', async function(e){
   if ((b = e.target.closest('[data-cbf]'))) { CU.f = b.dataset.cbf; cbDraw(); return; }
   if ((b = e.target.closest('[data-cbs]'))) { CU.s = b.dataset.cbs; cbDraw(); return; }
   if ((b = e.target.closest('[data-cbnew]'))) { cbNew(b.dataset.cbnew, CU.view); return; }
+  if ((b = e.target.closest('[data-cbref]'))) { cbBill(b.dataset.cbref); return; }
   if (e.target.id === 'cbcopy') { var t = cbText(); try { await navigator.clipboard.writeText(t); e.target.textContent = 'Copied ✓'; } catch(er){ prompt('Copy:', t); } return; }
   var x = e.target.closest('[data-cbx]');
   if (x) { if (!confirm('Delete ' + x.dataset.cbr + ' from ' + CU.st.name + '\'s balance?')) return;
@@ -3798,7 +3807,7 @@ function drDone(type){ if (!DR.cur || DR.cur.type !== type) return; var ref = DR
 // WhatsApp: Stock · Memo · Chats · Orders · More. Every old button still exists (hidden) and is pressed by the bar, so nothing underneath changed.
 function uiToast(msg){ var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(uiToast.t); uiToast.t = setTimeout(function(){ t.hidden = true; }, 2600); }
 function navMemo(nd, nc){ if ($('nvm')) $('nvm').textContent = nd ? String(nd) : ''; $('bar').classList.toggle('empty', !nc); }
-function navCloseAll(){ ['done', 'cc', 'ords', 'drs', 'more', 'today', 'mysheet', 'ff', 'dor', 'cash', 'cb', 'sv'].forEach(function(id){ var e = $(id); if (e && !e.hidden) e.hidden = true; }); clearInterval(CC.timer); if (CC.cu) { CC.cu = null; $('cccu').hidden = true; } }
+function navCloseAll(){ B.cbBack = null; ['done', 'cc', 'ords', 'drs', 'more', 'today', 'mysheet', 'ff', 'dor', 'cash', 'cb', 'sv'].forEach(function(id){ var e = $(id); if (e && !e.hidden) e.hidden = true; }); clearInterval(CC.timer); if (CC.cu) { CC.cu = null; $('cccu').hidden = true; } }
 function navSync(){ var t = !$('today').hidden ? 'today' : !$('cc').hidden ? 'chats' : !$('ords').hidden ? 'orders' : !$('done').hidden ? 'memo' : !$('more').hidden ? 'more' : 'stock'; document.querySelectorAll('#nav button').forEach(function(b){ b.classList.toggle('on', b.dataset.nv === t); }); }
 function navGo(t){
   if (t === 'today') { if ($('today').hidden) { navCloseAll(); tdOpen(); } }
