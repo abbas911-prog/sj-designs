@@ -142,6 +142,7 @@ main{max-width:720px;margin:0 auto;}
 .fft tr.tot td{font-weight:800;border-top:1.5px solid var(--ink)}
 .fft tr.bad td{background:#fbeee8}
 .ffi{width:58px;padding:4px 4px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:13px;text-align:right;background:#fffdf9}
+.ffi.ffno{width:96px;text-align:left}.ffi.ffno.chg{border-color:#b08a4a;background:#fff4dc}
 .ffv{font:inherit;font-size:12px;padding:2px;border:1px solid var(--gold);border-radius:6px;background:#fff}
 .ffn{font-size:11px;color:var(--mute);margin-top:4px}
 .ffw{margin-top:6px;font-size:14px;text-align:right}
@@ -927,7 +928,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-28b';
+var VER = '2026-10-30a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2353,15 +2354,16 @@ function ffVariants(no){ if (!COST) return []; return Object.keys(COST.c).filter
 function ffCalc(b, E){
   var e = E[ffKey(b)] || {}, le = e.l || {}, rows = [], flags = [], block = false, wSum = 0, wPcs = 0;
   b.lines.forEach(function(l, i){
-    var x = le[i] || {}, vs = ffVariants(l.no), v = x.v || (COST && COST.c[l.no] != null ? l.no : (vs.length === 1 ? vs[0] : null));
+    var x = le[i] || {}, no = x.no || l.no, vs = ffVariants(no), v = x.v || (COST && COST.c[no] != null ? no : (vs.length === 1 ? vs[0] : null));   // 30 Oct 2026: x.no = design number corrected by hand
     var cost = x.cost != null ? x.cost : (v && COST ? +COST.c[v] : null), rate = x.rate != null ? x.rate : l.rate, qty = x.qty != null ? x.qty : l.qty;
     var auto = cost != null ? Math.round(cost + (rate - cost) / 2) : null, nw = x.nw != null ? x.nw : auto;
-    var r = { i: i, no: l.no, lab: 'SJ-' + (v || l.no), v: v, vs: vs, qty: qty, rate: rate, amt: qty * rate, cost: cost, profit: cost != null ? rate - cost : null,
+    var r = { i: i, no: no, orig: l.no, lab: 'SJ-' + (v || no), v: v, vs: vs, qty: qty, rate: rate, amt: qty * rate, cost: cost, profit: cost != null ? rate - cost : null,
       half: cost != null ? (rate - cost) / 2 : null, nw: nw, auto: auto, namt: nw != null ? qty * nw : null, ed: Object.keys(x).length > 0, f: [] };
     wSum += r.amt; wPcs += qty;
     if (Math.abs(l.qty * l.rate - l.amount) > 0.01) r.f.push(['w', 'line written ' + fmt2(l.amount) + ' but ' + l.qty + ' × ' + fmt2(l.rate) + ' = ' + fmt2(l.qty * l.rate)]);
     if (!(rate > 0)) { r.f.push(['b', 'no price on the bill — type the sold price']); block = true; }
-    if (cost == null) { r.f.push(['b', (vs.length > 1 ? 'pick which ' + l.no + ' it is (' + vs.map(function(k){ return k + ' ' + fmt2(COST.c[k]); }).join(' · ') + ')' : 'not in the inventory report' + (COST ? ' of ' + COST.d : '') + ' — type the cost') ]); block = true; }
+    if (x.no) r.f.push(['i', 'design number changed by you from SJ-' + l.no]);
+    if (cost == null) { r.f.push(['b', (vs.length > 1 ? 'pick which ' + no + ' it is (' + vs.map(function(k){ return k + ' ' + fmt2(COST.c[k]); }).join(' · ') + ')' : 'not in the inventory report' + (COST ? ' of ' + COST.d : '') + ' — fix the design number (tap it) or type the cost') ]); block = true; }
     else {
       if (rate > 0 && rate < cost) r.f.push(['w', 'sold below cost (' + fmt2(rate) + ' < ' + fmt2(cost) + ') — the loss is halved, so the new price goes UP to ' + nw]);
       else if (rate > 0 && (rate - cost) / cost < 0.05) r.f.push(['i', 'very thin profit: ' + fmt2(rate - cost) + ' AED a piece']);
@@ -2380,12 +2382,13 @@ function ffCalc(b, E){
 }
 function ffTable(head, rows, cls){ return '<table class="fft ' + (cls || '') + '"><tr>' + head.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '</tr>' + rows.join('') + '</table>'; }
 function ffIn(b, i, f, v){ return '<input class="ffi" inputmode="decimal" data-b="' + esc(ffKey(b)) + '" data-i="' + i + '" data-f="' + f + '" value="' + (v == null ? '' : +(+v).toFixed(2)) + '" placeholder="?">'; }
+function ffNo(b, r){ return '<input class="ffi ffno' + (r.no !== r.orig ? ' chg' : '') + '" inputmode="text" autocapitalize="characters" data-b="' + esc(ffKey(b)) + '" data-i="' + r.i + '" data-f="no" data-o="' + esc(r.orig) + '" value="' + esc(r.lab) + '" aria-label="design number">'; }   // 30 Oct 2026: always editable
 function ffBillHtml(b, k, E){
   var h = '<div class="ffb' + (k.out ? ' out' : '') + (b.draft ? ' draft' : '') + '"><div class="ffh"><b>' + esc(b.ref) + '</b> · ' + esc(dmy(b.date)) + ' · ' + esc(b.name || '—') + ' · ' + k.wPcs + ' pcs' +
     (b.draft ? '<em>preview of the bill on screen — not included yet</em>' : '<span><button type="button" data-out="' + esc(ffKey(b)) + '">' + (k.out ? 'Put in' : 'Leave out') + '</button><button type="button" class="ffdel" data-del="' + esc(ffKey(b)) + '">Delete bill</button>' + (k.ed ? '<button type="button" data-reset="' + esc(ffKey(b)) + '">Reset</button>' : '') + '</span>') + '</div>';
-  h += '<div class="ffs">1 · Bill as written</div>' + ffTable(['Design', 'Qty', 'Price', 'Amount'], k.rows.map(function(r){ return '<tr><td>' + esc(r.lab) + '</td><td>' + ffIn(b, r.i, 'qty', r.qty) + '</td><td>' + ffIn(b, r.i, 'rate', r.rate) + '</td><td>' + fmt2(r.amt) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + k.wPcs + '</td><td></td><td>' + fmt(k.wSum) + '</td></tr>']));
+  h += '<div class="ffs">1 · Bill as written</div>' + ffTable(['Design', 'Qty', 'Price', 'Amount'], k.rows.map(function(r){ return '<tr><td>' + ffNo(b, r) + '</td><td>' + ffIn(b, r.i, 'qty', r.qty) + '</td><td>' + ffIn(b, r.i, 'rate', r.rate) + '</td><td>' + fmt2(r.amt) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + k.wPcs + '</td><td></td><td>' + fmt(k.wSum) + '</td></tr>']));
   h += '<div class="ffs">2 · Cost <small>(inventory report ' + esc(COST ? COST.d : '—') + ')</small></div>' + ffTable(['Design', 'Cost', 'Sold', 'Profit', 'Half', 'New'], k.rows.map(function(r){
-    var sel = r.vs.length > 1 ? '<select class="ffv" data-b="' + esc(ffKey(b)) + '" data-i="' + r.i + '">' + (r.v ? '' : '<option value="">which?</option>') + r.vs.map(function(x){ return '<option' + (x === r.v ? ' selected' : '') + ' value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('') + '</select>' : esc(r.lab);
+    var sel = r.vs.length > 1 ? '<select class="ffv" data-b="' + esc(ffKey(b)) + '" data-i="' + r.i + '">' + (r.v ? '' : '<option value="">which?</option>') + r.vs.map(function(x){ return '<option' + (x === r.v ? ' selected' : '') + ' value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('') + '</select>' : ffNo(b, r);
     return '<tr' + (r.cost == null || !(r.rate > 0) ? ' class="bad"' : '') + '><td>' + sel + '</td><td>' + ffIn(b, r.i, 'cost', r.cost) + '</td><td>' + fmt2(r.rate) + '</td><td>' + fmt2(r.profit) + '</td><td>' + (r.half == null ? '—' : r.half.toFixed(2)) + '</td><td>' + ffIn(b, r.i, 'nw', r.nw) + '</td></tr>'; }));
   h += '<div class="ffn">New price = cost + half the profit, rounded to whole AED. Tap any box to change it.</div>';
   h += '<div class="ffs">3 · Revised bill</div>' + ffTable(['Design', 'Qty', 'New', 'Amount'], k.rows.map(function(r){ return '<tr><td>' + esc(r.lab) + '</td><td>' + r.qty + '</td><td>' + (r.nw == null ? '?' : r.nw) + '</td><td>' + (r.namt == null ? '?' : fmt(r.namt)) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + k.wPcs + '</td><td></td><td>' + fmt(k.nSum) + (k.block ? '?' : '') + '</td></tr>']));
@@ -2448,6 +2451,7 @@ $('ffbody').addEventListener('change', function(e){
   if (!t.dataset.b) return;
   var k = t.dataset.b, i = t.dataset.i, e1 = E[k] = E[k] || {}, l = e1.l = e1.l || {}, x = l[i] = l[i] || {};
   if (t.classList.contains('ffv')) { if (t.value) x.v = t.value; else delete x.v; delete x.cost; }
+  else if (t.dataset.f === 'no') { var nv = t.value.trim().toUpperCase().replace(/^S\s*[JH]\s*[-=:.]?\s*/, '').replace(/\s+/g, ''); if (!nv || nv === String(t.dataset.o).toUpperCase()) delete x.no; else x.no = nv; delete x.v; delete x.cost; delete x.nw; }   // 30 Oct 2026: design number fixed by hand → its own cost
   else { var v = parseFloat(String(t.value).replace(/[^\d.\-]/g, '')); if (isNaN(v) || t.value.trim() === '') delete x[t.dataset.f]; else x[t.dataset.f] = v; if (t.dataset.f !== 'nw' && x.nw != null && t.dataset.f !== 'qty') delete x.nw; }
   if (!Object.keys(x).length) delete l[i];
   ffSave(E); setTimeout(ffDraw, 300);   // later, so a tap on MAKE BILL right after typing is not lost under the redraw
