@@ -716,20 +716,31 @@ function parseTitle(t){
   if (no && headNums[0] === +no) headNums.shift();
   var total = headNums.length ? headNums[0] : null;
   if (total == null) { var m2 = head.match(/(\d+)\s*\)?\s*pcs/i); if (m2) total = +m2[1]; }
-  var groups = [], warn = [], rows = [];
+  var groups = [], warn = [], rows = [], gp = [];
   // 12 Oct 2026 (Abbas): a colour can carry its godown row as pieces-row: (8-1/8-2) = colour 1 8 pcs in row 1, colour 2 8 pcs in row 2.
   // Selling 4 of colour 1 makes it (4-1/8-2). A single colour may be written (8-1).
-  (tail + ')').replace(/\(([^()]*\/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)/g, function(_, g){
-    var toks = g.split('/').map(function(x){ return x.trim(); });
+  (tail + ')').replace(/\(([^()]*\/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)/g, function(_, g, at){
+    var toks = g.split('/').map(function(x){ return x.trim(); }), rw = [];
     if (toks.length > 1) toks = toks.filter(function(x){ return x; });   // 27 Oct 2026 (57026 "(8-3//0-3)" showed 7 colours): a stray slash is not a colour
-    groups.push(toks.map(function(x){
-      var pr = x.match(/^(\d+)\s*-\s*([A-Za-z0-9]+)$/); rows.push(pr ? pr[2] : '');
+    gp.push({ at: at, rw: rw, v: toks.map(function(x){
+      var pr = x.match(/^(\d+)\s*-\s*([A-Za-z0-9]+)$/); rw.push(pr ? pr[2] : '');
       if (pr) return +pr[1];
       if (/^\d+$/.test(x)) return +x;
       var d = x.match(/\d+/); if (d) { warn.push(x); return +d[0]; }
       warn.push(x || '?'); return 0;
-    }));
+    }) });
   });
+  // 30 Oct 2026 (Abbas, SJ-40032 "colour= 1 ___(60)": "why can't I select this design?"; SJ-51862 "colour _(5)__(8/4/12/8)_(16)"): a colour's count
+  // written as a plain "(60)" was never read. A plain (N) after the word colour is a colour when the slashed groups alone do not make the total
+  // and adding the plain ones does; the colour NUMBER right after the word ("colour = (5)") never counts. Same rule in stock.py / build.py.
+  var gsum = function(){ return gp.reduce(function(a, x){ return a + x.v.reduce(function(p, q){ return p + q; }, 0); }, 0); };
+  if (total != null && gsum() !== total) {
+    var cw = tail.match(/^colou?rs?/i), ce = cw ? cw[0].length : 0, pl = [], pm, pre = /\(\s*(\d+)\s*\)/g;
+    while ((pm = pre.exec(tail))) if (!/^[\s=:._,\-…]*$/.test(tail.slice(ce, pm.index))) pl.push(pm);
+    if (pl.length && gsum() + pl.reduce(function(a, m){ return a + +m[1]; }, 0) === total) {
+      pl.forEach(function(m){ gp.push({ at: m.index, rw: [''], v: [+m[1]] }); }); gp.sort(function(a, b){ return a.at - b.at; }); }
+  }
+  gp.forEach(function(x){ groups.push(x.v); x.rw.forEach(function(r){ rows.push(r); }); });
   var ncol = (tail.match(/colou?rs?\.?\s*=?\s*\(\s*(\d+)\s*\)/i) || [])[1];
   var sum = groups.reduce(function(a, g){ return a + g.reduce(function(x, y){ return x + y; }, 0); }, 0);
   return { no: no, total: total, groups: groups, rows: rows, ncol: ncol ? +ncol : null, sum: sum, warn: warn, ok: total != null && sum === total && groups.length > 0 };
@@ -936,7 +947,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30g';
+var VER = '2026-10-30h';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;

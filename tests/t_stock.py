@@ -28,11 +28,17 @@ r2 = st.run({'op':'retbill','ref':'RET-0001','dev':'d1','lines':[{'card':'A','no
 for t, want in [('Sj 6668 (pcs67) 5 colors.      (14/13/14/14/12)', (67, [14, 13, 14, 14, 12])), ('Sj 6668 (pcs 60 ) 5 colors.  (12/12/12/12/12)', (60, [12] * 5)),
                 ('Sj  6668  (20pcc) 5 colors.  (4/4/4/4/4)', (20, [4] * 5)), ('Sj 6668(70pcs)5 colors.   (14/14/14/14/14/)', (70, [14] * 5)),
                 ('Sj= **6668** pcs (46) 5 colors.   (8/10/10/8/10)', (46, [8, 10, 10, 8, 10])),
-                ('Sj = **(57026)** (38) pcs __ Colour= (6)__(0-3/14-3/16-3/0-3/8-3//0-3)', (38, [0, 14, 16, 0, 8, 0]))]:   # 27 Oct 2026: "//" showed 7 colours
+                ('Sj = **(57026)** (38) pcs __ Colour= (6)__(0-3/14-3/16-3/0-3/8-3//0-3)', (38, [0, 14, 16, 0, 8, 0])),   # 27 Oct 2026: "//" showed 7 colours
+                ('Sj= (40032) ..(60) pcs colour= 1 ___(60)', (60, [60])),                                          # 30 Oct 2026: a plain "(60)" is the one colour
+                ('Sj = **(51862)** (48) pcs __ colour _(5)__(8/4/12/8)_(16)', (48, [8, 4, 12, 8, 16])),            # …and "(16)" the 5th colour, "(5)" the colour number
+                ('Sj = **(71352)** (32) pcs colour = (5) ,,,,,(8/4/8/8/4)', (32, [8, 4, 8, 8, 4]))]:
     p = st.parse(t); got = (p['total'] and p['total'][0], [c[0] for c in p['cells']])
     assert p['ok'] and got == want, (t, got)
 for t in ['Sj = **(6668) ', 'SJ = **6668** (60) pcs ,,, colors = (5) ,,,,,,']:
     assert not st.parse(t)['ok'], t
+for t, sold, want in [('Sj= (40032) ..(60) pcs colour= 1 ___(60)', [56], 'Sj= (40032) ..(56) pcs colour= 1 ___(56)'),
+                      ('Sj = **(51862)** (48) pcs __ colour _(5)__(8/4/12/8)_(16)', [8, 4, 12, 8, 12], 'Sj = **(51862)** (44) pcs __ colour _(5)__(8/4/12/8)_(12)')]:
+    assert st.rewrite(t, st.parse(t), sold) == want, (t, st.rewrite(t, st.parse(t), sold))   # a sale changes only that colour's number and the total
 print('parse: shop-typed titles ok')
 # 28 Oct 2026: a return line whose colour is not on the card (colour 3 on a 2-colour card) changes nothing and comes back as an error —
 # before, the card was marked done for that return and the phone showed "Back on Trello ✓" although nothing went back

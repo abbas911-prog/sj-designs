@@ -346,7 +346,9 @@ def group_sizes(title):
     s = title.replace('**', '  ').replace('{', '(').replace('}', ')')
     s = re.sub(r'\(\s*rows?\b[^)]*\)', lambda m: ' ' * len(m.group()), s, flags=re.I)   # '(row 3)' = godown row, not a colour count
     ci = re.search(r'colou?rs?', s, re.I); tail = (s[ci.start():] if ci else s) + ')'
-    return [max(1, sum(1 for t in g.group(1).split('/') if t.strip())) for g in re.finditer(r'\(([^()]*/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)', tail)]   # a stray slash ("//", "/)") is not a colour
+    gs = [max(1, sum(1 for t in g.group(1).split('/') if t.strip())) for g in re.finditer(r'\(([^()]*/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)', tail)]   # a stray slash ("//", "/)") is not a colour
+    p = parse(title)                    # 30 Oct 2026: a plain "(60)" / "(16)" that makes the card total is a colour group of its own (SJ-40032, SJ-51862)
+    return p['gsz'] if p['ok'] and sum(p['gsz']) > sum(gs) else gs
 
 def page_stem(name):
     slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')[:30] or 'sj'

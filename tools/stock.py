@@ -32,24 +32,36 @@ def parse(t):
         m2 = re.search(r'(\d+)\s*\)?\s*p(?:cs|cc|is|ics)', head, re.I) or re.search(r'pcs\s*\(?\s*(\d+)', head, re.I)   # 67 pcs / 20pcc / pcs 67
         if m2: total = (int(m2.group(1)), m2.span(1))
     tail = (s[ci:] if ci >= 0 else s) + ')'
-    cells = []                                              # one per colour: [pcs, (start, end) in t, pure_number]
-    groups = 0
+    grp = []                                                # (position, [cells]) per bracket group; one cell per colour: [pcs, (start, end) in t, pure_number]
     for g in re.finditer(r'\(([^()]*/[^()]*?|\s*\d+\s*-\s*[A-Za-z0-9]+\s*)\)', tail):   # (8-1/8-2) = pieces-row per colour; a single colour may be (8-1) (12 Oct 2026)
-        groups += 1
-        pos = g.start(1)
+        pos = g.start(1); gc = []
         toks = g.group(1).split('/')
         for tok in toks:
             if not tok.strip() and len(toks) > 1: pos += len(tok) + 1; continue   # "(14/14/14/14/14/)" or "(8-3//0-3)": a stray slash is not a colour (23 + 27 Oct 2026)
             d = re.search(r'\d+', tok)
             if d:
                 a, b = off + pos + d.start(), off + pos + d.end()
-                cells.append([int(d.group()), (a, b) if b <= len(t) else None, bool(re.fullmatch(r'\s*\d+\s*', tok))])
+                gc.append([int(d.group()), (a, b) if b <= len(t) else None, bool(re.fullmatch(r'\s*\d+\s*', tok))])
             else:
-                cells.append([0, None, False])
+                gc.append([0, None, False])
             pos += len(tok) + 1
+        grp.append((g.start(), gc))
+    # 30 Oct 2026 (Abbas, SJ-40032 "colour= 1 ___(60)": "why can't I select this design?"; SJ-51862 "colour _(5)__(8/4/12/8)_(16)"): a colour's count
+    # written as a plain "(60)" with no slash was never read. A plain (N) after the word colour counts as a colour when the slashed groups alone do
+    # not make the card total and adding the plain ones does; the colour NUMBER right after the word ("colour = (5)") never counts.
+    if total is not None and sum(c[0] for _, gc in grp for c in gc) != total[0]:
+        ct = re.match(r'colou?rs?', tail, re.I); ce = ct.end() if ct else 0
+        pl = [m for m in re.finditer(r'\(\s*(\d+)\s*\)', tail) if not re.fullmatch(r'[\s=:._,\-…]*', tail[ce:m.start()])]
+        if pl and sum(c[0] for _, gc in grp for c in gc) + sum(int(m.group(1)) for m in pl) == total[0]:
+            for m in pl:
+                a, b = off + m.start(1), off + m.end(1)
+                grp.append((m.start(), [[int(m.group(1)), (a, b) if b <= len(t) else None, True]]))
+            grp.sort(key=lambda x: x[0])
+    cells = [c for _, gc in grp for c in gc]
+    groups = len(grp)
     ncol = re.search(r'colou?rs?\.?\s*=?\s*\(\s*(\d+)\s*\)', tail, re.I)
     sm = sum(c[0] for c in cells)
-    return {'no': no, 'total': total, 'cells': cells, 'groups': groups, 'sum': sm,
+    return {'no': no, 'total': total, 'cells': cells, 'groups': groups, 'sum': sm, 'gsz': [max(1, len(gc)) for _, gc in grp],
             'ok': total is not None and sm == total[0] and groups > 0}
 
 def rewrite(t, p, new):
