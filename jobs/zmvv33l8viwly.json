@@ -1,0 +1,42 @@
+{
+ "ok": true,
+ "kind": "sizes",
+ "page": "sz-1030.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sz-1030.html?v=1",
+ "cover": "og-sz-1030.jpg",
+ "name": "SJ TRADING",
+ "country": "",
+ "ref": "INV-0033",
+ "cust": "NASIR (LIBYA)",
+ "designs": [
+  "18634",
+  "20713",
+  "34185",
+  "35218",
+  "48188",
+  "70438",
+  "79246",
+  "79623",
+  "82554"
+ ],
+ "report": [
+  "SJ-18634  4+4+4+4 → 4 colours on the bill, 16 pcs · sizes M L XL XXL (default)",
+  "SJ-20713  4+4+0+0+0+4+4+4+4+0+4+0 → 7 colours on the bill, 28 pcs · sizes M L XL XXL (default)",
+  "SJ-34185  0+0+0+0+4+0+4+8+4+0+8 → 5 colours on the bill, 28 pcs · sizes M L XL XXL (default)",
+  "SJ-35218  0+0+4+0+4+4+0+0+4+4+4+4 → 7 colours on the bill, 28 pcs · sizes M L XL XXL (default)",
+  "SJ-48188  0+15+0+0+8+8+6+0+0+0+0+12+4+0 → 6 colours on the bill, 53 pcs · sizes M L XL XXL (default)",
+  "SJ-70438  8+7+8+4+8+8+0+0+0+0+4+4 → 8 colours on the bill, 51 pcs · sizes M L XL XXL (default)",
+  "SJ-79246  0+0+4+0+4+4+4+0+0+4+0+4 → 6 colours on the bill, 24 pcs · sizes M L XL XXL (default)",
+  "SJ-79623  8+8+8+8+8+8+0+0+8 → 7 colours on the bill, 56 pcs · sizes M L XL XXL (default)",
+  "SJ-82554  4+4+0+0+0+0+0+0 → 2 colours on the bill, 8 pcs · sizes M L XL XXL (default)"
+ ],
+ "flags": [
+  "SJ-20713: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-35218: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-70438: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-79246: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-79623: no JAMĀL photo for every colour group — shop photo used."
+ ],
+ "bytes": 4046780,
+ "id": "zmvv33l8viwly"
+}
