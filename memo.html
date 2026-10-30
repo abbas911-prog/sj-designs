@@ -140,6 +140,7 @@ main{max-width:720px;margin:0 auto;}
 .fft td{padding:4px 3px;border-bottom:1px solid #f0ebe3;text-align:right;white-space:nowrap}
 .fft th:first-child,.fft td:first-child{text-align:left}
 .fft tr.tot td{font-weight:800;border-top:1.5px solid var(--ink)}
+.fft.one td{background:#fff}.fft.one tr:nth-child(odd):not(.tot) td{background:#faf6ef}
 .fft tr.bad td{background:#fbeee8}
 .ffi{width:58px;padding:4px 4px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:13px;text-align:right;background:#fffdf9}
 .ffi.ffno{width:96px;text-align:left}.ffi.ffno.chg{border-color:#b08a4a;background:#fff4dc}
@@ -928,7 +929,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30a';
+var VER = '2026-10-30b';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2427,7 +2428,8 @@ function ffDraw(){
     var ml = ffMerge(inc), tot = inc.reduce(function(a, x){ return a + x.k.nSum; }, 0), pcs = inc.reduce(function(a, x){ return a + x.k.wPcs; }, 0), wt = inc.reduce(function(a, x){ return a + x.k.wSum; }, 0), date = ls('sj_ff_date') || '1/6/26';
     h += '<div class="ffb all"><div class="ffh"><b>COMPLETE BILL</b> · ' + inc.map(function(x){ return esc(x.b.ref); }).join(', ') + '</div>';
     h += '<label class="ffd">Date on the bill <input id="ffdate" value="' + esc(date) + '"></label>';
-    ffChunks(ml.length).forEach(function(ch, ci, all){ h += ffTable(['Design', 'Qty', 'Price', 'Amount'], ml.slice(ch[0], ch[1]).map(function(l){ return '<tr><td>' + esc(l.lab) + '</td><td>' + l.qty + '</td><td>' + (l.nw == null ? '?' : l.nw) + '</td><td>' + (l.nw == null ? '?' : fmt(l.qty * l.nw)) + '</td></tr>'; }).concat(ci === all.length - 1 ? ['<tr class="tot"><td>TOTAL</td><td>' + pcs + '</td><td></td><td>' + fmt(tot) + '</td></tr>'] : [])); });
+    // 30 Oct 2026 (Abbas, video): one table on the screen, the heading once — the posted text (ffText) keeps its blocks of 9
+    h += ffTable(['Design', 'Qty', 'Price', 'Amount'], ml.map(function(l){ return '<tr><td>' + esc(l.lab) + '</td><td>' + l.qty + '</td><td>' + (l.nw == null ? '?' : l.nw) + '</td><td>' + (l.nw == null ? '?' : fmt(l.qty * l.nw)) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + pcs + '</td><td></td><td>' + fmt(tot) + '</td></tr>']), 'one');
     h += '<div class="ffg">GRAND TOTAL = ' + (blocked.length ? '—' : fmt(tot) + ' AED') + ' · ' + pcs + ' pcs<small>as written ' + fmt(wt) + ' AED</small></div>';
     if (blocked.length) h += '<div class="fff"><div class="b">⛔ Fix the red lines first: ' + blocked.map(function(x){ return esc(x.b.ref); }).join(', ') + ' (or Leave out that bill).</div></div>';
     h += '<div class="ffbtns"><button type="button" class="gold" id="ffmake"' + (blocked.length || FF.busy ? ' disabled' : '') + '>MAKE BILL</button><button type="button" id="ffcopy"' + (blocked.length ? ' disabled' : '') + '>Copy bill text</button></div>';
