@@ -87,6 +87,28 @@ async function suite(fast, browser) {
       ok(!(await page.textContent('#outbar')).trim() || await page.locator('#outbar').isHidden(), 'outbox empty');
       await page.goBack();
     });
+    await test('a 19-MB video reaches Slack in full, through the fast lane when it is on; Slack refusing it is said in words', async () => {   // 31 Oct 2026
+      await openCardNo(page, '17841'); await until(async () => /cutting started/.test(await page.textContent('#thread')), 10000, 'chat');
+      T.fastCalls.length = 0; const vid = Buffer.alloc(19 * 1024 * 1024, 5);
+      const all = () => [].concat(...Object.values(W.slack.ch).map(c => c.msgs));
+      try {
+        await page.setInputFiles('#afiles', { name: 'VID_0001.mp4', mimeType: 'video/mp4', buffer: vid }); await page.click('#send');
+        await until(() => all().some(m => (m.files || []).some(f => f.name === 'VID_0001.mp4')), 40000, 'video in Slack');
+        const f = all().map(m => (m.files || []).find(f => f.name === 'VID_0001.mp4')).find(Boolean); ok(f.size === vid.length && (fast ? f.uploaded === vid.length : f.uploaded >= vid.length), 'every byte arrived: ' + f.uploaded + ' of ' + vid.length);   // direct = multipart (a few bytes of wrapping), worker = the bare file
+        if (fast) ok(T.fastCalls.includes('/up'), 'went through the worker /up: ' + T.fastCalls.join(' ')); else ok(!T.fastCalls.includes('/up'), 'no worker in the relay-only round');
+        await until(() => page.evaluate(() => window.__f.OUT.length === 0), 10000, 'outbox empty');
+        if (fast) {   // a 30-MB video (too big for the relay's fallback) that Slack refuses (413) -> the bubble says so; once Slack takes uploads again it goes
+          W.uploadRefuse = true;
+          try { await page.setInputFiles('#afiles', { name: 'VID_0002.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(30 * 1024 * 1024, 6) }); await page.click('#send');
+            await page.evaluate(() => { const v = window.__f.OUT.find(x => x.files.length); if (v) v.tries = 2; });   // two failed tries already
+            await until(async () => /Slack answered 413/.test(await page.textContent('#thread')), 40000, 'the reason in the bubble: ' + (await page.textContent('#outbar')));
+          } finally { W.uploadRefuse = false; }
+          await page.evaluate(() => { const v = window.__f.OUT.find(x => x.files.length); if (v) v.next = 0; return window.__f.outRun(true); });
+          await until(() => all().some(m => (m.files || []).some(f => f.name === 'VID_0002.mp4')), 40000, 'the second video goes once Slack takes uploads again');
+          await until(() => page.evaluate(() => window.__f.OUT.length === 0), 10000, 'outbox empty again');
+        }
+      } finally { await page.evaluate(() => { window.__f.OUT.length = 0; }); if (await page.locator('#card').isVisible()) { await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000).catch(() => {}); } }
+    });
     await test('a big video Slack will not take does not hold back the text messages after it; it can be removed', async () => {   // 30 Oct 2026
       await openCardNo(page, '17841'); await until(async () => /cutting started/.test(await page.textContent('#thread')), 10000, 'chat');
       T.uploadDown = true;

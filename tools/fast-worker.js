@@ -171,6 +171,17 @@ async function post(env, q, ctx) {                               // a text line:
   return res;
 }
 
+// 31 Oct 2026 (Abbas: "the worker cannot send videos"): a big photo / video used to go phone -> Slack's upload address directly, in a way the
+// browser is not allowed to read the answer of - so the app never knew whether Slack took it. Now the file goes phone -> here -> Slack
+// (streamed, nothing kept) and Slack's real answer goes back to the phone. Only Slack's own upload addresses are accepted.
+async function upload(req, q) {
+  const u = String(q.u || ''); if (!/^https:\/\/files\.slack\.com\/upload\//.test(u)) return json({ ok: false, error: 'bad request' }, 400);
+  try {
+    const r = await fetch(u, { method: 'POST', body: req.body, headers: { 'Content-Type': req.headers.get('Content-Type') || 'application/octet-stream' } });
+    const t = (await r.text()).slice(0, 200);
+    return json({ ok: r.ok, status: r.status, text: t });
+  } catch (e) { return json({ ok: false, error: 'the upload to Slack broke: ' + String(e && e.message || e).slice(0, 120) }, 502); }
+}
 async function file(env, q, req) {                              // a photo / voice note / video, streamed in its original quality
   const id = String(q.id || '').replace(/[^A-Z0-9]/g, ''); if (!id) return json({ ok: false, error: 'bad request' }, 400);
   const fi = await slack(env, 'files.info', { file: id }, true);
@@ -235,6 +246,7 @@ export default {
     if (req.method === 'GET' && url.pathname === '/') return json({ ok: true, sj: 'fast', slack: !!env.SLACK_TOKEN, trello: !!env.TRELLO_TOKEN });
     if (req.method === 'POST' && url.pathname === '/slack') return slackEvent(req, url, ctx);
     let q = {};
+    if (req.method === 'POST' && url.pathname === '/up') { q = Object.fromEntries(url.searchParams); if (!(await proven(q.k))) return json({ ok: false, error: 'not allowed - sign in again', auth: true }, 403); return await upload(req, q); }
     if (req.method === 'GET' && url.pathname === '/f') q = Object.fromEntries(url.searchParams);
     else { try { q = JSON.parse(await req.text()); } catch (e) { return json({ ok: false, error: 'bad request' }, 400); } }
     if (!(await proven(q.k))) return json({ ok: false, error: 'not allowed - sign in again', auth: true }, 403);

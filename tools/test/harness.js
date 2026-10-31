@@ -26,7 +26,7 @@ async function boot(opts) {
   const T0 = {}, srv = await serve(T0), base = 'http://127.0.0.1:' + srv.address().port + '/';
   const browser = opts.browser || await chromium.launch({ executablePath: process.env.PW_CHROMIUM || undefined });
   const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, serviceWorkers: opts.sw ? 'allow' : 'block' });
-  const T = Object.assign(T0, { W, relay, worker, base, browser, ctx, errors: [], relayCalls: [], sse: {}, trace: [] });
+  const T = Object.assign(T0, { W, relay, worker, base, browser, ctx, errors: [], relayCalls: [], fastCalls: [], sse: {}, trace: [] });
   if (opts.init) await ctx.addInitScript(opts.init);
   await ctx.route('https://script.google.com/**', async route => { const body = route.request().postData() || '';
     let op = '', rq = {}; try { rq = JSON.parse(JSON.parse(body).req); op = rq.op; } catch (e) {}
@@ -37,6 +37,7 @@ async function boot(opts) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: txt }); });
   await ctx.route(FASTURL + '/**', async route => { const rq = route.request();
     if (T.fastDown) { await route.abort('failed'); return; }
+    const fp = new URL(rq.url()).pathname; T.fastCalls.push(fp); if (fp === '/up' && T.uploadDown) { await route.abort('failed'); return; } if (fp === '/up' && T.uploadSlow) await new Promise(r => setTimeout(r, T.uploadSlow));
     const r = await worker.fetch(new Request(rq.url(), { method: rq.method(), headers: rq.headers(), body: ['GET', 'HEAD'].includes(rq.method()) ? undefined : rq.postDataBuffer() }));
     const h = {}; r.headers.forEach((v, k) => { h[k] = v; }); await route.fulfill({ status: r.status, headers: h, body: Buffer.from(await r.arrayBuffer()) }); });
   await ctx.route('https://ntfy.sh/**', async route => { const u = new URL(route.request().url()), m = u.pathname.match(/^\/([\w-]+)\/sse$/);

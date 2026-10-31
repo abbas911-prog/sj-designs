@@ -51,7 +51,7 @@ function handle(W, method, url, body, headers) {
   if (u.hostname === 'slack.com') return slack(W, u.pathname.replace(/^\/api\//, ''), A, J);
   if (u.hostname === 'files.slack.com') {
     const m = u.pathname.match(/^\/(dl|thumb|upload)\/(\w+)/); if (!m) return { status: 404, body: Buffer.from('no'), type: 'text/plain' };
-    if (m[1] === 'upload') { const f = W.slack.files[m[2]]; if (f) { f.uploaded = Buffer.isBuffer(body) ? body.length : typeof body === 'string' ? body.length : f.size; f.size = f.want || f.size; } return { status: 200, body: Buffer.from('OK'), type: 'text/plain' }; }
+    if (m[1] === 'upload') { if (W.uploadRefuse) return { status: 413, body: Buffer.from('<html>Request Entity Too Large</html>'), type: 'text/html' }; const f = W.slack.files[m[2]]; if (f) { f.uploaded = Buffer.isBuffer(body) ? body.length : typeof body === 'string' ? body.length : f.size; f.size = f.want || f.size; } return { status: 200, body: Buffer.from('OK'), type: 'text/plain' }; }
     const f = W.slack.files[m[2]]; if (!f) return { status: 404, body: Buffer.from('no'), type: 'text/plain' };
     return { status: 200, body: f.bytes || Buffer.alloc(f.size || 10, 7), type: f.mimetype };
   }
@@ -164,7 +164,7 @@ async function makeWorker(W, relay, env) {
   const fakeFetch = async (url, o) => { o = o || {}; url = String(url);
     if (/script\.google\.com/.test(url)) { const t = relay.post(String(o.body)); return new Response(t, { headers: { 'Content-Type': 'application/json' } }); }
     while (W.slackDelay && /slack\.com/.test(url)) { await new Promise(r => setTimeout(r, W.slackDelay)); break; }
-    let body = o.body; if (body && ArrayBuffer.isView(body)) body = Buffer.from(body.buffer, body.byteOffset, body.byteLength); else if (body && typeof body !== 'string' && !Buffer.isBuffer(body)) body = String(body);
+    let body = o.body; if (body && ArrayBuffer.isView(body)) body = Buffer.from(body.buffer, body.byteOffset, body.byteLength); else if (body && typeof body === 'object' && typeof body.getReader === 'function') body = Buffer.from(await new Response(body).arrayBuffer()); else if (body && typeof body !== 'string' && !Buffer.isBuffer(body)) body = String(body);   // a streamed upload (worker /up)
     const r = handle(W, o.method || 'GET', url, body, o.headers || {}); return new Response(r.body, { status: r.status, headers: { 'Content-Type': r.type } }); };
   const mod = { exports: {} }; const ctx = vm.createContext({ module: mod, fetch: fakeFetch, crypto: globalThis.crypto, TextEncoder, btoa, atob, Response, Request, Headers, URL, URLSearchParams, setTimeout, clearTimeout, console, Map, Date, JSON, Math, Promise, Object, Array, String, Number, RegExp, Error, encodeURIComponent });
   vm.runInContext(src, ctx, { filename: 'fast-worker.js' });

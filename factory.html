@@ -273,7 +273,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-31a';
+var VER = '2026-10-31b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -1282,11 +1282,11 @@ async function outOne(it){
       if (fj && fj.ok) return fj; if (!fj && !(FAST.fail || {}).quick) return { ok: false, error: 'no answer from the fast lane - trying again' }; }   // no answer after a wait: maybe sent - only the fast lane (once-only id) is asked again; refused at once (offline worker): the relay sends it
     return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id }); }
   var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
-  if (!it.fids) { var big = tot > 18 * 1024 * 1024, wl = null; if (big) { UPNOW = { size: tot, t0: Date.now(), cname: it.cname, kind: it.files.some(function(x){ return x.kind === 'video'; }) ? 'video' : 'file' }; outPaint(); try { if (navigator.wakeLock) wl = await navigator.wakeLock.request('screen'); } catch(e){} }   // 31 Oct 2026: a big upload keeps the screen awake and says "keep the app open" (Android stopped it when the phone slept)
+  if (!it.fids) { var big = tot > UPLIM, wl = null; if (big) { UPNOW = { size: tot, t0: Date.now(), cname: it.cname, kind: it.files.some(function(x){ return x.kind === 'video'; }) ? 'video' : 'file' }; outPaint(); try { if (navigator.wakeLock) wl = await navigator.wakeLock.request('screen'); } catch(e){} }   // 31 Oct 2026: a big upload keeps the screen awake and says "keep the app open" (Android stopped it when the phone slept)
     try { it.fids = await slackDirect(it.files, null, it.card); it.derr = ''; oput(it); } catch(e){ it.fids = null; it.derr = upWhy(e, tot); }
     finally { if (big) { UPNOW = null; try { if (wl) wl.release(); } catch(e){} outPaint(); } } }      // originals straight to Slack (full quality)
-  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.fset || 0) }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; it.fset = (it.fset || 0) + 1; oput(it); } }   // 20 Oct 2026: the same once-only id on every retry of the same upload (it used to change each try, so an answer lost on a weak line could post the photos twice)
-  if (tot > 18 * 1024 * 1024) return { ok: false, error: it.derr || 'Slack did not take the upload (' + mb(tot) + ')' };
+  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.fset || 0) }); if (j.ok || tot > UPLIM) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; it.fset = (it.fset || 0) + 1; oput(it); } }   // 20 Oct 2026: the same once-only id on every retry of the same upload (it used to change each try, so an answer lost on a weak line could post the photos twice)
+  if (tot > UPLIM) return { ok: false, error: it.derr || 'Slack did not take the upload (' + mb(tot) + ')' };
   var files = []; for (var i = 0; i < it.files.length; i++) files.push({ name: it.files[i].name, b64: await b64of(it.files[i].blob) });
   return await call({ op: 'up', card: it.card, files: files, text: it.text, who: it.who, rid: it.id + 'b' });
 }
@@ -1294,7 +1294,8 @@ async function outOne(it){
 // the outbox sent strictly in order and STOPPED at the first item that failed - one big video Slack would not take held every text behind it, and
 // after 5 tries of a big file it did not even try again by itself. Now each item has its own next-try time: a failing item waits, everything
 // after it still goes. A big file that failed 5 times waits for a tap (or the app coming back to the front) - it no longer blocks anything.
-function obig(it){ return it.files.reduce(function(a, x){ return a + ((x.blob && x.blob.size) || 0); }, 0) > 18 * 1024 * 1024; }
+var UPLIM = 18 * 1024 * 1024;   // a file up to 18 MB can still go through the relay (base64) when the direct way failed
+function obig(it){ return it.files.reduce(function(a, x){ return a + ((x.blob && x.blob.size) || 0); }, 0) > UPLIM; }
 async function outRun(now){
   if (OUTRUN || !OUT.length || !PW) return; OUTRUN = true; clearTimeout(OUTT);
   try { var list = OUT.slice();
@@ -1379,7 +1380,7 @@ $('nsgo').onclick = async function(){ var RET = NSMODE === 'ret', nm = $('nsname
     STEP = 'sending the files to Slack'; btn.textContent = '⏳ Sending ' + mb(tot) + ' in full quality… · পাঠানো হচ্ছে';
     var fids = [], files = [];
     try { if (SP.length) fids = await slackDirect(SP, function(i){ btn.textContent = '⏳ ' + (i + 1) + ' / ' + SP.length + ' · ' + mb(SP[i].blob.size) + '…'; }); }
-    catch (e) { if (tot > 18 * 1024 * 1024) throw new Error('Slack refused the upload (' + e.message + ')'); fids = []; for (var i = 0; i < SP.length; i++) files.push({ name: SP[i].name, type: SP[i].blob.type || '', b64: await b64of(SP[i].blob) }); }
+    catch (e) { if (tot > UPLIM) throw new Error('Slack refused the upload (' + e.message + ')'); fids = []; for (var i = 0; i < SP.length; i++) files.push({ name: SP[i].name, type: SP[i].blob.type || '', b64: await b64of(SP[i].blob) }); }
     STEP = 'making the card'; btn.textContent = '⏳ Making the card… · তৈরি হচ্ছে';
     var j = await call({ op: 'sample', kind: RET ? 'ret' : '', usman: !RET && $('nsusm').checked ? 1 : 0, name: nm, desc: $('nsdesc').value, files: files, fids: fids, cover: cover });
     if (!j || !j.ok) { var em = (j && j.error) || 'no answer from the relay'; toast('✗ ' + em); if (!(j && j.card)) nserr(em); if (j && j.card) { $('ns').hidden = true; if (RET) await load(true); await gotoNew(j.card, j.list || lid(RET ? 'RETURNS' : 'SAMPLES')); } return; }
@@ -1411,7 +1412,12 @@ async function slackDirect(items, onStep, card){
   for (var i = 0; i < items.length; i++) { if (onStep) onStep(i);
     var fd = new FormData(); fd.append('filename', items[i].blob, items[i].name);
     var ac = window.AbortController ? new AbortController() : null, tm = ac ? setTimeout(function(){ ac.abort(); }, 15 * 60000) : null;
-    try { await fetch(j.urls[i].url, { method: 'POST', mode: 'no-cors', body: fd, signal: ac ? ac.signal : undefined }); } finally { clearTimeout(tm); } }
+    // 31 Oct 2026: through the fast lane when it is on and the file fits (≤ 95 MB) - the worker hands back Slack's real answer, so a refused
+    // upload is known at once with its reason. The old direct way (the browser cannot read Slack's answer) stays for bigger files and when the worker is off.
+    var viaW = false;
+    if (fastOn() && FAST.k && items[i].blob.size <= 95 * 1024 * 1024) { try { var wr = await fetch(FAST.url + '/up?u=' + encodeURIComponent(j.urls[i].url) + '&k=' + FAST.k, { method: 'POST', body: items[i].blob, headers: { 'Content-Type': items[i].blob.type || 'application/octet-stream' }, signal: ac ? ac.signal : undefined }), wj = null; try { wj = await wr.json(); } catch(e2){}
+        if (wj && wj.ok) viaW = true; else if (wj && (wj.status || wj.error)) { clearTimeout(tm); throw new Error(wj.error ? wj.error : 'Slack answered ' + wj.status + (wj.text ? ' ' + String(wj.text).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) : '')); } } catch(e3){ if (!/^Slack answered|^the upload to Slack/.test(e3.message || '') && !(ac && ac.signal.aborted)) viaW = false; else { clearTimeout(tm); throw e3; } } }
+    try { if (!viaW) await fetch(j.urls[i].url, { method: 'POST', mode: 'no-cors', body: fd, signal: ac ? ac.signal : undefined }); } finally { clearTimeout(tm); } }
   return j.urls.map(function(u){ return u.id; });
 }
 function mb(n){ return n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
