@@ -1,0 +1,15 @@
+{
+ "ok": false,
+ "error": "SJ-613491 is not in READY on Trello.",
+ "errors": [
+  "SJ-613491 is not in READY on Trello."
+ ],
+ "report": [
+  "SJ-7284 COMPLETE  12+12+12+12 = 48 ✓ (card: 48) → 3 complete sets",
+  "SJ-38156 COMPLETE  8+8+8+8+8+8 = 48 ✓ (card: 48) → 2 complete sets",
+  "SJ-82554 SETS  6+5+10+9+10+14+14+12 = 80 ✓ (card: 80) → 8 colours",
+  "SJ-92236 SETS  4+8+8+8+4+8+8+4 = 52 ✓ (card: 52) → 8 colours",
+  "SJ-71352 COMPLETE  8+4+8+8+4 = 32 ✓ (card: 32) → 1 complete sets + 12 pcs"
+ ],
+ "id": "cmvwk6di90759"
+}
