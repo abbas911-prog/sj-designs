@@ -209,6 +209,7 @@ main{max-width:720px;margin:0 auto;}
 .stk button{margin-top:8px;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;border:1.5px solid var(--line);background:#fff;font-weight:700}
 #p-cat textarea{width:100%;min-height:90px;padding:10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px}
 .crow{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border-radius:10px;padding:8px 10px;margin:6px 0;font-weight:700}
+.cpick{margin:-2px 0 8px;padding:8px 10px;background:#fff;border-radius:10px}.cpick>small{display:block;color:var(--mute);font-size:12px;margin-bottom:6px}.cpick>div{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}.cpick button{flex:0 0 auto;width:92px;border:2px solid var(--line);border-radius:12px;background:#fff;padding:4px;font:inherit;text-align:center;color:var(--mute)}.cpick button img,.cpick button i{display:block;width:100%;height:92px;object-fit:cover;border-radius:8px;background:#EFE9DF}.cpick button b{display:block;font-size:12.5px;color:var(--ink);margin-top:4px}.cpick button small{display:block;font-size:10.5px}.cpick button.on{border-color:var(--gold);background:var(--goldbg)}
 .crow .sw{display:flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
 .crow .sw button{border:0;background:#fff;padding:7px 11px;font:inherit;font-size:12.5px;font-weight:700;color:var(--mute)}
 .crow .sw button.on{background:var(--gold);color:#fff}
@@ -952,7 +953,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-31b';
+var VER = '2026-10-31c';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2105,13 +2106,32 @@ function catParse(){
     var mode = /comp|^c\b|كامل/.test(w) ? 'C' : /set|^s\b|طقم|اطقم|أطقم/.test(w) ? 'S' : (CAT.modes[key] || '');
     out.push({ no: key, mode: mode }); });
   CAT.items = out; setTimeout(catPrices, 0);
-  $('clist').innerHTML = out.map(function(it, i){ var b0 = it.no.split('-')[0], inR = designs.some(function(d){ return d.base === it.no || d.base === b0; });
-    var nAll = /-ALL$/.test(it.no) ? designs.filter(function(d){ return d.base === b0; }).length : 0;
-    return '<div class="crow"><span>SJ-' + (nAll ? b0 + ' <b>all</b>' : it.no) + ' <small style="font-weight:500;color:' + (inR ? 'var(--mute)' : '#9a3b1e') + '">' + (nAll ? nAll + ' cards in READY, each its own design' : inR ? 'in READY' : 'not in READY') + '</small></span><span class="sw">' +
-      '<button type="button" data-i="' + i + '" data-v="S" class="' + (it.mode === 'S' ? 'on' : '') + '">SETS</button><button type="button" data-i="' + i + '" data-v="C" class="' + (it.mode === 'C' ? 'on' : '') + '">COMPLETE</button></span></div>'; }).join('');
+  // 31 Oct 2026 (Abbas, 20 READY cards named 6668: "I only want to send 5, not all — I tried -1, -2, it did not work"): a row's number can be the
+  // app's own card name (6668 = newest card, 6668-2, 6668-3 … as the Stock tab shows them); under a number with several READY cards the cards
+  // appear as photo tiles — tap the ones to send (the lines above follow). "6668 all" still = every card.
+  var done = {};
+  $('clist').innerHTML = out.map(function(it, i){ var b0 = it.no.split('-')[0], inR = designs.some(function(d){ return d.no === it.no || d.base === it.no || d.base === b0; });
+    var dups = designs.filter(function(d){ return d.base === b0 && !d.sample; }).sort(function(x, y){ return x.id < y.id ? 1 : -1; }), nAll = /-ALL$/.test(it.no) ? dups.length : 0;
+    var own = dups.filter(function(d){ return d.no === it.no; })[0], lab2 = own && dups.length > 1 ? ' <small style="font-weight:500;color:var(--mute)">card ' + (dups.indexOf(own) + 1) + ' of ' + dups.length + ' · ' + (own.total || 0) + ' pcs</small>' : '';
+    var h = '<div class="crow"><span>SJ-' + (nAll ? b0 + ' <b>all</b>' : it.no) + (lab2 || ' <small style="font-weight:500;color:' + (inR ? 'var(--mute)' : '#9a3b1e') + '">' + (nAll ? nAll + ' cards in READY, each its own design' : inR ? 'in READY' : 'not in READY') + '</small>') + '</span><span class="sw">' +
+      '<button type="button" data-i="' + i + '" data-v="S" class="' + (it.mode === 'S' ? 'on' : '') + '">SETS</button><button type="button" data-i="' + i + '" data-v="C" class="' + (it.mode === 'C' ? 'on' : '') + '">COMPLETE</button></span></div>';
+    if (dups.length > 1 && !done[b0]) { done[b0] = 1; var all = out.some(function(x){ return x.no === b0 + '-ALL'; });
+      h += '<div class="cpick" data-b="' + esc(b0) + '"><small>' + dups.length + ' READY cards named ' + esc(b0) + ' — tap the ones to send · اختر البطاقات</small><div>' + dups.map(function(d){ var on = all || out.some(function(x){ return x.no === d.no; }), p = d.photos && (d.photos.filter(function(q){ return q.nums && q.nums.length; })[0] || d.photos[0]);
+        return '<button type="button" data-ck="' + esc(d.no) + '" class="' + (on ? 'on' : '') + '">' + (p && p.blob ? '<img src="' + p.blob + '" alt="">' : '<i data-cph="' + esc(d.no) + '"></i>') + '<b>' + esc(d.no) + '</b><small>' + (d.total || 0) + ' pcs · ' + (d.colours || []).length + ' col</small></button>'; }).join('') + '</div></div>'; }
+    return h; }).join('');
+  document.querySelectorAll('#clist i[data-cph]').forEach(function(e){ var d = designs.filter(function(x){ return x.no === e.dataset.cph; })[0], p = d && d.photos && (d.photos.filter(function(q){ return q.nums && q.nums.length; })[0] || d.photos[0]); if (!p) return;
+    getPhoto(p, true).then(function(u){ if (u && e.parentNode) { var im = document.createElement('img'); im.src = u; im.alt = ''; e.replaceWith(im); } }); });
 }
+// tap a card tile: its line joins / leaves the list (with the mode of its number's first line); "all" becomes the other cards' lines
+function catPick(key){ var b0 = key.split('-')[0], items = CAT.items || [], md = (items.filter(function(x){ return x.no.split('-')[0] === b0 && x.mode; })[0] || {}).mode || '';
+  var line = function(k){ return k + (md === 'C' ? ' complete' : md === 'S' ? ' sets' : ''); }, L = $('cnos').value.split(/[\n]+/).filter(function(x){ return x.trim(); });
+  var dups = designs.filter(function(d){ return d.base === b0 && !d.sample; }).map(function(d){ return d.no; }), isLine = function(t, k){ var m = t.match(/(\d{3,6})(?:\s*-\s*([A-Za-z0-9]{1,3}))?/); if (!m) return false; var kk = m[1] + (m[2] ? '-' + m[2].toUpperCase() : ''); if (!m[2] && (/\b(all|every|كل)\b/i.test(t) || t.indexOf('*') >= 0)) kk = m[1] + '-ALL'; return kk === k; };
+  if (L.some(function(t){ return isLine(t, b0 + '-ALL'); })) { L = L.filter(function(t){ return !isLine(t, b0 + '-ALL'); }).concat(dups.filter(function(k){ return k !== key; }).map(line)); }
+  else if (L.some(function(t){ return isLine(t, key); })) L = L.filter(function(t){ return !isLine(t, key); });
+  else L.push(line(key));
+  $('cnos').value = L.join('\n'); catParse(); }
 $('cnos').addEventListener('input', catParse);
-$('clist').addEventListener('click', function(e){ var b = e.target.closest('button[data-i]'); if (!b) return; var it = CAT.items[+b.dataset.i]; it.mode = b.dataset.v; CAT.modes[it.no] = it.mode;
+$('clist').addEventListener('click', function(e){ var ck = e.target.closest('button[data-ck]'); if (ck) { catPick(ck.dataset.ck); return; } var b = e.target.closest('button[data-i]'); if (!b) return; var it = CAT.items[+b.dataset.i]; it.mode = b.dataset.v; CAT.modes[it.no] = it.mode;
   $('cnos').value = CAT.items.map(function(x){ return x.no.replace(/-ALL$/, ' all') + (x.mode ? (x.mode === 'C' ? ' complete' : ' sets') : ''); }).join('\n'); catParse(); });
 function cst(cls, h){ var el = $('cst'); el.hidden = !h; el.className = 'stk ' + cls; el.innerHTML = h; }
 $('cmake').onclick = async function(){

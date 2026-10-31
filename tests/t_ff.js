@@ -4,7 +4,7 @@
 const { chromium } = require('playwright'); const http = require('http'); const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
 const DIR = path.join(__dirname, '..'), PW = 'test1234';
 function lock(obj) { const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12), key = crypto.pbkdf2Sync(PW, salt, 1000, 32, 'sha256'); const c = crypto.createCipheriv('aes-256-gcm', key, iv); const ct = Buffer.concat([c.update(JSON.stringify(obj)), c.final(), c.getAuthTag()]); return { salt: salt.toString('base64'), iv: iv.toString('base64'), iter: 1000, ct: ct.toString('base64') }; }
-const enc = lock({ updated: new Date().toISOString(), cards: [{ id: 'c1', idShort: 1, list: 'r', name: 'SJ-18634 (16) colour = (2) (8/8)', attachments: [] }] });
+const enc = lock({ updated: new Date().toISOString(), cards: [{ id: 'c1', idShort: 1, list: 'r', name: 'SJ-18634 (16) colour = (2) (8/8)', attachments: [] }, { id: 'c0', idShort: 2, list: 'r', name: 'SJ-18634 (40) colour = (5) (8/8/8/8/8)', attachments: [] }, { id: 'b9', idShort: 3, list: 'r', name: 'SJ-18634 (12) colour = (3) (4/4/4)', attachments: [] }] });   // 31 Oct 2026: three READY cards named 18634 → 18634 (newest, c1), 18634-2 (c0), 18634-3 (b9)
 const bills = lock({ bills: [{ ref: 'INV-0022', dev: 'd1', st: 'open', t: 1, date: '2026-10-21', name: 'Musalim', pcs: 21, sub: 2880, stock_ok: true,
   lines: [{ no: '18634', qty: 12, rate: 150, amount: 1800 }, { no: '18747', qty: 9, rate: 120, amount: 1080 }] },
   { ref: 'INV-0023', dev: 'd1', st: 'open', t: 2, date: '2026-10-22', name: 'Nasir', pcs: 60, sub: 7200, stock_ok: true,
@@ -58,9 +58,16 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0];
   ok('the catalogue request carries price 141 for SJ-18634 (' + JSON.stringify((CATS[0] || {}).items) + ')', CATS.length === 1 && CATS[0].prices === 1 && CATS[0].items.length === 1 && CATS[0].items[0].price === 141);
   await pg.reload(); await pg.waitForSelector('#feed .design:not([hidden])', { timeout: 15000 }); await catGo();
   ok('the tick is remembered after a reload', await pg.$eval('#cshowp', e => e.checked));
+  // 31 Oct 2026 (Abbas, 20 READY cards named 6668: "I only want 5 — -1, -2 did not work"): three cards named 18634 → tiles under the row; a tap
+  // adds that card's line (18634-2 sets), the row says which card it is, and the request carries 18634-2
+  ok('three cards named 18634 → 3 photo tiles to tap, the newest (plain 18634) ticked', (await pg.$$('#clist .cpick button[data-ck]')).length === 3 && (await pg.$$eval('#clist .cpick button.on', L => L.map(b => b.dataset.ck))).join() === '18634');
+  await pg.$eval('#clist button[data-ck="18634-2"]', e => e.click()); await pg.waitForTimeout(300);
+  ok('tap 18634-2 → its line joins the list with the same mode, tile ticked, row says "card 2 of 3 · 40 pcs"', /18634 sets\n18634-2 sets/.test(await pg.$eval('#cnos', e => e.value)) && (await pg.$$eval('#clist .cpick button.on', L => L.map(b => b.dataset.ck))).join() === '18634,18634-2' && /card 2 of 3 · 40 pcs/.test(await pg.$eval('#clist', e => e.textContent)));
+  await pg.$eval('#clist button[data-ck="18634"]', e => e.click()); await pg.waitForTimeout(300);
+  ok('tap the ticked 18634 → its line leaves; 18634-2 stays', (await pg.$eval('#cnos', e => e.value)).trim() === '18634-2 sets');
   await pg.$eval('#cshowp', e => { e.checked = false; e.dispatchEvent(new Event('change')); }); await pg.waitForTimeout(200);
   await pg.$eval('#cmake', e => e.click()); for (let k = 0; k < 40 && CATS.length < 2; k++) await pg.waitForTimeout(250);
-  ok('tick off: no price in the request', CATS.length === 2 && CATS[1].prices === 0 && CATS[1].items.every(x => x.price == null));
+  ok('tick off: no price in the request, and the request carries 18634-2', CATS.length === 2 && CATS[1].prices === 0 && CATS[1].items.every(x => x.price == null) && CATS[1].items.length === 1 && CATS[1].items[0].no === '18634-2');
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

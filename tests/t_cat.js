@@ -55,6 +55,16 @@ const resP = JSON.parse(fs.readFileSync(path.join(T, 'jobs/tp.json'))); const ht
 const artP = (htmlP.match(/<article class="design" data-no="57026"[\s\S]*?<\/article>/) || [''])[0], artN = (htmlP.match(/<article class="design" data-no="79623"[\s\S]*?<\/article>/) || [''])[0];
 ok('57026 sent with price 120 → "120 AED" under its design number', resP.ok && /<div class="price">120 AED<small>/.test(artP) && artP.indexOf('class="no">57026<') >= 0);
 ok('79623 sent without a price → no price shown, page still fine', !!artN && artN.indexOf('class="price"') < 0 && htmlP.indexOf('.head .price{') >= 0);
+// 31 Oct 2026 (Abbas, 20 READY cards named 6668: "I only want 5, -1 / -2 did not work"): 6668-2 = the 2nd newest READY card of that number
+// (the app's own name for it), when no card is titled 6668-2; a number past the last card is a clear error
+const envD = Object.assign({}, env, { REQ: JSON.stringify({ id: 'td', name: 'DUP TEST', items: [{ no: '6668-2', mode: 'S' }, { no: '6668-4', mode: 'S' }] }) });
+execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: envD });
+const resD = JSON.parse(fs.readFileSync(path.join(T, 'jobs/td.json'))); const htmlD = resD.ok ? fs.readFileSync(path.join(T, resD.page), 'utf8') : '';
+ok('6668-2 = the 2nd newest READY 6668 card (pcs67 → 67 pcs) and 6668-4 the 4th, on one page ' + JSON.stringify(resD.report || resD.error), resD.ok && /data-no="6668-2"/.test(htmlD) && /data-no="6668-4"/.test(htmlD) && (resD.report || []).some(l => /6668-2 = READY card no\. 2 of 5.*pcs67/.test(l)));
+const envE = Object.assign({}, env, { REQ: JSON.stringify({ id: 'te', name: 'DUP ERR', items: [{ no: '6668-9', mode: 'S' }] }) });
+execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: envE });
+const resE = JSON.parse(fs.readFileSync(path.join(T, 'jobs/te.json')));
+ok('6668-9 with only 5 cards → a clear error, no page', !resE.ok && /only 5 READY cards/.test(resE.error || ''));
 // sizes catalogue from an invoice: colours 2 and 5 billed → card numbers kept, others faded
 const env2 = Object.assign({}, env, { REQ: JSON.stringify({ id: 't2', kind: 'sizes', ref: 'INV-1', cust: 'X', items: [{ card: 'abc123abc123abc123abc101', no: '57026', c: 2, pcs: 4 }, { card: 'abc123abc123abc123abc101', no: '57026', c: 5, pcs: 2 }] }) });
 execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: env2 });

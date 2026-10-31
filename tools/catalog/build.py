@@ -271,7 +271,15 @@ def build(req):
             report.append('SJ-%s all: %d READY cards → %s_01 … %s_%02d' % (base, len(cands), base, base, len(cands)))
             if len(cands) > 8: novid.update('%s_%02d' % (base, i + 1) for i in range(len(cands))); flags.append('SJ-%s all: %d cards — videos left out (too many for one page); make a small catalogue for the ones that need the video.' % (base, len(cands)))
             continue
-        if suf: mine = [c for c in cands if re.search(r'\b%s\s*-\s*%s\b' % (base, re.escape(suf)), c['name'], re.I)]
+        if suf:
+            mine = [c for c in cands if re.search(r'\b%s\s*-\s*%s\b' % (base, re.escape(suf)), c['name'], re.I)]
+            # 31 Oct 2026 (Abbas, 20 READY cards named 6668: "I only want 5, I tried -1, -2, it did not work"): a plain number after the dash that
+            # no card title carries = the app's own naming — 6668 / 6668-1 = the newest READY card, 6668-2 the next, … (newest first, like uniq())
+            if not mine and suf.isdigit() and cands:
+                byage = sorted(cands, key=lambda c: c['id'], reverse=True); k = int(suf)
+                if 1 <= k <= len(byage):
+                    mine = [byage[k - 1]]; report.append('SJ-%s = READY card no. %d of %d (newest first): %s' % (no, k, len(byage), byage[k - 1]['name'][:40]))
+                else: errors.append('SJ-%s: there are only %d READY cards named %s (6668-2 = the 2nd newest).' % (no, len(byage), base)); continue
         else:
             plain = [c for c in cands if not re.search(r'\b%s\s*-\s*[A-Za-z0-9]{1,3}\b' % base, c['name'])]
             mine = plain or cands
