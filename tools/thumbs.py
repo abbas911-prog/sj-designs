@@ -31,6 +31,15 @@ def api_url(u):
 def derive(pw, salt):
     return hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, ITER, 32)
 
+def stale(att_id, want, now=None):
+    """31 Oct 2026 (Abbas, SJ-12151 sold: "why can't I see the photo, neither in the invoice nor in the order?"): a card's thumbnails used to be
+    deleted the minute it left READY / SAMPLES (sold), so orders and reopened bills lost their photos. Now a thumbnail that is no longer on the
+    lists is kept until its photo is 180 days old (the attachment id carries its upload time)."""
+    if att_id in want: return False
+    try: made = int(att_id[:8], 16)
+    except ValueError: return True
+    return (now or datetime.datetime.now(datetime.timezone.utc).timestamp()) - made > 180 * 86400
+
 def publish(cards):
     """Write memo-data.enc only when the list content changed (so there is no commit every 20 min for nothing)."""
     if not PASSWORD:
@@ -91,7 +100,7 @@ def main():
                     print('fail', c['name'][:30], a['id'], type(e).__name__, str(e)[:80], file=sys.stderr)
             else:
                 failed += 1
-    gone = [f for f in os.listdir(OUT) if f.endswith('.jpg') and f[:-4] not in want]
+    gone = [f for f in os.listdir(OUT) if f.endswith('.jpg') and stale(f[:-4], want)]
     for f in gone:
         os.remove(os.path.join(OUT, f))
     publish(cards)

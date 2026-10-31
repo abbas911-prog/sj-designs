@@ -34,7 +34,7 @@ function relay(b) { const req = JSON.parse(b.req);
   }
   if (b.job === 'stock') return { ok: true };
   return { ok: false, error: 'not in test ' + b.job + ' ' + req.op }; }
-const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^\/(thumbs|keep)\/.*\.jpg$/.test(u)) { rs.setHeader('content-type', 'image/jpeg'); return rs.end(PH); } if (u === '/memo-data.enc') { rs.setHeader('content-type', 'application/json'); return rs.end(JSON.stringify(enc)); } const f = path.join(DIR, u === '/' ? 'memo.html' : u.slice(1)); if (fs.existsSync(f) && fs.statSync(f).isFile()) { rs.setHeader('content-type', 'text/html'); return rs.end(fs.readFileSync(f)); } rs.statusCode = 404; rs.end('nf'); });
+const HIT = {}; const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^\/(thumbs|keep)\/.*\.jpg$/.test(u)) { HIT[u] = (HIT[u] || 0) + 1; rs.setHeader('content-type', 'image/jpeg'); return rs.end(PH); } if (u === '/memo-data.enc') { rs.setHeader('content-type', 'application/json'); return rs.end(JSON.stringify(enc)); } const f = path.join(DIR, u === '/' ? 'memo.html' : u.slice(1)); if (fs.existsSync(f) && fs.statSync(f).isFile()) { rs.setHeader('content-type', 'text/html'); return rs.end(fs.readFileSync(f)); } rs.statusCode = 404; rs.end('nf'); });
 
 (async () => {
   await new Promise(r => srv.listen(0, r)); const URL0 = 'http://localhost:' + srv.address().port + '/memo.html';
@@ -61,6 +61,8 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^
   await pg.click('#sendc'); await pg.waitForTimeout(3500);
   const oid = Object.keys(ORDS).find(k => k !== 'oold');
   ok('the order now has 14 designs', ORDS[oid].items.length === 14 && (await pg.$$('#ccbody .optile img')).length === 14);
+  // 31 Oct 2026 (Abbas, SJ-12151 sold: "why can't I see the photo in the order?"): every order line remembers its photo (attachment id)
+  ok('every order line carries its photo id (ph)', ORDS[oid].items.every(x => /^a\d+$/.test(x.ph || '')));
   if (!(await pg.$('#ccbody details.ofull'))) { await pg.click('[data-ofold]'); } await pg.waitForTimeout(2500);
   const p2 = await pic(); ok('after adding designs, the picture shows ALL 14 (3 columns × 5 rows, drawn again) ' + JSON.stringify(p2), p2 && p2.src === 'blob:' && p2.w === 1200 && p2.h >= 1500);
   // the bill goes out as photos
@@ -83,6 +85,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^
   // more designs → OK → Invoice keeps the SAME number; opening the order again shows the new designs; Make bill again = same number, all designs
   const openOrd = async id => { for (let k = 0; k < 6; k++) { await pg.$eval('#nav [data-nv="orders"]', e => e.click()); await pg.waitForSelector('[data-ot="' + id + '"]', { timeout: 15000 }); await pg.waitForTimeout(400); await pg.$eval('[data-ot="' + id + '"]', e => e.click());
     if (await pg.waitForFunction(() => !document.querySelector('#cc').hidden && document.querySelector('[data-ofold]'), null, { timeout: 3000 }).then(() => true, () => false)) return; } };
+  ORDS.ogone = { id: 'ogone', name: 'GONE', created: Date.now() - 7200000, items: [{ no: '99999', pcs: 4, c: 'C1 4', ph: 'zz1' }], pcs: 4, steps: {} };   // a design sold since (not in READY), photo remembered
   const NO = 'oadd'; ORDS[NO] = { id: NO, name: 'NASSER', created: Date.now() - 3600000, items: [{ no: '30001', pcs: 8, c: 'C1 8' }, { no: '30002', pcs: 8, c: 'C1 8' }], pcs: 16, steps: {} };
   BILLS['ORD-' + NO] = { ref: 'ORD-' + NO, type: 'or', status: 'draft', data: JSON.stringify({ k: 'or', name: 'NASSER', state: { '30001:1': { pcs: 8, sets: 0, all: false }, '30002:1': { pcs: 8, sets: 0, all: false } }, prices: { '30001': 100, '30002': 100 } }) };
   await pg.evaluate(() => { localStorage.removeItem('sj_oid'); }); await pg.reload(); await pg.waitForSelector('#feed .design', { timeout: 15000 }); await pg.evaluate(() => { window.confirm = () => true; });
@@ -103,6 +106,9 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^
   const p3 = await pic(); ok('…and its picture shows the 4 designs (2 columns × 2 rows) ' + JSON.stringify(p3), p3 && p3.src === 'blob:' && p3.w === 920);
   await pg.$eval('[data-obill="new"]', e => e.click()).catch(() => {}); await pg.waitForTimeout(1500);
   const r3 = await pg.evaluate(() => (__sj.B().inv || {}).ref);
+  await openOrd('ogone'); await pg.waitForTimeout(1500);
+  ok('a design no longer in READY still shows its photo tile from the remembered id', (await pg.$$eval('#ccbody .optile img', L => L.map(i => i.src))).some(u => /thumbs\/zz1\.jpg|^blob:/.test(u)) && (HIT['/thumbs/zz1.jpg'] || 0) >= 1 && !(await pg.$('#ccbody .optile i')));
+  await openOrd(NO);
   ok('Make bill from this order again: still ' + r1 + ' (got ' + r3 + '), with all 4 designs', r3 === r1 && (await pg.evaluate(() => new Set(Object.keys(__sj.st()).map(k => k.split(':')[0])).size)) === 4);
   // 30 Oct 2026 (Abbas: "we just made a new order for Nawroz — it's not showing in ORDERS"): the phone stayed linked to the last order it worked on
   // (NASSER, from Make bill) until Clear; a new customer's memo then UPDATED that order instead of making a new one
@@ -122,6 +128,11 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (/^
   await pg.evaluate(() => { __sj.B().inv = null; }); await pg.$eval('#mode button[data-m="inv"]', e => e.click()); await pg.waitForTimeout(600);
   for (const i of await pg.$$('#bform input[data-p]')) await i.fill('100'); await pg.waitForTimeout(900);
   await pg.$eval('#dinc', e => e.click()); await pg.waitForTimeout(4000);
+  ok('the sold lines remember their photo (ph / qi / n)', await pg.evaluate(() => { const d = __sj.B().inv || {}; return Array.isArray(d.sold) && d.sold.length > 0 && d.sold.every(l => /^a\d+$/.test(l.ph) && l.n >= 1); }));
+  // a typed line of a sold-out design keeps its photo on the drawn bill (the thumbnail is fetched by its id)
+  await pg.evaluate(() => { const d = __sj.B().inv; d.man = (d.man || []).concat([{ d: 'SJ-GONE · C1 2 pcs', q: '2', r: '50', fz: 'gone', ph: 'zz2', qi: 0, n: 1 }]); __sj.setMode('inv'); });
+  for (let k = 0; k < 40 && !HIT['/thumbs/zz2.jpg']; k++) await pg.waitForTimeout(250);
+  ok('the bill drawing fetches the sold-out design\'s photo by its id', (HIT['/thumbs/zz2.jpg'] || 0) >= 1);
   ok('a NAWROZ bill does not tick "Bill made" on NASSER\'s order', await pg.evaluate(id => { const d = __sj.B().inv || {}; return d.status === 'included' && d.oid !== id; }, NO) && ORDS[NO].bill !== (await pg.evaluate(() => (__sj.B().inv || {}).ref)) && !(ORDS[NO].steps || {}).bill);
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
