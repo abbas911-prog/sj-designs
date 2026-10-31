@@ -1,0 +1,17 @@
+{
+ "ok": false,
+ "error": "SJ-6668-1 is not in READY on Trello. (cards with this number: Sj = 6668(40pcs) 5 colors.    , Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     ) SJ-6668-2 is not in READY on Trello. (cards with this number: Sj = 6668(40pcs) 5 colors.    , Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     ) SJ-6668-3 is not in READY on Trello. (cards with this number: Sj = 6668(40pcs) 5 colors.    , Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     ) SJ-6668-4 is not in READY on Trello. (cards with this number: Sj = 6668(40pcs) 5 colors.    , Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     ) SJ-24719-1 is not in READY on Trello. (cards with this number: SJ = **24719** (30) pcs ,,, co, SJ = **24719** (90) pcs ,,, co, SJ = **24719** (125) pcs ,, co) SJ-24719-2 is not in READY on Trello. (cards with this number: SJ = **24719** (30) pcs ,,, co, SJ = **24719** (90) pcs ,,, co, SJ = **24719** (125) pcs ,, co)",
+ "errors": [
+  "SJ-6668-1 is not in READY on Trello. (cards with this number: Sj = 6668(40pcs) 5 colors.    , Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     )",
+  "SJ-6668-2 is not in READY on Trello. (cards with this number: Sj = 6668(40pcs) 5 colors.    , Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     )",
+  "SJ-6668-3 is not in READY on Trello. (cards with this number: Sj = 6668(40pcs) 5 colors.    , Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     )",
+  "SJ-6668-4 is not in READY on Trello. (cards with this number: Sj = 6668(40pcs) 5 colors.    , Sj 6668 (70 pcs) 5 colors.    , Sj 6668 (65pcs) 5 colors.     )",
+  "SJ-24719-1 is not in READY on Trello. (cards with this number: SJ = **24719** (30) pcs ,,, co, SJ = **24719** (90) pcs ,,, co, SJ = **24719** (125) pcs ,, co)",
+  "SJ-24719-2 is not in READY on Trello. (cards with this number: SJ = **24719** (30) pcs ,,, co, SJ = **24719** (90) pcs ,,, co, SJ = **24719** (125) pcs ,, co)"
+ ],
+ "report": [
+  "SJ-6668 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-24719 COMPLETE  24+24+27+25+22 = 122 ✓ (card: 122) → 6 complete sets + 2 pcs"
+ ],
+ "id": "cmvwpzit5xis3"
+}
