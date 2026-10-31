@@ -43,7 +43,7 @@ def api_url(u):
 # ---------- reading Trello ----------
 def ready_cards():
     if LOCAL: return json.load(open(os.path.join(LOCAL, 'cards.json')))
-    q = urllib.parse.urlencode({'fields': 'name,idShort', 'attachments': 'true',
+    q = urllib.parse.urlencode({'fields': 'name,idShort,pos', 'attachments': 'true',
                                 'attachment_fields': 'id,name,mimeType,date,url,bytes', 'key': KEY, 'token': TOKEN})
     return json.loads(get(f'https://api.trello.com/1/lists/{READY}/cards?{q}'))
 
@@ -242,7 +242,7 @@ def opts(p, unit):
 def build(req):
     name = re.sub(r'\s+', ' ', str(req.get('name', ''))).strip().upper()[:60]
     sub = re.sub(r'\s+', ' ', str(req.get('country', ''))).strip().upper()[:40]
-    items, seen, PRICEIN = [], set(), {}   # 31 Oct 2026 (Abbas: "an option to include the prices inside the catalogue with the design, like a tick"): price per design, optional
+    items, seen, PRICEIN, it_card = [], set(), {}, {}   # 31 Oct 2026 (Abbas: "an option to include the prices inside the catalogue with the design, like a tick"): price per design, optional
     for it in req.get('items', []):
         # 17 Oct 2026 (Abbas: "6668 and 6668-1 ... it only gives me one design"): a suffix after the number names a different card
         mm = re.match(r'\s*(?:SJ|SH)?\s*[-=:]*\s*(\d{3,6})\s*(?:-\s*([A-Za-z0-9]{1,3}))?', str(it.get('no', '')), re.I)
@@ -252,6 +252,7 @@ def build(req):
         # number, each as its own design 6668_01, 6668_02 … (oldest card first, so the numbers stay the same next time)
         if not mm.group(2) and (re.search(r'\b(all|every|كل)\b', str(it.get('no', '')), re.I) or '*' in str(it.get('no', ''))): no = mm.group(1) + '-ALL'
         if no not in seen: seen.add(no); items.append((no, 'C' if str(it.get('mode', 'S')).upper().startswith('C') else 'S'))
+        if it.get('card'): it_card[no] = str(it.get('card'))
         try:
             pr = float(str(it.get('price', '') or '').replace(',', ''))
             if pr > 0: PRICEIN[no] = pr
@@ -271,15 +272,18 @@ def build(req):
             report.append('SJ-%s all: %d READY cards → %s_01 … %s_%02d' % (base, len(cands), base, base, len(cands)))
             if len(cands) > 8: novid.update('%s_%02d' % (base, i + 1) for i in range(len(cands))); flags.append('SJ-%s all: %d cards — videos left out (too many for one page); make a small catalogue for the ones that need the video.' % (base, len(cands)))
             continue
-        if suf:
+        picked = [c for c in cands if c['id'] == str(it_card.get(no, ''))]   # the app sends the card it showed as a tile — never ambiguous
+        if picked: mine = picked; report.append('SJ-%s = the READY card picked in the app: %s' % (no, picked[0]['name'][:40]))
+        elif suf:
             mine = [c for c in cands if re.search(r'\b%s\s*-\s*%s\b' % (base, re.escape(suf)), c['name'], re.I)]
-            # 31 Oct 2026 (Abbas, 20 READY cards named 6668: "I only want 5, I tried -1, -2, it did not work"): a plain number after the dash that
-            # no card title carries = the app's own naming — 6668 / 6668-1 = the newest READY card, 6668-2 the next, … (newest first, like uniq())
+            # 31 Oct 2026 (Abbas, 20 READY cards named 6668: "I only want 5; -1, -2 did not work" → "if it's one I write one, if it's two it's
+            # the one below"): a plain number after the dash that no card title carries counts FROM THE TOP of the READY list — 6668-1 = the
+            # first 6668 card from the top, 6668-2 the one below it … (Trello's own order, `pos`)
             if not mine and suf.isdigit() and cands:
-                byage = sorted(cands, key=lambda c: c['id'], reverse=True); k = int(suf)
-                if 1 <= k <= len(byage):
-                    mine = [byage[k - 1]]; report.append('SJ-%s = READY card no. %d of %d (newest first): %s' % (no, k, len(byage), byage[k - 1]['name'][:40]))
-                else: errors.append('SJ-%s: there are only %d READY cards named %s (6668-2 = the 2nd newest).' % (no, len(byage), base)); continue
+                bytop = sorted(cands, key=lambda c: (c.get('pos') is None, c.get('pos') or 0)); k = int(suf)
+                if 1 <= k <= len(bytop):
+                    mine = [bytop[k - 1]]; report.append('SJ-%s = READY card no. %d of %d from the top: %s' % (no, k, len(bytop), bytop[k - 1]['name'][:40]))
+                else: errors.append('SJ-%s: there are only %d READY cards named %s (6668-2 = the 2nd from the top of READY).' % (no, len(bytop), base)); continue
         else:
             plain = [c for c in cands if not re.search(r'\b%s\s*-\s*[A-Za-z0-9]{1,3}\b' % base, c['name'])]
             mine = plain or cands
