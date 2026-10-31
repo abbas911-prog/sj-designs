@@ -273,7 +273,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-30a';
+var VER = '2026-10-31a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -1025,7 +1025,7 @@ async function mvSend(m){ MVD[m.id] = { to: m.to, until: Date.now() + 25000 }; i
   if (!j.ok && !j.moved && (m.tries = (m.tries || 0) + 1) <= 9) { MVD[m.id].until = Date.now() + 25000; if (m.tries === 1) toast('⏳ ' + (m.no ? 'SJ-' + m.no + ' ' : '') + 'move waits for the line… · লাইন ফিরলে পাঠানো হবে'); setTimeout(function(){ mvSend(m); }, 10000); return; }
   MVR = Math.max(0, MVR - 1);
   if (!j.ok) { delete MVD[m.id]; var c = D.byId[m.id]; if (c) c.l = m.from; if (open && open.id === m.id) { open.l = m.from; paintCard(); } draw(); toast('✗ ' + (m.no ? 'SJ-' + m.no + ' ' : '') + j.error); if (j.moved) load(false); return; }
-  MVD[m.id] = { to: m.to, until: Date.now() + 25000 };
+  MVD[m.id] = { to: m.to, until: Date.now() + 25000 }; hotAdd(m.id, (Date.now() / 1000).toFixed(6));
   setTimeout(thPull, 800); setTimeout(function(){ load(false); }, 1200);
   if (/^(FINISH|FINISH SAMPLES)$/.test(m.name)) setTimeout(function(){ call({ op: 'reportauto', card: m.id, who: WHO }).then(function(){ if (open && open.id === m.id) { TH.force = true; thPull(); } }); }, 1500);   // 21 Oct 2026: the production report (the relay posts it once)
 }
@@ -1266,7 +1266,9 @@ async function oload(){ var d = await odb(); if (!d) return; await new Promise(f
 function outLabel(it){ return (it.text ? it.text + (it.files.length ? '\n' : '') : '') + it.files.map(function(x){ return x.kind === 'audio' ? '🎤 voice note' : x.kind === 'photo' ? '📷 photo' : x.kind === 'video' ? '🎬 video' : '📎 ' + x.name; }).join(' · '); }
 function outAdd(c, text, files){ var it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 10), card: c.id, cname: c.dm ? c.title : (parse(c.name).no ? 'SJ-' + parse(c.name).no : String(c.name || '').slice(0, 30)), text: text || '', files: files || [], who: WHO, at: Date.now(), tries: 0, err: '' };
   OUT.push(it); oput(it); outPaint(); outRun(); return it; }
-function outPaint(){ var el = $('outbar'), n = OUT.length, bad = OUT.filter(function(x){ return x.tries >= 3; }); if (bad.length) n = bad.length;   // 30 Oct 2026: the banner counts the stuck ones (others are on their way)
+var UPNOW = null; setInterval(function(){ if (UPNOW) outPaint(); }, 15000);
+function outPaint(){ if (UPNOW) { var ue = $('outbar'), um = Math.floor((Date.now() - UPNOW.t0) / 60000); ue.hidden = false; ue.className = ''; ue.innerHTML = '📤 Uploading ' + (UPNOW.kind === 'video' ? 'a video' : 'files') + ' · ' + mb(UPNOW.size) + ' · ' + (um ? um + ' min' : 'just started') + '<small>' + esc(UPNOW.cname || '') + ' — keep this app open and the phone awake until it is done · অ্যাপ খোলা রাখুন, শেষ না হওয়া পর্যন্ত</small>'; if (TH.card && !$('card').hidden && !playing()) thDraw(); return; }
+  var el = $('outbar'), n = OUT.length, bad = OUT.filter(function(x){ return x.tries >= 3; }); if (bad.length) n = bad.length;   // 30 Oct 2026: the banner counts the stuck ones (others are on their way)
   if (!n) { el.hidden = true; } else { el.hidden = false; el.className = bad.length ? 'bad' : ''; el.innerHTML = (bad.length ? '⚠ ' + n + ' message' + (n > 1 ? 's' : '') + ' not sent yet — ' + (bad[0].tries >= 5 ? 'tap to try again' : 'trying again · tap') : '📤 Sending ' + n + ' message' + (n > 1 ? 's' : '') + '… · পাঠানো হচ্ছে') + '<small>' + esc(OUT.map(function(x){ return x.cname; }).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(' · ')) + (bad.length && bad[0].err ? ' — ' + esc(bad[0].err) : '') + '</small>'; }
   if (TH.card && !$('card').hidden && !playing()) thDraw(); }
 $('outbar').onclick = function(){ var it = OUT[0]; if (!it) return; outRun(true); var c = D.byId[it.card]; if (c) openCard(c); };
@@ -1280,7 +1282,9 @@ async function outOne(it){
       if (fj && fj.ok) return fj; if (!fj && !(FAST.fail || {}).quick) return { ok: false, error: 'no answer from the fast lane - trying again' }; }   // no answer after a wait: maybe sent - only the fast lane (once-only id) is asked again; refused at once (offline worker): the relay sends it
     return await call({ op: 'post', card: it.card, text: it.text, who: it.who, rid: it.id }); }
   var tot = it.files.reduce(function(a, x){ return a + x.blob.size; }, 0), labels = it.files.map(function(x){ return x.name; });
-  if (!it.fids) { try { it.fids = await slackDirect(it.files, null, it.card); it.derr = ''; oput(it); } catch(e){ it.fids = null; it.derr = upWhy(e, tot); } }      // originals straight to Slack (full quality)
+  if (!it.fids) { var big = tot > 18 * 1024 * 1024, wl = null; if (big) { UPNOW = { size: tot, t0: Date.now(), cname: it.cname, kind: it.files.some(function(x){ return x.kind === 'video'; }) ? 'video' : 'file' }; outPaint(); try { if (navigator.wakeLock) wl = await navigator.wakeLock.request('screen'); } catch(e){} }   // 31 Oct 2026: a big upload keeps the screen awake and says "keep the app open" (Android stopped it when the phone slept)
+    try { it.fids = await slackDirect(it.files, null, it.card); it.derr = ''; oput(it); } catch(e){ it.fids = null; it.derr = upWhy(e, tot); }
+    finally { if (big) { UPNOW = null; try { if (wl) wl.release(); } catch(e){} outPaint(); } } }      // originals straight to Slack (full quality)
   if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.fset || 0) }); if (j.ok || tot > 18 * 1024 * 1024) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; it.fset = (it.fset || 0) + 1; oput(it); } }   // 20 Oct 2026: the same once-only id on every retry of the same upload (it used to change each try, so an answer lost on a weak line could post the photos twice)
   if (tot > 18 * 1024 * 1024) return { ok: false, error: it.derr || 'Slack did not take the upload (' + mb(tot) + ')' };
   var files = []; for (var i = 0; i < it.files.length; i++) files.push({ name: it.files[i].name, b64: await b64of(it.files[i].blob) });
@@ -1297,7 +1301,7 @@ async function outRun(now){
     for (var i = 0; i < list.length; i++) { var it = list[i], j = null, tnow = Date.now(); if (OUT.indexOf(it) < 0) continue;
       if (!now && it.next && it.next > tnow) continue; if (!now && obig(it) && it.tries >= 5) continue;
       try { j = await outOne(it); } catch(e){ j = { ok: false, error: e.message }; }
-      if (j && j.ok) { var k = OUT.indexOf(it); if (k >= 0) OUT.splice(k, 1); odel(it.id);
+      if (j && j.ok) { var k = OUT.indexOf(it); if (k >= 0) OUT.splice(k, 1); odel(it.id); hotAdd(it.card, j.ts || (Date.now() / 1000).toFixed(6));
         if (!it.files.length && j.ts) { var real = { ts: j.ts, who: it.who, app: true, text: it.text, files: [] }; THC[it.card] = (THC[it.card] || []).concat([real]); thcSave(); if (TH.card && TH.card.id === it.card && !TH.msgs.some(function(m){ return m.ts === j.ts; })) TH.msgs.push(real); }
         else { it.done = Date.now(); SENT.push(it); }                 // files: shown as "✓ sent" until the chat brings the real message
         outPaint(); if (TH.card && TH.card.id === it.card) { TH.force = true; setTimeout(thPull, 300); setTimeout(function(){ TH.force = true; thPull(); }, 4000); } continue; }
@@ -1535,8 +1539,12 @@ document.querySelector('.mono').onclick = function(){ if (confirm('Sign out on t
 // home screen and every 12 s inside a card; the full card list every 30 s; and at once when the app comes back to the front.
 var POLLN = 0, PINGING = false, LASTTOT = -1;
 var PAGAIN = false;
+// 31 Oct 2026: chats this phone saw change (its own fast-lane sends, the doorbell) - told to the relay with the next ping / list, so a chat whose
+// thread is older than the relay's 400-post window still counts as new for everybody (relay facHotAdd)
+var HOTQ = {}; function hotAdd(cid, ts){ if (!/^[0-9a-f]{24}$/.test(String(cid || '')) || !/^\d+(\.\d+)?$/.test(String(ts || ''))) return; if (!(+HOTQ[cid] >= +ts)) HOTQ[cid] = String(ts); }
+function hotTake(){ var h = HOTQ; HOTQ = {}; return Object.keys(h).length ? h : undefined; } function hotBack(h){ if (h) Object.keys(h).forEach(function(k){ hotAdd(k, h[k]); }); }
 async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now() - PINGING < 30000) { PAGAIN = true; return; } PINGING = Date.now(); PAGAIN = false;
-  var j = await call({ op: 'ping', fresh: fresh ? 1 : 0 }); PINGING = 0; if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
+  var hq = hotTake(), j = await call({ op: 'ping', fresh: fresh ? 1 : 0, hot: hq }); PINGING = 0; if (!j || !j.ok) hotBack(hq); if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
   D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.lais !== undefined) D.lais = j.lais; if (j.rooms !== undefined) { D.rooms = j.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (j.lo !== undefined) { D.lo = j.lo || []; loSync(); } if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); if (j.rv) rvSet(j.rv); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; draw(); alertNew(); liveMark(); prefetch(); }
 // 15 Oct 2026 (Abbas: "you see how long it is taking refreshing? I run a business - when a message comes I want it as instant as possible, without
@@ -1599,7 +1607,7 @@ async function liveFetch(cid){ if (!fastOn() || cid === 'lais') return; var room
   var j = await fast(room ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (!j || !j.ok || !j.msgs) return;
   var hv = {}; have.forEach(function(m){ hv[m.ts] = 1; }); var add = j.msgs.filter(function(m){ return /^\d+\.\d+$/.test(m.ts) && !hv[m.ts]; }); if (!add.length) return;
   if (open && (open.id === cid || (cid === 'dm' && open.dm))) return;
-  THC[cid] = have.concat(add); var news = add.filter(function(m){ return (!m.sys || noteOf(m)) && !isMe(m) && +m.ts > Date.now() / 1000 - 180; });
+  THC[cid] = have.concat(add); hotAdd(cid, add[add.length - 1].ts); var news = add.filter(function(m){ return (!m.sys || noteOf(m)) && !isMe(m) && +m.ts > Date.now() / 1000 - 180; });
   if (news.length) { var u = (D.th = D.th || {})[cid] || {}, nl = news[news.length - 1];
     if (!(+u.last >= +nl.ts)) { var t = String(nl.text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(); if (!t && (nl.files || []).length) t = nl.files.map(function(f){ return f.audio ? '🎤 voice note' : f.img ? '📷 photo' : f.video ? '🎬 video' : '📎 ' + f.name; }).join(' · ');
       D.th[cid] = { n: (u.n || 0) + news.length, last: nl.ts, tx: (nl.who ? nl.who + ': ' : '') + t.slice(0, 160) }; draw(); alertNew(); } }
@@ -1647,7 +1655,7 @@ if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } 
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, mvr: function(){ return MVR; }, wdTxt: wdTxt, outRun: outRun };
+window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, hotq: function(){ return HOTQ; }, mvr: function(){ return MVR; }, wdTxt: wdTxt, outRun: outRun };
 })();
 </script>
 </body></html>

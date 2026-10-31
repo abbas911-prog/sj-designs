@@ -99,8 +99,26 @@ async function suite(fast, browser) {
         ok(/line dropped during the upload \(19 MB\)/.test(await page.textContent('#thread .msg.out.bad')), 'the real reason is shown: ' + (await page.textContent('#thread .msg.out.bad')));
         await page.click('#thread .msg.out.bad .orm'); await until(() => page.evaluate(() => window.__f.OUT.length === 0), 5000, 'removed from the outbox');
         ok(!W.slack.ch[CUT].msgs.some(m => (m.files || []).some(f => /VID_2026/.test(f.name || ''))), 'the video was never posted');
-      } finally { T.uploadDown = false; }
+        T.uploadDown = false; T.uploadSlow = 4000;   // 31 Oct 2026: while a big video uploads, the bar says so and asks to keep the app open
+        await page.setInputFiles('#afiles', { name: 'VID_2027.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(19 * 1024 * 1024, 8) }); await page.click('#send');
+        await until(async () => /Uploading a video · 19 MB/.test(await page.textContent('#outbar')) && /keep this app open/.test(await page.textContent('#outbar')), 8000, 'upload bar with keep-open note');
+        await until(() => W.slack.ch[CUT].msgs.some(m => (m.files || []).some(f => /VID_2027/.test(f.name || ''))), 30000, 'the video reached Slack');
+      } finally { T.uploadDown = false; T.uploadSlow = 0; }
       await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
+    });
+    await test('a chat whose thread is older than the newest 400 posts still shows NEW and Catch up when someone writes in it', async () => {   // 31 Oct 2026
+      const old = F.addCard(W, CUTTING, 'SJ-24680 (10) pcs old chat'), r0 = F.postSlack(W, CUT, { text: '🧵 SJ-24680\n' + old.shortUrl, bot_id: 'B1' });
+      T.relay.P['FTH_' + old.id] = JSON.stringify({ ch: CUT, ts: r0.ts });
+      for (let i = 0; i < 420; i++) F.postSlack(W, CUT, { text: 'order post ' + i, bot_id: 'B1' });    // 420 newer top-level posts push its root out of the window
+      await page.evaluate(() => window.__f.load(true)); await page.waitForTimeout(500);
+      const r = F.postSlack(W, CUT, { text: '*Md Ibrahim:* colour 3 is finished', bot_id: 'B1', thread_ts: r0.ts });   // written from the employee's phone through the fast lane: the relay never saw it
+      await page.evaluate(([id, ts]) => { const h = window.__f.hotq(); h[id] = ts; }, [old.id, r.ts]);          // what that phone (or the doorbell) tells the relay with its next ping
+      await page.evaluate(() => window.__f.ping(true));
+      await until(() => page.evaluate(id => !!(window.__f.D.th[id] && window.__f.D.th[id].n), old.id), 15000, 'NEW on the old chat after the ping');
+      await page.waitForTimeout(5000); await page.evaluate(() => window.__f.ping(false)); await page.waitForTimeout(1500);
+      ok(await page.evaluate(id => !!(window.__f.D.th[id] && window.__f.D.th[id].n), old.id), 'still NEW after the next ordinary ping (the relay keeps it)');
+      ok(/colour 3 is finished/.test((await page.evaluate(id => window.__f.D.th[id].tx, old.id)) || ''), 'the line is in the new-messages box');
+      await openCardNo(page, '24680'); await until(async () => /colour 3 is finished/.test(await page.textContent('#thread')), 10000, 'the line in the chat'); await page.waitForTimeout(2500); await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000); await page.fill('#q', '');
     });
     await test('Undo: Done moves on screen at once, Trello only after 5 s; Undo sends nothing', async () => {
       await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '48188');
@@ -456,6 +474,7 @@ async function suite(fast, browser) {
       F.postSlack(W, CUT, { text: 'catch me 1', user: 'U1', thread_ts: W.rootB });
       F.postSlack(W, CUT, { text: 'catch me 2', user: 'U1', thread_ts: W.rootL });
       T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));
+      T.relay.post(JSON.stringify({ type: 'event_callback', fw: 1, event_id: 'EL' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootL, ts: F.slackTs() } }));   // 31 Oct 2026: Slack pushes every message (the worker passes it on to the relay)
       await page.click('#tabs button[data-t="chats"]');
       await until(async () => await page.locator('#bcatch2').isVisible() && /2 new/.test(await page.textContent('#bcatch2')), 20000, 'Catch up · 2 new');
       await page.click('#bcatch2'); await page.waitForSelector('#card:not([hidden])');

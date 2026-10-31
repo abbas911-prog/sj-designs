@@ -78,6 +78,9 @@ async function slackEvent(req, url, ctx) {
   if (t && b.type === 'event_callback' && ev.type === 'message' && !req.headers.get('x-slack-retry-num')) {
     const ch = String(ev.channel || '').replace(/[^A-Z0-9]/g, ''), ts = String(ev.thread_ts || (ev.message && ev.message.thread_ts) || (ev.previous_message && ev.previous_message.thread_ts) || ev.ts || '').replace(/[^\d.]/g, '');
     ctx.waitUntil(fetch('https://ntfy.sh/' + t, { method: 'POST', body: 's:' + ch + ':' + ts, headers: { Cache: 'no', Firebase: 'no' } }).catch(() => {}));
+    // 31 Oct 2026: the relay is told too (channel + thread + message time only), so a line written in an old card chat counts as new for Catch up
+    const mts = String(ev.ts || ev.event_ts || '').replace(/[^\d.]/g, '');
+    ctx.waitUntil(fetch(RELAY, { method: 'POST', redirect: 'manual', body: JSON.stringify({ type: 'event_callback', fw: 1, event_id: String(b.event_id || '').slice(0, 40), event: { type: 'message', channel: ch, thread_ts: ts, ts: mts } }) }).catch(() => {}));
   }
   return new Response('ok');
 }

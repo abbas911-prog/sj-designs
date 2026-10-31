@@ -35,7 +35,7 @@ function doPost(e) {
     // 15 Oct 2026: Slack's Event Subscriptions point here. The event is only a nudge ("something was written in a channel"): it makes every
     // phone's next poll re-read Slack at once. Nothing in it is trusted or stored, so a fake one can only cause an extra re-read.
     if (b.type === 'url_verification' && b.challenge) return ContentService.createTextOutput(String(b.challenge)).setMimeType(ContentService.MimeType.TEXT);
-    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') facNudge(P, facCardOf(P, evc)); } catch (x) {} try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { var evm = b.event || {}; if (evm.type === 'message' && evm.channel === CC_CH) { var cEE = CacheService.getScriptCache(); cEE.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEE, 'CC_HIST'); var rk = ''; try { var hh = ccHist(P.getProperty('SLACK_BOT_TOKEN'), true).filter(function (m) { return m.ts === (evm.thread_ts || evm.ts); })[0]; rk = hh ? ccKey(ccName(hh.text)) : ''; } catch (x) {} ccNudge(P, rk); if (evm.thread_ts) ccNudge(P, 'O' + evm.thread_ts); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel === GD_CH) { var cEG = CacheService.getScriptCache(); cEG.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEG, 'GD_HIST'); ccNudge(P, 'G' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && dmIsCh(P, evm.channel)) { var cED = CacheService.getScriptCache(); cED.put('CC_EV_AT', String(Date.now()), 900); cED.remove('DM_HIST_' + evm.channel); ccNudge(P, 'D' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
+    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') { var evcid = facCardOf(P, evc); if (!b.fw) facNudge(P, evcid); if (/^[0-9a-f]{24}$/.test(evcid || '') && evc.ts) { var evh = {}; evh[evcid] = String(evc.ts); facHotAdd(P, evh); } } } catch (x) {} /* 31 Oct 2026: a Slack event on a card's chat makes it hot */ try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { var evm = b.event || {}; if (evm.type === 'message' && evm.channel === CC_CH) { var cEE = CacheService.getScriptCache(); cEE.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEE, 'CC_HIST'); var rk = ''; try { var hh = ccHist(P.getProperty('SLACK_BOT_TOKEN'), true).filter(function (m) { return m.ts === (evm.thread_ts || evm.ts); })[0]; rk = hh ? ccKey(ccName(hh.text)) : ''; } catch (x) {} ccNudge(P, rk); if (evm.thread_ts) ccNudge(P, 'O' + evm.thread_ts); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel === GD_CH) { var cEG = CacheService.getScriptCache(); cEG.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEG, 'GD_HIST'); ccNudge(P, 'G' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && dmIsCh(P, evm.channel)) { var cED = CacheService.getScriptCache(); cED.put('CC_EV_AT', String(Date.now()), 900); cED.remove('DM_HIST_' + evm.channel); ccNudge(P, 'D' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
     if (b.job === 'fastchk') {                                // 16 Oct 2026: the FAST LANE worker (Cloudflare) asks "is this phone key right?" - key = sha256("sjfast|" + password)
@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-10-28a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-10-31a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -316,8 +316,22 @@ function facThreads(P, FT, cards, fresh) {                    // for every card 
       if (id) outm[id] = { n: m.rc, last: m.lr || m.t };
     });
   });
+  var hot = facHotGet(P); Object.keys(hot).forEach(function (cid) { var o = outm[cid]; if (!o || +o.last < +hot[cid]) outm[cid] = { n: o ? o.n : 0, last: hot[cid] }; });   // 31 Oct 2026: see facHotAdd
   try { cache.put('FAC_TH_' + g, JSON.stringify(outm), facTtl(P)); } catch (e) {} return outm;
 }
+// 31 Oct 2026 (Abbas: "he messaged me in some chats but I got no Catch up"): the relay finds new replies by reading the newest 400 top-level posts of
+// #cutting / #samples-discuss. A card whose chat began before those 400 was invisible: its replies never counted as new, and the NEW badge the
+// phone had set from the doorbell was wiped by the next answer. Now every card chat that had a new line in the last 10 days is "hot" (FAC_HOT =
+// {cardId: newest ts}) and is counted whatever its age. Told by the relay's own posts (fac(), any action with a card) and by the phones (ping /
+// list carry `hot`: what they sent through the fast lane and what the doorbell brought them).
+function facHotGet(P) { try { return JSON.parse(P.getProperty('FAC_HOT') || '{}'); } catch (e) { return {}; } }
+function facHotAdd(P, m) {
+  if (!m || typeof m !== 'object') return; var h = facHotGet(P), now = Date.now() / 1000, ch = false;
+  Object.keys(m).slice(0, 25).forEach(function (k) { var cid = String(k).replace(/[^0-9a-f]/g, ''), ts = String(m[k] || ''); if (cid.length !== 24 || !/^\d+(\.\d+)?$/.test(ts) || +ts > now + 86400 || +ts < now - 10 * 86400) return;
+    if (+h[cid] >= +ts || !P.getProperty('FTH_' + cid)) return; h[cid] = ts; ch = true; });
+  if (!ch) return; Object.keys(h).forEach(function (k) { if (+h[k] < now - 10 * 86400) delete h[k]; });
+  var ks = Object.keys(h).sort(function (a, b) { return +h[b] - +h[a]; }); ks.slice(150).forEach(function (k) { delete h[k]; });
+  try { P.setProperty('FAC_HOT', JSON.stringify(h)); } catch (e) {} facBump(); }
 function facFit(rec, keep) {                                  // trim {key: ts} records (oldest first) until they fit a script property comfortably
   var ks = Object.keys(rec).filter(function (x) { return keep.indexOf(x) < 0; }).sort(function (a, b) { return +rec[a] - +rec[b]; });
   while (JSON.stringify(rec).length > 7500 && ks.length) delete rec[ks.shift()];
@@ -881,12 +895,14 @@ function fac(reqText, P) {
   var rid = FAC_ONCE.test(rq0.op || '') ? String(rq0.rid || '').replace(/[^\w-]/g, '').slice(0, 40) : '', cR = CacheService.getScriptCache();
   if (rid) { var prev = cR.get('FRID_' + rid); if (prev === 'busy') return out({ ok: false, busy: true, error: 'still sending - one moment' }); if (prev) return ContentService.createTextOutput(prev).setMimeType(ContentService.MimeType.JSON); cR.put('FRID_' + rid, 'busy', 120); }
   var res = fac0(reqText, P);
-  if (rid) { try { var txt = res.getContent(), jj = JSON.parse(txt); if (jj.ok && txt.length < 90000) cR.put('FRID_' + rid, txt, 21600); else cR.remove('FRID_' + rid); } catch (e) { cR.remove('FRID_' + rid); } }
+  if (rid) { try { var txt = res.getContent(), jj = JSON.parse(txt); if (jj.ok && txt.length < 90000) cR.put('FRID_' + rid, txt, 21600); else cR.remove('FRID_' + rid);
+    if (jj.ok && /^[0-9a-f]{24}$/.test(String(rq0.card || ''))) { var hm = {}; hm[rq0.card] = String(jj.ts || Date.now() / 1000); facHotAdd(P, hm); } } catch (e) { cR.remove('FRID_' + rid); } }   // 31 Oct 2026: a line the relay wrote into a card's chat makes it hot
   return res;
 }
 function fac0(reqText, P) {
   var req = JSON.parse(reqText);
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
+  if (req.hot) { try { facHotAdd(P, req.hot); } catch (e) {} }
   var rtok = P.getProperty('TRELLO') || P.getProperty('TRELLO_W'), wtok = P.getProperty('TRELLO_W');
   if (!rtok) return out({ ok: false, error: 'the relay has no Trello key' });
   facRetLists(P, wtok, req.op === 'sample' && req.kind === 'ret' ? 2 : req.op === 'list');

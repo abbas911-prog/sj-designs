@@ -102,7 +102,7 @@ function slack(W, m, A, J) {
   const S = W.slack, C = S.ch[A.channel || A.channel_id];
   const top = c => c.msgs.filter(x => !x.thread_ts || x.thread_ts === x.ts);
   switch (m) {
-    case 'conversations.history': { if (!C) return J({ ok: false, error: 'channel_not_found' }); let ms = top(C).slice().reverse(); if (A.oldest) ms = ms.filter(x => +x.ts > +A.oldest); return J({ ok: true, messages: ms.slice(0, +A.limit || 100), has_more: false }); }
+    case 'conversations.history': { if (!C) return J({ ok: false, error: 'channel_not_found' }); let ms = top(C).slice().reverse(); if (A.oldest) ms = ms.filter(x => +x.ts > +A.oldest); const off = +(A.cursor || 0) || 0, lim = +A.limit || 100, pg = ms.slice(off, off + lim), more = off + lim < ms.length; return J({ ok: true, messages: pg, has_more: more, response_metadata: more ? { next_cursor: String(off + lim) } : {} }); }
     case 'conversations.replies': { if (!C) return J({ ok: false, error: 'channel_not_found' }); const root = C.msgs.find(x => x.ts === A.ts); if (!root) return J({ ok: false, error: 'thread_not_found' });
       const reps = C.msgs.filter(x => x.thread_ts === A.ts && x.ts !== A.ts && (!A.oldest || +x.ts > +A.oldest)); return J({ ok: true, messages: [root].concat(reps).slice(0, +A.limit || 1000) }); }
     case 'conversations.info': return C ? J({ ok: true, channel: { id: C.id, name: C.name, is_member: C.member } }) : J({ ok: false, error: 'channel_not_found' });

@@ -45,7 +45,7 @@ async function boot(opts) {
       const evs2 = W.ntfy.filter((e, i) => i >= from && e.topic === topic); T.sse[topic] = W.ntfy.length;
       await route.fulfill({ status: 200, headers: { 'Content-Type': 'text/event-stream', 'Access-Control-Allow-Origin': '*' }, body: 'retry: 300\n\n' + evs2.map(e => 'data: ' + JSON.stringify({ event: 'message', message: e.body }) + '\n\n').join('') }); return; }
     F.handle(W, route.request().method(), route.request().url(), route.request().postData() || ''); await route.fulfill({ status: 200, body: '{}', headers: { 'Access-Control-Allow-Origin': '*' } }); });
-  await ctx.route('https://files.slack.com/**', async route => { if (T.uploadDown && /\/upload\//.test(route.request().url())) { await route.abort('failed'); return; } const rq = route.request(), r = F.handle(W, rq.method(), rq.url(), rq.postDataBuffer() || Buffer.alloc(0)); await route.fulfill({ status: r.status, body: r.body, headers: { 'Content-Type': r.type, 'Access-Control-Allow-Origin': '*' } }); });
+  await ctx.route('https://files.slack.com/**', async route => { if (T.uploadDown && /\/upload\//.test(route.request().url())) { await route.abort('failed'); return; } if (T.uploadSlow && /\/upload\//.test(route.request().url())) await new Promise(r => setTimeout(r, T.uploadSlow)); const rq = route.request(), r = F.handle(W, rq.method(), rq.url(), rq.postDataBuffer() || Buffer.alloc(0)); await route.fulfill({ status: r.status, body: r.body, headers: { 'Content-Type': r.type, 'Access-Control-Allow-Origin': '*' } }); });
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, route => route.abort());
   T.open = async function (signIn) {
     const page = await ctx.newPage(); T.page = page;
