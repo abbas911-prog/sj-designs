@@ -46,6 +46,15 @@ const cuts = JSON.parse(execFileSync('python3', ['-c', `import sys; sys.path.ins
 from PIL import Image; import build, json; im = Image.open('${path.join(DIR, 'tests/fixtures/lineup-57026.jpg')}'); print(json.dumps([x / im.width for x in build.find_bounds(im, 6)]))`]).toString());
 const want = [0, 0.2425, 0.3787, 0.4988, 0.6225, 0.7438, 1];
 ok('real photo: six dress edges found (within 1.5%)', cuts.length === 7 && cuts.every((x, i) => Math.abs(x - want[i]) < 0.015));
+// 31 Oct 2026 (Abbas: "an option to include the prices inside the catalogue with the design, like a tick"): a price sent with a design is printed
+// under its number; a design sent without one shows none; the page above (no prices sent) has none at all
+ok('no prices sent → no price on the page', html.indexOf('class="price"') < 0);
+const envP = Object.assign({}, env, { REQ: JSON.stringify({ id: 'tp', name: 'PRICE TEST', prices: 1, items: [{ no: '57026', mode: 'S', price: 120 }, { no: '79623', mode: 'S' }] }) });
+execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: envP });
+const resP = JSON.parse(fs.readFileSync(path.join(T, 'jobs/tp.json'))); const htmlP = resP.ok ? fs.readFileSync(path.join(T, resP.page), 'utf8') : '';
+const artP = (htmlP.match(/<article class="design" data-no="57026"[\s\S]*?<\/article>/) || [''])[0], artN = (htmlP.match(/<article class="design" data-no="79623"[\s\S]*?<\/article>/) || [''])[0];
+ok('57026 sent with price 120 → "120 AED" under its design number', resP.ok && /<div class="price">120 AED<small>/.test(artP) && artP.indexOf('class="no">57026<') >= 0);
+ok('79623 sent without a price → no price shown, page still fine', !!artN && artN.indexOf('class="price"') < 0 && htmlP.indexOf('.head .price{') >= 0);
 // sizes catalogue from an invoice: colours 2 and 5 billed → card numbers kept, others faded
 const env2 = Object.assign({}, env, { REQ: JSON.stringify({ id: 't2', kind: 'sizes', ref: 'INV-1', cust: 'X', items: [{ card: 'abc123abc123abc123abc101', no: '57026', c: 2, pcs: 4 }, { card: 'abc123abc123abc123abc101', no: '57026', c: 5, pcs: 2 }] }) });
 execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: env2 });

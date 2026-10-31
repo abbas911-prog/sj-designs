@@ -17,7 +17,7 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0];
   await new Promise(r => srv.listen(0, r)); const URL0 = 'http://localhost:' + srv.address().port + '/memo.html';
   const br = await chromium.launch(); const pg = await br.newPage({ viewport: { width: 390, height: 844 } }); const errs = [];
   pg.on('pageerror', e => errs.push(e.message)); pg.on('dialog', d => d.accept());
-  await pg.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, customers: [], orders: [] }) }));
+  const CATS = []; await pg.route(/script\.google\.com/, r => { try { const b = JSON.parse(r.request().postData() || '{}'); if (b.job === 'catalog') CATS.push(JSON.parse(b.req)); } catch (e) {} r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, customers: [], orders: [] }) }); });
   await pg.route(/ntfy\.sh|github/, r => r.abort());
   await pg.goto(URL0); await pg.evaluate(pw => { localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas'); localStorage.setItem('sj_owner', '1'); localStorage.setItem('sj_owner_pin', '1234');
     localStorage.setItem('sj_costs', JSON.stringify({ d: '2026-10-30', c: Object.assign({ '18634': 104.22, '18774': 90 }, Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(20001 + i), 100]))) })); }, PW); await pg.reload();
@@ -47,6 +47,20 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0];
   ok('Reset puts the written SJ-18747 back', /Revised incomplete/.test(await txt()) && (await pg.$$('#ffbody input.ffno.chg')).length === 0);
   // 30 Oct 2026 (Abbas, video): 12 lines in the COMPLETE BILL = ONE table, heading once, TOTAL last (was a heading every 8 lines)
   ok('COMPLETE BILL on screen: one table, the heading once, 12 lines + TOTAL', await pg.evaluate(() => { const c = document.querySelector('#ffbody .ffb.all'); const t = c.querySelectorAll('table'); return t.length === 1 && t[0].querySelectorAll('th').length === 4 && t[0].querySelectorAll('tr').length === 14 && /TOTAL/.test(t[0].rows[13].textContent); }));
+  // 31 Oct 2026 (Abbas: "an option to include the prices inside the catalogue with the design, like a tick"): owner phone with costs → the tick
+  // sends SJ-18634's price (cost 104.22 × 1.35 = 141) with the catalogue request; tick off → no price goes out
+  const catGo = async () => { await pg.$eval('#catbtn', e => e.click()); await pg.waitForTimeout(300); await pg.fill('#cnos', '18634 sets'); await pg.waitForTimeout(400); };
+  await pg.$eval('#ffx', e => e.click()); await catGo();
+  ok('the "Show the prices" tick is offered on the owner phone', await pg.$eval('#cshowpw', e => !e.hidden));
+  await pg.$eval('#cshowp', e => { e.checked = true; e.dispatchEvent(new Event('change')); }); await pg.waitForTimeout(200);
+  ok('tick on: note says every design gets its price', /every design gets its price/.test(await pg.$eval('#cshowpn', e => e.textContent)));
+  await pg.$eval('#cmake', e => e.click()); await pg.waitForFunction(() => true); for (let k = 0; k < 40 && !CATS.length; k++) await pg.waitForTimeout(250);
+  ok('the catalogue request carries price 141 for SJ-18634 (' + JSON.stringify((CATS[0] || {}).items) + ')', CATS.length === 1 && CATS[0].prices === 1 && CATS[0].items.length === 1 && CATS[0].items[0].price === 141);
+  await pg.reload(); await pg.waitForSelector('#feed .design:not([hidden])', { timeout: 15000 }); await catGo();
+  ok('the tick is remembered after a reload', await pg.$eval('#cshowp', e => e.checked));
+  await pg.$eval('#cshowp', e => { e.checked = false; e.dispatchEvent(new Event('change')); }); await pg.waitForTimeout(200);
+  await pg.$eval('#cmake', e => e.click()); for (let k = 0; k < 40 && CATS.length < 2; k++) await pg.waitForTimeout(250);
+  ok('tick off: no price in the request', CATS.length === 2 && CATS[1].prices === 0 && CATS[1].items.every(x => x.price == null));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

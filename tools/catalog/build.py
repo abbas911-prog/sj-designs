@@ -12,7 +12,7 @@ The same customer page the chat runs built (sj-1005b, sj-1005, sj-1003, ahmad-li
     perfectly that I don't need to come back to this problem again") — the cutter is find_cuts below, checked on 114 real line-ups
   * chips by Rule Four (leftover rides on the top chip), pre-rendered in the HTML (Rule Five)
   * the card video under the photos, re-encoded to ~4-6 MB, served from vid/<no>.mp4 (Rule Eleven)
-  * no prices, no piece counts on the page (Rule Eight); Send order = one PDF (Seven-A); Share button on every photo/video
+  * no piece counts on the page (Rule Eight); prices only when the app's tick sends them (31 Oct 2026, per design "price"); Send order = one PDF (Seven-A); Share button on every photo/video
   * link preview cover og-<page>.jpg + tags, so the link arrives like a catalogue
 Input: env REQ = {"id","name","country","items":[{"no":"46209","mode":"C"|"S"}]}, SIG = HMAC-SHA256(shop password, REQ).
 Output: <page>.html, og-<page>.jpg, vid/*.mp4, jobs/<id>.json (read by memo.html)."""
@@ -242,7 +242,7 @@ def opts(p, unit):
 def build(req):
     name = re.sub(r'\s+', ' ', str(req.get('name', ''))).strip().upper()[:60]
     sub = re.sub(r'\s+', ' ', str(req.get('country', ''))).strip().upper()[:40]
-    items, seen = [], set()
+    items, seen, PRICEIN = [], set(), {}   # 31 Oct 2026 (Abbas: "an option to include the prices inside the catalogue with the design, like a tick"): price per design, optional
     for it in req.get('items', []):
         # 17 Oct 2026 (Abbas: "6668 and 6668-1 ... it only gives me one design"): a suffix after the number names a different card
         mm = re.match(r'\s*(?:SJ|SH)?\s*[-=:]*\s*(\d{3,6})\s*(?:-\s*([A-Za-z0-9]{1,3}))?', str(it.get('no', '')), re.I)
@@ -252,10 +252,14 @@ def build(req):
         # number, each as its own design 6668_01, 6668_02 … (oldest card first, so the numbers stay the same next time)
         if not mm.group(2) and (re.search(r'\b(all|every|كل)\b', str(it.get('no', '')), re.I) or '*' in str(it.get('no', ''))): no = mm.group(1) + '-ALL'
         if no not in seen: seen.add(no); items.append((no, 'C' if str(it.get('mode', 'S')).upper().startswith('C') else 'S'))
+        try:
+            pr = float(str(it.get('price', '') or '').replace(',', ''))
+            if pr > 0: PRICEIN[no] = pr
+        except ValueError: pass
     if not items: return {'ok': False, 'error': 'No design numbers.'}
     cards = ready_cards()
     errors, report, flags = [], [], []
-    MODE, TOT, COLS, PCSS, PHOTOS, VIDS, ORDER = {}, {}, {}, {}, {}, {}, []
+    MODE, TOT, COLS, PCSS, PHOTOS, VIDS, ORDER, PRICE = {}, {}, {}, {}, {}, {}, [], {}
     todo, novid = [], set()
     for no, mode in items:
         base, suf = (no.split('-', 1) + [''])[:2]
@@ -263,7 +267,7 @@ def build(req):
         if suf == 'ALL':
             if not cands: errors.append('SJ-%s is not in READY on Trello.' % base); continue
             cands.sort(key=lambda c: c['id'])                        # oldest first: 6668_01 stays 6668_01 next time
-            for i, c in enumerate(cands): todo.append(('%s_%02d' % (base, i + 1), mode, c))
+            for i, c in enumerate(cands): todo.append(('%s_%02d' % (base, i + 1), mode, c)); PRICE['%s_%02d' % (base, i + 1)] = PRICEIN.get(no)
             report.append('SJ-%s all: %d READY cards → %s_01 … %s_%02d' % (base, len(cands), base, base, len(cands)))
             if len(cands) > 8: novid.update('%s_%02d' % (base, i + 1) for i in range(len(cands))); flags.append('SJ-%s all: %d cards — videos left out (too many for one page); make a small catalogue for the ones that need the video.' % (base, len(cands)))
             continue
@@ -274,7 +278,7 @@ def build(req):
         if not mine: errors.append('SJ-%s is not in READY on Trello.' % no + (' (cards with this number: %s)' % ', '.join(c['name'][:30] for c in cands[:3]) if cands else '')); continue
         mine.sort(key=lambda c: c['id'], reverse=True)            # "the last one added in trello" = newest card id
         if len(mine) > 1: flags.append('SJ-%s has %d READY cards — used the newest: %s (type "%s all" for every card)' % (no, len(mine), mine[0]['name'], base))
-        todo.append((no, mode, mine[0]))
+        todo.append((no, mode, mine[0])); PRICE[no] = PRICEIN.get(no)
     for no, mode, card in todo:
         p = parse(card['name'])
         cells = [c[0] for c in p['cells']]
@@ -332,7 +336,7 @@ def build(req):
         if vids and video(no, vids[0]): VIDS[no] = 1
     if errors: return {'ok': False, 'error': ' '.join(errors), 'errors': errors, 'report': report}
     stem = page_stem(name)
-    html = render(stem, name, sub, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, VIDS)
+    html = render(stem, name, sub, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, VIDS, PRICE)
     html = _apply(html)                                            # PDF-only send + Share on every photo/video
     open(stem + '.html', 'w', encoding='utf-8').write(html)
     n = og_cover(html, stem, name, sub)
@@ -417,7 +421,7 @@ def tryon_html(no, page_file, force=False):
 def tryon_css(src):
     return src.replace('</style>', TRYB_CSS + '\n</style>', 1) if '<div class="tryb">' in src and '.tryb{' not in src else src
 
-def render(PAGE, CUSTOMER, CUSTOMER_SUB, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, VIDS):
+def render(PAGE, CUSTOMER, CUSTOMER_SUB, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, VIDS, PRICE=None):
     def labEn(no, c, v):
         C = MODE[no] == 'C'; unit = COLS[no] * 4 if C else 4; p = TOT[no] if C else PCSS[no][c]
         if v != 'F': return '%d complete set%s' % (v, '' if v == 1 else 's') if C else '%d set%s' % (v, '' if v == 1 else 's')
@@ -446,14 +450,16 @@ def render(PAGE, CUSTOMER, CUSTOMER_SUB, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, V
         C = MODE[no] == 'C'
         photos = ''.join('      ' + img_tag(im, nums, no, cols) + '\n' for im, nums, cols in PHOTOS[no])
         vid = ('      <div class="vid"><video src="vid/%s.mp4" controls playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture></video></div>\n' % no) if no in VIDS else ''
+        pr = (PRICE or {}).get(no)
+        ptag = ('<div class="price">%s AED<small>السعر · per piece</small></div>' % (('%d' % pr) if float(pr).is_integer() else ('%.2f' % pr))) if pr else ''
         if C:
             head = ('      <div class="head"><div><div class="lbl">Design</div><div class="no">%s</div></div>'
-                    '<div style="text-align:right"><div class="ar">الطقم الكامل = كل الألوان</div></div></div>\n' % no)
+                    '<div style="text-align:right">%s<div class="ar">الطقم الكامل = كل الألوان</div></div></div>\n' % (no, ptag))
             rows = '        <div class="row full"><div class="seg">%s</div></div>\n' % seg_buttons(no, 0, opts(TOT[no], COLS[no] * 4))
             dlist = ','.join(str(i) for i in range(1, COLS[no] + 1))
         else:
             head = ('      <div class="head"><div><div class="lbl">Design</div><div class="no">%s</div></div>'
-                    '<div style="text-align:right"><div class="ar">اختر اللون والأطقم</div></div></div>\n' % no)
+                    '<div style="text-align:right">%s<div class="ar">اختر اللون والأطقم</div></div></div>\n' % (no, ptag))
             cs = sorted(PCSS[no])
             rows = ''.join('        <div class="row"><div class="n">%d</div><div class="seg">%s</div></div>\n' % (c, seg_buttons(no, c, opts(PCSS[no][c], 4))) for c in cs)
             dlist = ','.join(str(c) for c in cs)
@@ -465,6 +471,7 @@ def render(PAGE, CUSTOMER, CUSTOMER_SUB, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, V
               '    <p>Tap what you want under each design, then OK.</p>\n    <p class="ar">اختر ما تريد تحت كل تصميم، ثم اضغط OK</p>\n  </header>')
     src = open(os.path.join(HERE, 'template.html'), encoding='utf-8').read()
     src = re.sub(r'  <header>.*?</header>', lambda m: HEADER, src, count=1, flags=re.S)
+    src = src.replace('  .head .ar{font-size:14px;color:var(--muted)}', '  .head .ar{font-size:14px;color:var(--muted)}\n  .head .price{font-family:var(--display);font-size:22px;font-weight:600;color:var(--ink,#1b1915);line-height:1.1;margin-bottom:2px}.head .price small{display:block;font-family:var(--body);font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em}', 1)
     src = src.replace('  header h1{', '  header h1 .sub{display:block;font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.16em;color:var(--muted);margin-top:5px}\n  header h1{', 1)
     src = src.replace('header h1{font-family:var(--display);font-weight:500;font-size:24px;margin:0 0 6px;letter-spacing:.01em;text-wrap:balance}',
                       'header h1{font-family:var(--display);font-weight:500;font-size:27px;margin:0 0 10px;letter-spacing:.01em;text-wrap:balance}', 1)

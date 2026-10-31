@@ -155,6 +155,7 @@ main{max-width:720px;margin:0 auto;}
 .ffbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .ffbtns button{padding:12px;border-radius:12px;border:1.5px solid var(--gold);background:#fff;font:inherit;font-weight:800}
 .ffbtns button.gold{background:var(--gold);color:#fff}.ffbtns button[disabled]{opacity:.4}
+.ctick{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 10px;font-size:14px}.ctick input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--gold)}.ctick small{display:block;color:var(--mute);font-size:12px;margin-top:2px}.ctick:has(input:checked){border-color:var(--gold);background:var(--goldbg)}
 .dfmt{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute);margin:-4px 0 10px;flex-wrap:wrap}.dfmt button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:700;color:var(--mute)}.dfmt button.on{border-color:var(--gold);background:var(--goldbg);color:var(--ink)}
 .ffbtns button small{display:block;font-size:11px;font-weight:600;opacity:.85;margin-top:1px}
 .ffpin{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:736px;bottom:calc(var(--navh) + 8px);z-index:2;margin:0;padding:8px;background:rgba(244,240,233,.97);border-radius:16px;box-shadow:0 8px 24px rgba(40,30,15,.22),0 0 0 1px var(--line)}
@@ -677,6 +678,7 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
   <label class="bf" style="margin-top:8px"><span>Design numbers — one per line, add SETS or COMPLETE after the number · أرقام التصاميم</span><textarea id="cnos" placeholder="46209 complete&#10;38156 sets&#10;6668 all sets"></textarea></label>
   <div id="clist"></div>
   <div id="cprice" class="pl" hidden></div>
+  <label class="ctick" id="cshowpw" hidden><input type="checkbox" id="cshowp"><span><b>Show the prices on the catalogue · إظهار الأسعار في الكتالوج</b><small id="cshowpn"></small></span></label>
   <div class="btns"><button id="cmake" class="gold" type="button">Make catalogue · اصنع الكتالوج</button></div>
   <div id="cst" class="stk" hidden></div>
   <div id="cres"></div>
@@ -949,7 +951,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-10-30j';
+var VER = '2026-10-31a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2120,7 +2122,8 @@ $('cmake').onclick = async function(){
   if (!RELAY) { cst('bad', 'The catalogue link is not set up yet (relay missing).'); return; }
   var id = jobId('c'); CAT.busy = true; $('cres').innerHTML = '';
   cst('', 'Building the catalogue for ' + esc(name || 'NEW COLLECTION') + ' — ' + items.length + ' design' + (items.length > 1 ? 's' : '') + '…<small>usually 2–6 minutes (videos take longest). You can keep using the memo.</small>');
-  try { await relay('catalog', { id: id, name: name, country: country, items: items }); }
+  var withP = catShowP() && isBoss() && !!COST, sent = items.map(function(it){ var o = { no: it.no, mode: it.mode }; if (withP) { var pr = priceOf(it.no.replace(/-ALL$/, '')); if (pr != null) o.price = pr; } return o; });
+  try { await relay('catalog', { id: id, name: name, country: country, items: sent, prices: withP ? 1 : 0 }); }
   catch(e){ CAT.busy = false; cst('bad', 'Could not start: ' + esc(e.message)); return; }
   var res = await waitJob(id, 'catalog', 30, function(sec){ cst('', 'Building the catalogue… ' + Math.floor(sec / 60) + ':' + ('0' + sec % 60).slice(-2) + '<small>photos, cut-outs, videos, cover picture</small>'); });
   CAT.busy = false;
@@ -2180,8 +2183,17 @@ costInfo();
 var PRICE = {};   // his own numbers, per design
 function costOf(no){ return COST && COST.c[no] != null ? +COST.c[no] : null; }
 function priceOf(no){ if (PRICE[no] > 0) return PRICE[no]; var c = costOf(no); if (c == null && String(no).indexOf('-') > 0) c = costOf(String(no).split('-')[0]); return c != null ? Math.round(c * 1.35) : null; }
+// 31 Oct 2026 (Abbas: "an option to include the prices inside the catalogue with the design, like a tick"): the tick sends each design's price
+// (the box above / cost × 1.35) with the request and the builder prints it under the design number — the customer sees it on the page
+function catShowP(){ return $('cshowp').checked; }
+function catTick(items){ var w = $('cshowpw'), on = isBoss() && !!COST && items.length > 0; w.hidden = !on; if (!on) return;
+  var have = items.filter(function(it){ return priceOf(it.no.replace(/-ALL$/, '')) != null; }).length;
+  $('cshowpn').textContent = catShowP() ? (have === items.length ? 'every design gets its price · ' + have + ' of ' + items.length : have + ' of ' + items.length + ' have a price — the others show none') : 'off — the customer sees no prices'; }
+$('cshowp').checked = ls('sj_cat_prices') === '1';
+$('cshowp').addEventListener('change', function(){ ls('sj_cat_prices', catShowP() ? '1' : '0'); catTick(CAT.items || []); });
 function catPrices(){
   var el = $('cprice'), items = CAT.items || [];
+  catTick(items);
   if (!items.length) { el.hidden = true; return; }
   el.hidden = false;
   if (!isBoss()) { el.hidden = true; return; }   // 20 Oct 2026: costs only on the owner's phone (owner password set), never on a staff phone with the catalogue on
