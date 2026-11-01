@@ -1,0 +1,37 @@
+{
+ "ok": false,
+ "error": "SJ-24719-5: 18+18+18+18+18 = 90 ✗ (card: 60) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again.",
+ "errors": [
+  "SJ-24719-5: 18+18+18+18+18 = 90 ✗ (card: 60) — the colours do not add up to the card total. Fix the card in Trello, then make the catalogue again."
+ ],
+ "report": [
+  "SJ-6668-1 = the READY card picked in the app: Sj = 6668(40pcs) 5 colors.              ",
+  "SJ-6668-17 = the READY card picked in the app: Sj6668(70pcs)5 colors.                  ",
+  "SJ-6668-3 = the READY card picked in the app: Sj 6668 (65pcs) 5 colors.               ",
+  "SJ-6668-10 = the READY card picked in the app: Sj 6668 (40) 5 colors.                  ",
+  "SJ-6668-16 = the READY card picked in the app: Sj6668(30),,,(pcs)5 colors.             ",
+  "SJ-24719-2 = the READY card picked in the app: SJ = **24719** (90) pcs ,,, colors = (5)",
+  "SJ-24719-3 = the READY card picked in the app: SJ = **24719** (125) pcs ,, colors = (5)",
+  "SJ-24719-5 = the READY card picked in the app: SJ = **24719** (60) pcs ,, colors = (5) ",
+  "SJ-31892 = the READY card picked in the app: Sj 31892. (44pcs)6 colors.              ",
+  "SJ-79246 = the READY card picked in the app: SJ = **79246** (40),,, colors = (12) ,,,",
+  "SJ-35091 = the READY card picked in the app: SJ = **35091** (52) pcs ,,, colors = (12",
+  "SJ-29847 = the READY card picked in the app: Sj= **29847** (20) pcs (5) colors.      ",
+  "SJ-12748 = the READY card picked in the app: Sj = **12748** (44) pcs. (5) colors.    ",
+  "SJ-7284 = the READY card picked in the app: Sj= **(7284)** (48) pcs colour= (4) ,,, ",
+  "SJ-6668-1 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-6668-17 COMPLETE  14+14+14+14+14 = 70 ✓ (card: 70) → 3 complete sets + 10 pcs",
+  "SJ-6668-3 COMPLETE  14+14+10+13+14 = 65 ✓ (card: 65) → 3 complete sets + 5 pcs",
+  "SJ-6668-10 COMPLETE  8+8+8+8+8 = 40 ✓ (card: 40) → 2 complete sets",
+  "SJ-6668-16 COMPLETE  6+6+6+6+6 = 30 ✓ (card: 30) → 1 complete sets + 10 pcs",
+  "SJ-24719-2 COMPLETE  18+18+18+18+18 = 90 ✓ (card: 90) → 4 complete sets + 10 pcs",
+  "SJ-24719-3 COMPLETE  26+25+24+25+25 = 125 ✓ (card: 125) → 6 complete sets + 5 pcs",
+  "SJ-31892 COMPLETE  8+4+8+8+8+8 = 44 ✓ (card: 44) → 1 complete sets + 20 pcs",
+  "SJ-79246 COMPLETE  0+4+0+4+0+8+0+4+8+0+8+4 = 40 ✓ (card: 40) → 1 complete sets + 12 pcs",
+  "SJ-35091 COMPLETE  4+4+4+4+8+4+4+4+4+4+4+4 = 52 ✓ (card: 52) → 1 complete sets + 4 pcs",
+  "SJ-29847 COMPLETE  4+4+4+4+4 = 20 ✓ (card: 20) → 1 complete sets",
+  "SJ-12748 SETS  12+8+8+8+8 = 44 ✓ (card: 44) → 5 colours",
+  "SJ-7284 COMPLETE  12+12+12+12 = 48 ✓ (card: 48) → 3 complete sets"
+ ],
+ "id": "cmvxx3bequha8"
+}
