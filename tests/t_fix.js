@@ -7,6 +7,7 @@ cards.push({ id: 'c2', idShort: 2, list: 'r', name: 'SJ-46209 (24) colour = (3) 
 const enc = lock({ updated: new Date().toISOString(), cards }); let LIVE = cards;
 const BILLS = { 'INV-0015': { ref: 'INV-0015', type: 'inv', name: 'MAMA BAKHTA', status: 'included', total: '1,600.00', date: '2026-10-18', updated: '2026-10-18T19:00:00Z', data: JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }, { no: '48293', base: '48293', card: 'cGONE', c: 2, qty: 8, rate: 100 }] }) } };
 const jobs = {}, custPosts = []; let stockReq = null;
+BILLS['RV-0007'] = { ref: 'RV-0007', type: 'rv', name: 'SOMEONE', status: 'sent', total: '1,000.00', date: '2026-10-30', dev: 'other-phone', data: JSON.stringify({ v: 1, k: 'rv', d: { ref: 'RV-0007', name: 'SOMEONE', amount: '1000' } }) };   // 1 Nov 2026: a receipt the employee's phone made
 BILLS['INV-0015'].data = JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [{ d: 'SJ-77001 · C1 4 pcs', q: 4, r: 50, fz: '77001' }, { d: 'SJ 6668-1 lace', q: 2, r: 10 }] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }] });
 function relay(b) { const req = JSON.parse(b.req);
   if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: Object.values(BILLS).map(x => Object.assign({}, x, { data: undefined })) }; if (req.op === 'get') return BILLS[req.ref] ? Object.assign({ ok: true }, BILLS[req.ref]) : { ok: false, error: 'not saved' }; if (req.op === 'put') { BILLS[req.ref] = Object.assign({}, req, { updated: new Date().toISOString() }); return { ok: true, status: req.status }; } }
@@ -151,6 +152,26 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await p2.$eval('#back', e => e.click()).catch(() => {}); await p2.waitForSelector('#cbcopy', { timeout: 8000 }).catch(() => {});
   out.push(['‹ Back returns to that customer\'s statement', await p2.evaluate(() => !document.querySelector('#cb').hidden && /MAMA BAKHTA/.test(document.querySelector('#cbbody').textContent) && !!document.querySelector('[data-cbref="INV-0015"]'))]);
   out.push(['a typed reference that is not a saved bill (INV-1) is plain text', !(await p2.$('[data-cbref="INV-1"]'))]);
+  // 1 Nov 2026 (Abbas: "my employee's bill gets the next number, but when I open the app it shows 001 again"): a fresh phone opening Receipts
+  // gets RV-0008 straight away (the employee's RV-0007 is on the shop's list), not RV-0001 — and ("add a discount on receipts") a discount
+  // comes off the balance, shows on the voucher and goes to the customer's statement as its own line
+  const p7 = await br.newPage({ viewport: { width: 390, height: 844 } }); p7.on('pageerror', e => errs.push(e.message)); p7.on('dialog', d => d.accept());
+  await p7.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) })); await p7.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
+  await p7.addInitScript(() => { try { navigator.clipboard.writeText = async t => { window.__clip = t; }; } catch (e) {} });
+  await p7.goto(URL0); await p7.evaluate(pw => { localStorage.clear(); localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas'); }, PW); await p7.reload(); await p7.waitForSelector('#feed .design', { timeout: 15000 });
+  await p7.click('#nav button[data-nv="more"]'); await p7.click('.mgrid button[data-go="bills"]'); await p7.waitForTimeout(1500);
+  const rvRef = await p7.evaluate(() => window.__sj.B().rv && window.__sj.B().rv.ref);
+  out.push(['a fresh phone opens Receipts at RV-0008 (after the employee\'s RV-0007), not RV-0001 — got ' + rvRef, rvRef === 'RV-0008']);
+  await p7.fill('#bform input[data-k="name"]', 'MAMA BAKHTA'); await p7.waitForTimeout(1200);
+  await p7.fill('#bform input[data-k="open"]', '10000'); await p7.fill('#bform input[data-k="amount"]', '9500'); await p7.fill('#bform input[data-k="disc"]', '500'); await p7.waitForTimeout(900);
+  const bt = await p7.$eval('#btot', e => e.textContent);
+  out.push(['receipt: Received 9,500 + Discount 500 → Remaining 0.00 on the screen', /Discount/.test(bt) && /-500\.00/.test(bt) && /Remaining\s*0\.00 AED/.test(bt)]);
+  await p7.$eval('#dcopy', e => e.click()); await p7.waitForTimeout(400); const rvTxt = await p7.evaluate(() => window.__clip || '');
+  out.push(['the receipt text carries the discount line and Remaining 0.00', /Discount: -500\.00/.test(rvTxt) && /\*Remaining: 0\.00 AED\*/.test(rvTxt)]);
+  const nPosts = custPosts.length; await p7.$eval('#dsend', e => e.click()); for (let k = 0; k < 40 && custPosts.length < nPosts + 2; k++) await p7.waitForTimeout(250);
+  const rvPost = custPosts.slice(nPosts).find(x => x.type === 'rv'), dPost = custPosts.slice(nPosts).find(x => x.type === 'adj' && /discount/.test(x.ref || ''));
+  out.push(['Send: the statement gets the receipt (9,500 received) AND a "RV-0008 discount" line of -500', !!rvPost && rvPost.recv === 9500 && !!dPost && dPost.adj === -500 && /^RV-0008 discount$/.test(dPost.ref)]);
+  await p7.close();
   out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); console.log('errors:', errs.slice(0, 5));
   await br.close(); srv.close();
 })().catch(e => { console.error('CRASH', e); process.exit(1); });
