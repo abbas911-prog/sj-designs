@@ -1,0 +1,36 @@
+{
+ "ok": true,
+ "kind": "sizes",
+ "page": "sz-1101.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sz-1101.html?v=1",
+ "cover": "og-sz-1101.jpg",
+ "name": "SJ TRADING",
+ "country": "",
+ "ref": "INV-0036",
+ "cust": "#47 Nawroz naif",
+ "designs": [
+  "34185",
+  "35091",
+  "40032",
+  "46594",
+  "47268",
+  "75308",
+  "35741"
+ ],
+ "report": [
+  "SJ-34185  0+0+0+0+0+4+0+0+0+4+0 → 2 colours on the bill, 8 pcs · sizes M L XL XXL (default)",
+  "SJ-35091  0+0+0+0+0+0+0+0+4+0+4+4 → 3 colours on the bill, 12 pcs · sizes M L XL XXL (default)",
+  "SJ-40032  4 → 1 colour on the bill, 4 pcs · sizes M L XL XXL (default)",
+  "SJ-46594  0+0+0+4+4+4 → 3 colours on the bill, 12 pcs · sizes M L XL XXL (default)",
+  "SJ-47268  5+4+4+4+4 → 5 colours on the bill, 21 pcs · sizes M L XL XXL (default)",
+  "SJ-75308  4+0+0+0+4 → 2 colours on the bill, 8 pcs · sizes M L XL XXL (default)",
+  "SJ-35741  4+4+4+4+4 → 5 colours on the bill, 20 pcs · sizes M L XL XXL (default)"
+ ],
+ "flags": [
+  "SJ-35091: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-46594: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-47268: no JAMĀL photo for every colour group — shop photo used."
+ ],
+ "bytes": 1846854,
+ "id": "zmvy2kavoykm4"
+}
