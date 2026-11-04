@@ -1,0 +1,65 @@
+{
+ "id": "smw2ddobpxus1",
+ "op": "sell",
+ "ref": "INV-0037",
+ "ok": false,
+ "cards": [
+  {
+   "card": "69660f7499e71bf862ccbf5e",
+   "no": "15907",
+   "before": "Sj = **(15907)**(47) pcs….color = (4) (8/8/3/16/12/0)",
+   "after": "Sj = **(15907)**(43) pcs….color = (4) (4/8/3/16/12/0)",
+   "left": 43,
+   "lines": [
+    "colour 1: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6aea1be7c269bc26157fab07",
+   "no": "26670",
+   "err": "colour 1 not on the card (it has 1 colours) — nothing changed on this card; fix the colour number and try again"
+  },
+  {
+   "card": "6aea1c70c4fa8d6f2f94fc7b",
+   "no": "34571",
+   "err": "colour 1 not on the card (it has 1 colours) — nothing changed on this card; fix the colour number and try again"
+  },
+  {
+   "card": "6aea1c2ca65326ee38c8f2d0",
+   "no": "80656",
+   "err": "colour 1 not on the card (it has 1 colours) — nothing changed on this card; fix the colour number and try again"
+  },
+  {
+   "card": "6aea1ce95acd12d52b675a01",
+   "no": "89990",
+   "err": "colour 1 not on the card (it has 1 colours) — nothing changed on this card; fix the colour number and try again"
+  },
+  {
+   "card": "6ad2260b0911f9e05ed57c6a",
+   "no": "26670",
+   "before": "SJ-26670",
+   "after": "SJ-26670",
+   "left": 0,
+   "lines": [
+    "sample: 1 → 0 (−1)"
+   ],
+   "moved": "moved to FINISH (sample sold)"
+  },
+  {
+   "card": "6a8c0ca86f5db43f5e75971d",
+   "no": "81016",
+   "before": "Sj = **(81016)** (75) pcs colour = (4) ,,,,,(16/20/19/20)",
+   "after": "Sj = **(81016)** (59) pcs colour = (4) ,,,,,(12/16/15/16)",
+   "left": 59,
+   "lines": [
+    "colour 1: 16 → 12 (−4)",
+    "colour 2: 20 → 16 (−4)",
+    "colour 3: 19 → 15 (−4)",
+    "colour 4: 20 → 16 (−4)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
