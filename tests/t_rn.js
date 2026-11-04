@@ -1,7 +1,8 @@
 const { chromium } = require('playwright'); const http = require('http'); const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
 const DIR = require('path').join(__dirname, '..'), PW = 'test1234';
 function lock(obj) { const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12), key = crypto.pbkdf2Sync(PW, salt, 1000, 32, 'sha256'); const c = crypto.createCipheriv('aes-256-gcm', key, iv); const ct = Buffer.concat([c.update(JSON.stringify(obj)), c.final(), c.getAuthTag()]); return { salt: salt.toString('base64'), iv: iv.toString('base64'), iter: 1000, ct: ct.toString('base64') }; }
-const cards = [{ id: 'c1', idShort: 1, list: 'r', name: 'SJ-18634 (16) colour = (2) (8/8)', attachments: [{ id: 'a1', mimeType: 'image/jpeg', date: '2026-10-01T00:00:00Z', name: 'x.jpg' }] }];
+const cards = [{ id: 'c1', idShort: 1, list: 'r', name: 'SJ-18634 (16) colour = (2) (8/8)', attachments: [{ id: 'a1', mimeType: 'image/jpeg', date: '2026-10-01T00:00:00Z', name: 'x.jpg' }] },
+  { id: 'c5', idShort: 5, list: 'r', name: 'SJ-47168 (20) colour = (5) (4/4/4/4/4)', attachments: [] }];
 const enc = lock({ updated: new Date().toISOString(), cards });
 const BILLS = { 'INV-0015': { ref: 'INV-0015', type: 'inv', name: 'MAMA BAKHTA', status: 'included', total: '1,600.00', date: '2026-10-18', updated: '2026-10-18T19:00:00Z', data: JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }, { no: '48293', base: '48293', card: 'cGONE', c: 2, qty: 8, rate: 100 }] }) } };
 const jobs = {}, custPosts = []; let stockReq = null;
@@ -44,12 +45,28 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   out.push(['hand line sent by number', stockReq.lines.length === 1 && stockReq.lines[0].card === '' && stockReq.lines[0].no === '6668-1' && stockReq.lines[0].c === 2]);
   // colour picker from the card + colour names refused
   await pg.click('#dnew'); await pg.waitForTimeout(300); await pg.click('#addri'); let r3 = await pg.$$('.rnrow input'); await r3[0].fill('18634'); await r3[0].dispatchEvent('change'); await pg.waitForTimeout(500);
-  out.push(['colour picker shows the card colours', (await pg.$$eval('.rncols button', L => L.length)) === 2]);
+  out.push(['colour picker shows the card colours', (await pg.$$eval('.rncols button[data-ric]', L => L.length)) === 2]);
   r3 = await pg.$$('.rnrow input'); await r3[1].fill('BLACK'); await r3[2].fill('2'); await r3[3].fill('100'); await pg.waitForTimeout(700); const before = stockReq;
   await pg.click('#dinc'); await pg.waitForTimeout(1500); out.push(['colour name refused (no Trello job)', stockReq === before]);
   await pg.click('.rncols button[data-c="2"]'); await pg.waitForTimeout(400); r3 = await pg.$$('.rnrow input'); await r3[2].fill('2'); await pg.waitForTimeout(700);
   await pg.click('#dinc'); await pg.waitForFunction(() => /Back on Trello/.test(document.querySelector('#stk').textContent), null, { timeout: 30000 }).catch(() => {});
   out.push(['picked colour goes to the card', stockReq !== before && stockReq.lines.length === 1 && stockReq.lines[0].card === 'c1' && stockReq.lines[0].c === 2 && stockReq.lines[0].pcs === 2]);
+  // 4 Nov: one design, 5 colours x 4 pcs back -> tap All (or each colour) = one line per colour, same pcs + rate
+  await pg.click('#dnew'); await pg.waitForTimeout(300); await pg.click('#addri'); let r5 = await pg.$$('.rnrow input'); await r5[0].fill('47168'); await r5[0].dispatchEvent('change'); await pg.waitForTimeout(500);
+  r5 = await pg.$$('.rnrow input'); await r5[2].fill('4'); await r5[3].fill('105'); await pg.waitForTimeout(300);
+  out.push(['All button for a 5-colour design', (await pg.$$('.rncols .rnall')).length === 1]);
+  if (await pg.$('.rncols .rnall')) { await pg.click('.rncols .rnall'); await pg.waitForTimeout(400); }
+  const tot5 = () => pg.$eval('#btot', e => e.textContent).catch(() => '');
+  out.push(['All = 5 lines, 20 pcs, 2,100', (await pg.$$('.rnrow')).length === 5 && /Return \(20 pcs\)/.test(await tot5()) && /2,100\.00/.test(await tot5())]);
+  if (await pg.$('.rncols button[data-c="3"]')) { await pg.click('.rncols button[data-c="3"]'); await pg.waitForTimeout(400); }
+  out.push(['tap a picked colour = its line goes', (await pg.$$('.rnrow')).length === 4 && /Return \(16 pcs\)/.test(await tot5())]);
+  if (await pg.$('.rncols button[data-c="3"]')) { await pg.click('.rncols button[data-c="3"]'); await pg.waitForTimeout(400); }
+  r5 = await pg.$$('.rnrow input'); await r5[2].fill('5'); await r5[2].dispatchEvent('input'); await pg.waitForTimeout(500);
+  out.push(['pcs on the first line carries to the others', /Return \(25 pcs\)/.test(await tot5())]);
+  r5 = await pg.$$('.rnrow input'); await r5[2].fill('4'); await r5[2].dispatchEvent('input'); await pg.waitForTimeout(700); const before5 = stockReq;
+  await pg.click('#dinc'); await pg.waitForFunction(() => /Back on Trello/.test(document.querySelector('#stk').textContent), null, { timeout: 30000 }).catch(() => {}); await pg.waitForTimeout(300);
+  const L5 = (stockReq && stockReq.lines) || [];
+  out.push(['5 colours go back to the card, 4 pcs each', stockReq !== before5 && L5.length === 5 && L5.every(l => l.card === 'c5' && l.pcs === 4) && L5.map(l => l.c).sort().join() === '1,2,3,4,5']);
   await pg.screenshot({ path: path.join(__dirname, 'shot-rn.png'), fullPage: false });
   out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); console.log('errors:', errs.slice(0, 5));
   await br.close(); srv.close();

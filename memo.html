@@ -445,6 +445,7 @@ body{-webkit-tap-highlight-color:transparent}
 .rnpick{margin:-2px 0 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.rnpick img{height:64px;border-radius:8px;border:1px solid var(--line)}.rnpick small{font-size:12px;color:#9a3b1e}.rncols{display:flex;gap:6px;flex-wrap:wrap}.rncols button{min-width:46px;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:5px 7px;font:inherit;font-weight:800;font-size:16px;line-height:1.1}.rncols button small{display:block;font-weight:500;font-size:10.5px;color:#888}.rncols button.on{border-color:var(--gold);background:var(--gold);color:#fff}.rncols button.on small{color:#fff}.rnrow input.badc{border-color:#c0392b;background:#fdecea}
 .rnfrom{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0}.rnfrom button{border:1.5px solid var(--gold);color:var(--gold);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-weight:700}.rnfrom span{font-size:13px;color:#666}
 #rnlist{margin:6px 0 10px}.rninv{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;margin:4px 0;font:inherit}.rninv small{display:block;color:#666;font-size:12px}
+.rncols .rnall{font-weight:800}.rnhint{display:block;width:100%;color:var(--mute)!important;font-size:11.5px}
 .rnrow{display:grid;grid-template-columns:1.6fr .8fr .8fr auto;gap:6px;margin:6px 0;align-items:center}.rnrow:has(input[data-f="no"]){grid-template-columns:1fr .7fr .8fr .8fr auto}.rnrow input{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:9px;font:inherit;background:#fff}.rnrow button{border:0;background:#eee;border-radius:999px;width:32px;height:32px}.rnd{font-size:14px}.rnd small{display:block;color:#888;font-size:11.5px}
 .bst{font-size:11px;border-radius:999px;padding:1px 8px;background:#eee;margin-left:4px;vertical-align:middle;font-weight:600}.bst.sent{background:#dfe9ff}.bst.included{background:#d9f2e3}
 .ccrow.ord .av{background:#f3ead6}.ccrow b small.od{font-weight:500;color:#888;font-size:11.5px;margin-left:4px}
@@ -953,7 +954,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-04a';
+var VER = '2026-11-04b';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1274,8 +1275,24 @@ function invCalc(d){
 function rnDz(no){ no = String(no || '').trim().replace(/^S[JH]\s*-?\s*/i, ''); if (!no) return null; return designs.filter(function(z){ return z.no === no || shown(z.no) === no; })[0] || designs.filter(function(z){ return z.base === no; })[0] || null; }
 function rnColOk(c){ return /^\d{1,2}$/.test(String(c || '').trim()) && +c > 0; }
 function rnPicker(it, i){ var dz = rnDz(it.no), o = '<div class="rnpick" data-rnp="' + i + '">'; if (!dz || dz.sample) return o + (dz && dz.sample ? '<small>Sample — 1 piece</small>' : String(it.no || '').trim() ? '<small>SJ-' + esc(String(it.no).replace(/^S[JH]\s*-?\s*/i, '')) + ' is not on READY now — type its colour NUMBER (1, 2, 3…) as on the card photo.</small>' : '') + '</div>';
-  var ph = (dz.photos || []).filter(function(p){ return p.nums && p.nums.length; })[0];
-  return o + (ph ? '<img data-rnph="' + esc(dz.no) + '" alt="">' : '') + '<div class="rncols">' + dz.colours.map(function(n){ return '<button type="button" data-ric="' + i + '" data-c="' + n.c + '" class="' + (String(it.c) === String(n.c) ? 'on' : '') + '">' + n.c + '<small>' + n.pcs + ' pcs</small></button>'; }).join('') + '</div></div>'; }
+  var ph = (dz.photos || []).filter(function(p){ return p.nums && p.nums.length; })[0], on = rnGroup(B.rn, i).map(function(j){ return String(B.rn.items[j].c); });
+  return o + (ph ? '<img data-rnph="' + esc(dz.no) + '" alt="">' : '') + '<div class="rncols">' + dz.colours.map(function(n){ return '<button type="button" data-ric="' + i + '" data-c="' + n.c + '" class="' + (on.indexOf(String(n.c)) >= 0 ? 'on' : '') + '">' + n.c + '<small>' + n.pcs + ' pcs</small></button>'; }).join('') +
+    (dz.colours.length > 1 ? '<button type="button" class="rnall" data-ricall="' + i + '">All<small>' + dz.colours.length + ' colours</small></button>' : '') + '</div>' + (dz.colours.length > 1 ? '<small class="rnhint">tap more colours = one line each, same pcs and rate · اختر عدة ألوان</small>' : '') + '</div>'; }
+// 4 Nov 2026 (Abbas, a return of 5 colours × 4 pcs: "this is not making sense here"): the colour buttons under a design pick SEVERAL colours —
+// each picked colour is its own line (what Trello and the statement need), made with the pcs + rate of the design's first line; tap again =
+// that colour's line goes; "All" = every colour. The first line's pcs / rate carry to the lines that still had the same value.
+function rnKey(it){ var dz = rnDz(it.no); return dz && !dz.sample ? 'c' + dz.id : 't' + String(it.no || '').trim().toUpperCase().replace(/^S[JH]\s*-?\s*/, ''); }
+function rnFixed(it){ return !!it.card && !!it.c && !it.hand; }   // a line from a saved invoice (its colour is fixed); a line typed / tapped here has hand: 1
+function rnGroup(d, i){ var it = d && d.items && d.items[i]; if (!it || rnFixed(it)) return []; var k = rnKey(it), out = [];
+  d.items.forEach(function(x, j){ if (!rnFixed(x) && String(x.no || '').trim() && rnKey(x) === k) out.push(j); }); return out; }
+function rnHead(d, i){ var g = rnGroup(d, i); return g.length ? g[0] : i; }
+function rnPickCol(d, i, c, all){ var g = rnGroup(d, i), head = d.items[g[0] === undefined ? i : g[0]], dz = rnDz(head.no), card = dz && !dz.sample ? dz.id : '';
+  var has = function(cc){ return g.filter(function(j){ return String(d.items[j].c) === String(cc); })[0]; }, last = g.length ? g[g.length - 1] : i, add = [];
+  var hc = dz.colours.some(function(n){ return String(n.c) === String(head.c).trim(); });   // a typed name ("BLACK") is not a card colour: the tap replaces it
+  if (all) { dz.colours.forEach(function(n){ if (has(n.c) === undefined) add.push(n.c); }); if (!hc) { head.c = String(add.shift()); head.card = card; head.hand = 1; } }
+  else if (!hc || (g.length === 1 && String(head.c) === String(c))) { head.c = String(c); head.card = card; head.hand = 1; }
+  else { var j0 = has(c); if (j0 !== undefined) { if (g.length > 1) d.items.splice(j0, 1); } else add.push(c); }
+  add.forEach(function(cc, q){ d.items.splice(last + 1 + q, 0, { no: head.no, c: String(cc), pcs: head.pcs || '', rate: head.rate || '', card: card, hand: 1 }); }); }
 function rnPhotos(){ document.querySelectorAll('#bform img[data-rnph]').forEach(function(im){ var dz = rnDz(im.dataset.rnph), ph = dz && (dz.photos || []).filter(function(p){ return p.nums && p.nums.length; })[0]; if (ph) getPhoto(ph).then(function(u){ if (u) im.src = u; }); }); }
 function rnItems(d){ return (d.items || []).filter(function(it){ return String(it.no || '').trim() && n2(it.pcs) > 0; }); }
 function rnCalc(d){ var L = rnItems(d).map(function(it){ var q = Math.round(n2(it.pcs)), r = n2(it.rate); return { no: String(it.no).trim().replace(/^SJ-?/i, ''), c: String(it.c || '').trim(), qty: q, rate: r, amount: r2(q * r), card: it.card || '' }; });
@@ -1312,10 +1329,10 @@ function drawForm(){
   } else if (k === 'rn') {
     h += '<div class="bsec">Returned goods · البضاعة المرتجعة <small>(the pieces go back on the Trello card of that colour on <b>Return &amp; share</b>)</small></div>';
     h += '<div class="rnfrom"><button type="button" id="rnpick">📄 Pick from a saved invoice · من فاتورة</button>' + (d.inv ? '<span>Against <b>' + esc(d.inv) + '</b></span>' : '') + '</div><div id="rnlist" hidden></div>';
-    h += (d.items || []).map(function(it, i){ var fixed = !!it.card && !!it.c;
+    h += (d.items || []).map(function(it, i){ var fixed = rnFixed(it);
       return '<div class="rnrow">' + (fixed ? '<span class="rnd"><b>SJ-' + esc(it.no) + '</b> · colour ' + esc(it.c) + (it.max ? '<small>sold ' + it.max + '</small>' : '') + '</span>'
         : '<input data-ri="' + i + '" data-f="no" value="' + esc(it.no || '') + '" placeholder="Design no."><input data-ri="' + i + '" data-f="c" inputmode="numeric" pattern="[0-9]*" value="' + esc(it.c || '') + '" placeholder="Colour no." class="' + (it.c && !rnColOk(it.c) ? 'badc' : '') + '">') +
-        '<input data-ri="' + i + '" data-f="pcs" inputmode="numeric" value="' + esc(it.pcs || '') + '" placeholder="Pcs back"><input data-ri="' + i + '" data-f="rate" inputmode="decimal" value="' + esc(it.rate || '') + '" placeholder="Rate"><button type="button" data-rmi="' + i + '" aria-label="remove">✕</button></div>' + (fixed ? '' : rnPicker(it, i)); }).join('');
+        '<input data-ri="' + i + '" data-f="pcs" inputmode="numeric" value="' + esc(it.pcs || '') + '" placeholder="Pcs back"><input data-ri="' + i + '" data-f="rate" inputmode="decimal" value="' + esc(it.rate || '') + '" placeholder="Rate"><button type="button" data-rmi="' + i + '" aria-label="remove">✕</button></div>' + (fixed || rnHead(d, i) !== i ? '' : rnPicker(it, i)); }).join('');
     h += '<button type="button" class="badd" id="addri">+ Add design by hand</button>';
     h += '<div class="bgrid">' + field('Old balance (AED) · رصيد سابق', inp('open', d.open, 'num', '0')) + field('Note · ملاحظة', inp('note', d.note, 'text', 'Optional')) + '</div>';
     h += '<label class="bchk"><input type="checkbox" data-k="vat"' + (d.vat ? ' checked' : '') + '> VAT 5% on the return · ضريبة ٥٪</label>';
@@ -1350,7 +1367,9 @@ function onForm(e){
   else if (t.dataset.p) { var v = parseFloat(t.value); if (v > 0) prices[t.dataset.p] = v; else delete prices[t.dataset.p]; refresh(); }
   else if (t.dataset.x != null) { d.extras[+t.dataset.x][t.dataset.f] = t.value; }
   else if (t.dataset.mn != null) { (d.man = d.man || [])[+t.dataset.mn][t.dataset.f] = t.value; }
-  else if (t.dataset.ri != null) { var it0 = d.items[+t.dataset.ri]; it0[t.dataset.f] = t.value; if (t.dataset.f === 'no' || t.dataset.f === 'c') it0.card = '';
+  else if (t.dataset.ri != null) { var it0 = d.items[+t.dataset.ri], was0 = it0[t.dataset.f];
+    if ((t.dataset.f === 'pcs' || t.dataset.f === 'rate') && rnHead(d, +t.dataset.ri) === +t.dataset.ri) rnGroup(d, +t.dataset.ri).forEach(function(j){ var x = d.items[j]; if (x === it0 || String(x[t.dataset.f] || '') !== String(was0 || '')) return; x[t.dataset.f] = t.value; var inp2 = document.querySelector('#bform input[data-ri="' + j + '"][data-f="' + t.dataset.f + '"]'); if (inp2) inp2.value = t.value; });
+    it0[t.dataset.f] = t.value; if (t.dataset.f === 'no' || t.dataset.f === 'c') it0.card = '';
     if (t.dataset.f === 'no') { var dz0 = rnDz(t.value), pk = document.querySelector('#bform [data-rnp="' + t.dataset.ri + '"]'); if (dz0 && !it0.rate && prices[dz0.no] > 0) { it0.rate = String(prices[dz0.no]); var ri = document.querySelector('#bform input[data-ri="' + t.dataset.ri + '"][data-f="rate"]'); if (ri) ri.value = it0.rate; }
       if (pk) { var tmp = document.createElement('div'); tmp.innerHTML = rnPicker(it0, +t.dataset.ri); pk.replaceWith(tmp.firstChild); rnPhotos(); } } }
   else if (t.dataset.k) { d[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value;
@@ -1513,8 +1532,7 @@ $('bform').addEventListener('click', function(e){ var d = B[B.mode];
   if (e.target.id === 'addex') { d.extras.push({ d: '', a: '' }); redraw(); }
   if (e.target.id === 'addri') { (d.items = d.items || []).push({ no: '', c: '', pcs: '', rate: '' }); redraw(); var ri = document.querySelectorAll('#bform input[data-ri][data-f="no"]'); if (ri.length) ri[ri.length - 1].focus(); }
   if (e.target.dataset.rmi != null) { d.items.splice(+e.target.dataset.rmi, 1); redraw(); }
-  var rc0 = e.target.closest('[data-ric]'); if (rc0) { var ix = +rc0.dataset.ric, it1 = d.items[ix]; it1.c = rc0.dataset.c; var dz1 = rnDz(it1.no); it1.card = dz1 && !dz1.sample ? dz1.id : ''; var ci = document.querySelector('#bform input[data-ri="' + ix + '"][data-f="c"]'); if (ci) { ci.value = it1.c; ci.classList.remove('badc'); }
-    rc0.parentNode.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === rc0); }); drawDyn(); soon(); return; }
+  var rc0 = e.target.closest('[data-ric]'), ra0 = e.target.closest('[data-ricall]'); if (rc0 || ra0) { rnPickCol(d, +(rc0 || ra0).dataset[rc0 ? 'ric' : 'ricall'], rc0 ? rc0.dataset.c : 0, !!ra0); redraw(); soon(); return; }
   if (e.target.id === 'rnpick') rnPick();
   var rpi = e.target.closest('[data-rninv]'); if (rpi) rnFrom(rpi.dataset.rninv);
   if (e.target.id === 'addman') { (d.man = d.man || []).push({ d: '', q: '', r: '' }); redraw(); var ins = document.querySelectorAll('#bform input[data-mn][data-f="d"]'); if (ins.length) ins[ins.length - 1].focus(); }
