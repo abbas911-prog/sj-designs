@@ -10,7 +10,10 @@ const jobs = {}, custPosts = []; let stockReq = null;
 BILLS['RV-0007'] = { ref: 'RV-0007', type: 'rv', name: 'SOMEONE', status: 'sent', total: '1,000.00', date: '2026-10-30', dev: 'other-phone', data: JSON.stringify({ v: 1, k: 'rv', d: { ref: 'RV-0007', name: 'SOMEONE', amount: '1000' } }) };   // 1 Nov 2026: a receipt the employee's phone made
 BILLS['INV-0015'].data = JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [{ d: 'SJ-77001 · C1 4 pcs', q: 4, r: 50, fz: '77001' }, { d: 'SJ 6668-1 lace', q: 2, r: 10 }] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }] });
 function relay(b) { const req = JSON.parse(b.req);
-  if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: Object.values(BILLS).map(x => Object.assign({}, x, { data: undefined })) }; if (req.op === 'get') return BILLS[req.ref] ? Object.assign({ ok: true }, BILLS[req.ref]) : { ok: false, error: 'not saved' }; if (req.op === 'put') { BILLS[req.ref] = Object.assign({}, req, { updated: new Date().toISOString() }); return { ok: true, status: req.status }; } }
+  if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: Object.values(BILLS).map(x => Object.assign({}, x, { data: undefined })) }; if (req.op === 'get') return BILLS[req.ref] ? Object.assign({ ok: true }, BILLS[req.ref]) : { ok: false, error: 'not saved' }; if (req.op === 'put') { BILLS[req.ref] = Object.assign({}, req, { updated: new Date().toISOString() }); return { ok: true, status: req.status }; }
+    if (req.op === 'next') { const ty = req.type, pfx = req.ref.replace(/\d+$/, ''), mine = +(req.ref.match(/(\d+)$/) || [0, 0])[1]; let top = 0, taken = false;   // like relay.gs bills op next
+      Object.values(BILLS).forEach(r => { if (r.type !== ty) return; const own = r.ref === req.ref && !(r.dev && r.dev !== req.dev); if (r.ref === req.ref && !own && r.status !== 'deleted') taken = true; if (own && r.status !== 'deleted') return; const n = +(r.ref.match(/(\d+)$/) || [0, 0])[1]; if (n > top) top = n; });
+      if (!taken && mine > top) return { ok: true, ref: req.ref }; const give = pfx + String(top + 1).padStart(4, '0'); BILLS[give] = { ref: give, type: ty, name: req.name || '', status: 'draft', dev: req.dev, data: '{}' }; if (BILLS[req.ref] && !taken && BILLS[req.ref].status === 'draft') BILLS[req.ref].status = 'deleted'; return { ok: true, ref: give, was: req.ref }; } }
   if (b.job === 'cust') { if (req.op === 'post') { custPosts.push(req); return { ok: true, name: 'X', bal: 0, n: 1 }; } if (req.op === 'list') return { ok: true, list: [{ name: 'MAMA BAKHTA', bal: 100, n: 1, last: '2026-10-18' }] }; if (req.op === 'get' && req.name) return { ok: true, found: true, name: req.name, open: 0, odate: '2026-10-01', bal: 100, n: 1, entries: [{ id: 'x1', type: 'inv', ref: 'INV-1', date: '2026-10-18', sale: 100, recv: 0, adj: 0 }, { id: 'x2', type: 'inv', ref: 'INV-0015', date: '2026-10-18', sale: 1600, recv: 0, adj: 0 }] }; return { ok: true, found: false, names: [], list: [] }; }
   if (b.job === 'stock') { stockReq = req; jobs[req.id] = { id: req.id, ok: true, cards: [] }; return { ok: true }; }
   if (b.job === 'orders') { if (req.op === 'tick') ORDS[0].steps[req.step] = req.on ? { by: req.by, t: Date.now() } : null; if (req.op === 'link' && req.bill) ORDS[0].bill = req.bill; return { ok: true, orders: ORDS }; }
@@ -160,8 +163,19 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await p7.addInitScript(() => { try { navigator.clipboard.writeText = async t => { window.__clip = t; }; } catch (e) {} });
   await p7.goto(URL0); await p7.evaluate(pw => { localStorage.clear(); localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas'); }, PW); await p7.reload(); await p7.waitForSelector('#feed .design', { timeout: 15000 });
   await p7.click('#nav button[data-nv="more"]'); await p7.click('.mgrid button[data-go="bills"]'); await p7.waitForTimeout(1500);
-  const rvRef = await p7.evaluate(() => window.__sj.B().rv && window.__sj.B().rv.ref);
-  out.push(['a fresh phone opens Receipts at RV-0008 (after the employee\'s RV-0007), not RV-0001 — got ' + rvRef, rvRef === 'RV-0008']);
+  const rvRef = await p7.evaluate(() => window.__sj.B().rv && window.__sj.B().rv.ref), myDev0 = await p7.evaluate(() => localStorage.getItem('sj_dev'));
+  const rvNo = r => +((String(r).match(/(\d+)$/) || [0, 0])[1]), othersTop = () => Math.max(0, ...Object.values(BILLS).filter(b => b.type === 'rv' && b.dev !== myDev0 && b.status !== 'deleted').map(b => rvNo(b.ref)));
+  out.push(['a fresh phone opens Receipts after every number other phones used (employee\'s RV-0007 …), not RV-0001 — got ' + rvRef + ', others up to ' + othersTop(), rvNo(rvRef) > othersTop() && rvNo(rvRef) >= 8]);
+  // 4 Nov 2026 (Abbas: "my phone still says receipt No. 0001"): this phone's OWN old unsent draft RV-0001 (on the shop list under this phone AND
+  // kept in the phone's saved work) comes back at the next start → it moves to the next free number through the shop's check, old row set aside
+  const myDev = myDev0;
+  BILLS['RV-0001'] = { ref: 'RV-0001', type: 'rv', name: '', status: 'draft', dev: myDev, data: JSON.stringify({ v: 1, k: 'rv', d: { ref: 'RV-0001', amount: '' } }) };
+  await p7.evaluate(() => { __sj.B().rv = { ref: 'RV-0001', date: '2026-11-04', name: '', open: '', note: '', amount: '', modeP: 'Cash', chq: '', disc: '', status: 'draft' }; window.dispatchEvent(new Event('pagehide')); });
+  await p7.reload(); await p7.waitForSelector('#feed .design', { timeout: 15000 });
+  const rv0 = await p7.evaluate(() => (__sj.B().rv || {}).ref);
+  await p7.click('#nav button[data-nv="more"]'); await p7.click('.mgrid button[data-go="bills"]'); for (let k = 0; k < 30; k++) { if (await p7.evaluate(() => (__sj.B().rv || {}).ref !== 'RV-0001')) break; await p7.waitForTimeout(250); }
+  const rv1 = await p7.evaluate(() => (__sj.B().rv || {}).ref);
+  out.push(['this phone\'s own old RV-0001 draft (restored as ' + rv0 + ') moves on → ' + rv1 + ', and the old draft row is set aside', rv0 === 'RV-0001' && rvNo(rv1) > othersTop() && BILLS['RV-0001'].status === 'deleted']);
   await p7.fill('#bform input[data-k="name"]', 'MAMA BAKHTA'); await p7.waitForTimeout(1200);
   await p7.fill('#bform input[data-k="open"]', '10000'); await p7.fill('#bform input[data-k="amount"]', '9500'); await p7.fill('#bform input[data-k="disc"]', '500'); await p7.waitForTimeout(900);
   const bt = await p7.$eval('#btot', e => e.textContent);
@@ -170,7 +184,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   out.push(['the receipt text carries the discount line and Remaining 0.00', /Discount: -500\.00/.test(rvTxt) && /\*Remaining: 0\.00 AED\*/.test(rvTxt)]);
   const nPosts = custPosts.length; await p7.$eval('#dsend', e => e.click()); for (let k = 0; k < 40 && custPosts.length < nPosts + 2; k++) await p7.waitForTimeout(250);
   const rvPost = custPosts.slice(nPosts).find(x => x.type === 'rv'), dPost = custPosts.slice(nPosts).find(x => x.type === 'adj' && /discount/.test(x.ref || ''));
-  out.push(['Send: the statement gets the receipt (9,500 received) AND a "RV-0008 discount" line of -500', !!rvPost && rvPost.recv === 9500 && !!dPost && dPost.adj === -500 && /^RV-0008 discount$/.test(dPost.ref)]);
+  out.push(['Send: the statement gets the receipt (9,500 received) AND a "RV-… discount" line of -500', !!rvPost && rvPost.recv === 9500 && !!dPost && dPost.adj === -500 && dPost.ref === rv1 + ' discount']);
   await p7.close();
   out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); console.log('errors:', errs.slice(0, 5));
   await br.close(); srv.close();
