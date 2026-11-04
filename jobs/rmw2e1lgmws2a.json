@@ -1,0 +1,38 @@
+{
+ "id": "rmw2e1lgmws2a",
+ "op": "retbill",
+ "ref": "RET-0005",
+ "ok": true,
+ "cards": [
+  {
+   "card": "68f394bb41c6dc0c7d488e23",
+   "no": "47268",
+   "before": "SJ-47268 , (26)  pcs , COLORS =5 (4/10/4/4/4)",
+   "after": "SJ-47268 , (47)  pcs , COLORS =5 (8/14/9/8/8)",
+   "left": 47,
+   "lines": [
+    "colour 1: 4 → 8 (+4)",
+    "colour 2: 10 → 14 (+4)",
+    "colour 3: 4 → 9 (+5)",
+    "colour 4: 4 → 8 (+4)",
+    "colour 5: 4 → 8 (+4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a0c790acdbddb970426a351",
+   "no": "35741",
+   "before": "SJ = **35741** (0) pcs ,,,, colors = (5) ,,,, (0/0/0/0/0),,,,,",
+   "after": "SJ = **35741** (20) pcs ,,,, colors = (5) ,,,, (4/4/4/4/4),,,,,",
+   "left": 20,
+   "lines": [
+    "colour 1: 0 → 4 (+4)",
+    "colour 2: 0 → 4 (+4)",
+    "colour 3: 0 → 4 (+4)",
+    "colour 4: 0 → 4 (+4)",
+    "colour 5: 0 → 4 (+4)"
+   ],
+   "moved": ""
+  }
+ ]
+}
