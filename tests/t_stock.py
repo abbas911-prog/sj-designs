@@ -51,3 +51,14 @@ assert cards['D']['name'] == 'SJ-61111 (12) colour = (2) (6/6)' and comments['D'
 r4 = st.run({'op': 'retbill', 'ref': 'RET-0009', 'dev': 'd1', 'lines': [{'card': 'D', 'no': '61111', 'c': 1, 'pcs': 2}]})   # fixed line: goes through, not skipped
 assert not any(x.get('err') or x.get('skip') for x in r4) and cards['D']['name'] == 'SJ-61111 (14) colour = (2) (8/6)', (r4, cards['D'])
 print('retbill: colour not on the card → error, card untouched; fixed line then goes through — ok')
+# 5 Nov 2026 (Abbas, INV-0037 Matiullah #50: "the designs were deducted, but it has not moved to FINISH"): one-colour cards typed
+# "colour = (1)" with no count bracket were refused as "colour 1 not on the card" — the sale must take the pieces, and a sold-out card goes to FINISH
+cards['E'] = {'id': 'E', 'name': 'Sj = **(89990)__(4) pcs__ colour = (1) ', 'idList': st.READY, 'closed': False}; comments['E'] = []
+cards['F'] = {'id': 'F', 'name': 'Sj = **(26670)__(25) pcs__ colour = (1) ', 'idList': st.READY, 'closed': False}; comments['F'] = []
+r5 = st.run({'op': 'sell', 'ref': 'INV-0037', 'dev': 'd1', 'lines': [{'card': 'E', 'no': '89990', 'c': 1, 'pcs': 4}, {'card': 'F', 'no': '26670', 'c': 1, 'pcs': 5}]})
+assert not any(x.get('err') for x in r5), r5
+assert cards['E']['name'] == 'Sj = **(89990)__(0) pcs__ colour = (1) ' and cards['E']['idList'] == st.FINISH, cards['E']
+assert cards['F']['name'] == 'Sj = **(26670)__(20) pcs__ colour = (1) ' and cards['F']['idList'] == st.READY, cards['F']
+r6 = st.run({'op': 'sell', 'ref': 'INV-0037', 'dev': 'd1', 'lines': [{'card': 'F', 'no': '26670', 'c': 1, 'pcs': 5}]})   # Try again: never twice
+assert r6[0].get('skip') and cards['F']['name'] == 'Sj = **(26670)__(20) pcs__ colour = (1) ', (r6, cards['F'])
+print('sell: one-colour "colour = (1)" card sold, sold-out one moved to FINISH, retry skipped — ok')

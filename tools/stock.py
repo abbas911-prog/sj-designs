@@ -60,7 +60,7 @@ def parse(t):
     # 30 Oct 2026 (Abbas, SJ-83942 "Sj 83942 (8pcs) 1 colour": "it has colour 1, I've written it already"): one colour and no count bracket =
     # that colour holds the whole total (a sale then changes only the total, "(8pcs)" → "(4pcs)")
     if not grp and total is not None and re.search(r'(?<!\d)1\s*colou?rs?\b|colou?rs?\s*[.=:_\-]*\s*\(?\s*1\s*\)?(?!\s*[\d/])', s, re.I):
-        grp.append((len(tail), [[total[0], None, True]]))
+        grp.append((len(tail), [[total[0], None, True, 'total']]))   # 4th field: this colour IS the total (its number lives in the total's place)
     cells = [c for _, gc in grp for c in gc]
     groups = len(grp)
     ncol = re.search(r'colou?rs?\.?\s*=?\s*\(\s*(\d+)\s*\)', tail, re.I)
@@ -139,12 +139,15 @@ def run(req):
                 r.update(err='card title does not add up (%s = %d, card says %s) — not changed' %
                          ('+'.join(str(c[0]) for c in p['cells']), p['sum'], p['total'][0] if p['total'] else '?')); out.append(r); continue
             new = [c[0] for c in p['cells']]; desc = []
-            miss = sorted(set(c for c, pcs, _ in lines if not 1 <= c <= len(new) or not p['cells'][c - 1][1]))
+            # 5 Nov 2026 (Abbas, INV-0037 Matiullah #50: 26670 / 34571 / 80656 / 89990 "colour = (1)" were refused as "colour 1 not on the card"):
+            # the one-colour-holds-the-total cell has no place of its own in the title, which this check took for a missing colour
+            onc = lambda c: 1 <= c <= len(new) and (p['cells'][c - 1][1] or p['cells'][c - 1][3:] == ['total'])
+            miss = sorted(set(c for c, pcs, _ in lines if not onc(c)))
             if miss and op != 'check':                                    # 28 Oct 2026: was only a note in the comment, the card marked done and the phone told ✓
                 r.update(err='colour %s not on the card (it has %d colours) — nothing changed on this card; fix the colour number and try again'
                          % (', '.join(map(str, miss)), len(new))); out.append(r); continue
             for c, pcs, _ in sorted(lines):
-                if not 1 <= c <= len(new) or not p['cells'][c - 1][1]:
+                if not onc(c):
                     desc.append('colour %d: not on the card' % c); continue
                 b = new[c - 1]
                 if op in ('return', 'retbill'):
