@@ -85,7 +85,7 @@ main{max-width:720px;margin:0 auto;}
 .bl span{display:block;color:var(--mute);font-size:13px}
 .bprices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .bsec{font-weight:700;font-size:14px;margin-top:4px}.bsec small{font-weight:400;color:var(--mute)}.bsec.top{margin:2px 0 6px}
-.dmfix form{display:flex;gap:6px;margin-top:8px}.dmfix input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:14px}.dmfix button{border:0;border-radius:10px;background:var(--gold);color:#fff;font:inherit;font-weight:800;padding:0 12px}
+.dmfix form{display:flex;gap:6px;margin-top:8px}.dmfix input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:14px}.stk.dmfix button{margin-top:0;border:0;border-radius:10px;background:var(--gold);color:#fff;font:inherit;font-weight:800;padding:0 14px}
 .bex{display:grid;grid-template-columns:1fr 110px 40px;gap:6px}
 .bman{display:grid;grid-template-columns:1fr 64px 84px 40px;gap:6px;margin-bottom:6px}.bman input{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px;background:#fff}.bman button,.bex button{border:0;background:none;font-size:18px;color:var(--mute)}
 .bex button,.badd{border:1.5px solid var(--line);background:#fff;border-radius:10px;font:inherit}
@@ -954,7 +954,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-05a';
+var VER = '2026-11-05b';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -3604,7 +3604,7 @@ function ccDrawList(){ if (CC.bell) return;   // 20 Oct 2026: the 🔔 setup sta
   var L = ords.concat(custs).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
   L.sort(function(a, b){ var ua = (CC.un[a.k || ccK(a.name)] || {}).n ? 1 : 0, ub = (CC.un[b.k || ccK(b.name)] || {}).n ? 1 : 0; return ub - ua || (+b.last || 0) - (+a.last || 0); });
   var DL = (CC.dms || []).filter(function(r){ return !qq || ccK(r.name).indexOf(qq) >= 0; });
-  var hd = ''; if (CC.dmerr && !DL.length) hd += '<div class="stk bad dmfix">Direct chats: ' + esc(CC.dmerr) + (isBoss() ? '<br><br><b>Fix A:</b> api.slack.com/apps → SJ Memo → OAuth &amp; Permissions → Bot Token Scopes → add <b>groups:read</b> + <b>groups:write</b> (and <b>groups:history</b>) → Reinstall to Workspace.<br><b>Fix B:</b> in Slack make a private channel per person (e.g. <b>muhammad</b>) or one <b>sj-direct</b> for all, invite <b>@SJ Memo</b>, open the channel details, copy the Channel ID at the bottom and paste it here (with the person\'s name for a per-person channel):<form id="dmsetf"><input id="dmsetc" placeholder="Muhammad C0ABC12DEF" autocomplete="off"><button type="submit">Use it</button></form>' : '<br>Abbas: see the Chats tab on your phone.') + '</div>';
+  var hd = ''; if (CC.dmerr && (!DL.length || isBoss())) hd += '<div class="stk bad dmfix">Direct chats: ' + esc(CC.dmerr) + (isBoss() ? '<br><br><b>Fix A:</b> api.slack.com/apps → SJ Memo → OAuth &amp; Permissions → Bot Token Scopes → add <b>groups:read</b> + <b>groups:write</b> (and <b>groups:history</b>) → Reinstall to Workspace.<br><b>Fix B:</b> in Slack make a private channel per person (e.g. <b>muhammad</b>) or one <b>sj-direct</b> for all, invite <b>@SJ Memo</b>, open the channel details, copy the Channel ID at the bottom and paste it here (with the person\'s name for a per-person channel):<form id="dmsetf"><input id="dmsetc" placeholder="Muhammad C0ABC12DEF" autocomplete="off"><button type="submit">Use it</button></form>' : '<br>Abbas: see the Chats tab on your phone.') + '</div>';
   if (DL.length) hd += '<div class="bsec top">Direct · مباشر <small>' + (ccK(ccWho()).indexOf('ABBAS') === 0 ? 'you ↔ each person' : 'you ↔ Abbas') + '</small></div>' + DL.map(function(r){ var u = CC.un[r.k]; return '<div class="ccrow' + (u ? ' un' : '') + '" data-n="' + esc(r.name) + '" data-r="' + esc(r.root) + '" data-ch="direct"><div class="av">💬</div><div class="t"><b>' + esc(ccK(ccWho()).indexOf('ABBAS') === 0 ? r.name : 'Abbas') + '</b><small>' + (u && u.tx ? esc(u.tx) : 'direct chat · محادثة مباشرة') + '</small></div><span class="tm">' + (+r.last ? ccWhen(r.last) : '') + (u ? '<i>' + u.n + '</i>' : '') + '</span></div>'; }).join('');
   var h = hd + '<div class="ccsrch"><input id="ccq" placeholder="Search customer · ابحث عن عميل" autocomplete="off" value="' + esc(q) + '"></div>';
   var unk = Object.keys(CC.un);

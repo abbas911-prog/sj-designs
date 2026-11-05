@@ -46,4 +46,19 @@ ok('channel named after the person is used for him', l3.ok && l3.dms.length === 
 const sjd = Object.values(W3.slack.ch).find(c => c.name === 'sj-direct'); ok('the other person falls back to #sj-direct', !!sjd && sjd.msgs.length === 1 && /Imran/.test(sjd.msgs[0].text));
 const p3 = call3({ op: 'post', ch: 'direct', root: l3.dms[0].root, name: 'Muhammad', text: 'Salaam', who: 'Abbas', rid: 'r9' });
 ok('a line to Muhammad lands in his channel', p3.ok && W3.slack.ch['C0MUHAMMAD1'].msgs.length === 2 && call3({ op: 'list', who: 'Muhammad' }).dms[0].un === 1);
+// 5 Nov 2026 (Abbas made #muhammadm next to the older #muhammad; Imran has no channel and the bot may not make #sj-direct):
+// Muhammad's chat goes into the NEWEST channel named after him, and Imran's problem no longer hides it — it is said by name
+const W4 = F.makeWorld(), relay4 = F.makeRelay(W4, { MEMO_PASSWORD: PW, SLACK_BOT_TOKEN: 'xoxb-memo-test' });
+W4.slack.ch['C0BP6DSUHSA'] = { id: 'C0BP6DSUHSA', name: 'customer', member: true, msgs: [] }; W4.slack.ch['C08EDKV94SV'] = { id: 'C08EDKV94SV', name: 'godown', member: true, msgs: [] };
+W4.slack.ch['C0CAXAN1QPR'] = { id: 'C0CAXAN1QPR', name: 'muhammad', member: true, priv: true, created: 1761148000, msgs: [] };
+W4.slack.ch['C0CF3658Q5R'] = { id: 'C0CF3658Q5R', name: 'muhammadm', member: true, priv: true, created: 1762364700, msgs: [] }; W4.slackNoCreate = true;
+const call4 = o => { const req = JSON.stringify(Object.assign({ t: Date.now() }, o)); return JSON.parse(relay4.post(JSON.stringify({ job: 'cchat', req, sig: crypto.createHmac('sha256', PW).update(req).digest('hex') }))); };
+const l4 = call4({ op: 'list', who: 'Abbas' });
+ok('#muhammadm (the newest) is Muhammad\'s direct chat', l4.ok && (l4.dms || []).map(x => x.name).join() === 'Muhammad' && W4.slack.ch['C0CF3658Q5R'].msgs.length === 1 && W4.slack.ch['C0CAXAN1QPR'].msgs.length === 0);
+ok('Imran without a channel is named in the reason, Muhammad still listed', /^Imran: /.test(l4.dmerr || '') && /imran/.test(l4.dmerr));
+const W5 = F.makeWorld(), relay5 = F.makeRelay(W5, { MEMO_PASSWORD: PW, SLACK_BOT_TOKEN: 'xoxb-memo-test' });
+W5.slack.ch['C0BP6DSUHSA'] = { id: 'C0BP6DSUHSA', name: 'customer', member: true, msgs: [] }; W5.slack.ch['C0CF3658Q5R'] = { id: 'C0CF3658Q5R', name: 'muhammadm', member: true, priv: true, msgs: [] }; W5.slackNoCreate = true; W5.slackNoPrivList = true;
+const call5 = o => { const req = JSON.stringify(Object.assign({ t: Date.now() }, o)); return JSON.parse(relay5.post(JSON.stringify({ job: 'cchat', req, sig: crypto.createHmac('sha256', PW).update(req).digest('hex') }))); };
+const l5 = call5({ op: 'list', who: 'Abbas' });
+ok('a bot that may not see private channels says so (groups:read)', l5.ok && /groups:read/.test(l5.dmerr || ''));
 out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); if (!out.every(o => o[1])) { console.log(JSON.stringify({ a, m, i, r, p1, m2, th, a2 }).slice(0, 2500)); process.exit(1); }

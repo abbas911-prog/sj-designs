@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-10-31a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-11-05a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -1789,12 +1789,18 @@ function dmCh(P, tok) {
 }
 function dmChFor(P, tok, name) {                                   // 22 Oct 2026 (Abbas made a private channel "Muhammad" with the bot in it): the person's
   var k = 'CC_DM_CH_' + ccWhoKey(name), id = P.getProperty(k); if (id) return id;      // own channel wins (set by name, or pasted: op dmset with the name)
-  var slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), cur = '', n = 0;
-  try { do { var j = slackApi(tok, 'conversations.list', { types: 'public_channel,private_channel', exclude_archived: 'true', limit: 200, cursor: cur }, true); if (!j.ok) break;
-    var hit = (j.channels || []).filter(function (c) { var cn = String(c.name || '').toLowerCase(); return cn === slug || cn === 'sj-' + slug || cn === slug + '-direct' || cn === 'direct-' + slug; })[0]; if (hit) { id = hit.id; break; }
+  // 5 Nov 2026 (Abbas made #muhammadm next to the older #muhammad): a channel whose name STARTS with the person's name counts too
+  // (muhammadm, muhammad-m, sj-muhammad, muhammad-direct …); of several, the newest one is his. A bot that may not list private channels says so.
+  var slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), flat = slug.replace(/-/g, ''), cur = '', n = 0, best = null, lerr = '';
+  try { do { var j = slackApi(tok, 'conversations.list', { types: 'public_channel,private_channel', exclude_archived: 'true', limit: 200, cursor: cur }, true); if (!j.ok) { lerr = j.error || ''; break; }
+    (j.channels || []).forEach(function (c) { var cn = String(c.name || '').toLowerCase(), cf = cn.replace(/[-_]/g, '');
+      if (!(cf === flat || cf === 'sj' + flat || cf === 'direct' + flat || cf.indexOf(flat) === 0 || cf.indexOf('sj' + flat) === 0)) return;
+      if (!best || (+c.created || 0) > (+best.created || 0)) best = c; });
     cur = (j.response_metadata || {}).next_cursor || ''; } while (cur && ++n < 10); } catch (e) {}
+  if (best) id = best.id;
   if (id) { P.setProperty(k, id); return id; }
-  return dmCh(P, tok);                                              // nothing of his own: the shared #sj-direct
+  try { return dmCh(P, tok); }                                      // nothing of his own: the shared #sj-direct
+  catch (e) { throw new Error(lerr === 'missing_scope' ? 'SJ Memo may not see private channels (groups:read + groups:history missing) — add them (Fix A)' : 'no channel of his own (make a private channel "' + slug + '" and add @SJ Memo) — ' + String(e.message || e)); }
 }
 function dmRoot(P, tok, name) {                                    // the person's thread root (in his own channel, else #sj-direct), made once
   var k = 'CC_DM_ROOT_' + ccWhoKey(name), ts = P.getProperty(k); if (ts) return ts;
@@ -1824,7 +1830,10 @@ function dmUnread(P, tok, ch, who, roots, budget, fresh) {        // {'D'+ts: {n
 }
 function dmList(P, tok, who, budget, fresh) {                     // the direct chats this person may see, with unread counts
   var names = dmFor(P, who); if (!names.length) return [];
-  var rows = names.map(function (n) { var root = dmRoot(P, tok, n); return { k: 'D' + root, name: n, root: root, ch: dmChFor(P, tok, n), un: 0, tx: '', last: '0' }; });
+  // 5 Nov 2026: one person whose channel cannot be found or made no longer hides everybody else's chat; his reason is kept in dmList.err
+  var errs = []; dmList.err = '';
+  var rows = names.map(function (n) { try { var root = dmRoot(P, tok, n); return { k: 'D' + root, name: n, root: root, ch: dmChFor(P, tok, n), un: 0, tx: '', last: '0' }; } catch (e) { errs.push(n + ': ' + String(e.message || e)); return null; } }).filter(Boolean);
+  dmList.err = errs.join(' · ');
   var byCh = {}; rows.forEach(function (r) { (byCh[r.ch] = byCh[r.ch] || []).push(r); });
   Object.keys(byCh).forEach(function (ch) {
     var hist = []; try { hist = dmHist(tok, ch, fresh); } catch (e) {}
@@ -1884,7 +1893,7 @@ function cchat(reqText, P) {
       ords.sort(function (a, b) { return +b.last - +a.last; });
       if (!cR.get('CC_NSCAN')) { cR.put('CC_NSCAN', '1', 60); try { ccNotifyScan(P, 'poll'); } catch (e) {} }   // fallback when Slack's push is not pointed at the relay
       var gun = {}; try { gun = gdUnread(P, tok, who, req.groots || Object.keys(gdOrders(P)), req.op === 'ping' ? 4 : 8, !!req.fresh); } catch (e) {}
-      var dms = [], dmerr = ''; try { dms = dmList(P, tok, who, req.op === 'ping' ? 2 : 4, !!req.fresh); } catch (e) { dms = []; dmerr = String(e.message || e).slice(0, 300); }   // 22 Oct 2026: the reason is shown in the app, never swallowed
+      var dms = [], dmerr = ''; try { dms = dmList(P, tok, who, req.op === 'ping' ? 2 : 4, !!req.fresh); dmerr = String(dmList.err || '').slice(0, 400); } catch (e) { dms = []; dmerr = String(e.message || e).slice(0, 300); }   // 22 Oct 2026: the reason is shown in the app, never swallowed
       var ev = cR.get('CC_EV_AT'); return out({ ok: true, dms: dms, dmerr: dmerr, gun: gun, customers: Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return +b.last - +a.last; }), orders: ords.slice(0, 150), live: ccLive(P), nt: !!ntf[ccWhoKey(who)], ev: !!ev });
     }
     if ((req.ch === 'godown' || req.ch === 'direct') && (req.op === 'thread' || req.op === 'seen' || req.op === 'post' || req.op === 'up')) {
