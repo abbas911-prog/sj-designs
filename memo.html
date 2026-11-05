@@ -954,7 +954,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-04b';
+var VER = '2026-11-05a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1202,10 +1202,10 @@ var PFX = { inv: 'INV-', rv: 'RV-', pv: 'PV-', rn: 'RET-' };
 function nextRef(k){ return PFX[k] + String(lastNo(k) + 1).padStart(4, '0'); }
 // 21 Oct 2026: ONE number series for the whole shop. When a bill is finalised (green button / Send) the relay confirms its number: if another phone
 // already used it, or is ahead of it, the bill moves to the next free number and says so. Offline or an older relay: the number is kept as before.
-async function bsNext(k, d){ if (!RELAY || !token || !d || (d.status && d.status !== 'draft')) return;
-  try { var j = await bsCall({ op: 'next', type: k, ref: d.ref, name: d.name || '', date: d.date }, 1); if (!j.ok || !j.ref || j.ref === d.ref) return;
+async function bsNext(k, d){ if (!RELAY || !token || !d || (d.status && d.status !== 'draft')) return '';   // 5 Nov 2026: says 'kept' / 'moved', '' = no answer
+  try { var j = await bsCall({ op: 'next', type: k, ref: d.ref, name: d.name || '', date: d.date }, 1); if (!j.ok || !j.ref) return ''; if (j.ref === d.ref) return 'kept';
     var old = d.ref; keepNo(k, old); delete BS.last[old]; d.ref = j.ref; keepNo(k, j.ref); if (B[k] === d) redraw();
-    uiToast(old + ' → ' + j.ref + ' · that number was already used on another phone · الرقم مستخدم'); } catch(e){} }
+    uiToast(old + ' → ' + j.ref + ' · that number was already used on another phone · الرقم مستخدم'); return 'moved'; } catch(e){ return ''; } }
 function n2(v){ var x = parseFloat(String(v == null ? '' : v).replace(/[,\s]/g, '')); return isFinite(x) ? x : 0; }
 function r2(x){ return Math.round(x * 100) / 100; }
 function amt(x){ x = r2(x); return (x < 0 ? '-' : '') + Math.abs(x).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -1624,12 +1624,17 @@ function bsClose(){ BS.open = false; $('bsaved').hidden = true; $('bform').hidde
 // RV-0001 draft was one this phone had saved itself — the 1 Nov rule left a phone's own saved draft alone, so it kept 0001. Now any unsent draft
 // that is not ahead of every OTHER number of its kind is moved through the shop's own check (bsNext, the one Send uses): next free number, the
 // old draft row set aside — the same rule as at Send, just at once.
-function bsNos(){ (BS.list || []).forEach(function(b){ if (PFX[b.type]) keepNo(b.type, b.ref); });
+// 5 Nov 2026 (Abbas: "the receipt number goes up and down while we are making one"): two phones each with an open receipt LEAPFROGGED — each
+// counted the other's unsent draft (and the number the shop's check had just reserved for it) as used, moved above it, and the other phone then
+// moved above that, at every start / bills screen. Now only numbers that really went out (sent / included) count here; two open drafts on one
+// number are sorted out at Send by the shop's check, as always. And when the shop's check says the number is fine, the phone keeps it.
+function bsUsed(b){ return b.status === 'sent' || b.status === 'included'; }
+function bsNos(){ (BS.list || []).forEach(function(b){ if (PFX[b.type]) keepNo(b.type, b.ref); });   // a NEW bill still starts after every number on the list
   Object.keys(PFX).forEach(function(k){ var d = B[k]; if (!d || !d.ref || (d.status && d.status !== 'draft')) return; var m = String(d.ref).match(/(\d+)\s*$/); if (!m) return;
-    var top = 0; (BS.list || []).forEach(function(b){ if (b.type !== k || b.ref === d.ref) return; var n = +((String(b.ref).match(/(\d+)\s*$/) || [])[1] || 0); if (n > top) top = n; });
+    var top = 0; (BS.list || []).forEach(function(b){ if (b.type !== k || b.ref === d.ref || !bsUsed(b)) return; var n = +((String(b.ref).match(/(\d+)\s*$/) || [])[1] || 0); if (n > top) top = n; });
     if (+m[1] > top) return;
     if (bsNos.busy[k]) return; bsNos.busy[k] = 1; var was = d.ref;
-    bsNext(k, d).catch(function(){}).then(function(){ bsNos.busy[k] = 0; if (B[k] !== d || d.ref !== was || (d.status && d.status !== 'draft')) return;   // the shop's check moved it (or it was sent meanwhile)
+    bsNext(k, d).catch(function(){ return ''; }).then(function(how){ bsNos.busy[k] = 0; if (how || B[k] !== d || d.ref !== was || (d.status && d.status !== 'draft')) return;   // the shop's check moved it (or it was sent meanwhile)
       keepNo(k, was); delete BS.last[was]; d.ref = nextRef(k); if (B.mode === k && !$('done').hidden) { redraw(); uiToast(was + ' → ' + d.ref + ' · that number is already used · الرقم مستخدم'); } }); }); }   // no answer from the shop's check: move on here, as before
 bsNos.busy = {};
 async function bsSync(){ if (!RELAY || !token) return;

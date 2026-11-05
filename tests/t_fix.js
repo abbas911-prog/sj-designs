@@ -186,6 +186,20 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   const rvPost = custPosts.slice(nPosts).find(x => x.type === 'rv'), dPost = custPosts.slice(nPosts).find(x => x.type === 'adj' && /discount/.test(x.ref || ''));
   out.push(['Send: the statement gets the receipt (9,500 received) AND a "RV-… discount" line of -500', !!rvPost && rvPost.recv === 9500 && !!dPost && dPost.adj === -500 && dPost.ref === rv1 + ' discount']);
   await p7.close();
+  // 5 Nov 2026 (Abbas: "the receipt number goes up and down while we are making one"): two phones, each with a receipt open and not sent yet.
+  // Each used to count the other's unsent draft as a used number and move above it, again and again at every start / bills screen.
+  const ph = async (dev, name) => { const p = await br.newPage({ viewport: { width: 390, height: 844 } }); p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept());
+    await p.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) })); await p.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
+    await p.goto(URL0); await p.evaluate(a => { localStorage.clear(); localStorage.setItem('sj_memo_pw', a[0]); localStorage.setItem('sj_me', a[2]); localStorage.setItem('sj_dev', a[1]); }, [PW, dev, name]); await p.reload(); await p.waitForSelector('#feed .design', { timeout: 15000 });
+    p.bills = async () => { await p.evaluate(() => { if (!document.querySelector('#done').hidden) document.querySelector('#back') && document.querySelector('#back').click(); }); await p.click('#nav button[data-nv="more"]'); await p.click('.mgrid button[data-go="bills"]'); await p.waitForTimeout(1800); };
+    p.rv = () => p.evaluate(() => (__sj.B().rv || {}).ref); return p; };
+  const pA = await ph('shopA', 'Abbas'), pB = await ph('shopB', 'Imran');
+  await pA.bills(); await pA.fill('#bform input[data-k="name"]', 'NAWROZ'); await pA.fill('#bform input[data-k="amount"]', '300'); await pA.waitForTimeout(3500);   // auto-saved as a draft
+  await pB.bills(); await pB.fill('#bform input[data-k="name"]', 'MATIULLAH'); await pB.fill('#bform input[data-k="amount"]', '200'); await pB.waitForTimeout(3500);
+  const seenA = [await pA.rv()], seenB = [await pB.rv()];
+  for (let k = 0; k < 3; k++) { await pA.bills(); seenA.push(await pA.rv()); await pB.bills(); seenB.push(await pB.rv()); }
+  out.push(['two phones with a receipt open each: the numbers stay put (A ' + seenA.join(' ') + ' · B ' + seenB.join(' ') + ')', new Set(seenA).size === 1 && new Set(seenB).size === 1 && seenA[0] !== seenB[0]]);
+  await pA.close(); await pB.close();
   out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); console.log('errors:', errs.slice(0, 5));
   await br.close(); srv.close();
 })().catch(e => { console.error('CRASH', e); process.exit(1); });
