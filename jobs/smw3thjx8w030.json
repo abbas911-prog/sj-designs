@@ -1,0 +1,20 @@
+{
+ "id": "smw3thjx8w030",
+ "op": "sell",
+ "ref": "INV-0043",
+ "ok": true,
+ "cards": [
+  {
+   "card": "69f2461f73c71f6591672140",
+   "no": "91289",
+   "before": "Sj= **91289** (4) pcs colors = (5)                         (0/0/4/0/0/0),,(0/0)",
+   "after": "Sj= **91289** (0) pcs colors = (5)                         (0/0/0/0/0/0),,(0/0)",
+   "left": 0,
+   "lines": [
+    "colour 3: 4 → 0 (−4)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
