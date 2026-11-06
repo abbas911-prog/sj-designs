@@ -144,7 +144,7 @@ main{max-width:720px;margin:0 auto;}
 .fft tr.bad td{background:#fbeee8}
 .ffi{width:58px;padding:4px 4px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:13px;text-align:right;background:#fffdf9}
 .ffi.ffno{width:96px;text-align:left}.ffi.ffno.chg{border-color:#b08a4a;background:#fff4dc}
-.ffv{font:inherit;font-size:12px;padding:2px;border:1px solid var(--gold);border-radius:6px;background:#fff}
+.ffvs{display:flex;flex-wrap:wrap;gap:4px}.ffvb{font:inherit;font-size:12px;font-weight:700;padding:4px 8px;border:1.5px solid var(--gold);border-radius:8px;background:#fff;color:var(--ink,#222);line-height:1.15;text-align:left}.ffvb small{display:block;font-size:10.5px;font-weight:500;opacity:.8}.ffvb.on{background:var(--gold);color:#fff}
 .ffn{font-size:11px;color:var(--mute);margin-top:4px}
 .ffw{margin-top:6px;font-size:14px;text-align:right}
 .fff{margin-top:8px;font-size:12px;display:grid;gap:3px}
@@ -954,7 +954,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-05b';
+var VER = '2026-11-06a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2507,7 +2507,9 @@ function ffBillHtml(b, k, E){
     (b.draft ? '<em>preview of the bill on screen — not included yet</em>' : '<span><button type="button" data-out="' + esc(ffKey(b)) + '">' + (k.out ? 'Put in' : 'Leave out') + '</button><button type="button" class="ffdel" data-del="' + esc(ffKey(b)) + '">Delete bill</button>' + (k.ed ? '<button type="button" data-reset="' + esc(ffKey(b)) + '">Reset</button>' : '') + '</span>') + '</div>';
   h += '<div class="ffs">1 · Bill as written</div>' + ffTable(['Design', 'Qty', 'Price', 'Amount'], k.rows.map(function(r){ return '<tr><td>' + ffNo(b, r) + '</td><td>' + ffIn(b, r.i, 'qty', r.qty) + '</td><td>' + ffIn(b, r.i, 'rate', r.rate) + '</td><td>' + fmt2(r.amt) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + k.wPcs + '</td><td></td><td>' + fmt(k.wSum) + '</td></tr>']));
   h += '<div class="ffs">2 · Cost <small>(inventory report ' + esc(COST ? COST.d : '—') + ')</small></div>' + ffTable(['Design', 'Cost', 'Sold', 'Profit', 'Half', 'New'], k.rows.map(function(r){
-    var sel = r.vs.length > 1 ? '<select class="ffv" data-b="' + esc(ffKey(b)) + '" data-i="' + r.i + '">' + (r.v ? '' : '<option value="">which?</option>') + r.vs.map(function(x){ return '<option' + (x === r.v ? ' selected' : '') + ' value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('') + '</select>' : ffNo(b, r);
+    // 6 Nov 2026 (Abbas, iPad: "I change 75308 to 75308-B — when I click on B it still stays the same"): the variant dropdown is now one tap
+    // button per variant with its cost (works the same on every phone / iPad, and shows which cost each one means); the picked one is gold
+    var sel = r.vs.length > 1 ? '<div class="ffvs">' + r.vs.map(function(x){ return '<button type="button" class="ffvb' + (x === r.v ? ' on' : '') + '" data-b="' + esc(ffKey(b)) + '" data-i="' + r.i + '" data-v="' + esc(x) + '">' + esc(x) + '<small>' + fmt2(COST.c[x]) + '</small></button>'; }).join('') + '</div>' : ffNo(b, r);
     return '<tr' + (r.cost == null || !(r.rate > 0) ? ' class="bad"' : '') + '><td>' + sel + '</td><td>' + ffIn(b, r.i, 'cost', r.cost) + '</td><td>' + fmt2(r.rate) + '</td><td>' + fmt2(r.profit) + '</td><td>' + (r.half == null ? '—' : r.half.toFixed(2)) + '</td><td>' + ffIn(b, r.i, 'nw', r.nw) + '</td></tr>'; }));
   h += '<div class="ffn">New price = cost + half the profit, rounded to whole AED. Tap any box to change it.</div>';
   h += '<div class="ffs">3 · Revised bill</div>' + ffTable(['Design', 'Qty', 'New', 'Amount'], k.rows.map(function(r){ return '<tr><td>' + esc(r.lab) + '</td><td>' + r.qty + '</td><td>' + (r.nw == null ? '?' : r.nw) + '</td><td>' + (r.namt == null ? '?' : fmt(r.namt)) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + k.wPcs + '</td><td></td><td>' + fmt(k.nSum) + (k.block ? '?' : '') + '</td></tr>']));
@@ -2574,14 +2576,15 @@ $('ffbody').addEventListener('change', function(e){
   if (t.id === 'ffdate') { ls('sj_ff_date', t.value.trim() || '1/6/26'); ffDraw(); return; }
   if (!t.dataset.b) return;
   var k = t.dataset.b, i = t.dataset.i, e1 = E[k] = E[k] || {}, l = e1.l = e1.l || {}, x = l[i] = l[i] || {};
-  if (t.classList.contains('ffv')) { if (t.value) x.v = t.value; else delete x.v; delete x.cost; }
-  else if (t.dataset.f === 'no') { var nv = t.value.trim().toUpperCase().replace(/^S\s*[JH]\s*[-=:.]?\s*/, '').replace(/\s+/g, ''); if (!nv || nv === String(t.dataset.o).toUpperCase()) delete x.no; else x.no = nv; delete x.v; delete x.cost; delete x.nw; }   // 30 Oct 2026: design number fixed by hand → its own cost
+  if (t.dataset.f === 'no') { var nv = t.value.trim().toUpperCase().replace(/^S\s*[JH]\s*[-=:.]?\s*/, '').replace(/\s+/g, ''); if (!nv || nv === String(t.dataset.o).toUpperCase()) delete x.no; else x.no = nv; delete x.v; delete x.cost; delete x.nw; }   // 30 Oct 2026: design number fixed by hand → its own cost
   else { var v = parseFloat(String(t.value).replace(/[^\d.\-]/g, '')); if (isNaN(v) || t.value.trim() === '') delete x[t.dataset.f]; else x[t.dataset.f] = v; if (t.dataset.f !== 'nw' && x.nw != null && t.dataset.f !== 'qty') delete x.nw; }
   if (!Object.keys(x).length) delete l[i];
   ffSave(E); setTimeout(ffDraw, 300);   // later, so a tap on MAKE BILL right after typing is not lost under the redraw
 });
 $('ffbody').addEventListener('click', async function(e){
   var b = e.target.closest('button'); if (!b) return; var E = ffEd();
+  if (b.classList.contains('ffvb') && b.dataset.b) { var vk = b.dataset.b, vi = b.dataset.i, ve = E[vk] = E[vk] || {}, vl = ve.l = ve.l || {}, vx = vl[vi] = vl[vi] || {};
+    vx.v = b.dataset.v; delete vx.cost; delete vx.nw; ffSave(E); ffDraw(); return; }
   if (b.dataset.out) { var o = E[b.dataset.out] = E[b.dataset.out] || {}; o.out = /^Leave out/.test(b.textContent); ffSave(E); ffDraw(); return; }
   if (b.dataset.del) { var bl = (FF.L.bills || []).filter(function(x){ return ffKey(x) === b.dataset.del; })[0]; if (!bl) return;
     if (!confirm('Delete ' + bl.ref + ' (' + (bl.name || 'no name') + ', ' + bl.pcs + ' pcs) from the 50-50 list?\n\nThis does NOT put pieces back on Trello — for that use Undo on the invoice.')) return;
