@@ -954,7 +954,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-06a';
+var VER = '2026-11-07a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -962,7 +962,7 @@ async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (
   if (m && m[1] > VER) { saveWork();   // only ever forward: a stale cached copy must not send the phone back to an older version
     location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); return; }
   if (ne && m && m[1] === VER) ls('sj_memo_etag', ne); } catch(e){} }
-document.addEventListener('visibilitychange', function(){ if (!document.hidden) checkVer(); });
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) { checkVer(); setTimeout(custFlush, 1500); } });
 var NOIX = { of: null, m: {} };   // 20 Oct 2026: design by number in one step (it searched the whole list on every call — thousands of times per tap)
 // 21 Oct 2026 (Abbas, video: "the design is the same but the colours changed"): marks, prices and office/godown choices are tied to the Trello CARD,
 // not only to the design number. When a second card with the same number appears (or the plain number moves to a newer card), every saved
@@ -1186,7 +1186,7 @@ async function boot(){
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
   $('setup').hidden = true; $('load').hidden = false;
   try { designs = await loadCards(); $('load').hidden = true; var w = loadWork(); render(); if (updated) { var d = new Date(updated); $('cnt').title = 'List updated ' + d.toLocaleString(); }
-    setTimeout(checkVer, 800); setTimeout(liveSync, 300); setTimeout(bsSync, 1200);
+    setTimeout(checkVer, 800); setTimeout(liveSync, 300); setTimeout(bsSync, 1200); setTimeout(custFlush, 2500);
     if (w) { if (w.open) { $('done').hidden = false; setMode(w.open); } else if (w.at) { var a = document.querySelector('#feed .design[data-no="' + w.at + '"]'); if (a) a.scrollIntoView(); } } }
   catch (e) { $('load').hidden = true;
     if (/not accepted/.test(e.message)) { dropToken(); $('setup').hidden = false; $('tok').value = ''; $('seterr').textContent = 'Wrong password · كلمة السر غير صحيحة'; }
@@ -1748,6 +1748,7 @@ function stkShow(){ szPaint(); var el = $('stk'); $('dinc').hidden = B.mode !== 
   el.innerHTML = RELAY ? '<b>Send PDF</b> does not change stock. <b>Include &amp; share</b> sends the final invoice and takes its pieces off Trello. <small>فقط «تأكيد وإرسال» يخصم القطع من تريلو</small>' + (isOwner() ? '<button type="button" data-stk="check">Test — show what would change (Trello not touched)</button>' : '')
                        : 'Stock link not set up yet — sending will not change Trello. <small>لم يتم ربط المخزون بعد</small>'; }
 function stkPaint(s){ var el = $('stk'); if (B.mode !== 'inv' || !B.inv || stkKey(B.inv.ref) !== stkKey(s.ref)) return; el.hidden = false;
+  if (s.st === 'busy' && Date.now() - (s.t || 0) > 300000) { s.st = 'bad'; s.err = 'No answer from the stock job (the app was closed or the line dropped) — Try again is safe, it never takes pieces off twice.'; stkSave(); }
   var pcs = s.lines.reduce(function(a, l){ return a + l.pcs; }, 0), h = '';
   if (s.st === 'busy') { el.className = 'stk'; h = (s.op === 'sell' ? 'Taking ' + pcs + ' pcs off Trello…' : 'Putting ' + s.ref + ' back on Trello…') + '<small>' + (s.op === 'sell' ? 'جارٍ الخصم من تريلو' : 'جارٍ الإرجاع') + ' · about a minute</small>'; }
   else if (s.st === 'bad') { el.className = 'stk bad'; h = (s.op === 'sell' ? 'Trello NOT fully updated for ' : 'Return NOT done for ') + esc(s.ref) + '<small>' + esc(s.err) + '</small>' + cardLines(s.res) + '<button type="button" data-stk="' + s.op + '">Try again · أعد المحاولة</button>'; }
@@ -1803,8 +1804,13 @@ async function rnFrom(ref){ var d = B.rn, el = $('rnlist'); if (!d) return; el.i
   } catch(e){ el.innerHTML = '<div class="stk bad">Could not open ' + esc(ref) + ' — ' + esc(e.message) + '</div>'; } }
 function rnStk(){ var d = B.rn; return d ? STK[stkKey(d.ref)] : null; }
 function rnPaint(){ var el = $('stk'), d = B.rn; if (!d) { el.hidden = true; return; } var s = rnStk(); el.hidden = false;
-  if (!s && d.status === 'included' && d.doneDev && d.doneDev !== devId()) { el.className = 'stk ok'; el.innerHTML = '<b>' + esc(d.ref) + ' was shared on another phone.</b><small>Its pieces go back on Trello from that phone. To send the PDF again use Send PDF. · تم من هاتف آخر</small>'; return; }
-  if ((!s || (s.st === 'ok' && !s.lines.length)) && d.status === 'included') { el.className = 'stk bad'; el.innerHTML = '<b>' + esc(d.ref) + ' was shared, but its pieces are NOT back on Trello yet.</b><small>Check each line has the colour NUMBER, then press the button — it only changes Trello (the PDF and the balance are not sent again).</small><button type="button" data-rn="again">Put the pieces back on Trello now · أرجع القطع</button>'; return; }
+  // 7 Nov 2026: a return that was shared but whose follow-up never arrived (page lost after the WhatsApp share, or shared on another phone) is repaired from
+  // ANY phone: both buttons repeat what the first press should have done, with the same ids — the statement line is replaced and Trello skips what it already did
+  if (s && s.st === 'busy' && Date.now() - (s.t || 0) > 300000) { s.st = 'bad'; s.err = 'No answer from the stock job (the app was closed or the line dropped) — Try again is safe, it never puts pieces back twice.'; stkSave(); }
+  var fix = d.status === 'included' && (!s || (s.st === 'ok' && !s.lines.length) || (d.doneDev && d.doneDev !== devId()));
+  if (fix) { var other = d.doneDev && d.doneDev !== devId();
+    el.className = other ? 'stk' : 'stk bad'; el.innerHTML = '<b>' + esc(d.ref) + ' was shared' + (other ? ' on another phone' : '') + '.</b><small>If it is missing from ' + esc(d.name || 'the customer') + '\'s statement, or its pieces are not back on Trello, press the button — each one is safe to press twice (nothing is counted or put back twice). · إن لم يظهر في الكشف أو لم تعد القطع</small>' +
+      '<button type="button" data-rn="stmt">Add ' + amt(rnCalc(d).total) + ' to the customer\'s statement · أضف إلى الكشف</button><button type="button" data-rn="again">Put the pieces back on Trello · أرجع القطع</button>' + (d.saveErr ? '<small class="miss">' + esc(d.saveErr) + '</small>' : '') + (d.saved ? '<small>✓ On the statement — balance ' + amt(d.saved.bal) + ' AED</small>' : ''); return; }
   if (!s) { el.className = 'stk'; el.innerHTML = '<b>Send PDF</b> is only a draft. <b>Return &amp; share</b> shares the return, takes its amount off the customer\'s balance and puts the pieces back on Trello (colour by colour). <small>فقط «تأكيد المرتجع» يرجع القطع إلى تريلو</small>'; return; }
   var pcs = s.lines.reduce(function(a, l){ return a + l.pcs; }, 0);
   if (s.st === 'busy') { el.className = 'stk'; el.innerHTML = 'Putting ' + pcs + ' pcs back on Trello for ' + esc(s.ref) + '…<small>جارٍ الإرجاع إلى تريلو · about a minute</small>'; return; }
@@ -1829,20 +1835,24 @@ async function rnInclude(){
   rnCust(d, c);
   rnStock(d, c);
 }
-async function rnCust(d, c){ var nm = (d.name || '').trim(); if (!nm) return; var base = { name: nm, date: d.date, by: ls('sj_me') || '', open: n2(d.open) }; d.saveErr = ''; d.saved = null;
-  try { var last = null; if (d.adj) last = await custSend(Object.assign({ op: 'post', id: 'adj:' + d.ref + ':' + devId(), type: 'adj', ref: d.ref + ' adjust', adj: d.adj }, base));
-    last = await custSend(Object.assign({ op: 'post', id: 'rn:' + d.ref + ':' + devId(), type: 'adj', ref: d.ref + ' return', adj: -c.total }, base));
+async function rnCust(d, c){ var nm = (d.name || '').trim(); if (!nm) return false; var dv = d.doneDev || devId(); var base = { name: nm, date: d.date, by: ls('sj_me') || '', open: n2(d.open) }; d.saveErr = ''; d.saved = null;
+  try { var last = null; if (d.adj) last = await custSend(Object.assign({ op: 'post', id: 'adj:' + d.ref + ':' + dv, type: 'adj', ref: d.ref + ' adjust', adj: d.adj }, base));
+    last = await custSend(Object.assign({ op: 'post', id: 'rn:' + d.ref + ':' + dv, type: 'adj', ref: d.ref + ' return', adj: -c.total }, base));
     d.saved = { name: last.name, bal: last.bal }; d.cust = { found: true, name: last.name, bal: Math.round(n2(d.open) * 100) / 100, n: last.n }; d.openTyped = false; }
-  catch(e){ d.saveErr = e.message; } if (B.rn === d && B.mode === 'rn') custHint(); try { saveWork(); } catch(e){} }
+  catch(e){ d.saveErr = e.message; } if (B.rn === d && B.mode === 'rn') custHint(); try { saveWork(); } catch(e){} return !d.saveErr; }
 async function rnStock(d, c){ if (!RELAY) return;
   var lines = c.lines.map(function(l){ return { card: l.card || '', no: l.no, c: +l.c, pcs: l.qty }; }).filter(function(l){ return l.c > 0 && l.pcs > 0; });
   if (!lines.length) { alert('Nothing to put back on Trello — every line needs a colour NUMBER and pieces.'); if (B.mode === 'rn') rnPaint(); return; }
   var k = stkKey(d.ref), id = jobId('r'), s = STK[k] = { st: 'busy', op: 'retbill', ref: d.ref, lines: lines, id: id, who: d.name || '', t: Date.now() }; stkSave(); if (B.mode === 'rn') rnPaint();
-  try { await relay('stock', { id: id, op: 'retbill', ref: d.ref, dev: devId(), who: s.who, lines: lines }); }
+  try { await relay('stock', { id: id, op: 'retbill', ref: d.ref, dev: d.doneDev || devId(), who: s.who, lines: lines }); }
   catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); if (B.mode === 'rn') rnPaint(); return; }
   var res = await waitJob(id, 'stock', 8);
   s.res = res; s.st = res.ok ? 'ok' : 'bad'; s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); if (B.mode === 'rn' && B.rn === d) rnPaint(); }
-$('stk').addEventListener('click', function(e){ var b = e.target.closest('button[data-rn]'); if (!b || !B.rn) return; var bad = (B.rn.items || []).filter(function(it){ return n2(it.pcs) > 0 && !rnColOk(it.c); }); if (bad.length) { alert('Pick the colour NUMBER on every line first (tap the colour under the design).'); return; } var s = rnStk(); if (s) delete STK[stkKey(B.rn.ref)]; rnStock(B.rn, rnCalc(B.rn)); });
+$('stk').addEventListener('click', async function(e){ var b = e.target.closest('button[data-rn="stmt"]'); if (!b || !B.rn) return; var d = B.rn, c = rnCalc(d);
+  if (!(d.name || '').trim()) { alert('This return has no customer name — open it and type the name first.'); return; }
+  b.disabled = true; var ok = await rnCust(d, c); b.disabled = false; if (B.rn === d && B.mode === 'rn') rnPaint();
+  if (ok) { uiToast('✓ ' + d.ref + ' is on ' + (d.saved && d.saved.name || d.name) + '\'s statement · balance ' + amt(d.saved ? d.saved.bal : 0)); bsSave(true); } else alert('Not added: ' + (d.saveErr || 'no answer') + '\n\nIt is kept on this phone and sent again by itself.'); });
+$('stk').addEventListener('click', function(e){ var b = e.target.closest('button[data-rn]'); if (!b || b.dataset.rn === 'stmt' || !B.rn) return; var bad = (B.rn.items || []).filter(function(it){ return n2(it.pcs) > 0 && !rnColOk(it.c); }); if (bad.length) { alert('Pick the colour NUMBER on every line first (tap the colour under the design).'); return; } var s = rnStk(); if (s) delete STK[stkKey(B.rn.ref)]; rnStock(B.rn, rnCalc(B.rn)); });
 $('stk').addEventListener('click', function(e){ var b = e.target.closest('button[data-stk]'); if (!b) return;
   if (b.dataset.stk === 'return' && !confirm('Put the pieces of ' + B.inv.ref + ' back on Trello?')) return;
   if (b.dataset.stk === 'sell') { var s = STK[stkKey(B.inv.ref)]; if (s) s.st = 'retry'; }
@@ -3310,8 +3320,11 @@ function custBefore(k, d){     // ask before changing a known customer's balance
   d.open = String(d.cust.bal); d.openTyped = false; redraw(); return false;
 }
 function custQ(v){ if (v === undefined) { try { return JSON.parse(ls('sj_custq') || '[]'); } catch(e){ return []; } } ls('sj_custq', JSON.stringify(v)); }
-async function custSend(o){ try { var j = await custCall(Object.assign({}, o)); custQ(custQ().filter(function(x){ return x.id !== o.id; })); return j; }
-  catch(e){ var q = custQ().filter(function(x){ return x.id !== o.id; }); q.push(o); custQ(q); throw e; } }
+// 7 Nov 2026 (Abbas: a 720 return shared on a phone never reached Matiullah's statement): the line is kept on the phone BEFORE it is sent and only
+// forgotten once the shop answered ok — before, it was kept only when the send FAILED, so a phone that lost the page right after the WhatsApp share
+// (nothing failed, nothing was sent) kept nothing. A kept line is sent again at the next start / when the app comes to the front / on Bills.
+async function custSend(o){ var q = custQ().filter(function(x){ return x.id !== o.id; }); q.push(o); custQ(q);
+  var j = await custCall(Object.assign({}, o)); custQ(custQ().filter(function(x){ return x.id !== o.id; })); return j; }
 async function custFlush(){ var q = custQ(); for (var i = 0; i < q.length; i++) { try { await custCall(Object.assign({}, q[i])); custQ(custQ().filter(function(x){ return x.id !== q[i].id; })); } catch(e){ return; } } }
 async function custAfter(k, d){
   var nm = (d.name || '').trim(); if (!nm) return;

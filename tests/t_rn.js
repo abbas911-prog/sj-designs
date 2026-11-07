@@ -5,7 +5,7 @@ const cards = [{ id: 'c1', idShort: 1, list: 'r', name: 'SJ-18634 (16) colour = 
   { id: 'c5', idShort: 5, list: 'r', name: 'SJ-47168 (20) colour = (5) (4/4/4/4/4)', attachments: [] }];
 const enc = lock({ updated: new Date().toISOString(), cards });
 const BILLS = { 'INV-0015': { ref: 'INV-0015', type: 'inv', name: 'MAMA BAKHTA', status: 'included', total: '1,600.00', date: '2026-10-18', updated: '2026-10-18T19:00:00Z', data: JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }, { no: '48293', base: '48293', card: 'cGONE', c: 2, qty: 8, rate: 100 }] }) } };
-const jobs = {}, custPosts = []; let stockReq = null;
+const jobs = {}, custPosts = []; let stockReq = null, hangCust = false;
 function relay(b) { const req = JSON.parse(b.req);
   if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: Object.values(BILLS).map(x => Object.assign({}, x, { data: undefined })) }; if (req.op === 'get') return Object.assign({ ok: true }, BILLS[req.ref]); if (req.op === 'put') { BILLS[req.ref] = Object.assign({}, req, { updated: new Date().toISOString() }); return { ok: true, status: req.status }; } }
   if (b.job === 'cust') { if (req.op === 'get') return { ok: true, found: true, name: 'MAMA BAKHTA', bal: 5000, n: 3 }; if (req.op === 'post') { custPosts.push(req); return { ok: true, name: 'MAMA BAKHTA', bal: 5000 + (req.adj || 0), n: 4 }; } return { ok: true, names: [] }; }
@@ -17,7 +17,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await new Promise(r => srv.listen(0, r)); const URL0 = 'http://localhost:' + srv.address().port + '/memo.html';
   const br = await chromium.launch(); const pg = await br.newPage({ viewport: { width: 390, height: 844 } }); const errs = [];
   pg.on('pageerror', e => errs.push(e.message)); pg.on('dialog', d => d.accept());
-  await pg.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) }));
+  await pg.route(/script\.google\.com/, r => { const b = JSON.parse(r.request().postData() || '{}'); if (hangCust && b.job === 'cust' && JSON.parse(b.req).op === 'post') return; r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(b)) }); });
   await pg.route(/raw\.githubusercontent\.com\/.*jobs\//, r => { const id = r.request().url().match(/jobs\/([^.?]+)\.json/)[1]; jobs[id] ? r.fulfill({ contentType: 'application/json', body: JSON.stringify(jobs[id]) }) : r.fulfill({ status: 404, body: 'nf' }); });
   await pg.route(/ntfy\.sh|api\.github\.com/, r => r.abort());
   await pg.addInitScript(() => { window.navigator.canShare = () => false; });
@@ -67,6 +67,26 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await pg.click('#dinc'); await pg.waitForFunction(() => /Back on Trello/.test(document.querySelector('#stk').textContent), null, { timeout: 30000 }).catch(() => {}); await pg.waitForTimeout(300);
   const L5 = (stockReq && stockReq.lines) || [];
   out.push(['5 colours go back to the card, 4 pcs each', stockReq !== before5 && L5.length === 5 && L5.every(l => l.card === 'c5' && l.pcs === 4) && L5.map(l => l.c).sort().join() === '1,2,3,4,5']);
+  // 7 Nov 2026 (Abbas: a 720 return shared on Muhammad's phone never reached Matiullah's statement and Trello): the phone must remember the statement
+  // line BEFORE it sends it (a page lost right after the WhatsApp share sent nothing and failed nothing, so nothing was kept), and a return shared but
+  // never confirmed — or shared on another phone — can be repaired from any phone with both buttons, with the first phone's ids
+  await pg.click('#dnew'); await pg.waitForTimeout(300); await pg.fill('#bform input[data-k="name"]', 'MAMA'); await pg.waitForTimeout(500); await pg.click('#addri'); const iq = await pg.$$('.rnrow input'); await iq[0].fill('6668-1'); await iq[1].fill('2'); await iq[2].fill('4'); await iq[3].fill('50'); await pg.waitForTimeout(700);
+  hangCust = true; await pg.click('#dinc'); await pg.waitForTimeout(1200);
+  out.push(['the statement line is kept on the phone while the shop has not answered', await pg.evaluate(() => (JSON.parse(localStorage.getItem('sj_custq') || '[]')).some(x => /^rn:RET-\d+:/.test(x.id) && x.adj === -200))]);
+  hangCust = false;
+  const nP = custPosts.length, nS = stockReq && stockReq.id;
+  await pg.evaluate(() => { window.__sj.B().rn = { ref: 'RET-0099', date: '2026-11-04', name: 'MAMA', open: '5000', note: '', vat: false, inv: '', items: [{ no: '18634', c: '1', pcs: '4', rate: '180', card: 'c1', hand: 1 }], status: 'included', doneDev: 'otherphone' }; window.__sj.setMode('rn'); });
+  await pg.waitForTimeout(500);
+  const bx = await t('#stk');
+  out.push(['a return shared on another phone offers both repair buttons', /was shared on another phone/.test(bx) && !!(await pg.$('#stk button[data-rn="stmt"]')) && !!(await pg.$('#stk button[data-rn="again"]')) && /720\.00/.test(bx)]);
+  await pg.click('#stk button[data-rn="stmt"]'); await pg.waitForTimeout(900);
+  const mine = custPosts.slice(nP).filter(p => /RET-0099/.test(p.ref || ''));
+  out.push(['Add to statement: -720 under the first phone\'s id (rn:RET-0099:otherphone)', mine.length === 1 && mine[0].id === 'rn:RET-0099:otherphone' && mine[0].adj === -720]);
+  await pg.click('#stk button[data-rn="stmt"]'); await pg.waitForTimeout(900);
+  const again = custPosts.slice(nP).filter(p => /RET-0099/.test(p.ref || ''));
+  out.push(['pressing it twice sends the same id (the shop replaces the line, never counts it twice)', again.length === 2 && again[0].id === again[1].id]);
+  await pg.click('#stk button[data-rn="again"]'); await pg.waitForTimeout(1500);
+  out.push(['Put the pieces back: the Trello job carries the first phone\'s dev (so it skips what it did)', !!stockReq && stockReq.id !== nS && stockReq.dev === 'otherphone' && stockReq.ref === 'RET-0099' && stockReq.lines.length === 1 && stockReq.lines[0].pcs === 4 && stockReq.lines[0].c === 1]);
   await pg.screenshot({ path: path.join(__dirname, 'shot-rn.png'), fullPage: false });
   out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); console.log('errors:', errs.slice(0, 5));
   await br.close(); srv.close();

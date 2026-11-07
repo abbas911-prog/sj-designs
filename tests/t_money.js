@@ -52,8 +52,10 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0]; if (
 
   // 1 — a return shared on phone A, opened on phone B
   await openSaved('RET-0007');
-  const stk7 = await pg.$eval('#stk', e => ({ t: e.textContent, btn: !!e.querySelector('button[data-rn]') }));
-  ok('1 return done on another phone: says so, no "put the pieces back" button', /another phone/.test(stk7.t) && !stk7.btn);
+  const stk7 = await pg.$eval('#stk', e => ({ t: e.textContent, btn: !!e.querySelector('button[data-rn]'), stmt: !!e.querySelector('button[data-rn="stmt"]'), again: !!e.querySelector('button[data-rn="again"]') }));
+  // 7 Nov 2026: was "no button" — now the two repair buttons are offered on any phone (a return shared but never confirmed, e.g. Matiullah's RET-0006, could not
+  // be repaired from another phone); they repeat the first phone's own ids, so nothing is counted or put back twice. Sharing it AGAIN is still refused (next check).
+  ok('1 return done on another phone: says so, offers the two safe repair buttons (statement, Trello) — sharing again stays refused', /another phone/.test(stk7.t) && stk7.stmt && stk7.again);
   let a0 = alerts.length, c0 = custPosts.length, s0 = stockReqs.length; await pg.click('#dinc'); await pg.waitForTimeout(1500);
   ok('1 Return & share again on phone B is refused: no second credit, no second put-back', alerts.slice(a0).some(x => /already shared/.test(x)) && custPosts.length === c0 && stockReqs.length === s0);
   await pg.click('#nav button[data-nv="stock"]'); await openSaved('RET-0008');   // an older return without the phone mark
