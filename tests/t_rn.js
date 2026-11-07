@@ -41,10 +41,15 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   // hand line + new number
   await pg.click('#dnew'); await pg.waitForTimeout(300); await pg.click('#addri'); const ins = await pg.$$('.rnrow input'); await ins[0].fill('6668-1'); await ins[1].fill('2'); await ins[2].fill('4'); await ins[3].fill('50'); await pg.waitForTimeout(700);
   out.push(['hand line total 200', (await t('#btot')).indexOf('200.00') >= 0]);
+  // 7 Nov 2026 (Abbas: "make it ask for a customer name first"): no name → stopped with a message, nothing goes to Trello or a statement
+  const msgs = []; const onD = d => msgs.push(d.message()); pg.on('dialog', onD); const s0 = stockReq, p0 = custPosts.length;
+  await pg.click('#dinc'); await pg.waitForTimeout(1200); pg.off('dialog', onD);
+  out.push(['no customer name: Return & share stops and asks for it', msgs.some(m => /customer's name first/.test(m)) && stockReq === s0 && custPosts.length === p0 && await pg.evaluate(() => document.activeElement && document.activeElement.dataset.k === 'name')]);
+  await pg.fill('#bform input[data-k="name"]', 'MAMA'); await pg.dispatchEvent('#bform input[data-k="name"]', 'change'); await pg.waitForTimeout(1500);
   await pg.click('#dinc'); await pg.waitForFunction(() => /Back on Trello/.test(document.querySelector('#stk').textContent), null, { timeout: 30000 }).catch(() => {});
   out.push(['hand line sent by number', stockReq.lines.length === 1 && stockReq.lines[0].card === '' && stockReq.lines[0].no === '6668-1' && stockReq.lines[0].c === 2]);
   // colour picker from the card + colour names refused
-  await pg.click('#dnew'); await pg.waitForTimeout(300); await pg.click('#addri'); let r3 = await pg.$$('.rnrow input'); await r3[0].fill('18634'); await r3[0].dispatchEvent('change'); await pg.waitForTimeout(500);
+  await pg.click('#dnew'); await pg.waitForTimeout(300); await pg.fill('#bform input[data-k="name"]', 'MAMA'); await pg.waitForTimeout(500); await pg.click('#addri'); let r3 = await pg.$$('.rnrow input'); await r3[0].fill('18634'); await r3[0].dispatchEvent('change'); await pg.waitForTimeout(500);
   out.push(['colour picker shows the card colours', (await pg.$$eval('.rncols button[data-ric]', L => L.length)) === 2]);
   r3 = await pg.$$('.rnrow input'); await r3[1].fill('BLACK'); await r3[2].fill('2'); await r3[3].fill('100'); await pg.waitForTimeout(700); const before = stockReq;
   await pg.click('#dinc'); await pg.waitForTimeout(1500); out.push(['colour name refused (no Trello job)', stockReq === before]);
@@ -52,7 +57,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await pg.click('#dinc'); await pg.waitForFunction(() => /Back on Trello/.test(document.querySelector('#stk').textContent), null, { timeout: 30000 }).catch(() => {});
   out.push(['picked colour goes to the card', stockReq !== before && stockReq.lines.length === 1 && stockReq.lines[0].card === 'c1' && stockReq.lines[0].c === 2 && stockReq.lines[0].pcs === 2]);
   // 4 Nov: one design, 5 colours x 4 pcs back -> tap All (or each colour) = one line per colour, same pcs + rate
-  await pg.click('#dnew'); await pg.waitForTimeout(300); await pg.click('#addri'); let r5 = await pg.$$('.rnrow input'); await r5[0].fill('47168'); await r5[0].dispatchEvent('change'); await pg.waitForTimeout(500);
+  await pg.click('#dnew'); await pg.waitForTimeout(300); await pg.fill('#bform input[data-k="name"]', 'MAMA'); await pg.waitForTimeout(500); await pg.click('#addri'); let r5 = await pg.$$('.rnrow input'); await r5[0].fill('47168'); await r5[0].dispatchEvent('change'); await pg.waitForTimeout(500);
   r5 = await pg.$$('.rnrow input'); await r5[2].fill('4'); await r5[3].fill('105'); await pg.waitForTimeout(300);
   out.push(['All button for a 5-colour design', (await pg.$$('.rncols .rnall')).length === 1]);
   if (await pg.$('.rncols .rnall')) { await pg.click('.rncols .rnall'); await pg.waitForTimeout(400); }

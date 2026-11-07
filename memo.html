@@ -954,7 +954,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-07a';
+var VER = '2026-11-07b';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1820,7 +1820,9 @@ async function rnInclude(){
   var d = B.rn; if (!d) return; var s0 = rnStk();
   if (d.status === 'included' && !(s0 && s0.st === 'bad')) {   // 28 Oct 2026: a second phone could share it again — the customer was credited twice and the pieces went back twice
     alert(d.ref + ' was already shared' + (d.doneDev && d.doneDev !== devId() ? ' on another phone' : '') + ' — the customer\'s balance and Trello already have it.\n\nTo send it again use Send PDF. Nothing changes.\n\n' + d.ref + ' تم تأكيده مسبقاً — استخدم إرسال PDF فقط'); return; }
-  await bsNext('rn', d);   // 28 Oct 2026: one number series for the shop, as the invoice
+  // 7 Nov 2026 (Abbas: "yes, make it ask for a customer name first"): a return shared without a name went on NO statement, silently — now it stops here
+  if (!(d.name || '').trim()) { alert('Type the customer\'s name first — the return comes off their balance.\n\nاكتب اسم العميل أولاً'); var nmi = document.querySelector('#bform input[data-k="name"]'); if (nmi) { nmi.scrollIntoView({ block: 'center' }); nmi.focus(); } return; }
+  await bsNext('rn', d);   // 28 Oct 2026: one number series for the shop,as the invoice
   clearTimeout(B.timer); await preview(); if (!B.pdf) return;
   var c = rnCalc(d), bad = (d.items || []).filter(function(it){ return n2(it.pcs) > 0 && (!String(it.no || '').trim() || !rnColOk(it.c)); });
   if (!c.lines.length) { alert('Type how many pieces came back (Pcs back) on at least one line.'); return; }
