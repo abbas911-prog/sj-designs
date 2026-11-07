@@ -954,7 +954,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-07b';
+var VER = '2026-11-07c';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1282,6 +1282,11 @@ function rnPicker(it, i){ var dz = rnDz(it.no), o = '<div class="rnpick" data-rn
 // each picked colour is its own line (what Trello and the statement need), made with the pcs + rate of the design's first line; tap again =
 // that colour's line goes; "All" = every colour. The first line's pcs / rate carry to the lines that still had the same value.
 function rnKey(it){ var dz = rnDz(it.no); return dz && !dz.sample ? 'c' + dz.id : 't' + String(it.no || '').trim().toUpperCase().replace(/^S[JH]\s*-?\s*/, ''); }
+// 7 Nov 2026 (Abbas: RET-0006 still not on Matiullah's statement): the shared return was opened again on a phone and its line changed — the edit
+// saved over it (91289 colour 3 · 4 pcs · 180 became a bare "91289", total 0.00), so its repair button could only add 0. A return keeps what it shared
+// (`d.done`: its lines + total, set at Return & share) and is locked from then on; the repair buttons always use what was shared.
+function rnLocked(d){ return !!d && d.status === 'included' && !!d.done; }
+function rnShared(d){ return d && d.done ? Object.assign({}, d, { items: d.done.items }) : d; }
 function rnFixed(it){ return !!it.card && !!it.c && !it.hand; }   // a line from a saved invoice (its colour is fixed); a line typed / tapped here has hand: 1
 function rnGroup(d, i){ var it = d && d.items && d.items[i]; if (!it || rnFixed(it)) return []; var k = rnKey(it), out = [];
   d.items.forEach(function(x, j){ if (!rnFixed(x) && String(x.no || '').trim() && rnKey(x) === k) out.push(j); }); return out; }
@@ -1347,6 +1352,8 @@ function drawForm(){
   }
   h += '<details class="bco"><summary>Company details on bills · بيانات الشركة</summary>' + field('Company name', '<input data-co="name" value="' + co.name.replace(/"/g, '&quot;') + '">') + field('Address / phone', '<input data-co="line" value="' + co.line.replace(/"/g, '&quot;') + '">') + field('TRN (for VAT invoices)', '<input data-co="trn" value="' + co.trn.replace(/"/g, '&quot;') + '" inputmode="numeric">') + '</details>';
   f.innerHTML = h; drawDyn(); if (k === 'rn') rnPhotos();
+  if (k === 'rn' && rnLocked(d)) { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
+    f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was shared — it cannot be changed.</b><small>For more pieces back make a new return (New number). · تم التأكيد — لا يمكن التعديل</small></div>'); }
   if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); if (d.name && d.cust === undefined) custLook(); }
 }
 function row(k2, v2, cls){ return '<div class="br ' + (cls || '') + '"><span>' + k2 + '</span><span>' + amt(v2) + ' AED</span></div>'; }
@@ -1810,7 +1817,7 @@ function rnPaint(){ var el = $('stk'), d = B.rn; if (!d) { el.hidden = true; ret
   var fix = d.status === 'included' && (!s || (s.st === 'ok' && !s.lines.length) || (d.doneDev && d.doneDev !== devId()));
   if (fix) { var other = d.doneDev && d.doneDev !== devId();
     el.className = other ? 'stk' : 'stk bad'; el.innerHTML = '<b>' + esc(d.ref) + ' was shared' + (other ? ' on another phone' : '') + '.</b><small>If it is missing from ' + esc(d.name || 'the customer') + '\'s statement, or its pieces are not back on Trello, press the button — each one is safe to press twice (nothing is counted or put back twice). · إن لم يظهر في الكشف أو لم تعد القطع</small>' +
-      '<button type="button" data-rn="stmt">Add ' + amt(rnCalc(d).total) + ' to the customer\'s statement · أضف إلى الكشف</button><button type="button" data-rn="again">Put the pieces back on Trello · أرجع القطع</button>' + (d.saveErr ? '<small class="miss">' + esc(d.saveErr) + '</small>' : '') + (d.saved ? '<small>✓ On the statement — balance ' + amt(d.saved.bal) + ' AED</small>' : ''); return; }
+      '<button type="button" data-rn="stmt">Add ' + amt(rnCalc(rnShared(d)).total) + ' to the customer\'s statement · أضف إلى الكشف</button><button type="button" data-rn="again">Put the pieces back on Trello · أرجع القطع</button>' + (d.saveErr ? '<small class="miss">' + esc(d.saveErr) + '</small>' : '') + (d.saved ? '<small>✓ On the statement — balance ' + amt(d.saved.bal) + ' AED</small>' : ''); return; }
   if (!s) { el.className = 'stk'; el.innerHTML = '<b>Send PDF</b> is only a draft. <b>Return &amp; share</b> shares the return, takes its amount off the customer\'s balance and puts the pieces back on Trello (colour by colour). <small>فقط «تأكيد المرتجع» يرجع القطع إلى تريلو</small>'; return; }
   var pcs = s.lines.reduce(function(a, l){ return a + l.pcs; }, 0);
   if (s.st === 'busy') { el.className = 'stk'; el.innerHTML = 'Putting ' + pcs + ' pcs back on Trello for ' + esc(s.ref) + '…<small>جارٍ الإرجاع إلى تريلو · about a minute</small>'; return; }
@@ -1833,7 +1840,7 @@ async function rnInclude(){
   if (!confirm('Return ' + d.ref + ': share it, take ' + amt(c.total) + ' AED off ' + (d.name || 'the customer') + '\'s balance and put ' + c.pcs + ' pcs back on Trello?')) return;
   keepNo('rn', d.ref);
   if (!(await docShare(shareText('rn', d)))) return;
-  d.status = 'included'; d.doneDev = devId(); bsSave(true);
+  d.status = 'included'; d.doneDev = devId(); d.done = { items: JSON.parse(JSON.stringify(d.items || [])), total: c.total }; bsSave(true); if (B.rn === d && B.mode === 'rn') drawForm();
   rnCust(d, c);
   rnStock(d, c);
 }
@@ -1850,11 +1857,13 @@ async function rnStock(d, c){ if (!RELAY) return;
   catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); if (B.mode === 'rn') rnPaint(); return; }
   var res = await waitJob(id, 'stock', 8);
   s.res = res; s.st = res.ok ? 'ok' : 'bad'; s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); if (B.mode === 'rn' && B.rn === d) rnPaint(); }
-$('stk').addEventListener('click', async function(e){ var b = e.target.closest('button[data-rn="stmt"]'); if (!b || !B.rn) return; var d = B.rn, c = rnCalc(d);
+$('stk').addEventListener('click', async function(e){ var b = e.target.closest('button[data-rn="stmt"]'); if (!b || !B.rn) return; var d = B.rn, c = rnCalc(rnShared(d));
   if (!(d.name || '').trim()) { alert('This return has no customer name — open it and type the name first.'); return; }
+  if (!(c.total > 0)) { alert(d.ref + ' shows 0.00 — its line has no pieces or rate.\n\nType the line again exactly as it was returned (design, colour number, pieces, rate), then press this button.\n\nاكتب السطر كما كان ثم اضغط مرة أخرى'); return; }
+  if (!d.done) d.done = { items: JSON.parse(JSON.stringify(d.items || [])), total: c.total };
   b.disabled = true; var ok = await rnCust(d, c); b.disabled = false; if (B.rn === d && B.mode === 'rn') rnPaint();
-  if (ok) { uiToast('✓ ' + d.ref + ' is on ' + (d.saved && d.saved.name || d.name) + '\'s statement · balance ' + amt(d.saved ? d.saved.bal : 0)); bsSave(true); } else alert('Not added: ' + (d.saveErr || 'no answer') + '\n\nIt is kept on this phone and sent again by itself.'); });
-$('stk').addEventListener('click', function(e){ var b = e.target.closest('button[data-rn]'); if (!b || b.dataset.rn === 'stmt' || !B.rn) return; var bad = (B.rn.items || []).filter(function(it){ return n2(it.pcs) > 0 && !rnColOk(it.c); }); if (bad.length) { alert('Pick the colour NUMBER on every line first (tap the colour under the design).'); return; } var s = rnStk(); if (s) delete STK[stkKey(B.rn.ref)]; rnStock(B.rn, rnCalc(B.rn)); });
+  if (ok) { uiToast('✓ ' + d.ref + ' is on ' + (d.saved && d.saved.name || d.name) + '\'s statement · balance ' + amt(d.saved ? d.saved.bal : 0)); bsSave(true); redraw(); } else alert('Not added: ' + (d.saveErr || 'no answer') + '\n\nIt is kept on this phone and sent again by itself.'); });
+$('stk').addEventListener('click', function(e){ var b = e.target.closest('button[data-rn]'); if (!b || b.dataset.rn === 'stmt' || !B.rn) return; var bad = (rnShared(B.rn).items || []).filter(function(it){ return n2(it.pcs) > 0 && !rnColOk(it.c); }); if (bad.length) { alert('Pick the colour NUMBER on every line first (tap the colour under the design).'); return; } var s = rnStk(); if (s) delete STK[stkKey(B.rn.ref)]; rnStock(B.rn, rnCalc(rnShared(B.rn))); });
 $('stk').addEventListener('click', function(e){ var b = e.target.closest('button[data-stk]'); if (!b) return;
   if (b.dataset.stk === 'return' && !confirm('Put the pieces of ' + B.inv.ref + ' back on Trello?')) return;
   if (b.dataset.stk === 'sell') { var s = STK[stkKey(B.inv.ref)]; if (s) s.st = 'retry'; }

@@ -38,6 +38,9 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   out.push(['result shown', (await t('#stk')).indexOf('Back on Trello ✓ 5 pcs') >= 0]);
   out.push(['balance credited -500', custPosts.some(p => p.type === 'adj' && p.adj === -500 && /return/.test(p.ref))]);
   await pg.waitForTimeout(3000); const rnSaved = Object.values(BILLS).find(b => b.type === 'rn'); out.push(['saved as included return', !!rnSaved && rnSaved.status === 'included']);
+  // 7 Nov 2026 (RET-0006: the shared return was edited afterwards and saved over — line wiped, total 0.00): once shared, the return is locked
+  out.push(['a shared return is locked: its lines cannot be changed or removed', await pg.evaluate(() => { const f = document.querySelector('#bform'); const pcs = f.querySelector('input[data-f="pcs"]'), rm = f.querySelector('[data-rmi]'), add = f.querySelector('#addri');
+    return !!pcs && pcs.disabled && !!rm && rm.disabled && !!add && add.disabled && /cannot be changed/.test(f.textContent) && !!(window.__sj.B().rn.done && window.__sj.B().rn.done.total === 500); })]);
   // hand line + new number
   await pg.click('#dnew'); await pg.waitForTimeout(300); await pg.click('#addri'); const ins = await pg.$$('.rnrow input'); await ins[0].fill('6668-1'); await ins[1].fill('2'); await ins[2].fill('4'); await ins[3].fill('50'); await pg.waitForTimeout(700);
   out.push(['hand line total 200', (await t('#btot')).indexOf('200.00') >= 0]);
@@ -92,6 +95,18 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   out.push(['pressing it twice sends the same id (the shop replaces the line, never counts it twice)', again.length === 2 && again[0].id === again[1].id]);
   await pg.click('#stk button[data-rn="again"]'); await pg.waitForTimeout(1500);
   out.push(['Put the pieces back: the Trello job carries the first phone\'s dev (so it skips what it did)', !!stockReq && stockReq.id !== nS && stockReq.dev === 'otherphone' && stockReq.ref === 'RET-0099' && stockReq.lines.length === 1 && stockReq.lines[0].pcs === 4 && stockReq.lines[0].c === 1]);
+  // RET-0006 as it is now: shared on Muhammad's phone (no `done` kept — older app), its line since wiped to a bare "91289", total 0.00
+  const nW = custPosts.length;
+  await pg.evaluate(() => { window.__sj.B().rn = { ref: 'RET-0006', date: '2026-11-04', name: 'MAMA', open: '281503', note: '', vat: false, inv: '', items: [{ no: '91289', c: '', pcs: '', rate: '', card: '' }], status: 'included', doneDev: 'seklcj' }; window.__sj.setMode('rn'); });
+  await pg.waitForTimeout(500);
+  const wmsg = []; const onW = d => wmsg.push(d.message()); pg.on('dialog', onW);
+  await pg.click('#stk button[data-rn="stmt"]'); await pg.waitForTimeout(700);
+  out.push(['wiped return (0.00): Add to statement says to type the line again, sends nothing', wmsg.some(m => /shows 0\.00/.test(m)) && custPosts.length === nW]);
+  const wi = await pg.$$('.rnrow input'); out.push(['… and that older return can still be typed (it kept nothing to lock)', wi.length >= 4 && !(await wi[2].evaluate(e => e.disabled))]);
+  await wi[1].fill('3'); await wi[2].fill('4'); await wi[3].fill('180'); await wi[3].dispatchEvent('input'); await pg.waitForTimeout(700);
+  await pg.click('#stk button[data-rn="stmt"]'); await pg.waitForTimeout(1200); pg.off('dialog', onW);
+  const w6 = custPosts.slice(nW).filter(p => /RET-0006/.test(p.ref || ''));
+  out.push(['typed again: -720 goes on the statement under the first phone\'s id, then the return is locked', w6.length === 1 && w6[0].id === 'rn:RET-0006:seklcj' && w6[0].adj === -720 && await pg.evaluate(() => { const i = document.querySelector('#bform input[data-f="pcs"]'); return !!i && i.disabled; })]);
   await pg.screenshot({ path: path.join(__dirname, 'shot-rn.png'), fullPage: false });
   out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); console.log('errors:', errs.slice(0, 5));
   await br.close(); srv.close();
