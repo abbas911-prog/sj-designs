@@ -1,0 +1,95 @@
+{
+ "id": "smw6jsk5vkwtt",
+ "op": "sell",
+ "ref": "INV-0044",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6aaa55c9d48af05e3349d8fa",
+   "no": "18634",
+   "before": "Sj = **(18634)** (68) pcs ....color = (4)...(16/16/16/20)",
+   "after": "Sj = **(18634)** (56) pcs ....color = (4)...(12/16/12/16)",
+   "left": 56,
+   "lines": [
+    "colour 1: 16 → 12 (−4)",
+    "colour 3: 16 → 12 (−4)",
+    "colour 4: 20 → 16 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a7c44396c35228ee3a32b21",
+   "no": "48293",
+   "before": "Sj = **(48293)** (31) pcs colour= (6) ,,,(8/8/4/7/4/0)",
+   "after": "Sj = **(48293)** (23) pcs colour= (6) ,,,(8/8/0/3/4/0)",
+   "left": 23,
+   "lines": [
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 7 → 3 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6ac9e7a5c6ae93519be179fe",
+   "no": "51862",
+   "before": "Sj = **(51862)** (48) pcs __ colour _(5)__(8/4/12/8)_(16)",
+   "after": "Sj = **(51862)** (40) pcs __ colour _(5)__(8/4/8/4)_(16)",
+   "left": 40,
+   "lines": [
+    "colour 3: 12 → 8 (−4)",
+    "colour 4: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a8d5f283f2f5fa16ebae142",
+   "no": "82554",
+   "before": "Sj= **(82554)** (80) colour = (8) ....(6/5/10/9/10),,(14/14/12)",
+   "after": "Sj= **(82554)** (67) colour = (8) ....(6/0/10/9/6),,(10/14/12)",
+   "left": 67,
+   "lines": [
+    "colour 2: 5 → 0 (−5)",
+    "colour 5: 10 → 6 (−4)",
+    "colour 6: 14 → 10 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a8bffe13e3870dab691352c",
+   "no": "96743",
+   "before": "Sj = **(96743)** (16) pcs colour. = (4) ,,,,(4/4/4/4)",
+   "after": "Sj = **(96743)** (0) pcs colour. = (4) ,,,,(0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 4 → 0 (−4)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6a9aaa81d85ee31de31c9527",
+   "no": "39240",
+   "before": "SJ-39240",
+   "after": "SJ-39240",
+   "left": 0,
+   "lines": [
+    "sample: 1 → 0 (−1)"
+   ],
+   "moved": "moved to FINISH (sample sold)"
+  },
+  {
+   "card": "6aabe942c586f7c3a116b320",
+   "no": "74451",
+   "before": "SJ-74451",
+   "after": "SJ-74451",
+   "left": 0,
+   "lines": [
+    "sample: 1 → 0 (−1)"
+   ],
+   "moved": "moved to FINISH (sample sold)"
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
