@@ -10,7 +10,9 @@ const jobs = {}, custPosts = []; let stockReq = null;
 BILLS['RV-0007'] = { ref: 'RV-0007', type: 'rv', name: 'SOMEONE', status: 'sent', total: '1,000.00', date: '2026-10-30', dev: 'other-phone', data: JSON.stringify({ v: 1, k: 'rv', d: { ref: 'RV-0007', name: 'SOMEONE', amount: '1000' } }) };   // 1 Nov 2026: a receipt the employee's phone made
 BILLS['INV-0015'].data = JSON.stringify({ v: 1, k: 'inv', d: { ref: 'INV-0015', name: 'MAMA BAKHTA', vat: false, man: [{ d: 'SJ-77001 · C1 4 pcs', q: 4, r: 50, fz: '77001' }, { d: 'SJ 6668-1 lace', q: 2, r: 10 }] }, cols: [{ no: '18634', base: '18634', card: 'c1', c: 1, qty: 8, rate: 100 }] });
 function relay(b) { const req = JSON.parse(b.req);
-  if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: Object.values(BILLS).map(x => Object.assign({}, x, { data: undefined })) }; if (req.op === 'get') return BILLS[req.ref] ? Object.assign({ ok: true }, BILLS[req.ref]) : { ok: false, error: 'not saved' }; if (req.op === 'put') { BILLS[req.ref] = Object.assign({}, req, { updated: new Date().toISOString() }); return { ok: true, status: req.status }; }
+  if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: Object.values(BILLS).map(x => Object.assign({}, x, { data: undefined })) }; if (req.op === 'get') return BILLS[req.ref] ? Object.assign({ ok: true }, BILLS[req.ref]) : { ok: false, error: 'not saved' }; if (req.op === 'put') { const o = BILLS[req.ref], ck = n => String(n || '').trim().toUpperCase(); if (o && o.dev && req.dev && o.dev !== req.dev && ck(o.name) !== ck(req.name) && !req.force && o.status !== 'deleted') return { ok: false, clash: true, error: req.ref + ' is already used on another phone' };   // like relay.gs bills op put
+    BILLS[req.ref] = Object.assign({}, req, { updated: new Date().toISOString() }); return { ok: true, status: req.status }; }
+    if (req.op === 'del') { if (BILLS[req.ref]) BILLS[req.ref].status = 'deleted'; return { ok: true }; }   // like relay.gs bills op del
     if (req.op === 'next') { const ty = req.type, pfx = req.ref.replace(/\d+$/, ''), mine = +(req.ref.match(/(\d+)$/) || [0, 0])[1]; let top = 0, taken = false;   // like relay.gs bills op next
       Object.values(BILLS).forEach(r => { if (r.type !== ty) return; const own = r.ref === req.ref && !(r.dev && r.dev !== req.dev); if (r.ref === req.ref && !own && r.status !== 'deleted') taken = true; if (own && r.status !== 'deleted') return; const n = +(r.ref.match(/(\d+)$/) || [0, 0])[1]; if (n > top) top = n; });
       if (!taken && mine > top) return { ok: true, ref: req.ref }; const give = pfx + String(top + 1).padStart(4, '0'); BILLS[give] = { ref: give, type: ty, name: req.name || '', status: 'draft', dev: req.dev, data: '{}' }; if (BILLS[req.ref] && !taken && BILLS[req.ref].status === 'draft') BILLS[req.ref].status = 'deleted'; return { ok: true, ref: give, was: req.ref }; } }
@@ -198,7 +200,10 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await pB.bills(); await pB.fill('#bform input[data-k="name"]', 'MATIULLAH'); await pB.fill('#bform input[data-k="amount"]', '200'); await pB.waitForTimeout(3500);
   const seenA = [await pA.rv()], seenB = [await pB.rv()];
   for (let k = 0; k < 3; k++) { await pA.bills(); seenA.push(await pA.rv()); await pB.bills(); seenB.push(await pB.rv()); }
-  out.push(['two phones with a receipt open each: the numbers stay put (A ' + seenA.join(' ') + ' · B ' + seenB.join(' ') + ')', new Set(seenA).size === 1 && new Set(seenB).size === 1 && seenA[0] !== seenB[0]]);
+  // 9 Nov 2026: nothing is reserved any more — the second phone steps past the number the first one holds ONCE, then both stay put, never the same
+  const moves = a => a.filter((x, i) => i && x !== a[i - 1]).length;
+  out.push(['two phones with a receipt open each: each moves at most once, then stays, never the same number (A ' + seenA.join(' ') + ' · B ' + seenB.join(' ') + ')', moves(seenA) + moves(seenB) <= 1 && seenA.slice(-3).every(x => x === seenA[seenA.length - 1]) && seenB.slice(-3).every(x => x === seenB[seenB.length - 1]) && seenA[seenA.length - 1] !== seenB[seenB.length - 1]]);
+  out.push(['no number was reserved at the shop for an unsent receipt (no empty draft rows)', !Object.values(BILLS).some(b => b.type === 'rv' && b.status === 'draft' && !b.name && b.data === '{}')]);
   await pA.close(); await pB.close();
   out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); console.log('errors:', errs.slice(0, 5));
   await br.close(); srv.close();

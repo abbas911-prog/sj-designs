@@ -954,7 +954,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-07c';
+var VER = '2026-11-09a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1352,6 +1352,11 @@ function drawForm(){
   }
   h += '<details class="bco"><summary>Company details on bills · بيانات الشركة</summary>' + field('Company name', '<input data-co="name" value="' + co.name.replace(/"/g, '&quot;') + '">') + field('Address / phone', '<input data-co="line" value="' + co.line.replace(/"/g, '&quot;') + '">') + field('TRN (for VAT invoices)', '<input data-co="trn" value="' + co.trn.replace(/"/g, '&quot;') + '" inputmode="numeric">') + '</details>';
   f.innerHTML = h; drawDyn(); if (k === 'rn') rnPhotos();
+  var rfi = f.querySelector('input[data-k="ref"]'); if (rfi) { rfi.readOnly = true; rfi.title = 'The number comes from the shop — one series for everyone'; }   // 9 Nov 2026: typed numbers (RV-00, RV-001) broke the series
+  // 9 Nov 2026: Islamudin's sent receipt RV-0020 (5,000) stayed open on a phone, was changed to Matiullah 1,500 and sent again under RV-0020 — it REPLACED
+  // his line on his statement. A sent receipt / payment voucher is now locked; the next one starts with New number.
+  if ((k === 'rv' || k === 'pv') && d.status === 'sent') { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
+    f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was sent — it cannot be changed.</b><small>For the next ' + (k === 'rv' ? 'receipt' : 'voucher') + ' press <b>New number</b>. Send again only shares this same one. · تم الإرسال — لا يمكن التعديل</small></div>'); }
   if (k === 'rn' && rnLocked(d)) { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
     f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was shared — it cannot be changed.</b><small>For more pieces back make a new return (New number). · تم التأكيد — لا يمكن التعديل</small></div>'); }
   if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); if (d.name && d.cust === undefined) custLook(); }
@@ -1552,7 +1557,7 @@ $('dsend').onclick = async function(){
   clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
   if (!(await docShare(shareText(k, d)))) return;
   if (k === 'rv') custAfter(k, d);      // a receipt counts once it is sent; an invoice (and a return) only on Include & share
-  if (d.status !== 'included') d.status = 'sent'; bsSave(true);
+  if (d.status !== 'included') d.status = 'sent'; bsSave(true); if (B[k] === d && B.mode === k && (k === 'rv' || k === 'pv')) drawForm();   // 9 Nov 2026: shows the lock at once
 };
 // INCLUDE & SHARE (Abbas, 7 Oct 2026): an invoice can still change (discount, add, less, other colour), so a plain Send PDF never touches stock.
 // Only "Include & share" shares the final invoice AND takes its pieces off Trello.
@@ -1639,10 +1644,18 @@ function bsUsed(b){ return b.status === 'sent' || b.status === 'included'; }
 function bsNos(){ (BS.list || []).forEach(function(b){ if (PFX[b.type]) keepNo(b.type, b.ref); });   // a NEW bill still starts after every number on the list
   Object.keys(PFX).forEach(function(k){ var d = B[k]; if (!d || !d.ref || (d.status && d.status !== 'draft')) return; var m = String(d.ref).match(/(\d+)\s*$/); if (!m) return;
     var top = 0; (BS.list || []).forEach(function(b){ if (b.type !== k || b.ref === d.ref || !bsUsed(b)) return; var n = +((String(b.ref).match(/(\d+)\s*$/) || [])[1] || 0); if (n > top) top = n; });
-    if (+m[1] > top) return;
-    if (bsNos.busy[k]) return; bsNos.busy[k] = 1; var was = d.ref;
-    bsNext(k, d).catch(function(){ return ''; }).then(function(how){ bsNos.busy[k] = 0; if (how || B[k] !== d || d.ref !== was || (d.status && d.status !== 'draft')) return;   // the shop's check moved it (or it was sent meanwhile)
-      keepNo(k, was); delete BS.last[was]; d.ref = nextRef(k); if (B.mode === k && !$('done').hidden) { redraw(); uiToast(was + ' → ' + d.ref + ' · that number is already used · الرقم مستخدم'); } }); }); }   // no answer from the shop's check: move on here, as before
+    // …and a fresh draft (not saved yet) steps past a number another phone already holds — never the other way round, so two phones never leapfrog
+    var other = (BS.list || []).some(function(b){ return b.type === k && b.ref === d.ref && b.dev && b.dev !== devId() && b.status !== 'deleted'; }),
+        mineRow = (BS.list || []).some(function(b){ return b.type === k && b.ref === d.ref && b.dev === devId(); });
+    if (+m[1] > top && !(other && !mineRow)) return;
+    // 9 Nov 2026 (Abbas: "invoice and receipt numbers go high and low randomly"): this used to RESERVE the next number at the shop (relay op next).
+    // An iPad with SJ Stock open in several places (each copy restores the same old empty receipt RV-0021 of 23 Oct) reserved one number per copy,
+    // again and again — RV-0026 … RV-0064 on 8 Nov, all empty, so the real receipts jumped. Now the draft just takes the next number after every
+    // number on the shop's list, here on the phone (every copy gets the same one); the shop confirms it at Send, as always. Nothing is reserved.
+    var was = d.ref; keepNo(k, was); delete BS.last[was]; d.ref = nextRef(k); try { saveWork(); } catch(e){}
+    var old = (BS.list || []).filter(function(b){ return b.type === k && b.ref === was; });
+    if (old.length && old.every(function(b){ return b.dev === devId() && b.status === 'draft'; })) bsCall({ op: 'del', ref: was }).catch(function(){});   // this phone's own old draft row: set aside
+    if (B.mode === k && !$('done').hidden) { redraw(); uiToast(was + ' → ' + d.ref + ' · that number is already used · الرقم مستخدم'); } }); }
 bsNos.busy = {};
 async function bsSync(){ if (!RELAY || !token) return;
   if (!BS.list) { var cb = cLoad('sj_c_bills'); if (Array.isArray(cb)) { BS.list = cb; bsNos(); } }
