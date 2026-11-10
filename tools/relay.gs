@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-11-05a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-11-10a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -2061,7 +2061,7 @@ function dorder(reqText, P) {
   try {
     if (op === 'find') { var f = doFindCard(req.no, tok); return out({ ok: true, w: trWho(P, tok), card: f ? { id: f.id, name: f.name, url: f.shortUrl, made: idTime(f.id) } : null }); }
     if (op === 'mint') return out({ ok: true, no: doMint(req.prefix === 'US-' ? 'US-' : '', tok) });
-    if (op === 'list') return out({ ok: true, log: JSON.parse(P.getProperty('DOLOG') || '[]') });
+    if (op === 'list') return out({ ok: true, sched: 1, log: JSON.parse(P.getProperty('DOLOG') || '[]') });   // sched: this relay can send an order later (10 Nov 2026)
     var oid = String(req.oid || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40); if (!oid) return out({ ok: false, error: 'no order id' });
     var key = 'DO_' + oid, st = JSON.parse(P.getProperty(key) || '{}'), save = function () { P.setProperty(key, JSON.stringify(st)); };
     var FT = P.getProperty('SLACK_FACTORY_TOKEN'), ST = P.getProperty('SLACK_BOT_TOKEN');
@@ -2135,6 +2135,9 @@ function dorder(reqText, P) {
         doCostSale(uc.id, req, tok, notes);                    // Abbas 12 Oct 2026: "two spaces for the cost price and the sale price ... mention them in the custom fields of those cards"
         st.ucard = { id: uc.id, url: uc.shortUrl, name: uc.name }; st.notes = notes; save();
       }
+      // 10 Nov 2026 (Abbas: "it also has to include the Trello cards"): a scheduled order's cards are made now (so the photos / videos can go on them while
+      // the phone is open) but ARCHIVED at once - nobody sees them; at the chosen time they come back to the top of their list with the Slack message (doReveal)
+      if (req.later && !st.factory) { [st.card, st.ucard].forEach(function (c) { if (c && !c.hid) { trApi('put', '/cards/' + c.id, { closed: true }, tok); c.hid = 1; save(); } }); }
       return out({ ok: true, card: st.card, ucard: st.ucard || null, notes: st.notes || [] });
     }
     if (op === 'file') {
@@ -2155,21 +2158,24 @@ function dorder(reqText, P) {
     }
     if (op === 'send') {
       if (!st.card) return out({ ok: false, error: 'build the card first' });
-      var text = String(req.text || '').slice(0, 3500);
-      if (!st.factory) {
-        var chans = st.mode === 'out' ? [factoryChannel(P, FT, 'emaan')] : st.usman ? [DOX.CUTTING, DOX.USMANCUT] : [DOX.CUTTING];
-        var ids = (st.coverF ? [st.coverF] : []).concat((st.files || []).map(function (x) { return x.slack; }));
-        slackShare(FT, ids, chans, text); st.factory = Date.now(); save();
+      var text = String(req.text || '').slice(0, 3500), sample = String(req.sample || ('SJ-' + st.no + ' SAMPLE')), at = +req.at || 0;
+      // 10 Nov 2026 (Abbas: "send that message on schedule, like Slack — long press, give it a time and date"): the card and the files are done now;
+      // they stay hidden (archived, see op card `later`) and the factory message (+ #samplesneed) waits here; both appear at that time (doSchedTick, every minute)
+      if (at > Date.now() + 30000 && !st.factory) {
+        if (at > Date.now() + 31 * 864e5) return out({ ok: false, error: 'pick a time within 30 days' });
+        st.at = at; st.text = text; st.sample = sample; delete st.schedErr; save(); doSchedAdd(P, oid, at);
+        doLogPut(P, oid, st, { at: at }); return out({ ok: true, card: st.card, scheduled: at, notes: st.notes || [] });
       }
-      if (st.mode !== 'out' && !st.samples) {
-        if (!ST) throw new Error('the relay has no SLACK_BOT_TOKEN for #samplesneed');
-        slackShare(ST, st.sampleF ? [st.sampleF] : [], [DOX.SAMPLESNEED], String(req.sample || ('SJ-' + st.no + ' SAMPLE')));
-        st.samples = Date.now(); save();
-      }
-      var log = JSON.parse(P.getProperty('DOLOG') || '[]').filter(function (x) { return x.oid !== oid; });
-      log.unshift({ oid: oid, t: Date.now(), name: st.card.name, url: st.card.url, mode: st.mode, usman: !!st.usman, files: (st.files || []).length, notes: st.notes || [] });
-      P.setProperty('DOLOG', JSON.stringify(log.slice(0, 25)));
-      return out({ ok: true, card: st.card, notes: st.notes || [] });
+      doDeliver(P, st, text, sample, FT, ST, save); doSchedDrop(P, oid);
+      doLogPut(P, oid, st, {}); return out({ ok: true, card: st.card, notes: st.notes || [] });
+    }
+    if (op === 'unsched' || op === 'sendnow') {               // 10 Nov 2026: a scheduled order — cancel it (its card stays archived), or send it at once
+      if (!st.card) return out({ ok: false, error: 'no such order' });
+      if (st.factory && (st.mode === 'out' || st.samples)) { doSchedDrop(P, oid); return out({ ok: true, already: true }); }
+      if (op === 'unsched') { doSchedDrop(P, oid); delete st.at; save(); doLogPut(P, oid, st, { cancelled: Date.now() }); return out({ ok: true }); }
+      var lk = LockService.getScriptLock(); lk.waitLock(25000);   // the minute check may be sending it right now: never twice
+      try { st = JSON.parse(P.getProperty(key) || '{}'); doDeliver(P, st, st.text || '', st.sample || '', FT, ST, save); doSchedDrop(P, oid); doLogPut(P, oid, st, {}); } finally { lk.releaseLock(); }
+      return out({ ok: true, card: st.card });
     }
     return out({ ok: false, error: 'bad request' });
   } catch (e) {
@@ -2177,6 +2183,58 @@ function dorder(reqText, P) {
     if (/Trello said 401/.test(msg)) { var w = trWho(P, tok); msg += ' [key used: ' + w.key + (w.write === false ? ', read-only' : '') + ']'; }
     return out({ ok: false, error: msg });
   }
+}
+// 10 Nov 2026: the factory message of a new design order — now or at its scheduled time. A file Slack let go while it waited (uploaded but never
+// posted) does not stop the message: it goes without the files and says they are on the Trello card.
+function doReveal(P, st, save) {                           // a scheduled order's hidden (archived) cards come back, on top of their list
+  var tok = P.getProperty('TRELLO_W') || P.getProperty('TRELLO');
+  [st.card, st.ucard].forEach(function (c) { if (c && c.hid) { trApi('put', '/cards/' + c.id, { closed: false, pos: 'top' }, tok); delete c.hid; save(); } });
+}
+function doDeliver(P, st, text, sample, FT, ST, save) {
+  doReveal(P, st, save);
+  if (!st.factory) {
+    if (!FT) throw new Error('the relay has no SLACK_FACTORY_TOKEN yet');
+    var chans = st.mode === 'out' ? [factoryChannel(P, FT, 'emaan')] : st.usman ? [DOX.CUTTING, DOX.USMANCUT] : [DOX.CUTTING];
+    var ids = (st.coverF ? [st.coverF] : []).concat((st.files || []).map(function (x) { return x.slack; })).filter(Boolean);
+    try { slackShare(FT, ids, chans, text); }
+    catch (e) { if (!ids.length || /not_in_channel|channel_not_found|invalid_auth|token/.test(String(e.message))) throw e;
+      slackShare(FT, [], chans, text + '\n(photos / videos: on the Trello card above)'); (st.notes = st.notes || []).push('Slack had let the files go — sent without them; they are on the Trello card'); }
+    st.factory = Date.now(); save();
+  }
+  if (st.mode !== 'out' && !st.samples) {
+    if (!ST) throw new Error('the relay has no SLACK_BOT_TOKEN for #samplesneed');
+    var sm = sample || ('SJ-' + st.no + ' SAMPLE');
+    try { slackShare(ST, st.sampleF ? [st.sampleF] : [], [DOX.SAMPLESNEED], sm); } catch (e) { if (!st.sampleF) throw e; slackShare(ST, [], [DOX.SAMPLESNEED], sm); }
+    st.samples = Date.now(); save();
+  }
+}
+function doLogPut(P, oid, st, extra) {                      // the order list in the app (newest first, 25 kept)
+  var log = JSON.parse(P.getProperty('DOLOG') || '[]').filter(function (x) { return x.oid !== oid; });
+  var row = { oid: oid, t: Date.now(), name: st.card.name, url: st.card.url, mode: st.mode, usman: !!st.usman, files: (st.files || []).length, notes: st.notes || [] };
+  Object.keys(extra || {}).forEach(function (k) { row[k] = extra[k]; }); log.unshift(row);
+  P.setProperty('DOLOG', JSON.stringify(log.slice(0, 25)));
+}
+function doSchedAdd(P, oid, at) {
+  var L = JSON.parse(P.getProperty('DO_SCHED') || '[]').filter(function (x) { return x.oid !== oid; }); L.push({ oid: oid, at: at });
+  P.setProperty('DO_SCHED', JSON.stringify(L));
+  if (!ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'doSchedTick'; })) ScriptApp.newTrigger('doSchedTick').timeBased().everyMinutes(1).create();
+}
+function doSchedDrop(P, oid) { var L = JSON.parse(P.getProperty('DO_SCHED') || '[]'), K = L.filter(function (x) { return x.oid !== oid; }); if (K.length !== L.length) P.setProperty('DO_SCHED', JSON.stringify(K)); }
+function doSchedTick() {                                    // every minute while an order waits: send the ones whose time has come
+  var P = PropertiesService.getScriptProperties(), lock = LockService.getScriptLock(); if (!lock.tryLock(5000)) return;
+  try {
+    var L = JSON.parse(P.getProperty('DO_SCHED') || '[]'), now = Date.now(), keep = [], FT = P.getProperty('SLACK_FACTORY_TOKEN'), ST = P.getProperty('SLACK_BOT_TOKEN');
+    L.forEach(function (x) {
+      if (+x.at > now) { keep.push(x); return; }
+      var key = 'DO_' + x.oid, st = JSON.parse(P.getProperty(key) || '{}'), save = function () { P.setProperty(key, JSON.stringify(st)); };
+      if (!st.card || !st.at) return;                         // cancelled meanwhile
+      try { doDeliver(P, st, st.text || '', st.sample || '', FT, ST, save); doLogPut(P, x.oid, st, { at: x.at, sent: Date.now() }); }
+      catch (e) { x.tries = (x.tries || 0) + 1; st.schedErr = String(e.message || e).slice(0, 200); save();
+        if (x.tries < 15) keep.push(x); else doLogPut(P, x.oid, st, { at: x.at, failed: st.schedErr }); }
+    });
+    P.setProperty('DO_SCHED', JSON.stringify(keep));
+    if (!keep.length) ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'doSchedTick') ScriptApp.deleteTrigger(t); });
+  } finally { lock.releaseLock(); }
 }
 // CUSTOMER BALANCES (Abbas, 11 Oct 2026: "save the opening balances within the app ... when I make a receipt of a particular customer
 // once with the given opening balance, you should continue from there on, be it sales or receipt, from now onwards").

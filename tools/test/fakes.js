@@ -116,8 +116,9 @@ function slack(W, m, A, J) {
     case 'files.info': { const f = S.files[A.file]; return f ? J({ ok: true, file: f }) : J({ ok: false, error: 'file_not_found' }); }
     case 'files.getUploadURLExternal': { const id = 'F' + crypto.randomBytes(5).toString('hex').toUpperCase(); S.files[id] = { id, name: A.filename, mimetype: /\.(m4a|webm|ogg)$/i.test(A.filename) ? 'audio/mp4' : /\.(mp4|mov)$/i.test(A.filename) ? 'video/mp4' : 'image/jpeg', size: 0, want: +A.length, url_private: 'https://files.slack.com/dl/' + id, url_private_download: 'https://files.slack.com/dl/' + id, thumb_720: 'https://files.slack.com/thumb/' + id };
       return J({ ok: true, upload_url: 'https://files.slack.com/upload/' + id, file_id: id }); }
-    case 'files.completeUploadExternal': { if (!C) return J({ ok: false, error: 'channel_not_found' }); const ids = JSON.parse(A.files).map(x => x.id), files = ids.map(id => S.files[id]).filter(Boolean);
-      const r = postSlack(W, C.id, { text: A.initial_comment || '', bot_id: 'B1', thread_ts: A.thread_ts || undefined, files }); return J({ ok: true, files: files.map(f => ({ id: f.id, shares: { public: { [C.id]: [{ ts: r.ts }] } } })) }); }
+    case 'files.completeUploadExternal': { const chs = C ? [C] : String(A.channels || '').split(',').filter(Boolean).map(id => S.ch[id]);   // one channel, or `channels` = a comma list (new design order)
+      if (!chs.length || chs.some(x => !x)) return J({ ok: false, error: 'channel_not_found' }); const ids = JSON.parse(A.files).map(x => x.id), files = ids.map(id => S.files[id]).filter(Boolean), sh = {};
+      chs.forEach(c => { const r = postSlack(W, c.id, { text: A.initial_comment || '', bot_id: 'B1', thread_ts: A.thread_ts || undefined, files }); sh[c.id] = [{ ts: r.ts }]; }); return J({ ok: true, files: files.map(f => ({ id: f.id, shares: { public: sh } })) }); }
   }
   return J({ ok: false, error: 'fake slack: unknown method ' + m });
 }

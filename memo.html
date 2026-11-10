@@ -361,6 +361,13 @@ header{backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate
 .dorstar{grid-column:2;justify-self:start;border:0;background:none;color:var(--gold);font:inherit;font-size:12px;font-weight:700;padding:0}
 .dorx{grid-row:1;grid-column:3;border:0;background:none;color:#b9b0a4;font-size:18px}
 .dorsend{width:100%;height:50px;border:0;border-radius:14px;background:var(--gold);color:#fff;font:inherit;font-size:16px;font-weight:800;box-shadow:0 3px 10px rgba(160,125,63,.3)}.dorsend[disabled]{opacity:.5}
+.dorsend{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.dorlater{display:block;margin:8px auto 0;border:0;background:none;color:var(--gold);font:inherit;font-size:13.5px;font-weight:700}.dorlater small{color:var(--mute);font-weight:400}
+.dorsch{background:#fff;border:2px solid var(--gold);border-radius:14px;padding:12px;margin:10px 0}.dorsch b{display:block;margin-bottom:8px}.dorsch small{display:block;color:var(--mute);margin:8px 0;line-height:1.4}
+.dorsch input{width:100%;box-sizing:border-box;height:44px;font:inherit;font-size:16px;border:1px solid #ddd;border-radius:10px;padding:0 10px}
+.dorschq{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.dorschq button{border:1px solid var(--gold);background:#fff;color:var(--ink);border-radius:16px;padding:6px 10px;font:inherit;font-size:13px}.dorschq button.on{background:var(--gold);color:#fff}
+.dorschb{display:flex;gap:8px}.dorschb button{flex:1;height:44px;border-radius:12px;font:inherit;font-weight:800;border:1px solid #ddd;background:#fff}.dorschb .gold{border:0;background:var(--gold);color:#fff}
+.dorl .dsch{color:#8a5a00;font-weight:700}.dorl .dsb{display:flex;gap:6px;margin-top:6px}.dorl .dsb button{border:1px solid #ddd;background:#fff;border-radius:10px;padding:5px 10px;font:inherit;font-size:13px}
 .dorprog{font-size:13px;line-height:1.6;margin:10px 2px}.dorprog a{color:var(--gold);font-weight:700}.okc{color:#2f6b4f}
 .dorl{background:#fff;border-radius:12px;padding:8px 10px;margin:6px 0;font-size:13.5px}.dorl a{color:var(--ink);font-weight:700;text-decoration:none}.dorl small{display:block;color:var(--mute)}
 /* small vendors */
@@ -629,6 +636,10 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
 <div class="dorpaste"><textarea id="dorpaste" rows="1" placeholder="📋 Tap here and PASTE a photo, video or voice note (from WhatsApp / Slack)"></textarea><label class="dorbtn" style="padding:4px 12px">📎 Files<input type="file" id="dorfiles" accept="image/*,video/*,audio/*,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label></div>
 <div id="dormedia"></div>
 <button type="button" class="gold dorsend" id="dorsend">Send order</button>
+<button type="button" class="dorlater" id="dorlater">⏰ Send later · إرسال لاحقاً <small>(or hold Send order)</small></button>
+<div id="dorsch" class="dorsch" hidden><b>Send the factory message at · وقت الإرسال</b><div class="dorschq" id="dorschq"></div><input type="datetime-local" id="dorat">
+<small>The order is prepared now (card + photos / videos) but kept hidden. The Trello card and the message to the factory Slack (and #samplesneed) both appear at this time — like Slack's Schedule message.</small>
+<div class="dorschb"><button type="button" id="dorschx">Cancel</button><button type="button" class="gold" id="dorschgo">⏰ Schedule</button></div></div>
 <div id="dorprog" class="dorprog"></div>
 <div id="dorlog"></div>
 </div></div>
@@ -954,7 +965,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-09a';
+var VER = '2026-11-10a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -3190,8 +3201,8 @@ function dorShrink(file, maxBytes, onp, vEl, acIn){ return new Promise(function(
 }); }
 function dorB64(blob){ return new Promise(function(ok, no){ var r = new FileReader(); r.onload = function(){ ok(String(r.result).split(',')[1] || ''); }; r.onerror = function(){ no(new Error('could not read the file')); }; r.readAsDataURL(blob); }); }
 function dorProg(h){ $('dorprog').innerHTML = h; }
-async function dorSend(){
-  if (DOR.busy) return;
+async function dorSend(at){
+  if (DOR.busy) return; at = +at || 0;
   var m = DOR.mode, fresh = m !== 'out' && DOR.fresh, no = dorV('dorno').replace(/^SJ-?/i, '');
   if (m !== 'out' && !fresh && !no) { alert('Type the design number, or tick /N for a new fabric'); return; }
   if (m !== 'out' && fresh && no && DOR.src === 'wait') { alert('Still looking for the ALM card of SJ-' + no + ' — try again in a second'); return; }
@@ -3202,7 +3213,7 @@ async function dorSend(){
   var AC = window.AudioContext || window.webkitAudioContext; if (!DOR.ac && AC) try { DOR.ac = new AC(); } catch(e){} if (DOR.ac) try { DOR.ac.resume(); } catch(e){}
   DOR.media.forEach(function(x){ if (x.kind === 'video' && x.size > DOR_MAX && !x.sent && !x.vel) { var v = document.createElement('video'); v.playsInline = true; v.preload = 'auto'; v.src = x.url; x.vel = v;
     try { var pr = v.play(); if (pr && pr.then) pr.then(function(){ v.pause(); }).catch(function(){}); } catch(e){} } });
-  if (!confirm('Send this order now? It goes to Trello and the factory Slack.')) return;
+  if (!confirm(at ? 'Schedule this order for ' + dorWhen(at) + '? The Trello card and the factory message both appear at that time.' : 'Send this order now? It goes to Trello and the factory Slack.')) return;
   DOR.busy = true; $('dorsend').disabled = true;
   var run = DOR.run && (DOR.run.card || DOR.run.sig === dorName() + DOR.media.length + (DOR.usman && m !== 'out')) ? DOR.run : (DOR.run = {   // 20 Oct 2026: once the card is made, Send again finishes THAT order (a changed photo/typo made a second card)
  oid: 'd' + Date.now().toString(36) + devId(), sig: dorName() + DOR.media.length + (DOR.usman && m !== 'out'), no: null, card: null, sent: {} });
@@ -3218,9 +3229,9 @@ async function dorSend(){
     var shownNo = m === 'out' ? run.no : 'SJ-' + run.no;
     var name = $('dorname').value.trim().replace(/US-\(new number\)|SJ-\(new number\)/, shownNo) || dorName().replace(/US-\(new number\)|SJ-\(new number\)/, shownNo);
     lines = ['Number: <b>' + esc(shownNo) + '</b>']; lines.push('Trello card…'); show();
-    var j = await dorCall({ op: 'card', oid: run.oid, mode: m, usman: m !== 'out' && DOR.usman, fresh: fresh, no: run.no, base: no, src: DOR.src && DOR.src.id, name: name, rate: $('dorrate').checked, hisaab: $('dorhis').checked,
+    var j = await dorCall({ op: 'card', oid: run.oid, later: at ? 1 : 0, mode: m, usman: m !== 'out' && DOR.usman, fresh: fresh, no: run.no, base: no, src: DOR.src && DOR.src.id, name: name, rate: $('dorrate').checked, hisaab: $('dorhis').checked,
       customer: dorV('dorcust'), person: dorV('dorperson'), cost: dorV('dorcost'), sale: dorV('dorsale') });
-    run.card = j.card; lines[lines.length - 1] = '✓ Trello card: <a href="' + esc(j.card.url) + '" target="_blank" rel="noopener">' + esc(j.card.name) + '</a>' + (j.ucard ? '<br>✓ USMAN HAND WORK card: <a href="' + esc(j.ucard.url) + '" target="_blank" rel="noopener">' + esc(j.ucard.name) + '</a>' : ''); (j.notes || []).forEach(function(n){ lines.push('<span class="miss">' + esc(n) + '</span>'); }); show();
+    run.card = j.card; lines[lines.length - 1] = (at ? '✓ Trello card ready (hidden until its time): <a' : '✓ Trello card: <a') + ' href="' + esc(j.card.url) + '" target="_blank" rel="noopener">' + esc(j.card.name) + '</a>' + (j.ucard ? '<br>✓ USMAN HAND WORK card: <a href="' + esc(j.ucard.url) + '" target="_blank" rel="noopener">' + esc(j.ucard.name) + '</a>' : ''); (j.notes || []).forEach(function(n){ lines.push('<span class="miss">' + esc(n) + '</span>'); }); show();
     var skipped = [], order = DOR.media.map(function(x, i){ return { x: x, i: i }; }).sort(function(a, b){ var r = function(o){ return o.x.design ? 0 : o.x.kind === 'photo' ? 1 : o.x.kind === 'voice' ? 2 : 3; }; return r(a) - r(b) || a.i - b.i; });
     for (var q = 0; q < order.length; q++){
       var x = order[q].x; if (x.sent) continue; var blob = x.blob, mime = x.mime, fname = x.name;
@@ -3236,16 +3247,60 @@ async function dorSend(){
     var sep = '//////////////////////', txt = [sep, '', j.card.name];
     if (m !== 'out') { if ($('dorrate').checked) txt.push('RATE'); if ($('dorhis').checked) txt.push('HISAAB'); }
     dorV('dornotes').split('\n').forEach(function(l){ if (l.trim()) txt.push(l.trim()); }); if (skipped.length) txt.push('(' + skipped.length + ' file' + (skipped.length > 1 ? 's' : '') + ' could not be uploaded: ' + skipped.join(', ') + ')'); txt.push(j.card.url); if (j.ucard) txt.push('USMAN: ' + j.ucard.url);
-    var sj = await dorCall({ op: 'send', oid: run.oid, text: txt.join('\n'), sample: shownNo + ' SAMPLE' });
-    lines.push('✓ Posted to ' + (m === 'out' ? '#emaan' : j.ucard ? '#cutting + #usmancutting' : '#cutting') + (m === 'out' ? '' : ' and #samplesneed'));
-    show('<b class="okc">Done ✓</b>');
+    var sj = await dorCall(Object.assign({ op: 'send', oid: run.oid, text: txt.join('\n'), sample: shownNo + ' SAMPLE' }, at ? { at: at } : {}));
+    var where = (m === 'out' ? '#emaan' : j.ucard ? '#cutting + #usmancutting' : '#cutting') + (m === 'out' ? '' : ' and #samplesneed');
+    if (sj.scheduled) lines.push('⏰ The Trello card and the message to ' + where + ' appear on <b>' + esc(dorWhen(sj.scheduled)) + '</b> — change it below (Send now / Cancel)');
+    else lines.push('✓ Posted to ' + where);
+    (sj.notes || []).filter(function(n){ return (j.notes || []).indexOf(n) < 0; }).forEach(function(n){ lines.push('<span class="miss">' + esc(n) + '</span>'); });
+    show('<b class="okc">' + (sj.scheduled ? 'Scheduled ✓' : 'Done ✓') + '</b>');
     DOR.run = null; DOR.media = []; DOR.nameEdited = false; ['dorno', 'dorpcs', 'dorcol', 'dorsize', 'dorcust', 'dornotes', 'dorperson', 'dorcost', 'dorsale'].forEach(function(id){ $(id).value = ''; });
     DOR.fresh = false; DOR.usman = false; $('dorfresh').checked = false; $('dorrate').checked = false; $('dorhis').checked = false; DOR.src = null; dorDraw(); dorLog();
   } catch(e){ show('<span class="miss">Stopped: ' + esc(e.message) + '</span> — press <b>Send order</b> again to carry on from here (nothing is sent twice).'); }
   finally { DOR.busy = false; $('dorsend').disabled = false; }
 }
-async function dorLog(){ try { var j = await dorCall({ op: 'list' }); $('dorlog').innerHTML = (j.log || []).length ? '<div class="ffs">Sent from the app</div>' + j.log.map(function(x){
-  return '<div class="dorl"><a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><small>' + ordWhen(x.t) + ' · ' + (x.mode === 'out' ? '#emaan' : x.usman || x.mode === 'hand' ? '#cutting + #usmancutting' : '#cutting') + ' · ' + x.files + ' file' + (x.files === 1 ? '' : 's') + '</small></div>'; }).join('') : ''; } catch(e){} }
+async function dorLog(){ try { var j = await dorCall({ op: 'list' }); DOR.sched = !!j.sched; $('dorlog').innerHTML = (j.log || []).length ? '<div class="ffs">Sent from the app</div>' + j.log.map(function(x){
+  var wait = x.at && !x.sent && !x.cancelled && !x.failed,
+      sch = !x.at ? '' : wait ? '<small class="dsch">⏰ Card + message appear ' + esc(dorWhen(x.at)) + '</small><div class="dsb"><button type="button" data-dsn="' + esc(x.oid) + '">▶ Send now</button><button type="button" data-dsc="' + esc(x.oid) + '">✕ Cancel the order</button></div>'
+        : x.sent ? '<small>⏰ scheduled · went ' + esc(dorWhen(x.sent)) + '</small>' : x.cancelled ? '<small class="miss">⏰ cancelled — nothing was sent; its card stays archived in Trello</small>' : '<small class="miss">⏰ could not send: ' + esc(x.failed) + '</small>';
+  return '<div class="dorl"><a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><small>' + ordWhen(x.t) + ' · ' + (x.mode === 'out' ? '#emaan' : x.usman || x.mode === 'hand' ? '#cutting + #usmancutting' : '#cutting') + ' · ' + x.files + ' file' + (x.files === 1 ? '' : 's') + '</small>' + sch + '</div>'; }).join('') : ''; } catch(e){} }
+// 10 Nov 2026 (Abbas: "send that message on schedule, just like on Slack — long press, give it a time and date"): hold Send order (or ⏰ Send later)
+// → pick the day and time; the card is made now but archived (hidden); the relay brings it back and posts the factory message then (relay doSchedTick)
+function dorWhen(t){ var d = new Date(+t); return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] + ' ' + ordWhen(+t); }
+function dorDtl(t){ var d = new Date(t), z = function(n){ return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + 'T' + z(d.getHours()) + ':' + z(d.getMinutes()); }
+function dorSchedOpen(){
+  if (DOR.busy) return; var now = new Date(), at = function(days, h){ var d = new Date(now); d.setDate(d.getDate() + days); d.setHours(h, 0, 0, 0); return d.getTime(); };
+  var q = [['In 1 hour', Math.ceil((Date.now() + 36e5) / 3e5) * 3e5]];
+  if (now.getHours() < 17) q.push(['Today 6 pm', at(0, 18)]); if (now.getHours() < 20) q.push(['Tonight 9 pm', at(0, 21)]);
+  q.push(['Tomorrow 9 am', at(1, 9)], ['Tomorrow 2 pm', at(1, 14)]);
+  $('dorschq').innerHTML = q.map(function(x){ return '<button type="button" data-qat="' + x[1] + '">' + x[0] + '</button>'; }).join('');
+  if (!$('dorat').value || new Date($('dorat').value).getTime() < Date.now() + 6e4) $('dorat').value = dorDtl(at(1, 9));
+  $('dorat').min = dorDtl(Date.now()); $('dorsch').hidden = false; try { $('dorsch').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch(e){}
+}
+$('dorschq').addEventListener('click', function(e){ var b = e.target.closest('[data-qat]'); if (!b) return; $('dorat').value = dorDtl(+b.dataset.qat);
+  [].forEach.call(this.children, function(c){ c.classList.toggle('on', c === b); }); });
+$('dorschx').onclick = function(){ $('dorsch').hidden = true; };
+$('dorlater').onclick = dorSchedOpen;
+$('dorschgo').onclick = async function(){
+  var v = $('dorat').value, t = v ? new Date(v).getTime() : 0;
+  if (!t || isNaN(t)) { alert('Pick a day and time first'); return; }
+  if (t < Date.now() + 60000) { alert('That time has passed — pick a later time (or press Send order to send now)'); return; }
+  if (t > Date.now() + 30 * 864e5) { alert('Pick a time within 30 days'); return; }
+  if (DOR.sched == null) await dorLog();
+  if (!DOR.sched) { alert('Sending later needs the new relay version (2026-11-10a). Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy, then try again.'); return; }
+  $('dorsch').hidden = true; dorSend(t);
+};
+$('dorlog').addEventListener('click', async function(e){
+  var b = e.target.closest('[data-dsn],[data-dsc]'); if (!b) return; var now = !!b.dataset.dsn, oid = b.dataset.dsn || b.dataset.dsc;
+  if (!confirm(now ? 'Show the Trello card and send the factory message now?' : 'Cancel this order? The factory gets no message and its Trello card stays hidden (archived).')) return;
+  b.disabled = true; try { await dorCall({ op: now ? 'sendnow' : 'unsched', oid: oid }); uiToast(now ? 'Sent ✓' : 'Order cancelled'); } catch(err){ alert(err.message); } dorLog();
+});
+(function(){ var b = $('dorsend'), t = null, held = false;          // hold Send order = schedule (like Slack)
+  function stop(){ clearTimeout(t); t = null; }
+  b.addEventListener('pointerdown', function(){ if (b.disabled) return; held = false; stop(); t = setTimeout(function(){ t = null; held = true; try { navigator.vibrate && navigator.vibrate(25); } catch(e){} dorSchedOpen(); }, 550); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function(ev){ b.addEventListener(ev, stop); });
+  b.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  b.onclick = function(){ if (held) { held = false; return; } dorSend(); };   // a hold opened the time sheet: that release is not a Send
+})();
 function dorOpen(){ if (!isBoss()) return; $('mysheet').hidden = true; $('dor').hidden = false; dorDraw(); dorLog(); }
 $('doropen').onclick = dorOpen;
 $('dorx').onclick = function(){ $('dor').hidden = true; };
@@ -3297,7 +3352,6 @@ $('dormedia').addEventListener('click', function(ev){
   var b = ev.target.closest('[data-dx]'); if (b) { var x = DOR.media[+b.dataset.dx]; if (x && !x.sent && confirm('Remove this ' + (x.kind === 'voice' ? 'voice note' : x.kind) + '?')) { URL.revokeObjectURL(x.url); DOR.media.splice(+b.dataset.dx, 1); dorMedia(); } return; }
   b = ev.target.closest('[data-dstar]'); if (b) { DOR.media.forEach(function(m, i){ m.design = i === +b.dataset.dstar; }); dorMedia(); }
 });
-$('dorsend').onclick = dorSend;
 window.__dor = { shrink: dorShrink };
 
 // ----- CUSTOMER BALANCES (Abbas, 11 Oct 2026): "save the opening balances within the app ... when I make a receipt of a particular
