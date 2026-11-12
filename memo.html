@@ -207,6 +207,7 @@ main{max-width:720px;margin:0 auto;}
 #szc img{display:block;width:100%;border-radius:8px;margin:8px 0}
 #szc .btns{display:flex;flex-wrap:wrap;gap:6px}
 .stk button{margin-top:8px;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;border:1.5px solid var(--line);background:#fff;font-weight:700}
+.stk .vbtn{display:flex;flex-wrap:wrap;gap:8px}.stk .vbtn button{padding:10px 16px;font-size:14.5px}.stk button.vgo{background:var(--gold);border-color:var(--gold);color:#fff}
 #p-cat textarea{width:100%;min-height:90px;padding:10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px}
 .crow{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border-radius:10px;padding:8px 10px;margin:6px 0;font-weight:700}
 .cpick{margin:-2px 0 8px;padding:8px 10px;background:#fff;border-radius:10px}.cpick>small{display:block;color:var(--mute);font-size:12px;margin-bottom:6px}.cpick>div{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}.cpick button{flex:0 0 auto;width:92px;border:2px solid var(--line);border-radius:12px;background:#fff;padding:4px;font:inherit;text-align:center;color:var(--mute)}.cpick button img,.cpick button i{display:block;width:100%;height:92px;object-fit:cover;border-radius:8px;background:#EFE9DF}.cpick button b{display:block;font-size:12.5px;color:var(--ink);margin-top:4px}.cpick button small{display:block;font-size:10.5px}.cpick button.on{border-color:var(--gold);background:var(--goldbg)}
@@ -959,13 +960,15 @@ function saveWork(){ clearTimeout(wkT); wkT = null; if (!designs.length) return;
 function saveSoon(){ if (!wkT) wkT = setTimeout(saveWork, 400); }
 function loadWork(){ var w; try { w = JSON.parse(localStorage.getItem(WK) || 'null'); } catch(e){} if (!w) return null;
   state = keyRemap(w.state || {}, w.cards); prices = keyRemap(w.prices || {}, w.cards); LOC = keyRemap(w.loc || {}, w.cards); if (w.name && !$('name').value.trim()) $('name').value = w.name; if (w.q && !$('q').value.trim()) $('q').value = w.q; if (w.dl) Object.keys(w.dl).forEach(function(k){ if ($('dl_' + k)) $('dl_' + k).value = w.dl[k] || ''; });
-  ['inv', 'rv', 'pv', 'rn'].forEach(function(k){ if (w[k]) B[k] = w[k]; }); return w; }
+  ['inv', 'rv', 'pv', 'rn'].forEach(function(k){ if (w[k]) B[k] = w[k]; });
+  ['rv', 'pv'].forEach(function(k){ vchNext(k, true); });   // 12 Nov 2026: a receipt already sent is not what the next payment is typed into
+  return w; }
 ['input', 'change', 'click'].forEach(function(ev){ document.addEventListener(ev, saveSoon); });
 document.addEventListener('visibilitychange', function(){ if (document.hidden) saveWork(); });
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-10a';
+var VER = '2026-11-12a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1319,6 +1322,17 @@ function vchCalc(d){ var open = n2(d.open), a = Math.abs(n2(d.amount)), disc = M
 // ----- form -----
 function field(lbl, html){ return '<label class="bf"><span>' + lbl + '</span>' + html + '</label>'; }
 function inp(key, val, type, ph){ return '<input data-k="' + key + '" type="' + (type || 'text') + '"' + (type === 'num' ? ' inputmode="decimal"' : '') + ' value="' + String(val == null ? '' : val).replace(/"/g, '&quot;') + '" placeholder="' + (ph || '') + '">'; }
+function vchLocked(k, d){ return (k === 'rv' || k === 'pv') && !!d && d.status === 'sent' && !d.editing; }
+// a receipt / voucher that was already sent is never the one a new payment is typed into: coming to the tab starts the next one (the sent one is in Saved bills)
+function vchNext(k, quiet){ var d = B[k]; if ((k !== 'rv' && k !== 'pv') || !d || d.status !== 'sent' || d.editing) return false;
+  keepNo(k, d.ref); B[k] = null; if (!quiet) setTimeout(function(){ uiToast(d.ref + ' was sent — this is a new ' + (k === 'rv' ? 'receipt' : 'voucher') + ' · سند جديد'); }, 60); return true; }
+function vchSender(k, d){ if (d.sentDev) return d.sentDev; var b = (BS.list || []).filter(function(x){ return x.type === k && x.ref === d.ref && x.status !== 'deleted'; })[0]; return b && b.dev || ''; }
+function vchFix(k, d){
+  var sd = vchSender(k, d), wd = k === 'rv' ? 'receipt' : 'voucher';
+  if (sd && sd !== devId()) { alert(d.ref + ' was sent from another phone — correct it on that phone (Saved bills → ' + d.ref + ' → Correct).\n\nFor another payment press ＋ New ' + wd + '.'); return; }
+  if (!confirm('Correct ' + d.ref + '?\n\nUse this only when ' + d.ref + ' itself has a mistake (wrong amount, wrong customer, wrong date). After Send it replaces the old one.\n\nFor ANOTHER payment press Cancel, then ＋ New ' + wd + '.')) return;
+  d.fix = { name: d.name, date: d.date, open: d.open, amount: d.amount, disc: d.disc || '', modeP: d.modeP, chq: d.chq, note: d.note, saved: d.saved || null, cust: d.cust }; d.editing = 1; d.saved = null; redraw(); try { saveWork(); } catch(e){} }
+function vchUndo(d){ if (d.fix) ['name', 'date', 'open', 'amount', 'disc', 'modeP', 'chq', 'note', 'saved', 'cust'].forEach(function(f){ d[f] = d.fix[f]; }); delete d.fix; delete d.editing; redraw(); try { saveWork(); } catch(e){} }
 function drawForm(){
   var k = B.mode, d = B[k] || (B[k] = freshDoc(k)), f = $('bform'), co = coGet(), h = '';
   var who = k === 'inv' ? 'Bill to · العميل' : k === 'rn' ? 'Returned by · العميل' : (k === 'rv' ? 'Received from · استلمنا من' : 'Paid to · دفعنا إلى');
@@ -1366,10 +1380,19 @@ function drawForm(){
   var rfi = f.querySelector('input[data-k="ref"]'); if (rfi) { rfi.readOnly = true; rfi.title = 'The number comes from the shop — one series for everyone'; }   // 9 Nov 2026: typed numbers (RV-00, RV-001) broke the series
   // 9 Nov 2026: Islamudin's sent receipt RV-0020 (5,000) stayed open on a phone, was changed to Matiullah 1,500 and sent again under RV-0020 — it REPLACED
   // his line on his statement. A sent receipt / payment voucher is now locked; the next one starts with New number.
-  if ((k === 'rv' || k === 'pv') && d.status === 'sent') { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
-    f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was sent — it cannot be changed.</b><small>For the next ' + (k === 'rv' ? 'receipt' : 'voucher') + ' press <b>New number</b>. Send again only shares this same one. · تم الإرسال — لا يمكن التعديل</small></div>'); }
+  // 12 Nov 2026 (Abbas: "my employee was trying to make a receipt and he wanted to edit it — he could not"): the sent RV-0066 of 9 Nov stayed on the
+  // phone, greyed out, and the only way on was the small "New number" button — he pressed Send on the old one instead (11 and 12 Nov), no new receipt
+  // was made. Now the Receipt tab opens a NEW receipt by itself (vchNext); a sent one shows two clear buttons: New receipt / Correct this one.
+  var wd = k === 'rv' ? 'receipt' : 'voucher';
+  if (vchLocked(k, d)) { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
+    f.insertAdjacentHTML('afterbegin', '<div class="stk ok" id="vlock">🔒 <b>' + esc(d.ref) + ' was sent' + (d.name ? ' — ' + esc(d.name) + ' · ' + amt(vchCalc(d).amount) + ' AED' : '') + '</b><small>It is saved. For another payment make a new ' + wd + '. If this one has a mistake, correct it — it stays ' + esc(d.ref) + '. · تم الإرسال</small>'
+      + '<div class="vbtn"><button type="button" class="vgo" data-vnew="1">＋ New ' + wd + ' · سند جديد</button><button type="button" data-vfix="1">✏️ Correct this ' + wd + ' · تعديل</button></div></div>'); }
+  else if ((k === 'rv' || k === 'pv') && d.editing) f.insertAdjacentHTML('afterbegin', '<div class="stk bad" id="vedit">✏️ <b>Correcting ' + esc(d.ref) + '</b> — sent as ' + esc((d.fix || {}).name || '') + ' · ' + amt(Math.abs(n2((d.fix || {}).amount))) + ' AED'
+      + '<small>Change what was wrong and press Send: it replaces the old one on the statement, it is never counted twice. This is NOT a new ' + wd + '. · تصحيح نفس السند</small>'
+      + '<div class="vbtn"><button type="button" data-vundo="1">✕ Leave it as it was</button><button type="button" data-vnew="1">＋ New ' + wd + ' instead</button></div></div>');
+  if (k === 'rv' || k === 'pv') $('dnew').textContent = '＋ New ' + wd + ' · سند جديد'; else $('dnew').textContent = 'New number · رقم جديد';
   if (k === 'rn' && rnLocked(d)) { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
-    f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was shared — it cannot be changed.</b><small>For more pieces back make a new return (New number). · تم التأكيد — لا يمكن التعديل</small></div>'); }
+    f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was shared — it cannot be changed.</b><small>For more pieces back make a new return. · تم التأكيد — لا يمكن التعديل</small><div class="vbtn"><button type="button" class="vgo" data-vnew="1">＋ New return · مرتجع جديد</button></div></div>'); }
   if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); if (d.name && d.cust === undefined) custLook(); }
 }
 function row(k2, v2, cls){ return '<div class="br ' + (cls || '') + '"><span>' + k2 + '</span><span>' + amt(v2) + ' AED</span></div>'; }
@@ -1549,9 +1572,12 @@ function setMode(m){
   if (m === 'cat') { catOpen(); return; }
   if (m !== 'memo') { setTimeout(stkShow, 0); if (B[m] && !B[m].name) B[m].name = $('name').value.trim(); redraw(); }
 }
-$('mode').onclick = function(e){ var b = e.target.closest('button'); if (b) setMode(b.dataset.m); };
+$('mode').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; if (b.dataset.m !== B.mode) vchNext(b.dataset.m); setMode(b.dataset.m); };
 $('bform').addEventListener('input', onForm); $('bform').addEventListener('change', onForm);
 $('bform').addEventListener('click', function(e){ var d = B[B.mode];
+  if (e.target.closest('[data-vnew]')) { if (d && d.editing) vchUndo(d); $('dnew').click(); return; }
+  if (e.target.closest('[data-vfix]')) { vchFix(B.mode, d); return; }
+  if (e.target.closest('[data-vundo]')) { vchUndo(d); return; }
   if (e.target.id === 'addex') { d.extras.push({ d: '', a: '' }); redraw(); }
   if (e.target.id === 'addri') { (d.items = d.items || []).push({ no: '', c: '', pcs: '', rate: '' }); redraw(); var ri = document.querySelectorAll('#bform input[data-ri][data-f="no"]'); if (ri.length) ri[ri.length - 1].focus(); }
   if (e.target.dataset.rmi != null) { d.items.splice(+e.target.dataset.rmi, 1); redraw(); }
@@ -1563,11 +1589,16 @@ $('bform').addEventListener('click', function(e){ var d = B[B.mode];
   if (e.target.dataset.rm != null) { d.extras.splice(+e.target.dataset.rm, 1); if (!d.extras.length) d.extras.push({ d: '', a: '' }); redraw(); } });
 $('dsend').onclick = async function(){
   var k = B.mode, d = B[k]; if (!d) return;
+  if ((k === 'rv' || k === 'pv') && d.editing && d.fix && nmKey(d.name) !== nmKey(d.fix.name) &&
+      !confirm(d.ref + ' was sent for ' + (d.fix.name || '(no name)') + '.\n\nYou changed the name to ' + (d.name || '(no name)') + ': ' + (k === 'rv' ? 'the receipt moves off ' + (d.fix.name || 'the first customer') + '\'s statement onto ' + (d.name || 'the new name') + '\'s.' : 'the voucher is changed.') + '\n\nOK = yes, the name was wrong.\nCancel = stop (for another payment use ＋ New ' + (k === 'rv' ? 'receipt' : 'voucher') + ').')) return;
   if (k === 'rv' && !custBefore(k, d)) return;
   await bsNext(k, d);
   clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
   if (!(await docShare(shareText(k, d)))) return;
-  if (k === 'rv') custAfter(k, d);      // a receipt counts once it is sent; an invoice (and a return) only on Include & share
+  if (k === 'rv') { var hadDisc = d.editing && d.fix && Math.abs(n2(d.fix.disc)) > 0 && !vchCalc(d).disc, was = d.editing && d.fix ? d.fix.name : '';
+    custAfter(k, d).then(function(){ if (hadDisc) custCall({ op: 'void', id: 'disc:' + d.ref + ':' + devId(), by: ls('sj_me') || '' }).catch(function(){}); });   // a corrected receipt that no longer has its discount: the old discount line goes too
+  }      // a receipt counts once it is sent; an invoice (and a return) only on Include & share
+  if (k === 'rv' || k === 'pv') { d.sentDev = d.sentDev || devId(); delete d.editing; delete d.fix; }
   if (d.status !== 'included') d.status = 'sent'; bsSave(true); if (B[k] === d && B.mode === k && (k === 'rv' || k === 'pv')) drawForm();   // 9 Nov 2026: shows the lock at once
 };
 // INCLUDE & SHARE (Abbas, 7 Oct 2026): an invoice can still change (discount, add, less, other colour), so a plain Send PDF never touches stock.
@@ -1603,8 +1634,9 @@ $('dinc').onclick = async function(){
   if (d.cat !== false && szl.length) szRun(d, szl);
 };
 $('dcopy').onclick = async function(){ var t = docText(B.mode, B[B.mode]); try { await navigator.clipboard.writeText(t); $('dcopy').textContent = 'Copied ✓'; setTimeout(function(){ $('dcopy').textContent = 'Copy text · نسخ النص'; }, 1500); } catch(e){ prompt('Copy:', t); } };
-$('dnew').onclick = function(){ var k = B.mode; clearTimeout(BS.t); bsSave(true); keepNo(k, B[k].ref); B[k] = freshDoc(k); redraw(); stkShow(); bsMark(''); };
-$('bills').onclick = function(){ custNames(); custFlush(); $('done').hidden = false; window.scrollTo(0, 0); setMode(Object.keys(state).length ? 'inv' : 'rv'); bsSync(); };
+$('dnew').onclick = function(){ var k = B.mode; if (B[k] && B[k].editing) vchUndo(B[k]);   // a correction left half-way is dropped, the sent receipt stays as it was sent
+  clearTimeout(BS.t); bsSave(true); keepNo(k, B[k].ref); B[k] = freshDoc(k); redraw(); stkShow(); bsMark(''); };
+$('bills').onclick = function(){ custNames(); custFlush(); $('done').hidden = false; window.scrollTo(0, 0); var bm = Object.keys(state).length ? 'inv' : 'rv'; vchNext(bm); setMode(bm); bsSync(); };
 // ---------- SAVED BILLS (Abbas, 18 Oct 2026: "If I make an invoice, I usually send it to a customer, and then the next day the goods come, we
 // confirm, and maybe there are some payments or changes in the invoice. I want you to keep that invoice in the draft somewhere. So if I had to
 // make some changes in the bill, I would go inside the bill and change whatever I want to change.") ----------
@@ -1627,7 +1659,8 @@ function bsSnap(k){ var d = B[k]; if (!d || !d.ref || k === 'memo' || k === 'cat
   var cols = k === 'inv' ? colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ var dz = byNo(l.no); return { no: l.no, base: dz ? dz.base : l.no, card: dz ? dz.id : '', c: l.c, qty: l.qty, rate: l.rate }; }) : [];   // 19 Oct: colour by colour, so a RETURN can be picked from this invoice later
   return { v: 1, k: k, d: d, state: st, prices: pr, cards: cardsOf(), dl: dlv(), lines: lines, cols: cols, total: (k === 'inv' || k === 'rn') ? c.total : n2(d.amount), name: (d.name || $('name').value || '').trim(), date: d.date || today() }; }
 function bsSoon(){ clearTimeout(BS.t); BS.t = setTimeout(function(){ bsSave(false); }, 2500); }
-async function bsSave(force){ if (!RELAY || !token) return; var k = B.mode, snap = bsSnap(k); if (!snap) return;
+async function bsSave(force){ if (!RELAY || !token) return; var k = B.mode; if (B[k] && B[k].editing) return;   // 12 Nov 2026: a correction is saved only when it is sent (the saved bill always matches the statement)
+  var snap = bsSnap(k); if (!snap) return;
   var js = JSON.stringify(snap); if (!force && BS.last[snap.d.ref] === js) return; BS.last[snap.d.ref] = js;
   var stt = snap.d.status || 'draft'; bsMark('saving…');
   var j = null; try { j = await bsCall({ op: 'put', ref: snap.d.ref, type: k, name: snap.name, status: stt, total: amt(snap.total), date: snap.date, data: js }); if (!j.ok) throw new Error(j.error);
@@ -3946,7 +3979,7 @@ function ccOpenOrder(o){ if (!o) return; navCloseAll(); $('cc').hidden = false; 
   if (o.ts) { if (!(CC.orders || []).some(function(x){ return x.ts === o.ts; })) CC.orders = [{ k: 'O' + o.ts, ts: o.ts, name: o.name, head: 'just sent', chat: 0, last: o.ts }].concat(CC.orders || []); ccChat(o.name, o.ts); uiToast('💬 This order\'s chat is open — anything you write here goes under the memo in #customer'); }
   else { ccList(); uiToast('Memo sent — its chat is in the list (tap it)'); }
   setTimeout(function(){ ccPoll(true); }, 1500); navSync(); }
-window.__sj = { ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: ccDraw, st: function(x){ if (x) state = x; return state; }, snapApply: snapApply, setMode: setMode, liveApply: liveApply, reapply: reapply, keyRemap: keyRemap, cardNo: cardNo, rnPaint: rnPaint, cashRead: cashRead, bsSnap: function(k){ return bsSnap(k); }, drSnap: drSnap, drOpen: drOpen };   // hooks for the headless test (t_shell.js)
+window.__sj = { bsOpen: bsOpen, ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: ccDraw, st: function(x){ if (x) state = x; return state; }, snapApply: snapApply, setMode: setMode, liveApply: liveApply, reapply: reapply, keyRemap: keyRemap, cardNo: cardNo, rnPaint: rnPaint, cashRead: cashRead, bsSnap: function(k){ return bsSnap(k); }, drSnap: drSnap, drOpen: drOpen };   // hooks for the headless test (t_shell.js)
 
 
 // ===== DRAFTS (Abbas, 20 Oct 2026: "when I am in the process of making a bill or order memo, give a small option beside OK that says MEMO, with two
