@@ -3,7 +3,7 @@
 // photo (CAT_LOCAL mode, no Trello), then the page is driven; plus the real 57026 studio photo as a guard on the cutter.
 const { chromium } = require('playwright'); const { execFileSync } = require('child_process'); const fs = require('fs'), path = require('path'), os = require('os');
 const DIR = path.join(__dirname, '..');
-const T = fs.mkdtempSync(path.join(os.tmpdir(), 'sjcat-')), L = path.join(T, 'local'); fs.mkdirSync(L); const F79 = path.join(__dirname, 'fixtures/79623');
+const T = fs.mkdtempSync(path.join(os.tmpdir(), 'sjcat-')), L = path.join(T, 'local'); fs.mkdirSync(L); const F79 = path.join(__dirname, 'fixtures/79623'), F14 = path.join(__dirname, 'fixtures/1114');
 // a 1200x800 "line-up": six coloured dresses on a white wall
 execFileSync('python3', ['-c', `
 from PIL import Image, ImageDraw
@@ -14,7 +14,14 @@ im.save('${L}/p1.jpg', 'JPEG', quality=90)
 # the real SJ-79623 card (Nasir, 23 Oct 2026): 5 Trello photos (shop shot, shop 3, shop 6, JAMAL 3, JAMAL 6) as the repo's thumbnails
 import shutil, os, json; os.makedirs('${T}/thumbs', exist_ok=True)
 for f in os.listdir('${F79}'): shutil.copy(os.path.join('${F79}', f), '${L}/' + f)
-json.dump({'6a368bee72fb291b1477f713': ['shot'], '6a381658df3773d1ea5397da': ['lineup'], '6a38168c84e0eb6464b9ab4d': ['lineup'], '6a58efc843b0bc351f6ed77f': ['cover'], '6a58efd612e8e3518909c3bb': ['lineup']}, open('${T}/thumbs/roles.json', 'w'))
+for f in os.listdir('${F14}'): shutil.copy(os.path.join('${F14}', f), '${L}/' + f)
+# 14 Nov 2026, the real SJ-40032 (dress photo 'detail' + a handwritten paper 'shot', newer) and SJ-46594 (two ChatGPT JAMAL pictures file_….png,
+# one called 'cover', the other 'lineup' with a weak logo score; two shop line-ups; a Slack screenshot) with the roles the sorter gave them
+json.dump({'6a368bee72fb291b1477f713': ['shot'], '6a381658df3773d1ea5397da': ['lineup'], '6a38168c84e0eb6464b9ab4d': ['lineup'], '6a58efc843b0bc351f6ed77f': ['cover'], '6a58efd612e8e3518909c3bb': ['lineup'],
+  '69271fd533419d8edea04f10': ['detail'], '69357ab5c2838c2ae7c4cf00': ['shot'], '6ae231e9ffc2d24b0ca674af': ['cover'], '6ae234a4d58c2c5f0d68105d': ['lineup'], '6ae234c6296e006459138d31': ['lineup'], '6ae234cb6a9f41d269c82089': ['lineup'], '6ae6e9d8b97cc323625ff513': ['shot']}, open('${T}/thumbs/roles.json', 'w'))
+att14a = [('69271fd533419d8edea04f10', 'image.jpeg', '2025-11-26T15:42:13Z'), ('69357ab5c2838c2ae7c4cf00', 'photo.jpeg', '2025-12-07T13:01:41Z')]
+att14b = [('6ae231e9ffc2d24b0ca674af', 'file_00000000e0788211b9cad23ad4d39fb6.png', '2026-10-28T17:33:29Z'), ('6ae234a4d58c2c5f0d68105d', 'file_000000008a14821182ac1a59bc9bbcf2.png', '2026-10-28T17:45:08Z'),
+  ('6ae234c6296e006459138d31', '20261028_212334.jpg', '2026-10-28T17:45:42Z'), ('6ae234cb6a9f41d269c82089', '20261028_213124.jpg', '2026-10-28T17:45:47Z'), ('6ae6e9d8b97cc323625ff513', 'Screenshot_20261101_112627_Slack.jpg', '2026-11-01T07:27:20Z')]
 att79 = [('6a368bee72fb291b1477f713', 'photo.jpeg', '2026-06-20T12:47:42Z'), ('6a381658df3773d1ea5397da', 'photo.jpeg', '2026-06-21T16:50:32Z'), ('6a38168c84e0eb6464b9ab4d', 'photo.jpeg', '2026-06-21T16:51:24Z'), ('6a58efc843b0bc351f6ed77f', 'photo.png', '2026-07-16T14:50:48Z'), ('6a58efd612e8e3518909c3bb', 'photo.png', '2026-07-16T14:51:02Z')]
 json.dump([{'id': '6a324a6384a02f213399fefe', 'name': 'SJ = **(79623)** (96) pcs color = (9) ,,,, (16/8/8/8/16/16)..(8/8/8)', 'attachments': [{'id': i, 'name': n, 'mimeType': 'image/jpeg', 'date': d, 'url': 'x'} for i, n, d in att79]},
   {'id': '6a324a6384a02f213399feff', 'name': 'SJ = **(79624)** (96) pcs color = (9) (8/8/8) (16/8/8/8/16/16)', 'attachments': [{'id': i, 'name': n, 'mimeType': 'image/jpeg', 'date': d, 'url': 'x'} for i, n, d in att79[1:3]]},
@@ -25,6 +32,8 @@ json.dump([{'id': '6a324a6384a02f213399fefe', 'name': 'SJ = **(79623)** (96) pcs
   {'id': 'abc123abc123abc123abc202', 'name': 'Sj = **(6668)**(65pcs) 5 color (13/13/13/13/13)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
   {'id': 'abc123abc123abc123abc204', 'name': 'Sj 6668 (pcs67) 5 colors.     (14/13/14/14/12/)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
   {'id': 'abc123abc123abc123abc205', 'name': 'SJ = **6668** (60) pcs ,,, colors = (5) ,,,,,,', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]},
+  {'id': '69271fd2be38518cc4c408f2', 'name': 'Sj= (40032) ..(56) pcs colour= 1 ___(56)', 'attachments': [{'id': i, 'name': n, 'mimeType': 'image/jpeg', 'date': d, 'url': 'x'} for i, n, d in att14a]},
+  {'id': '6ae231d43feb6608c448be31', 'name': 'Sj = **(46594)**__(36) pcs__ colour= (6)__(8-3/8-3/8-3)_(4-3/4-3/4-3)', 'attachments': [{'id': i, 'name': n, 'mimeType': 'image/jpeg', 'date': d, 'url': 'x'} for i, n, d in att14b]},
   {'id': 'abc123abc123abc123abc301', 'name': 'Sj = **(57027)** (38) pcs __ Colour= (6)__(0-3/14-3/16-3/0-3/8-3//0-3)', 'attachments': [{'id': 'p1', 'name': 'file_x.jpg', 'mimeType': 'image/jpeg', 'date': '2026-10-01', 'url': 'x'}]}], open('${L}/cards.json', 'w'))
 `]);
 const env = Object.assign({}, process.env, { CAT_LOCAL: L, PYTHONPATH: path.join(DIR, 'tools') + ':' + path.join(DIR, 'tools/catalog'), REQ: JSON.stringify({ id: 't1', name: 'TEST CUSTOMER', items: [{ no: '57026', mode: 'S' }] }), SIG: '' });
@@ -91,6 +100,26 @@ const r4 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t4.json'))); const h4 =
 const ph4 = [...h4.matchAll(/<div class="photo"[^>]*data-nums="([^"]*)"[^>]*>\s*<img[^>]*width="(\d+)" height="(\d+)"/g)].map(m => [m[1], Math.round(100 * m[2] / m[3])]);
 ok('79623: 6-colour group = the 6-dress JAMAL photo, 3-colour group = the 3-dress JAMAL photo', r4.ok && ph4.length === 2 && ph4[0][0] === '1,2,3,4,5,6' && ph4[0][1] === 139 && ph4[1][0] === '7,8,9' && ph4[1][1] === 136);
 ok('79623: both are JAMAL photos (the 6-dress one found by its logo, the sorter had called it a shop photo) - no warning', !(r4.flags || []).some(f => /79623/.test(f)));
+// 14 Nov 2026 (Abbas, DASTAGIR catalogue: "SJ-40032 took a paper instead of the photo of the design, and SJ-46594 has JAMAL photos but you took the normal ones")
+const env14 = Object.assign({}, env, { REQ: JSON.stringify({ id: 't14', name: 'DASTAGIR TEST', items: [{ no: '40032', mode: 'S' }, { no: '46594', mode: 'C' }] }) });
+execFileSync('python3', [path.join(DIR, 'tools/catalog/build.py')], { cwd: T, env: env14 });
+const r14 = JSON.parse(fs.readFileSync(path.join(T, 'jobs/t14.json')));
+const which = r14.ok ? JSON.parse(execFileSync('python3', ['-c', `
+import re, base64, io, json, os
+from PIL import Image
+h = open('${T}/' + ${JSON.stringify(r14.page || '')}, encoding='utf-8').read()
+fx = {f[:-4]: Image.open('${F14}/' + f).convert('L').resize((40, 40)) for f in os.listdir('${F14}')}
+out = {}
+for no in ['40032', '46594']:
+    a = h.index('<article class="design" data-no="%s"' % no); b = h.find('<article class="design"', a + 10)
+    out[no] = []
+    for m in re.finditer(r'<div class="photo" data-nums="([^"]*)"[^>]*><img src="data:image/jpeg;base64,([^"]+)"', h[a:b]):
+        im = Image.open(io.BytesIO(base64.b64decode(m.group(2)))).convert('L').resize((40, 40)); px = list(im.tobytes())
+        out[no].append([m.group(1), min(fx, key=lambda k: sum(abs(x - y) for x, y in zip(px, fx[k].tobytes())))])
+print(json.dumps(out))`]).toString()) : {};
+ok('40032: the dress photo, not the handwritten paper (' + JSON.stringify(which['40032']) + ')', r14.ok && (which['40032'] || []).length === 1 && which['40032'][0][1] === '69271fd533419d8edea04f10');
+ok('46594: both colour groups get the JAMAL pictures, never a shop photo (' + JSON.stringify(which['46594']) + ')', (which['46594'] || []).length === 2 && which['46594'].every(x => /^6ae231e9|^6ae234a4/.test(x[1])) && which['46594'][0][1] !== which['46594'][1][1]);
+ok('… no "shop photo used" warning for 46594, no "paper" warning for 40032 (it has a dress photo)', !(r14.flags || []).some(f => (/46594/.test(f) && /shop photo used/.test(f)) || (/40032/.test(f) && /paper/.test(f))));
 // the same card with only the two shop photos and the groups the other way round (3 first, then 6): the upload sequence rules
 // (newest photo = first group) even though the counts disagree - and the job warns
 const env5 = Object.assign({}, env, { REQ: JSON.stringify({ id: 't5', name: 'SEQ TEST', items: [{ no: '79624', mode: 'S' }] }) });

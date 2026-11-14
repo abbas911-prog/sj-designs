@@ -314,12 +314,19 @@ def build(req):
         def jamal(a):                                              # a JAMAL photo: the thumbnail sorter says cover, or the real JAMAL logo is in it
             if role(a) == 'cover': return True
             if role(a) == 'shot': return False
+            # 14 Nov 2026 (Abbas, SJ-46594: "there are JAMAL photos available, you have still taken the normal photos"): the two JAMAL pictures are
+            # ChatGPT exports (file_….png); the sorter called one of them a lineup and its logo scored 0.50 (< 0.6), so a shop photo was used
+            if re.match(r'(file_|chatgpt)', str(a.get('name', '')).lower()): return True
             try: return logo_score(load(a)) >= 0.6
             except Exception as e: print('logo_score failed (%s)' % e, file=sys.stderr); return False
         if not imgs: errors.append('SJ-%s: no photo on the card.' % no); continue
         covers = [a for a in imgs if jamal(a)]; lineups = [a for a in imgs if a not in covers and role(a) == 'lineup']
-        others = [a for a in imgs if a not in covers and a not in lineups]
-        pick = (covers + lineups + others)[:len(groups)]            # Abbas (23 Oct 2026): the JAMAL photo always; the rest only to fill up
+        # 14 Nov 2026 (Abbas, SJ-40032: "it took a paper instead of the photo of the design"): a 'shot' (handwritten paper, screenshot, chat)
+        # is never a design photo — it is used only when the card has nothing else; the newest photo is no longer enough to win
+        shots = [a for a in imgs if a not in covers and a not in lineups and role(a) == 'shot']
+        others = [a for a in imgs if a not in covers and a not in lineups and a not in shots]
+        pick = (covers + lineups + others + shots)[:len(groups)]    # Abbas (23 Oct 2026): the JAMAL photo always; the rest only to fill up
+        if any(a in shots for a in pick): flags.append('SJ-%s: the card has no dress photo (only a paper / screenshot) — add the photo in Trello and make the catalogue again.' % no)
         pick.sort(key=lambda a: a.get('date', ''), reverse=True)   # ... and in the upload sequence: newest = first colour group
         while len(pick) < len(groups):                             # fewer photos than groups: the rest ride on the last photo
             groups[-2] = groups[-2] + groups[-1]; groups.pop()
