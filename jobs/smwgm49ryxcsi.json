@@ -1,0 +1,82 @@
+{
+ "id": "smwgm49ryxcsi",
+ "op": "sell",
+ "ref": "INV-0054",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6adc7fe0de4ad9f9248dfc31",
+   "no": "711",
+   "before": "Sj = **(711-A)**__(40)pcs__Colour = (5)___(8-4/8-4/8-4/8-4/8-4)",
+   "after": "Sj = **(711-A)**__(20)pcs__Colour = (5)___(4-4/4-4/4-4/4-4/4-4)",
+   "left": 20,
+   "lines": [
+    "colour 1: 8 → 4 (−4)",
+    "colour 2: 8 → 4 (−4)",
+    "colour 3: 8 → 4 (−4)",
+    "colour 4: 8 → 4 (−4)",
+    "colour 5: 8 → 4 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6af5de9764724f0bbcbc2d12",
+   "no": "12151",
+   "before": "Sj = **(12151)**__(16) pcs __ colour=(3)__(4/4/8)",
+   "after": "Sj = **(12151)**__(0) pcs __ colour=(3)__(0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 8 → 0 (−8)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6af1bf3e2d239d486df9a1d5",
+   "no": "17841",
+   "before": "Sj =**(17841)**....(22) Pcs __colour = (7)__(4/4/4/4/4/1/1)",
+   "after": "Sj =**(17841)**....(0) Pcs __colour = (7)__(0/0/0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 4 → 0 (−4)",
+    "colour 5: 4 → 0 (−4)",
+    "colour 6: 1 → 0 (−1)",
+    "colour 7: 1 → 0 (−1)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "6ada15a7bbd72086af0d1a46",
+   "no": "49712",
+   "before": "Sj = **(49712)** (81)__ colour= (7)__(6/16/20/2/6)_(24/7)",
+   "after": "Sj = **(49712)** (60)__ colour= (7)__(4/12/16/0/4)_(20/4)",
+   "left": 60,
+   "lines": [
+    "colour 1: 6 → 4 (−2)",
+    "colour 2: 16 → 12 (−4)",
+    "colour 3: 20 → 16 (−4)",
+    "colour 4: 2 → 0 (−2)",
+    "colour 5: 6 → 4 (−2)",
+    "colour 6: 24 → 20 (−4)",
+    "colour 7: 7 → 4 (−3)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6af08a00426ab6db2f97cb25",
+   "no": "84658",
+   "before": "SJ-84658",
+   "after": "SJ-84658",
+   "left": 0,
+   "lines": [
+    "sample: 1 → 0 (−1)"
+   ],
+   "moved": "moved to FINISH (sample sold)"
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
