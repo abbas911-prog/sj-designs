@@ -1,0 +1,20 @@
+{
+ "id": "smwgjs4m28p6f",
+ "op": "sell",
+ "ref": "INV-0052",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6ada15a7bbd72086af0d1a46",
+   "no": "49712",
+   "before": "Sj = **(49712)** (83)__ colour= (7)__(6/16/20/4/6)_(24/7)",
+   "after": "Sj = **(49712)** (81)__ colour= (7)__(6/16/20/2/6)_(24/7)",
+   "left": 81,
+   "lines": [
+    "colour 4: 4 → 2 (−2)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
