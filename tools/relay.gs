@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-11-10a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-11-16a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -1640,7 +1640,7 @@ function doFindCard(no, tok) {
   var n = String(no).replace(/^SJ-?/i, '').trim(); if (!n) return null;
   var esc = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), re = new RegExp('(^|[^0-9A-Za-z])' + esc + '(?![0-9A-Za-z])', 'i'), all = [];
   [n, 'SJ-' + n].forEach(function (qq) {
-    var r = trApi('get', '/search', { query: qq, idBoards: DOX.ALM, modelTypes: 'cards', cards_limit: 100, card_fields: 'name,closed,idList,shortUrl', partial: 'false' }, tok);
+    var r = trApi('get', '/search', { query: qq, idBoards: DOX.ALM, modelTypes: 'cards', cards_limit: 100, card_fields: 'name,closed,idList,shortUrl,desc', partial: 'false' }, tok);
     (r.cards || []).forEach(function (c) { if (!all.some(function (x) { return x.id === c.id; })) all.push(c); });
   });
   var ok = all.filter(function (c) {
@@ -1648,7 +1648,12 @@ function doFindCard(no, tok) {
     var nums = (c.name.match(/\d{4,6}/g) || []).filter(function (v, i, a) { return a.indexOf(v) === i; });
     return nums.length <= 1;                       // a card carrying two design numbers belongs to neither
   }).sort(function (a, b) { return idTime(b.id) - idTime(a.id); });
-  return ok[0] || null;
+  // 16 Nov 2026 (Abbas: "when I add a new design card it does not copy the custom fields — e.g. SJ-12151"): the newest card with the number
+  // was the "SJ-12151 SAMPLE" card #samplesneed puts on RETURNS (no custom fields, no pictures), so the new order card was copied from it —
+  // and every later order of that number copied the copy (desc "From #samplesneed …"). Such cards are skipped while a real one exists.
+  var ret = {}; try { var fr = JSON.parse(PropertiesService.getScriptProperties().getProperty('FRET_LISTS') || 'null'); if (fr) { ret[fr.ret] = 1; ret[fr.back] = 1; } } catch (e) {}
+  var weak = function (c) { return !!ret[c.idList] || /\bSAMPLE\s*$/i.test(String(c.name || '').trim()) || /From #samplesneed/i.test(String(c.desc || '')); };
+  return ok.filter(function (c) { return !weak(c); })[0] || ok[0] || null;
 }
 function doMint(prefix, tok) {
   for (var k = 0; k < 20; k++) {
