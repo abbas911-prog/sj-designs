@@ -1,0 +1,20 @@
+{
+ "id": "smwmcaafja3s5",
+ "op": "sell",
+ "ref": "INV-0058",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6afdb9d64a3545e0f9e02613",
+   "no": "79869",
+   "before": "Sj =**(79869)** (48) pcs __colour = (1)___(48)",
+   "after": "Sj =**(79869)** (0) pcs __colour = (1)___(0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 48 → 0 (−48)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
