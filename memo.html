@@ -455,7 +455,8 @@ body{-webkit-tap-highlight-color:transparent}
 #rnlist{margin:6px 0 10px}.rninv{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;margin:4px 0;font:inherit}.rninv small{display:block;color:#666;font-size:12px}
 .rncols .rnall{font-weight:800}.rnhint{display:block;width:100%;color:var(--mute)!important;font-size:11.5px}
 .rnrow{display:grid;grid-template-columns:1.6fr .8fr .8fr auto;gap:6px;margin:6px 0;align-items:center}.rnrow:has(input[data-f="no"]){grid-template-columns:1fr .7fr .8fr .8fr auto}.rnrow input{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:9px;font:inherit;background:#fff}.rnrow button{border:0;background:#eee;border-radius:999px;width:32px;height:32px}.rnd{font-size:14px}.rnd small{display:block;color:#888;font-size:11.5px}
-.bst{font-size:11px;border-radius:999px;padding:1px 8px;background:#eee;margin-left:4px;vertical-align:middle;font-weight:600}.bst.sent{background:#dfe9ff}.bst.included{background:#d9f2e3}
+.bst{font-size:11px;border-radius:999px;padding:1px 8px;background:#eee;margin-left:4px;vertical-align:middle;font-weight:600}.bst.sent{background:#dfe9ff}.bst.included{background:#1f8a4c;color:#fff}.bst.zero{background:#c0392b;color:#fff}
+.gmark{background:#e8f6ee;border:2px solid #1f8a4c;border-radius:14px;padding:10px 12px;margin:8px 0;font-size:13.5px;line-height:1.45}.gmark b{color:#1f6b3d}.gmark small{display:block;color:var(--mute);margin-top:3px}.gmark .zero{color:#c0392b;font-weight:700;display:block;margin-top:6px}
 .ccrow.ord .av{background:#f3ead6}.ccrow b small.od{font-weight:500;color:#888;font-size:11.5px;margin-left:4px}
 /* 17 Oct 2026 (Abbas): "I want the star at the main page" — the ★ owner button stays in the header */
 #mybtn{width:46px;height:46px;flex:none;border:0;border-radius:14px;background:linear-gradient(150deg,#F3E7CF,#E7D4AE);color:#7E5E27;font-size:22px;font-weight:800;line-height:46px;padding:0;box-shadow:var(--sh)}
@@ -968,7 +969,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-12a';
+var VER = '2026-11-19a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1391,6 +1392,10 @@ function drawForm(){
       + '<small>Change what was wrong and press Send: it replaces the old one on the statement, it is never counted twice. This is NOT a new ' + wd + '. · تصحيح نفس السند</small>'
       + '<div class="vbtn"><button type="button" data-vundo="1">✕ Leave it as it was</button><button type="button" data-vnew="1">＋ New ' + wd + ' instead</button></div></div>');
   if (k === 'rv' || k === 'pv') $('dnew').textContent = '＋ New ' + wd + ' · سند جديد'; else $('dnew').textContent = 'New number · رقم جديد';
+  if (k === 'inv' && d.status === 'included') { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
+    var sz = (d.sold || []).filter(function(l){ return !(l.rate > 0); }), when = d.soldAt ? new Date(d.soldAt) : null;
+    f.insertAdjacentHTML('afterbegin', '<div class="gmark" id="gmark">✅ <b>' + esc(d.ref) + ' — green button pressed · تم التأكيد</b><small>' + (when ? when.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + (d.soldBy ? ' · by ' + esc(d.soldBy) : '') + ' · ' : '') + 'pieces taken off Trello · on ' + esc(d.name || 'the customer') + '\'s statement · in 50-50. It cannot be changed here; to change it press Undo (puts the pieces back) and make it again.</small>'
+      + (sz.length ? '<span class="zero">⚠ Sold with NO PRICE: ' + sz.map(function(l){ return 'SJ-' + esc(shown(l.no)) + ' C' + l.c + ' · ' + l.pcs + ' pcs'; }).join(', ') + ' — the statement and 50-50 have 0 for ' + (sz.length > 1 ? 'them' : 'it') + '. Type the price in 50-50 (the red line), and ask Abbas to fix the statement.</span>' : '') + '</div>'); }
   if (k === 'rn' && rnLocked(d)) { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
     f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was shared — it cannot be changed.</b><small>For more pieces back make a new return. · تم التأكيد — لا يمكن التعديل</small><div class="vbtn"><button type="button" class="vgo" data-vnew="1">＋ New return · مرتجع جديد</button></div></div>'); }
   if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); if (d.name && d.cust === undefined) custLook(); }
@@ -1617,6 +1622,10 @@ $('dinc').onclick = async function(){
   var lines = stkLines(), pcs = lines.reduce(function(a, l){ return a + l.pcs; }, 0), s = STK[stkKey(d.ref)];
   var hasMan = manLines(d).length > 0;
   if (!lines.length && !hasMan) { alert('No designs on this invoice.'); return; }
+  // 19 Nov 2026 (Abbas: "why are Nawroz's 4 pieces not on his balance? 50-50 shows 0"): INV-0056 went through the green button with no price on
+  // SJ-65082, so the statement line and 50-50 got 0. A line without a price now asks first; Cancel = type the price.
+  var zc = invCalc(d), zero = zc.unpriced.map(function(no){ return 'SJ-' + shown(no); }).concat(manLines(d).filter(function(l){ return !(l.rate > 0); }).map(function(l){ return l.desc || 'a typed line'; }));
+  if (zero.length && !confirm('⚠ NO PRICE on ' + zero.join(', ') + '.\n\nIf you go on, ' + (zero.length > 1 ? 'they go' : 'it goes') + ' on the customer\'s statement and in 50-50 as 0 — the customer is charged nothing for ' + (zero.length > 1 ? 'them' : 'it') + '.\n\nCancel = go back and type the price (recommended).\nOK = it really is free (0).\n\nلا يوجد سعر — اكتب السعر أولاً')) { var pi = document.querySelector('#bform input[data-p]'); if (pi) { pi.focus(); pi.scrollIntoView({ block: 'center' }); } return; }
   if (s && (s.st === 'ok' || s.st === 'busy')) { alert(d.ref + ' is already included — its pieces were taken off Trello. To change it: press Undo first, then Include again.'); return; }
   if (!custBefore('inv', d)) return;
   if (!confirm('Include ' + d.ref + ': share it' + (pcs ? ' and take ' + pcs + ' pcs off Trello?' : ' (typed lines only — nothing comes off Trello)?'))) return;
@@ -1625,9 +1634,11 @@ $('dinc').onclick = async function(){
   custAfter('inv', d);
   Object.keys(state).forEach(function(k){ var s = state[k]; if (s && s.all) { var p = k.split(':'); state[k] = { sets: 0, all: false, pcs: lab(s, colPcs(byNo(p[0]), +p[1])).pcs }; } });   // 21 Oct 2026: frozen as sold
   // 21 Oct 2026 (INV-0018 / INV-0021): the bill itself keeps exactly what it sold — every phone and laptop shows these numbers, whatever Trello says later
-  d.sold = colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ return { no: l.no, card: (byNo(l.no) || {}).id || '', c: l.c, pcs: l.qty, rate: l.rate, ph: l.photo ? l.photo.att : '', qi: l.qi || 0, n: l.n || 1 }; });   // 31 Oct 2026: ph/qi/n = its photo, kept for a reopened bill after the card is sold d.soldAt = Date.now(); d.soldBy = me();
+  d.sold = colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ return { no: l.no, card: (byNo(l.no) || {}).id || '', c: l.c, pcs: l.qty, rate: l.rate, ph: l.photo ? l.photo.att : '', qi: l.qi || 0, n: l.n || 1 }; });   // 31 Oct 2026: ph/qi/n = its photo, kept for a reopened bill after the card is sold
+  d.soldAt = Date.now(); d.soldBy = me(); d.soldDev = devId();          // 19 Nov 2026: these two used to sit inside the comment above and never ran
   if (!d.oid) { var so = curOid(d.name || $('name').value); if (so) d.oid = so; }   // the order this bill belongs to
   d.status = 'included'; bsSave(true); drDone('bd');
+  if (B.inv === d && B.mode === 'inv') drawForm();                 // 19 Nov 2026: the green mark + lock show at once
   if (d.oid && RELAY) ordCall({ op: 'link', id: d.oid, bill: d.ref }).then(function(){ d.linked = d.ref; }).catch(function(){});   // the order's "Continue bill" opens THIS bill
   var szl = lines.slice();
   stkRun('sell');
@@ -1710,7 +1721,7 @@ async function bsList(){ BS.open = true; var el = $('bsaved'); el.hidden = false
   catch(e){ if (BS.list && BS.open) { uiToast('Could not refresh the saved bills — showing the last list'); return; } el.innerHTML = '<div class="bsh"><b>Saved bills</b><button type="button" id="bsx">✕</button></div><div class="stk bad">' + esc(e.message) + (/does not know|bad request/.test(e.message) ? '<br><br><b>What to do:</b> Apps Script → Deploy → Manage deployments → ✏️ → New version → Deploy.' : '') + '</div>'; $('bsx').onclick = bsClose; } }
 function bsDrawList(){ var q = ($('bsq') || {}).value || '', qq = q.toUpperCase().trim(), L = (BS.list || []).filter(function(b){ return ['od', 'bd', 'or'].indexOf(b.type) < 0; }).filter(function(b){ return !qq || (b.ref + ' ' + (b.name || '')).toUpperCase().indexOf(qq) >= 0; }), own = isOwner();
   var h = '<div class="bsh"><b>🗂 Saved bills · ' + (BS.list || []).length + '</b><button type="button" id="bsx">✕</button></div><div class="ccsrch"><input id="bsq" placeholder="Search number or customer · ابحث" autocomplete="off" value="' + esc(q) + '"></div>';
-  h += L.length ? L.map(function(b){ var ty = { inv: 'Invoice', rv: 'Receipt', pv: 'Payment', rn: 'Return' }[b.type] || b.type; return '<div class="bsrow" data-ref="' + esc(b.ref) + '"><div class="t"><b>' + esc(b.ref) + '</b> <span class="bst ' + esc(b.status) + '">' + esc(b.status) + '</span><small>' + esc(b.name || 'no name') + ' · ' + ty + ' · ' + esc(dmy(b.date) || '') + (b.total ? ' · AED ' + esc(b.total) : '') + '</small></div><span class="tm">' + esc(bsWhen(b.updated)) + (b.by ? '<br>' + esc(b.by) : '') + '</span>' + (own ? '<button type="button" class="bsdel" data-del="' + esc(b.ref) + '" title="remove from the list">🗑</button>' : '') + '</div>'; }).join('')
+  h += L.length ? L.map(function(b){ var ty = { inv: 'Invoice', rv: 'Receipt', pv: 'Payment', rn: 'Return' }[b.type] || b.type; return '<div class="bsrow" data-ref="' + esc(b.ref) + '"><div class="t"><b>' + esc(b.ref) + '</b> <span class="bst ' + esc(b.status) + '">' + esc(b.type === 'inv' && b.status === 'included' ? '✅ green pressed' : b.type === 'inv' && b.status !== 'deleted' ? (b.status === 'sent' ? 'sent · not green' : 'draft · not green') : b.status) + '</span><small>' + esc(b.name || 'no name') + ' · ' + ty + ' · ' + esc(dmy(b.date) || '') + (b.total ? ' · AED ' + esc(b.total) : '') + '</small></div><span class="tm">' + esc(bsWhen(b.updated)) + (b.by ? '<br>' + esc(b.by) : '') + '</span>' + (own ? '<button type="button" class="bsdel" data-del="' + esc(b.ref) + '" title="remove from the list">🗑</button>' : '') + '</div>'; }).join('')
     : '<div class="ffempty">' + (qq ? 'Nothing matches.' : 'No saved bill yet. Every invoice or voucher you make is saved here by itself — open it later, change it, send it again.') + '</div>';
   var had = document.activeElement && document.activeElement.id === 'bsq'; $('bsaved').innerHTML = h; $('bform').hidden = true;
   var qi = $('bsq'); qi.oninput = bsDrawList; if (had) { qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); } $('bsx').onclick = bsClose; }
@@ -3918,10 +3929,13 @@ function ordTiles(o){ var it = o.items || [];
   var h = '<div class="ophead"><b>' + esc(o.name || 'No name') + '</b><small>' + ordWhen(o.created) + ' · ' + it.length + (it.length === 1 ? ' design' : ' designs') + ' · ' + (o.pcs || 0) + ' pcs</small></div>';
   return it.length ? h + ordTileRow(o, false) : h; }
 function ordPanel(o){ var h = ordTabs(o) + ordTiles(o);
-  var stg = ordStage(o), dn = ordDone(o), pvs = ordPvSrc(o);
-  h += '<div class="opanel"><button type="button" class="ophd" data-ofold="1"><span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span><span class="onx">' + (dn ? '✓ Complete' : 'Next: ' + esc(ordNext(o))) + '</span><em>' + (CC.ordOpen ? '▴ hide' : '▾ order & steps') + '</em></button>';
+  var stg = ordStage(o), dn = ordDone(o), pvs = ordPvSrc(o), obr = o.bill ? (BS.list || cLoad('sj_c_bills') || []).filter(function(b){ return b && b.ref === o.bill && b.type === 'inv'; })[0] : null;
+  // 19 Nov 2026 (Abbas: "give a mark so I know this bill was pressed green"): on the always-visible step bar too
+  var gtag = obr ? (obr.status === 'included' ? '<span class="bst included">✅ ' + esc(o.bill) + ' green pressed</span>' : '<span class="bst">' + esc(o.bill) + ' · not green</span>') : '';
+  h += '<div class="opanel"><button type="button" class="ophd" data-ofold="1"><span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span><span class="onx">' + (dn ? '✓ Complete' : 'Next: ' + esc(ordNext(o))) + gtag + '</span><em>' + (CC.ordOpen ? '▴ hide' : '▾ order & steps') + '</em></button>';
   if (CC.ordOpen) {
-    h += '<div class="obills">' + (o.bill ? '<button type="button" class="gold" data-obill="cont">🧾 Continue bill ' + esc(o.bill) + '<small>متابعة الفاتورة</small></button>' : '<button type="button" class="gold" data-obill="new">🧾 Make bill from this order<small>عمل فاتورة</small></button>') + '<button type="button" data-obill="memo">📄 Open as memo<small>edit the order</small></button></div>';
+    h += '<div class="obills">' + (o.bill ? (function(){ var br = obr, g = br && br.status === 'included';
+      return '<button type="button" class="gold" data-obill="cont">' + (g ? '✅ ' + esc(o.bill) + ' — green pressed (open)<small>تم التأكيد · فتح الفاتورة</small>' : '🧾 Continue bill ' + esc(o.bill) + (br ? ' · not green yet' : '') + '<small>متابعة الفاتورة</small>') + '</button>'; })() : '<button type="button" class="gold" data-obill="new">🧾 Make bill from this order<small>عمل فاتورة</small></button>') + '<button type="button" data-obill="memo">📄 Open as memo<small>edit the order</small></button></div>';
     OSTEPS.forEach(function(s, i){ h += '<div class="ostep"><u>' + (i + 1) + '</u>' + ordRow(o, s[0], s[1], s[2]) + '</div>'; });
     h += '<div class="ostep"><u>4</u><div class="o4"><div class="o4h">Sent to customer <small class="ar">أرسل للعميل</small></div>' + OSUB.map(function(s){ return ordRow(o, s[0], s[1], s[2], true); }).join('') + '</div></div>';
     h += '<details class="ofull"' + (CC.fullOpen ? ' open' : '') + '><summary>Complete order · ' + (o.items || []).length + ' designs · ' + (o.pcs || 0) + ' pcs ' + ordSplit(o) + '</summary><img class="opvbig" alt="" src="' + pvs + '" onerror="this.remove()">' +
@@ -3979,7 +3993,7 @@ function ccOpenOrder(o){ if (!o) return; navCloseAll(); $('cc').hidden = false; 
   if (o.ts) { if (!(CC.orders || []).some(function(x){ return x.ts === o.ts; })) CC.orders = [{ k: 'O' + o.ts, ts: o.ts, name: o.name, head: 'just sent', chat: 0, last: o.ts }].concat(CC.orders || []); ccChat(o.name, o.ts); uiToast('💬 This order\'s chat is open — anything you write here goes under the memo in #customer'); }
   else { ccList(); uiToast('Memo sent — its chat is in the list (tap it)'); }
   setTimeout(function(){ ccPoll(true); }, 1500); navSync(); }
-window.__sj = { bsOpen: bsOpen, ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: ccDraw, st: function(x){ if (x) state = x; return state; }, snapApply: snapApply, setMode: setMode, liveApply: liveApply, reapply: reapply, keyRemap: keyRemap, cardNo: cardNo, rnPaint: rnPaint, cashRead: cashRead, bsSnap: function(k){ return bsSnap(k); }, drSnap: drSnap, drOpen: drOpen };   // hooks for the headless test (t_shell.js)
+window.__sj = { ordPanel: ordPanel, bsOpen: bsOpen, ccOpenOrder: ccOpenOrder, B: function(){ return B; }, ccDraw: ccDraw, st: function(x){ if (x) state = x; return state; }, snapApply: snapApply, setMode: setMode, liveApply: liveApply, reapply: reapply, keyRemap: keyRemap, cardNo: cardNo, rnPaint: rnPaint, cashRead: cashRead, bsSnap: function(k){ return bsSnap(k); }, drSnap: drSnap, drOpen: drOpen };   // hooks for the headless test (t_shell.js)
 
 
 // ===== DRAFTS (Abbas, 20 Oct 2026: "when I am in the process of making a bill or order memo, give a small option beside OK that says MEMO, with two
