@@ -253,7 +253,7 @@ def post_sales(text, osig):
 def ledger(req, pw, cards):
     """Returns a short note for the memo, or '' when the ledger is not touched."""
     op, ref, dev = req.get('op'), str(req.get('ref', '')).strip()[:40], str(req.get('dev', ''))[:16]
-    if op not in ('sell', 'return', 'billdone', 'billopen', 'billdel'):
+    if op not in ('sell', 'return', 'billdone', 'billopen', 'billdel', 'billprice'):
         return ''
     L = ledger_load(pw)
     now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
@@ -294,6 +294,20 @@ def ledger(req, pw, cards):
             for b in hit:
                 b['st'], b['batch'] = 'posted', bid
             note = '%d bill(s) posted to #sales (%s)' % (len(hit), bid)
+        elif op == 'billprice':                                       # 19 Nov 2026 (Abbas: Nawroz INV-0056 went green with no price - 50-50 and Jarvis showed 0)
+            rates = req.get('rates') if isinstance(req.get('rates'), dict) else {}
+            n = 0
+            for b in hit:
+                if b.get('st') != 'open':
+                    continue
+                old_sub = sum(num(l.get('amount')) for l in b['lines'])
+                for k, v in rates.items():
+                    i = int(num(k)); r = num(v)
+                    if 0 <= i < len(b['lines']) and r > 0:
+                        l = b['lines'][i]; l['rate'] = r; l['amount'] = round(l['qty'] * r, 2); n += 1
+                new_sub = round(sum(num(l.get('amount')) for l in b['lines']), 2)
+                b['total'] = round(num(b.get('total')) + new_sub - old_sub, 2); b['sub'] = new_sub; b['priced'] = now
+            note = '%d price(s) saved in the 50-50 bill' % n
         elif op == 'billdel':                                         # Abbas, 9 Oct 2026: "give an option of removing the whole bill"
             for b in hit:
                 if b.get('st') == 'open':
@@ -329,14 +343,14 @@ def main():
         except Exception as e:
             res.update(ok=False, error='preview not saved: %s' % str(e)[:120])
     else:
-        cards = run(req) if req.get('op') not in ('billdone', 'billopen', 'billdel') else []
+        cards = run(req) if req.get('op') not in ('billdone', 'billopen', 'billdel', 'billprice') else []
         res.update(ok=not any('err' in c for c in cards), cards=cards)
         try:
             note = ledger(req, pw, cards)
             if note: res['bill'] = note
         except Exception as e:
             res['bill_err'] = '%s: %s' % (type(e).__name__, str(e)[:160])
-            if req.get('op') in ('billdone', 'billopen', 'billdel'): res.update(ok=False, error='50-50 list not updated: ' + res['bill_err'])
+            if req.get('op') in ('billdone', 'billopen', 'billdel', 'billprice'): res.update(ok=False, error='50-50 list not updated: ' + res['bill_err'])
     os.makedirs('jobs', exist_ok=True)
     json.dump(res, open('jobs/%s.json' % jid, 'w'), ensure_ascii=False, indent=1)
     print(json.dumps(res, ensure_ascii=False, indent=1))

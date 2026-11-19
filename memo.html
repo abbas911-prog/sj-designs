@@ -143,7 +143,7 @@ main{max-width:720px;margin:0 auto;}
 .fft.one td{background:#fff}.fft.one tr:nth-child(odd):not(.tot) td{background:#faf6ef}
 .fft tr.bad td{background:#fbeee8}
 .ffi{width:58px;padding:4px 4px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:13px;text-align:right;background:#fffdf9}
-.ffi.ffno{width:96px;text-align:left}.ffi.ffno.chg{border-color:#b08a4a;background:#fff4dc}
+.ffi.ffno{width:96px;text-align:left}.ffi.need{border:2px solid #c0392b;background:#fff0ee}.ffsave{display:block;width:100%;margin:6px 0;border:0;border-radius:10px;padding:9px;font:inherit;font-weight:700;background:#1f8a4c;color:#fff}.ffi.ffno.chg{border-color:#b08a4a;background:#fff4dc}
 .ffvs{display:flex;flex-wrap:wrap;gap:4px}.ffvb{font:inherit;font-size:12px;font-weight:700;padding:4px 8px;border:1.5px solid var(--gold);border-radius:8px;background:#fff;color:var(--ink,#222);line-height:1.15;text-align:left}.ffvb small{display:block;font-size:10.5px;font-weight:500;opacity:.8}.ffvb.on{background:var(--gold);color:#fff}
 .ffn{font-size:11px;color:var(--mute);margin-top:4px}
 .ffw{margin-top:6px;font-size:14px;text-align:right}
@@ -969,7 +969,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-19a';
+var VER = '2026-11-19b';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2589,11 +2589,14 @@ function ffCalc(b, E){
   return { rows: rows, flags: flags, block: block, wSum: wSum, wPcs: wPcs, nSum: nSum, out: e.out != null ? !!e.out : !!(b.returned || b.st === 'returned'), ed: rows.some(function(r){ return r.ed; }) };
 }
 function ffTable(head, rows, cls){ return '<table class="fft ' + (cls || '') + '"><tr>' + head.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '</tr>' + rows.join('') + '</table>'; }
-function ffIn(b, i, f, v){ return '<input class="ffi" inputmode="decimal" data-b="' + esc(ffKey(b)) + '" data-i="' + i + '" data-f="' + f + '" value="' + (v == null ? '' : +(+v).toFixed(2)) + '" placeholder="?">'; }
+function ffIn(b, i, f, v){ var need = f === 'rate' && !(+v > 0);   // 19 Nov 2026: no price = an empty red box "type price" (a "0" looked fixed)
+  return '<input class="ffi' + (need ? ' need' : '') + '" inputmode="decimal" data-b="' + esc(ffKey(b)) + '" data-i="' + i + '" data-f="' + f + '" value="' + (v == null || need ? '' : +(+v).toFixed(2)) + '" placeholder="' + (need ? 'price' : '?') + '">'; }
 function ffNo(b, r){ return '<input class="ffi ffno' + (r.no !== r.orig ? ' chg' : '') + '" inputmode="text" autocapitalize="characters" data-b="' + esc(ffKey(b)) + '" data-i="' + r.i + '" data-f="no" data-o="' + esc(r.orig) + '" value="' + esc(r.lab) + '" aria-label="design number">'; }   // 30 Oct 2026: always editable
 function ffBillHtml(b, k, E){
   var h = '<div class="ffb' + (k.out ? ' out' : '') + (b.draft ? ' draft' : '') + '"><div class="ffh"><b>' + esc(b.ref) + '</b> · ' + esc(dmy(b.date)) + ' · ' + esc(b.name || '—') + ' · ' + k.wPcs + ' pcs' +
     (b.draft ? '<em>preview of the bill on screen — not included yet</em>' : '<span><button type="button" data-out="' + esc(ffKey(b)) + '">' + (k.out ? 'Put in' : 'Leave out') + '</button><button type="button" class="ffdel" data-del="' + esc(ffKey(b)) + '">Delete bill</button>' + (k.ed ? '<button type="button" data-reset="' + esc(ffKey(b)) + '">Reset</button>' : '') + '</span>') + '</div>';
+  var fix = b.draft ? [] : k.rows.filter(function(r){ return !(+b.lines[r.i].rate > 0) && r.rate > 0; });
+  if (fix.length) h += '<button type="button" class="ffsave" data-fprice="' + esc(ffKey(b)) + '">💾 Save ' + fix.map(function(r){ return 'SJ-' + esc(r.no) + ' at ' + fmt2(r.rate); }).join(', ') + ' into ' + esc(b.ref) + ' — every phone and Jarvis</button>';
   h += '<div class="ffs">1 · Bill as written</div>' + ffTable(['Design', 'Qty', 'Price', 'Amount'], k.rows.map(function(r){ return '<tr><td>' + ffNo(b, r) + '</td><td>' + ffIn(b, r.i, 'qty', r.qty) + '</td><td>' + ffIn(b, r.i, 'rate', r.rate) + '</td><td>' + fmt2(r.amt) + '</td></tr>'; }).concat(['<tr class="tot"><td>TOTAL</td><td>' + k.wPcs + '</td><td></td><td>' + fmt(k.wSum) + '</td></tr>']));
   h += '<div class="ffs">2 · Cost <small>(inventory report ' + esc(COST ? COST.d : '—') + ')</small></div>' + ffTable(['Design', 'Cost', 'Sold', 'Profit', 'Half', 'New'], k.rows.map(function(r){
     // 6 Nov 2026 (Abbas, iPad: "I change 75308 to 75308-B — when I click on B it still stays the same"): the variant dropdown is now one tap
@@ -2675,6 +2678,14 @@ $('ffbody').addEventListener('click', async function(e){
   if (b.classList.contains('ffvb') && b.dataset.b) { var vk = b.dataset.b, vi = b.dataset.i, ve = E[vk] = E[vk] || {}, vl = ve.l = ve.l || {}, vx = vl[vi] = vl[vi] || {};
     vx.v = b.dataset.v; delete vx.cost; delete vx.nw; ffSave(E); ffDraw(); return; }
   if (b.dataset.out) { var o = E[b.dataset.out] = E[b.dataset.out] || {}; o.out = /^Leave out/.test(b.textContent); ffSave(E); ffDraw(); return; }
+  if (b.dataset.fprice) { var pb = (FF.L.bills || []).filter(function(x){ return ffKey(x) === b.dataset.fprice; })[0]; if (!pb) return;   // 19 Nov 2026: the price goes INTO the 50-50 bill (bills.enc), not only this phone
+    var pe = (E[b.dataset.fprice] || {}).l || {}, rates = {}; pb.lines.forEach(function(l, i){ var x = pe[i] || {}; if (!(+l.rate > 0) && +x.rate > 0) rates[i] = +x.rate; });
+    if (!Object.keys(rates).length) return; b.disabled = true; FF.note = 'Saving the price into ' + pb.ref + '… (about a minute)'; ffDraw();
+    try { var id6 = jobId('f'); await relay('stock', { id: id6, op: 'billprice', ref: 'PRICE', dev: devId(), lines: [], refs: [[pb.ref, pb.dev]], rates: rates }); var r6 = await waitJob(id6, 'stock', 8);
+      FF.note = r6.ok ? pb.ref + ': price saved ✓ — every phone and Jarvis see it now' : 'Not saved: ' + (r6.error || r6.bill_err || '');
+      if (r6.ok) { Object.keys(rates).forEach(function(i){ var x = pe[i]; if (x) { delete x.rate; if (!Object.keys(x).length) delete pe[i]; } }); ffSave(E); await ffLoad(); } }
+    catch(e6){ FF.note = 'Could not start: ' + e6.message; }
+    ffDraw(); return; }
   if (b.dataset.del) { var bl = (FF.L.bills || []).filter(function(x){ return ffKey(x) === b.dataset.del; })[0]; if (!bl) return;
     if (!confirm('Delete ' + bl.ref + ' (' + (bl.name || 'no name') + ', ' + bl.pcs + ' pcs) from the 50-50 list?\n\nThis does NOT put pieces back on Trello — for that use Undo on the invoice.')) return;
     bl.st = 'deleting'; FF.note = 'Deleting ' + bl.ref + '…'; ffDraw();
