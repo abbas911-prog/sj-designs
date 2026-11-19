@@ -456,7 +456,7 @@ body{-webkit-tap-highlight-color:transparent}
 .rncols .rnall{font-weight:800}.rnhint{display:block;width:100%;color:var(--mute)!important;font-size:11.5px}
 .rnrow{display:grid;grid-template-columns:1.6fr .8fr .8fr auto;gap:6px;margin:6px 0;align-items:center}.rnrow:has(input[data-f="no"]){grid-template-columns:1fr .7fr .8fr .8fr auto}.rnrow input{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:9px;font:inherit;background:#fff}.rnrow button{border:0;background:#eee;border-radius:999px;width:32px;height:32px}.rnd{font-size:14px}.rnd small{display:block;color:#888;font-size:11.5px}
 .bst{font-size:11px;border-radius:999px;padding:1px 8px;background:#eee;margin-left:4px;vertical-align:middle;font-weight:600}.bst.sent{background:#dfe9ff}.bst.included{background:#1f8a4c;color:#fff}.bst.zero{background:#c0392b;color:#fff}
-.gmark{background:#e8f6ee;border:2px solid #1f8a4c;border-radius:14px;padding:10px 12px;margin:8px 0;font-size:13.5px;line-height:1.45}.gmark b{color:#1f6b3d}.gmark small{display:block;color:var(--mute);margin-top:3px}.gmark .zero{color:#c0392b;font-weight:700;display:block;margin-top:6px}
+.cuse{display:block;margin:6px 0;border:0;border-radius:10px;padding:8px 12px;font:inherit;font-weight:700;background:var(--gold);color:#fff}.gmark{background:#e8f6ee;border:2px solid #1f8a4c;border-radius:14px;padding:10px 12px;margin:8px 0;font-size:13.5px;line-height:1.45}.gmark b{color:#1f6b3d}.gmark small{display:block;color:var(--mute);margin-top:3px}.gmark .zero{color:#c0392b;font-weight:700;display:block;margin-top:6px}
 .ccrow.ord .av{background:#f3ead6}.ccrow b small.od{font-weight:500;color:#888;font-size:11.5px;margin-left:4px}
 /* 17 Oct 2026 (Abbas): "I want the star at the main page" — the ★ owner button stays in the header */
 #mybtn{width:46px;height:46px;flex:none;border:0;border-radius:14px;background:linear-gradient(150deg,#F3E7CF,#E7D4AE);color:#7E5E27;font-size:22px;font-weight:800;line-height:46px;padding:0;box-shadow:var(--sh)}
@@ -969,7 +969,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-19b';
+var VER = '2026-11-19c';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1580,6 +1580,7 @@ function setMode(m){
 $('mode').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; if (b.dataset.m !== B.mode) vchNext(b.dataset.m); setMode(b.dataset.m); };
 $('bform').addEventListener('input', onForm); $('bform').addEventListener('change', onForm);
 $('bform').addEventListener('click', function(e){ var d = B[B.mode];
+  var cu = e.target.closest('[data-cuse]'); if (cu && d) { d.name = cu.dataset.cuse; d.cust = undefined; d.openTyped = false; var ni = document.querySelector('#bform input[data-k="name"]'); if (ni) ni.value = d.name; custHint(); custLook(); return; }
   if (e.target.closest('[data-vnew]')) { if (d && d.editing) vchUndo(d); $('dnew').click(); return; }
   if (e.target.closest('[data-vfix]')) { vchFix(B.mode, d); return; }
   if (e.target.closest('[data-vundo]')) { vchUndo(d); return; }
@@ -3419,6 +3420,16 @@ var CU = { t: null, list: null, view: '', q: '' };
 async function custCall(o, tries){ o.t = Date.now(); o.dev = devId(); if (isBoss()) o.chk = await svChk(); var j = await relayJson('cust', o, tries || 3);
   if (!j.ok) throw new Error(j.error === 'bad request' && o.op !== 'post' ? 'the relay needs its new version — Apps Script → Deploy → Manage deployments → ✎ → New version → Deploy' : (j.error || 'refused')); return j; }
 function custId(k, d){ return (k === 'inv' ? 'inv' : 'rv') + ':' + d.ref + ':' + devId(); }
+// 19 Nov 2026 (Abbas: "Nasir Libya's last bill is not in the customer's ledger"): INV-0058 was typed "Nasir labiya" — not found, so it made a NEW
+// customer with Nasir's balance as its opening, and NASIR (LIBYA) never saw the bill. A name that is not found but looks like a customer now says so.
+function custLike(nm){ var a = String(nm || '').toLowerCase().replace(/[^a-z\u0600-\u06ff]+/g, ''); if (a.length < 4) return '';
+  var names = [].map.call(document.querySelectorAll('#custnames option'), function(o){ return o.value; }), best = '', bd = 99;
+  names.forEach(function(n){ var b = n.toLowerCase().replace(/[^a-z\u0600-\u06ff]+/g, ''); if (!b || b === a) return; var d = lev(a, b), lim = Math.max(2, Math.floor(Math.min(a.length, b.length) / 4));
+    if ((d <= lim || (Math.min(a.length, b.length) >= 5 && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0))) && d < bd) { bd = d; best = n; } });
+  return best; }
+function lev(a, b){ var m = [], i, j; for (i = 0; i <= a.length; i++) { m[i] = [i]; } for (j = 1; j <= b.length; j++) m[0][j] = j;
+  for (i = 1; i <= a.length; i++) for (j = 1; j <= b.length; j++) m[i][j] = Math.min(m[i-1][j] + 1, m[i][j-1] + 1, m[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return m[a.length][b.length]; }
 function custHint(){
   var k = B.mode, d = B[k], el = $('bcust'); if (!el || !d || k === 'pv') return;
   var nm = (d.name || '').trim(), h = '';
@@ -3428,7 +3439,9 @@ function custHint(){
   else if (d.cust && d.cust.err) h = '<span class="miss">Balance not checked: ' + esc(d.cust.err) + '</span>';
   else if (d.cust && d.cust.found) { h = '✓ <b>' + esc(d.cust.name) + '</b> — balance in the app: <b>' + amt(d.cust.bal) + ' AED</b> (' + d.cust.n + ' entr' + (d.cust.n === 1 ? 'y' : 'ies') + ').';
     if (Math.abs(n2(d.open) - d.cust.bal) > 0.004) h += '<span class="miss">You typed ' + amt(n2(d.open)) + ' — on ' + (k === 'inv' ? 'Include & share' : 'Send') + ' you\'ll be asked to change their balance to it.</span>'; }
-  else h = 'New customer — the ' + (k === 'inv' ? 'old balance' : 'opening balance') + ' you type becomes <b>' + esc(nm) + '</b>\'s opening balance in the app.';
+  else { var like = custLike(nm);
+    h = like ? '<span class="miss">⚠ <b>' + esc(nm) + '</b> is not a customer. Did you mean <b>' + esc(like) + '</b>?</span><button type="button" class="cuse" data-cuse="' + esc(like) + '">Use ' + esc(like) + ' · استخدم</button><small>Only if this really is a new customer, keep the name — the ' + (k === 'inv' ? 'old balance' : 'opening balance') + ' you type becomes their opening balance.</small>'
+      : 'New customer — the ' + (k === 'inv' ? 'old balance' : 'opening balance') + ' you type becomes <b>' + esc(nm) + '</b>\'s opening balance in the app.'; }
   if (nm && k === 'inv' && !d.saved) h += ' <small>Saved to the balance on <b>Include & share</b> (Send PDF is only a draft).</small>';
   if (d.saveErr) h += '<span class="miss">Not saved to the balance yet (' + esc(d.saveErr) + ') — it will be sent again automatically.</span>';
   el.innerHTML = h;
@@ -3446,6 +3459,10 @@ async function custLook(){
 }
 function custBefore(k, d){     // ask before changing a known customer's balance; false = stop the send
   var nm = (d.name || '').trim(); d.adj = 0;
+  if (nm && d.cust && d.cust.found === false && !d.newOk) { var lk = custLike(nm);   // 19 Nov 2026: Nasir labiya / NASIR (LIBYA)
+    if (lk) { if (confirm('"' + nm + '" is NOT a customer yet — this would make a NEW customer, and ' + lk + ' would not get this ' + (k === 'inv' ? 'bill' : 'receipt') + '.\n\nDid you mean ' + lk + '?\n\nOK = use ' + lk + '\nCancel = it really is a new customer')) {
+        d.name = lk; d.cust = undefined; d.openTyped = false; redraw(); custLook(); return false; }
+      d.newOk = 1; } }
   if (nm && d.cust === undefined) { alert('Still checking ' + nm + '\'s balance — press again in a second.'); if (!CU.t) custLook(); return false; }
   if (!nm || !d.cust || !d.cust.found) return true;
   var diff = Math.round((n2(d.open) - d.cust.bal) * 100) / 100; if (Math.abs(diff) < 0.005) return true;
@@ -3942,7 +3959,7 @@ function ordTiles(o){ var it = o.items || [];
 function ordPanel(o){ var h = ordTabs(o) + ordTiles(o);
   var stg = ordStage(o), dn = ordDone(o), pvs = ordPvSrc(o), obr = o.bill ? (BS.list || cLoad('sj_c_bills') || []).filter(function(b){ return b && b.ref === o.bill && b.type === 'inv'; })[0] : null;
   // 19 Nov 2026 (Abbas: "give a mark so I know this bill was pressed green"): on the always-visible step bar too
-  var gtag = obr ? (obr.status === 'included' ? '<span class="bst included">✅ ' + esc(o.bill) + ' green pressed</span>' : '<span class="bst">' + esc(o.bill) + ' · not green</span>') : '';
+  var gtag = obr ? (obr.status === 'included' ? '<span class="bst included" data-obill="cont">✅ ' + esc(o.bill) + ' green pressed ›</span>' : '<span class="bst" data-obill="cont">' + esc(o.bill) + ' · not green ›</span>') : '';   // tap = open the bill
   h += '<div class="opanel"><button type="button" class="ophd" data-ofold="1"><span class="obar">' + [1, 2, 3, 4].map(function(n){ return '<i class="' + (n <= stg ? 'on' : '') + '">' + n + '</i>'; }).join('') + '</span><span class="onx">' + (dn ? '✓ Complete' : 'Next: ' + esc(ordNext(o))) + gtag + '</span><em>' + (CC.ordOpen ? '▴ hide' : '▾ order & steps') + '</em></button>';
   if (CC.ordOpen) {
     h += '<div class="obills">' + (o.bill ? (function(){ var br = obr, g = br && br.status === 'included';
@@ -3993,6 +4010,7 @@ async function ordMkRoot(w){ var o = CC.ord; if (!o) return;
   catch(e){ alert('Could not start the chat: ' + (/does not know|bad request/.test(e.message) ? 'the relay needs its new version' : e.message)); } }
 $('ccbody').addEventListener('click', function(e){
   var t = e.target.closest('[data-och]'); if (t && CC.ord) { ordChat(CC.ord.id, t.dataset.och, true); return; }
+  var bl0 = e.target.closest('[data-obill]'); if (bl0 && CC.ord) { ordBill(CC.ord, bl0.dataset.obill); return; }   // 19 Nov 2026: before the fold — the mark on the step bar opens the bill
   var f = e.target.closest('[data-ofold]'); if (f) { CC.ordOpen = !CC.ordOpen; ccDraw(); return; }
   var k = e.target.closest('[data-ok]'); if (k && CC.ord) { ordTick(k); return; }
   var bl = e.target.closest('[data-obill]'); if (bl && CC.ord) { ordBill(CC.ord, bl.dataset.obill); return; }

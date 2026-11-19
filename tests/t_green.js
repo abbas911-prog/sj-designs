@@ -19,7 +19,7 @@ function relay(b) { const req = JSON.parse(b.req || '{}');
     if (req.op === 'put') { BILLS[req.ref] = Object.assign({}, BILLS[req.ref] || {}, req, { updated: new Date().toISOString() }); return { ok: true, ref: req.ref, status: req.status }; }
     return { ok: true }; }
   if (b.job === 'cust') { if (req.op === 'post') { custPosts.push(req); return { ok: true, name: 'MAMA BAKHTA', bal: 0, n: 1 }; } if (req.op === 'list') return { ok: true, list: [{ name: 'MAMA BAKHTA', bal: 100, n: 1, last: '2026-10-18' }] };
-    if (req.op === 'get') return { ok: true, found: true, name: req.name, open: 0, odate: '2026-10-01', bal: 100, n: 1, entries: [] }; return { ok: true, names: ['MAMA BAKHTA'] }; }
+    if (req.op === 'get') return /labiya|new shop/i.test(req.name) ? { ok: true, found: false } : { ok: true, found: true, name: req.name, open: 0, odate: '2026-10-01', bal: 100, n: 1, entries: [] }; return { ok: true, names: ['MAMA BAKHTA', 'NASIR (LIBYA)', '#47 Nawroz naif'] }; }
   if (b.job === 'stock') { stockReqs.push(req); return { ok: true }; }
   if (b.job === 'cchat') { if (/ntfy/.test(req.op)) return { ok: true }; return { ok: true, customers: [{ k: 'M', name: 'M', last: '1', memos: 1, chat: 1, un: 0, tx: '' }], orders: [] }; }
   if (b.job === 'orders') return { ok: true, orders: [] };
@@ -62,6 +62,19 @@ const srv = http.createServer((rq, rs) => { const u = rq.url.split('?')[0]; if (
   ok('4 Saved bills: INV-0056 "✅ green pressed", the draft INV-0057 "not green" (' + rows.a + ' / ' + rows.b + ')', /green pressed/.test(rows.a) && /not green/.test(rows.b));
   const op = await pg.evaluate(() => { const P = window.__sj.ordPanel; try { return { a: P({ id: 'o1', name: '#47 Nawroz naif', bill: 'INV-0056', items: [] }), b: P({ id: 'o2', name: 'X', bill: 'INV-0057', items: [] }) }; } catch (e) { return { err: e.message }; } });
   ok('4 order screen (step bar, always visible): "✅ INV-0056 green pressed" / "INV-0057 · not green"' + (op.err ? ' (' + op.err + ')' : ''), /✅ INV-0056 green pressed/.test(op.a || '') && /INV-0057 · not green/.test(op.b || '') && !/green pressed/.test(op.b || ''));
+  // 5 — Nasir: "Nasir labiya" is not a customer, NASIR (LIBYA) is (INV-0058 went to a new customer with Nasir's balance as its opening)
+  await pg.evaluate(() => { const S = window.__sj, B = S.B(); B.inv = null; S.st({ '18634:1': { pcs: 2, sets: 0, all: false } }); S.setMode('inv'); });
+  await pg.waitForTimeout(600); await pg.fill('#bform input[data-k="name"]', 'Nasir labiya'); await pg.waitForTimeout(2500);
+  const h5 = await pg.$eval('#bcust', e => ({ t: e.textContent, use: !!e.querySelector('[data-cuse="NASIR (LIBYA)"]') }));
+  ok('5 a name that is not a customer but looks like one: "Did you mean NASIR (LIBYA)?" with a Use button', /Did you mean NASIR \(LIBYA\)/.test(h5.t) && h5.use);
+  await pg.fill('#bform input[data-p="18634"]', '100'); await pg.waitForTimeout(400);
+  a0 = alerts.length; c0 = custPosts.length; await pg.click('#dinc'); await pg.waitForTimeout(2500);
+  const n5 = await pg.evaluate(() => window.__sj.B().inv.name);
+  ok('5 the green button asks "Did you mean NASIR (LIBYA)?"; OK = the bill is for NASIR (LIBYA), nothing sent yet', alerts.slice(a0).some(x => /"Nasir labiya" is NOT a customer yet/.test(x)) && n5 === 'NASIR (LIBYA)' && custPosts.length === c0);
+  await pg.fill('#bform input[data-k="name"]', 'New Shop'); await pg.waitForTimeout(2500);
+  ok('5 a really new name (nothing like it): no "did you mean"', !/Did you mean/.test(await pg.$eval('#bcust', e => e.textContent)));
+  // 6 — the green mark on the order's step bar opens the bill (it only folded the steps)
+  ok('6 the step-bar mark is a button to the bill', /data-obill="cont">✅ INV-0056 green pressed/.test(op.a || ''));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
   let fail = 0; out.forEach(([n, v]) => { if (!v) fail++; console.log((v ? 'ok   ' : 'FAIL ') + n); }); console.log(`\n${out.length - fail} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
