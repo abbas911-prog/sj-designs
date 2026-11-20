@@ -41,12 +41,15 @@ function doPost(e) {
     if (b.job === 'fastchk') {                                // 16 Oct 2026: the FAST LANE worker (Cloudflare) asks "is this phone key right?" - key = sha256("sjfast|" + password)
       var fcC = CacheService.getScriptCache(), fcN = +(fcC.get('FASTCHK_N') || 0); if (fcN > 30) return out({ ok: false, error: 'slow down' });
       var fk = String(b.k || ''), okk = [P.getProperty('FACTORY_PASSWORD'), pw].some(function (k) { return k && hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'sjfast|' + k, Utilities.Charset.UTF_8)) === fk; });
+      if (!okk) { var fpm = facJson(P, 'FAC_PEOPLE'); okk = Object.keys(fpm).some(function (s) { return fpm[s].k && facKeyHex('sjfast|' + fpm[s].k) === fk; }); }   // 21 Nov 2026: a phone signed in with its own key
       if (!okk) fcC.put('FASTCHK_N', String(fcN + 1), 60); return out({ ok: okk });
     }
     if (b.job === 'fac') {                                    // FACTORY APP (12 Oct 2026): its own password (FACTORY_PASSWORD), or the shop password
       if (typeof b.req !== 'string' || b.req.length > 25000000) return out({ ok: false, error: 'bad request' });
       var fpw = P.getProperty('FACTORY_PASSWORD'), sg = String(b.sig), okf = [fpw, pw].some(function (k) { return k && hex(Utilities.computeHmacSha256Signature(b.req, k, Utilities.Charset.UTF_8)) === sg; });
-      return okf ? fac(b.req, P) : out({ ok: false, error: 'wrong password' });
+      var amode = okf ? 'pw' : '';
+      if (!okf) { var ka = facKeyAuth(P, b.req, sg); if (ka === 'off') return out({ ok: false, off: true, error: 'Abbas removed this name from the app · এই নাম অ্যাপ থেকে বাদ দেওয়া হয়েছে' }); if (ka === 'ok') { okf = true; amode = 'key'; } }   // 21 Nov 2026: each person's own key
+      return okf ? fac(b.req, P, amode) : out({ ok: false, error: 'wrong password' });
     }
     if (typeof b.req !== 'string' || b.req.length > (b.job === 'slackpdf' || b.job === 'slackpdf2' || b.job === 'dorder' || b.job === 'cash' || b.job === 'cchat' || b.job === 'bills' ? 25000000 : b.job === 'timo' ? 2000000 : 20000)) return out({ ok: false, error: 'bad request' });   // a memo PDF can be a few MB
     if (hex(Utilities.computeHmacSha256Signature(b.req, pw, Utilities.Charset.UTF_8)) !== String(b.sig)) return out({ ok: false, error: 'wrong password' });
@@ -78,7 +81,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-11-20c';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-11-21a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -204,7 +207,7 @@ function facNotifyScan(P, why) {
       var nk = 'FNOTE_' + nm.toUpperCase().slice(0, 40), noted = JSON.parse(P.getProperty(nk) || '{}'), changed = false;
       Object.keys(un).forEach(function (id) {
         var u = un[id]; if (!u || !u.n || !u.last || +noted[id] >= +u.last) return;
-        var card = byId[id], ttl = id === 'dm' ? '💬 Direct chat' + (dm ? ' #' + dm.name : '') : isXRoom(id) ? FAC_XROOMS.filter(function (x) { return x.k === id; })[0].title : (card && card.name ? (String(card.name).match(/\d{3,6}/) ? 'SJ-' + String(card.name).match(/\d{3,6}/)[0] : String(card.name).slice(0, 40)) : 'Card chat');
+        var card = byId[id], ttl = id === 'dm' ? '💬 Direct chat' + (dm ? ' #' + dm.name : '') : isXRoom(id) ? ((FAC_XROOMS.filter(function (x) { return x.k === id; })[0] || {}).title || '💬 Direct chat') : (card && card.name ? (String(card.name).match(/\d{3,6}/) ? 'SJ-' + String(card.name).match(/\d{3,6}/)[0] : String(card.name).slice(0, 40)) : 'Card chat');
         var note = { title: ttl + (u.n > 1 ? ' · ' + u.n + ' new' : ''), msg: u.tx || 'New message', click: 'https://abbas911-prog.github.io/sj-designs/factory.html#card=' + id, tag: id }, took = false;
         if (map[nm] && facNtfy(map[nm], note)) took = true;
         if (wpn.indexOf(nm) >= 0) { try { if (facWpSend(P, nm, note)) took = true; } catch (e) {} }   // 20 Oct 2026: Web Push too
@@ -255,6 +258,7 @@ function facCardOf(P, ev) {                                     // which card (o
   var dm = JSON.parse(P.getProperty('FAC_DM') || 'null'); if (dm && dm.ch === ch) return 'dm';
   var lr = JSON.parse(P.getProperty('FAC_LAIS2') || 'null'); if (lr && lr.ch === ch) return 'lais';
   for (var xi = 0; xi < FAC_XROOMS.length; xi++) { var xr = JSON.parse(P.getProperty('FAC_ROOM_' + FAC_XROOMS[xi].k) || 'null'); if (xr && xr.ch === ch) return FAC_XROOMS[xi].k; }
+  var pmc = facJson(P, 'FAC_DMP'), pk = Object.keys(pmc).filter(function (s) { return pmc[s].ch === ch; })[0]; if (pk) return 'p_' + pk;
   var all = P.getProperties(), hit = ''; Object.keys(all).some(function (k) { if (k.indexOf('FTH_') === 0 && all[k].indexOf('"' + ts + '"') >= 0) { hit = k.slice(4); return true; } return false; });
   return hit;
 }
@@ -373,9 +377,76 @@ function facLais(P, FT) {                                       // #laisfactory 
 // and 'exp'), found by name among the factory bot's channels (a public one is joined; a private one needs /invite @SJ Orders first) and
 // remembered in FAC_ROOM_<k>. Money talk: only Abbas (sign-in name Abbas…) gets them - other phones never see that they exist.
 var FAC_XROOMS = [{ k: 'cash', re: /^cash$|^cash[-_ ]/i, title: '💵 #cash' }, { k: 'exp', re: /^expenses?$|^expenses?[-_ ]/i, title: '🧾 #expenses' }];
-function isXRoom(k) { return FAC_XROOMS.some(function (x) { return x.k === k; }); }
+function isXRoom(k) { return FAC_XROOMS.some(function (x) { return x.k === k; }) || /^p_[a-z0-9]{2,30}$/.test(String(k || '')); }
+// ===== 21 Nov 2026 (Abbas said "all" to: private direct chats, remove one person, a Phones screen) =====
+// PEOPLE. FAC_PEOPLE = { slug: { n: name, k: key, c: code typed at sign-in ('' = key handed out by itself), at } }. A phone signs every request
+// with its person's own key (HMAC, like the password before); a phone still on the shared factory password is handed its key in the next
+// ping answer. Abbas can add a person with a 6-digit code, give a new code (the old phones of that person are signed out) or remove a person
+// (FAC_OFF) - a removal also switches on FAC_KEYSONLY: from then on the shared password works for the owner name only, everyone else signs
+// in with a code from Abbas, so a removed person cannot come back under another name. FAC_PHONES = what each phone last said about itself
+// (app version, last seen, stuck messages) for the People screen. No passwords or codes are ever in the repo.
+function facSlug(who) { return String(who || '').toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 30); }
+function facJson(P, k) { try { return JSON.parse(P.getProperty(k) || '{}') || {}; } catch (e) { return {}; } }
+function facKeyHex(t) { return hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, t, Utilities.Charset.UTF_8)); }
+function facKeyAuth(P, reqText, sig) {                             // 'ok' = signed with this person's own key, 'off' = a removed name, '' = no
+  var who = ''; try { who = String(JSON.parse(reqText).who || ''); } catch (e) { return ''; }
+  var s = facSlug(who); if (s.length < 2) return '';
+  var rec = facJson(P, 'FAC_PEOPLE')[s], c = CacheService.getScriptCache();
+  if (rec && rec.k) { var bad = +(c.get('FKA_' + s) || 0); if (bad > 60) return '';                // a wrong key 60 times in 5 min: wait (a 6-digit code cannot be guessed by trying)
+    if (hex(Utilities.computeHmacSha256Signature(reqText, rec.k, Utilities.Charset.UTF_8)) === sig) return 'ok'; c.put('FKA_' + s, String(bad + 1), 300); }
+  return facJson(P, 'FAC_OFF')[s] ? 'off' : '';
+}
+function facGate(P, req, amode) {                                  // what a request signed with the SHARED password may still do
+  if (amode !== 'pw') return null; var s = facSlug(req.who);
+  if (s && facJson(P, 'FAC_OFF')[s]) return { ok: false, off: true, error: 'Abbas removed this name from the app · এই নাম অ্যাপ থেকে বাদ দেওয়া হয়েছে' };
+  if (P.getProperty('FAC_KEYSONLY') && !facOwner(req.who)) return { ok: false, needcode: true, error: 'Sign in with your own code - ask Abbas for it · নিজের কোড দিয়ে ঢুকুন (আব্বাসের কাছে চান)' };
+  return null;
+}
+function facKeyGive(P, who) {                                      // the key of a person seen for the first time (made once, under the lock)
+  var s = facSlug(who); if (s.length < 2) return ''; var m = facJson(P, 'FAC_PEOPLE'); if (m[s] && m[s].k) return m[s].k;
+  var lock = LockService.getScriptLock(); if (!lock.tryLock(1500)) return '';
+  try { m = facJson(P, 'FAC_PEOPLE'); if (!(m[s] && m[s].k)) { m[s] = { n: String(who).replace(/[*\n]/g, ' ').trim().slice(0, 40), k: facKeyHex(Utilities.getUuid() + '|' + Utilities.getUuid() + '|' + s), c: '', at: Date.now() }; P.setProperty('FAC_PEOPLE', JSON.stringify(m)); } return m[s].k; }
+  finally { lock.releaseLock(); }
+}
+function facPhoneSeen(P, req) {                                    // from the ping: app version, last seen, stuck messages (written at most every 5 min per phone, or when something changed)
+  var s = facSlug(req.who), dv = String(req.dv || '').replace(/[^\w-]/g, '').slice(0, 12); if (s.length < 2 || !dv) return;
+  var c = CacheService.getScriptCache(), sig = String(req.v || '') + '|' + (+req.ob || 0), ck = 'FPH_' + s + '_' + dv; if (c.get(ck) === sig) return; c.put(ck, sig, 300);
+  var m = facJson(P, 'FAC_PHONES'), r = m[s] = m[s] || { n: String(req.who).trim().slice(0, 40), d: {} }; r.d = r.d || {};
+  r.d[dv] = { v: String(req.v || '').replace(/[^\w-]/g, '').slice(0, 12), at: Date.now(), ua: String(req.ua || '').replace(/[^\w .-]/g, '').slice(0, 16), ob: Math.max(0, Math.min(99, +req.ob || 0)) };
+  Object.keys(r.d).sort(function (a, b) { return r.d[b].at - r.d[a].at; }).slice(3).forEach(function (x) { delete r.d[x]; });
+  try { P.setProperty('FAC_PHONES', JSON.stringify(m)); } catch (e) {}
+}
+function facPeopleList(P, extra) {                                 // for Abbas: everyone with a key or a phone, the removed names, the lock
+  var PM = facJson(P, 'FAC_PEOPLE'), PH = facJson(P, 'FAC_PHONES'), OFF = facJson(P, 'FAC_OFF'), DMP = facJson(P, 'FAC_DMP'), all = {};
+  Object.keys(PM).concat(Object.keys(PH)).forEach(function (s) { if (!OFF[s]) all[s] = 1; });
+  var r = { ok: true, t: Date.now(), lock: !!P.getProperty('FAC_KEYSONLY'), people: Object.keys(all).map(function (s) { var a = PM[s] || {}, h = PH[s] || {}, n = a.n || h.n || s;
+      return { s: s, n: n, c: a.c || '', key: !!a.k, at: a.at || 0, own: facOwner(n), dm: facDmOk(P, n), room: !!DMP[s], d: Object.keys(h.d || {}).map(function (x) { return h.d[x]; }).sort(function (x, y) { return y.at - x.at; }) }; })
+    .sort(function (x, y) { return (y.own ? 1 : 0) - (x.own ? 1 : 0) || ((y.d[0] || {}).at || 0) - ((x.d[0] || {}).at || 0) || (x.n < y.n ? -1 : 1); }),
+    off: Object.keys(OFF).map(function (s) { return { s: s, n: OFF[s].n || s, at: OFF[s].at || 0 }; }) };
+  if (extra) Object.keys(extra).forEach(function (k) { r[k] = extra[k]; }); return r;
+}
+// PRIVATE DIRECT CHATS. The old Direct chat (FAC_DM) was one room for everyone who signed in. Now: (1) it is for Abbas and the people on
+// FAC_DMOK only (until Abbas chooses: anyone whose name has "ibrahim" in it - the chat was his); (2) every other person can have his own
+// room with Abbas (FAC_DMP = { slug: { ch, name, n } }, a private Slack channel "direct-<name>" made by the bot, or one Abbas picks) -
+// it behaves like #cash / #expenses (key "p_<slug>"): Abbas sees them all, a person sees only his own.
+function facDmOkList(P) { var v = P.getProperty('FAC_DMOK'); if (v == null || v === '') return null; try { return JSON.parse(v) || []; } catch (e) { return []; } }
+function facDmOk(P, who) { if (facOwner(who)) return true; var s = facSlug(who); if (s.length < 3) return false; var L = facDmOkList(P); return L ? L.indexOf(s) >= 0 : s.indexOf('ibrahim') >= 0; }
+function facDmFor(P, FT, who) { return facDmOk(P, who) ? facDm(P, FT) : null; }
+function facPRoom(P, FT, s, name, ch) {                            // make (or link) one person's private room
+  var m = facJson(P, 'FAC_DMP'); if (m[s] && !ch) return m[s]; if (!FT) throw new Error('the relay has no SLACK_FACTORY_TOKEN');
+  var pick = null, cs = facChans(FT);
+  if (ch) { pick = cs.filter(function (c) { return c.id === ch; })[0]; if (!pick) throw new Error('no such channel'); if (!pick.member) { var jn = slackApi(FT, 'conversations.join', { channel: pick.id }); if (!jn.ok) throw new Error('the factory bot is not in #' + pick.name + ' - in Slack type /invite @SJ Orders there, then choose it again'); } }
+  else { var base = 'direct-' + s; pick = cs.filter(function (c) { return c.name === base && c.member; })[0];
+    if (!pick) { var cj = null, nm = base; for (var i = 0; i < 4; i++) { cj = slackApi(FT, 'conversations.create', { name: nm, is_private: true }); if (cj.ok || cj.error !== 'name_taken') break; nm = base + '-' + (i + 2); }
+      if (!cj.ok) throw new Error('Slack would not make the chat: ' + cj.error + (cj.error === 'missing_scope' ? ' (the factory Slack app needs groups:write, then Reinstall) - or make a private channel yourself, /invite @SJ Orders, and choose it here' : ''));
+      pick = { id: cj.channel.id, name: nm }; } }
+  CacheService.getScriptCache().remove('FAC_CHANS'); m = facJson(P, 'FAC_DMP'); m[s] = { ch: pick.id, name: pick.name, n: name }; P.setProperty('FAC_DMP', JSON.stringify(m));
+  try { slackApi(FT, 'chat.postMessage', { channel: pick.id, text: '→ *DIRECT CHAT* · Abbas ↔ ' + name + ' · private, from the factory app' }); } catch (e) {}
+  return m[s];
+}
 function facOwner(who) { return /^abbas/.test(facWho1(who)); }
 function facXRoom(P, FT, k) {
+  if (/^p_/.test(String(k))) { var pr = facJson(P, 'FAC_DMP')[String(k).slice(2)]; return pr ? { ch: pr.ch, name: pr.name } : null; }   // 21 Nov 2026: one person's private room
   var x = FAC_XROOMS.filter(function (r) { return r.k === k; })[0]; if (!x) return null;
   var have = P.getProperty('FAC_ROOM_' + k); if (have) return JSON.parse(have); if (!FT) return null;
   var c = CacheService.getScriptCache(); if (c.get('FAC_ROOM_TRY_' + k)) return null;
@@ -384,7 +455,9 @@ function facXRoom(P, FT, k) {
   if (!pick.member) { var jn = slackApi(FT, 'conversations.join', { channel: pick.id }); if (!jn.ok) { c.put('FAC_ROOM_TRY_' + k, '1', 300); return null; } c.remove('FAC_CHANS'); }
   var r = { ch: pick.id, name: pick.name }; P.setProperty('FAC_ROOM_' + k, JSON.stringify(r)); return r;
 }
-function facXRoomsFor(P, FT, who) { if (!facOwner(who)) return []; return FAC_XROOMS.map(function (x) { try { var r = facXRoom(P, FT, x.k); return r ? { k: x.k, ch: r.ch, name: r.name, title: x.title } : null; } catch (e) { return null; } }).filter(Boolean); }
+function facXRoomsFor(P, FT, who) { var pm = facJson(P, 'FAC_DMP'), ws = facSlug(who);
+  if (!facOwner(who)) return pm[ws] ? [{ k: 'p_' + ws, ch: pm[ws].ch, name: pm[ws].name, title: '💬 Abbas · সরাসরি' }] : [];   // a person: only his own private room
+  return Object.keys(pm).map(function (s) { return { k: 'p_' + s, ch: pm[s].ch, name: pm[s].name, title: '💬 ' + (pm[s].n || s) }; }).concat(FAC_XROOMS.map(function (x) { try { var r = facXRoom(P, FT, x.k); return r ? { k: x.k, ch: r.ch, name: r.name, title: x.title } : null; } catch (e) { return null; } }).filter(Boolean)); }
 function isRoom(k) { return k === 'dm' || k === 'lais' || isXRoom(k); }
 function facRoom(P, FT, k) { return k === 'dm' ? facDm(P, FT) : k === 'lais' ? facLais(P, FT) : isXRoom(k) ? facXRoom(P, FT, k) : null; }
 function roomTok(P, k, FT) { return k === 'lais' ? P.getProperty('SLACK_BOT_TOKEN') : FT; }   // the token of the workspace a room lives in
@@ -573,7 +646,7 @@ function facRate(pcs, workMs) { return Math.round(pcs / Math.max(0.25, workMs / 
 function facWorkDur(ms) { var h = ms / 3600000; return h < 1 ? Math.max(1, Math.floor(ms / 60000)) + ' min work' : (h >= 10 ? (Math.round(ms / WORK_DAY_MS * 10) / 10) + ' work days' : (Math.round(h * 10) / 10) + ' work h'); }   // 28 Oct 2026: a work day = 12 h 20 net (was divided by 14 h: 1.4 days showed as 1.2); minutes rounded down like the clock time (54 min clock showed 55 min work)
 function facWhen(ms) { var u = new Date(ms + 4 * 3600000); return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][u.getUTCDay()] + ' ' + facDay(ms) + ' ' + ('0' + u.getUTCHours()).slice(-2) + ':' + ('0' + u.getUTCMinutes()).slice(-2); }   // "Tue 21 Oct 14:05" Dubai
 function facDay(ms) { var u = new Date(ms + 4 * 3600000); return u.getUTCDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][u.getUTCMonth()]; }   // Dubai
-var WK_RE = /^👷 (IN|OUT|PART) · (.+?) · (\d+) pcs(?: · ([^·]+?))? · (.+?) \(factory app\)/;   // 23 Oct 2026: PART = some pieces came back, the rest stays with him
+var WK_RE = /^👷 (IN|OUT|PART|CLOSE) · (.+?) · (\d+) pcs(?: · ([^·]+?))? · (.+?) \(factory app\)/;   // 23 Oct 2026: PART = some pieces came back, the rest stays with him
 function facWkParse(acts) {                                    // comments -> { WORKER: [{in, out, g, d, by, hid}] } (oldest first)
   var out = {};
   acts.forEach(function (a) { if (a.type !== 'commentCard') return; var m = String((a.data || {}).text || '').match(WK_RE); if (!m) return;
@@ -581,7 +654,7 @@ function facWkParse(acts) {                                    // comments -> { 
     if (m[1] === 'IN') { var oi = null; for (var k = L.length - 1; k >= 0; k--) if (!L[k].out) { oi = L[k]; break; }
       if (oi) { oi.g += +m[3]; oi.adds = (oi.adds || []).concat([+m[3]]); oi.addT = (oi.addT || []).concat([t]); } else L.push({ in: t, g: +m[3], by: m[5].trim(), id: a.id }); }   // 21 Oct 2026: more pieces of the same design to a worker who still has some = added to his open batch (the 6th colour that came later)
     else if (m[1] === 'PART') { var op = null; for (var j = L.length - 1; j >= 0; j--) if (!L[j].out) { op = L[j]; break; } if (op) { op.pd = (op.pd || 0) + +m[3]; op.parts = (op.parts || []).concat([{ t: t, n: +m[3] }]); } else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); }   // 23 Oct 2026 (Abbas: "20 given, 2 done, 18 remaining"): a part delivery; the batch stays open
-    else { var o = null; for (var i = L.length - 1; i >= 0; i--) if (!L[i].out) { o = L[i]; break; } if (o) { o.out = t; o.d = (o.pd || 0) + +m[3]; o.outBy = m[5].trim(); } else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); } });
+    else { var o = null; for (var i = L.length - 1; i >= 0; i--) if (!L[i].out) { o = L[i]; break; } if (o) { o.out = t; o.d = (o.pd || 0) + +m[3]; o.outBy = m[5].trim(); if (m[1] === 'CLOSE') o.late = 1; } else if (m[1] === 'CLOSE') return; else L.push({ in: t, out: t, g: +m[3], d: +m[3], by: m[5].trim(), id: a.id }); } });
   return out;
 }
 // ===== 22 Oct 2026 (Abbas: "a complete factory app - everything happens here; add new things as options") =====
@@ -642,10 +715,15 @@ function facWorkRep(P, rtok, rdays) {                            // every worker
   var rw = {}; facWorkers(P, rtok).forEach(function (w) { rw[w.name.toUpperCase()] = { name: w.name, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0, byDay: {} }; });
   Object.keys(byCard).forEach(function (cid0) { var bc = byCard[cid0], wk0 = facWkParse(bc.acts.slice().sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); }));
     Object.keys(wk0).forEach(function (w) { var r = rw[w] = rw[w] || { name: w, pcs: 0, ms: 0, batches: 0, open: 0, cards: {}, hand: [], last: 0, byDay: {} }; wk0[w].forEach(function (b) {
-      var evs = (b.parts || []).slice(); if (b.out) evs.push({ t: b.out, n: b.d - (b.pd || 0) });   // 23 Oct 2026: every delivery counts on its own day (parts too)
+      var evs = (b.parts || []).slice(); if (b.out && !b.late) evs.push({ t: b.out, n: b.d - (b.pd || 0) });   // 21 Nov 2026: a forgotten batch closed late counts for no day   // 23 Oct 2026: every delivery counts on its own day (parts too)
       evs.forEach(function (ev) { if (ev.t >= rday0) r.today = (r.today || 0) + ev.n; if (ev.t < rcut) return; r.pcs += ev.n; r.cards[cid0] = (r.cards[cid0] || 0) + ev.n; if (ev.t > r.last) r.last = ev.t; var dk = facYmd(ev.t); r.byDay[dk] = (r.byDay[dk] || 0) + ev.n; });
-      if (b.out) { if (b.out >= rcut) { r.ms += facWorkMs(b.in, b.out); r.batches++; } }
+      if (b.out) { if (b.out >= rcut && !b.late) { r.ms += facWorkMs(b.in, b.out); r.batches++; } }
       else { r.open++; if (b.pd && evs.length && evs[evs.length - 1].t >= rcut) r.ms += facWorkMs(b.in, evs[evs.length - 1].t); r.hand.push({ id: cid0, name: bc.name, g: b.g - (b.pd || 0), given: b.g, pd: b.pd || 0, in: b.in, adds: b.adds || [], by: b.by, wd: facWorkDur(facWorkMs(b.in, Date.now())) }); } }); }); });
+  // 21 Nov 2026: pieces still "in hand" on a card that is already finished (FINISH / FINISH SAMPLES / archived) = forgotten, never closed
+  try { var hids = {}; Object.keys(rw).forEach(function (k) { rw[k].hand.forEach(function (h) { hids[h.id] = 1; }); }); var hl = Object.keys(hids).slice(0, 40), FINL = FAC.LISTS.filter(function (l) { return /^FINISH/.test(l[0]); }).map(function (l) { return l[1]; });
+    if (hl.length) { var hr = UrlFetchApp.fetchAll(hl.map(function (id) { return { url: 'https://api.trello.com/1/cards/' + id + '?key=' + TKEY + '&token=' + rtok + '&fields=idList,closed', muteHttpExceptions: true }; })), fin = {};
+      hr.forEach(function (x, i) { try { var cj = JSON.parse(x.getContentText()); if (cj.closed || FINL.indexOf(cj.idList) >= 0) fin[hl[i]] = 1; } catch (e) {} });
+      Object.keys(rw).forEach(function (k) { rw[k].hand.forEach(function (h) { if (fin[h.id]) h.fin = 1; }); }); } } catch (e) {}
   var rout = { ok: true, t: Date.now(), days: rdays, todayN: Object.keys(rw).filter(function (k) { return rw[k].today; }).length, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, today: r.today || 0, pcs: r.pcs, dur: facWorkDur(r.ms), perDay: r.ms ? facRate(r.pcs, r.ms) : 0, batches: r.batches, open: r.open, last: r.last, byDay: r.byDay, hand: r.hand.sort(function (a, b) { return a.in - b.in; }), cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
   rout.att = facAttWeek(P); rout.roles = facRoles(P, rtok); rout.today = facYmd(Date.now()); try { rout.late = facLate(P, rtok); } catch (e) { rout.late = []; } rout.low = facMatLow(P).map(function (m) { return { n: m.n, q: m.q, u: m.u || '' }; });
   return rout;
@@ -683,7 +761,7 @@ function facDailyTick(P) {                                       // from the 1-m
   if (h < (fri ? WORK_TO_FRI : WORK_TO) || P.getProperty('FAC_DAILY_LAST') === ymd) return;
   P.setProperty('FAC_DAILY_LAST', ymd); try { facDaily(P, ''); } catch (e) {}
 }
-function facWkLine(w, b) { var r = b.out ? ' · ' + facWorkDur(facWorkMs(b.in, b.out)) + ' · ≈' + facRate(b.d, facWorkMs(b.in, b.out)) + '/day' : ' · since ' + facDay(b.in); return w + ' ' + (b.out ? b.d + ' pcs ✓' : b.g + ' pcs ⏳') + r; }
+function facWkLine(w, b) { if (b.late) return w + ' ' + b.d + ' pcs ✓ · closed late'; var r = b.out ? ' · ' + facWorkDur(facWorkMs(b.in, b.out)) + ' · ≈' + facRate(b.d, facWorkMs(b.in, b.out)) + '/day' : ' · since ' + facDay(b.in); return w + ' ' + (b.out ? b.d + ' pcs ✓' : b.g + ' pcs ⏳') + r; }
 // the list's name as the app knows it (by its id) - a title somebody changed by accident in Trello ("IRON/CHECKINGnm", "IN LINE (2)/jnum") no
 // longer shows in reports and chat lines, and a renamed FINISH still gets its report (20 Nov 2026)
 function facLn(l) { l = l || {}; var k = l.id ? FAC.LISTS.filter(function (x) { return x[1] === l.id; })[0] : null; return k ? k[0] : (l.name || null); }
@@ -725,13 +803,15 @@ function facReportText(card, st, wk) {                       // 24 Oct 2026 (Abb
   L.push('_উৎপাদন রিপোর্ট · শুরু থেকে ' + (st.done === 'READY' ? 'রেডি' : 'শেষ') + ' পর্যন্ত ' + facDur(st.total) + '_');
   return L.join('\n');
 }
-function facReport(P, wtok, FT, cid, force, who) {              // posts the report into the card's chat + Trello; once per card unless forced
+function facReport(P, wtok, FT, cid, force, who, fill) {              // posts the report into the card's chat + Trello; once per card unless forced
   var tok = wtok || P.getProperty('TRELLO'), card = trApi('get', '/cards/' + cid, { fields: 'name,idList,idBoard' }, tok); if (card.idBoard !== FAC.BOARD) return { ok: false, error: 'not an ALM card' };
   var acts = facActs(tok, cid), have = acts.some(function (a) { return a.type === 'commentCard' && /#report\b/.test(String((a.data || {}).text || '')); });
   if (have && !force) return { ok: true, already: true };
   var st = facStages(acts, card), wk = facWkParse(acts), text = facReportText(card, st, wk);
   if (!st.finished && !force) return { ok: false, error: 'not finished' };
   var ts = '';
+  if (FT && fill) { try { var th0 = facThread(P, FT, cid, tok, false), rp0 = th0 ? slackApi(FT, 'conversations.replies', { channel: th0.ch, ts: th0.ts, limit: 200 }, true) : null;   // filling in old cards: the chat may have its report already (only Trello refused it)
+      if (rp0 && rp0.ok && (rp0.messages || []).some(function (m) { return /PRODUCTION REPORT/.test(String(m.text || '')); })) FT = null; } catch (e) {} }
   if (FT) { try { var th = facThread(P, FT, cid, tok, true); if (th) { var pj = slackApi(FT, 'chat.postMessage', { channel: th.ch, thread_ts: th.ts, text: text }); if (pj.ok) ts = pj.ts; } } catch (e) {} }
   if (wtok) { try { trApi('post', '/cards/' + cid + '/actions/comments', { text: text.replace(/\*/g, '') + '\n' + (who ? who + ' (factory app) ' : '') + '#report' }, wtok); } catch (e) {} }
   facBump(); facNudge(P, cid);
@@ -780,7 +860,7 @@ function facUnread(P, FT, cards, who, fresh) {                         // what T
       var r = { n: n, last: lastOther, tx: tx }; try { cache.put(rk, JSON.stringify(r), 21600); } catch (e) {} if (n) outm[cid] = r;
     });
   } else Object.keys(lastGood).forEach(function (x) { if (x !== 'dm' && x !== 'lais' && !isXRoom(x) && x.charAt(0) !== 'L') outm[x] = lastGood[x]; });
-  try { var dm = facDm(P, FT); if (dm) {                      // the direct chat counts too (Abbas 14 Oct: "include those chats notifications in catchup")
+  try { var dm = facDmFor(P, FT, who); if (dm) {              // the direct chat counts too - for the people who may see it (21 Nov 2026) (Abbas 14 Oct: "include those chats notifications in catchup")
     var seenD = Math.max(+(rec.dm || 0), +rec._t0), nd = 0, lastD = '', txD = '';
     facDmMsgs(P, FT, dm, fresh).forEach(function (m) { if (+m.ts <= seenD) return; var md = facMsg(P, FT, m, null); if ((md.sys && !facNote(md, who)) || mine(md)) return; nd++; lastD = m.ts; txD = facLine(md); });
     if (nd) outm.dm = { n: nd, last: lastD, tx: txD };
@@ -893,11 +973,13 @@ function setupFacWatch() {                                     // Abbas runs thi
 // 15 Oct 2026 audit: a phone that lost the answer (LTE, locked screen) retries - for a post / upload / new card that used to do it TWICE.
 // Every action now carries a once-only id (rid): the first answer is kept 10 min and any retry gets that same answer.
 var FAC_ONCE = /^(post|up|upfin|move|edit|copy|add|attach|sample|dmnew|dmset|later|retnew|retset|workset|report|workers|sheetset|attset|matset|salset|daily)$/;
-function fac(reqText, P) {
+function fac(reqText, P, amode) {
   var rq0 = {}; try { rq0 = JSON.parse(reqText); } catch (e) {}
+  var gate = facGate(P, rq0, amode); if (gate) return out(gate);
   var rid = FAC_ONCE.test(rq0.op || '') ? String(rq0.rid || '').replace(/[^\w-]/g, '').slice(0, 40) : '', cR = CacheService.getScriptCache();
   if (rid) { var prev = cR.get('FRID_' + rid); if (prev === 'busy') return out({ ok: false, busy: true, error: 'still sending - one moment' }); if (prev) return ContentService.createTextOutput(prev).setMimeType(ContentService.MimeType.JSON); cR.put('FRID_' + rid, 'busy', 120); }
   var res = fac0(reqText, P);
+  if (amode === 'pw' && rq0.op === 'ping') { try { var pj = JSON.parse(res.getContent()), gk = pj.ok ? facKeyGive(P, rq0.who) : ''; if (gk) { pj.key = gk; res = out(pj); } } catch (e) {} }   // 21 Nov 2026: a phone still on the shared password gets its own key (it signs with that from now on)
   if (rid) { try { var txt = res.getContent(), jj = JSON.parse(txt); if (jj.ok && txt.length < 90000) cR.put('FRID_' + rid, txt, 21600); else cR.remove('FRID_' + rid);
     if (jj.ok && /^[0-9a-f]{24}$/.test(String(rq0.card || ''))) { var hm = {}; hm[rq0.card] = String(jj.ts || Date.now() / 1000); facHotAdd(P, hm); } } catch (e) { cR.remove('FRID_' + rid); } }   // 31 Oct 2026: a line the relay wrote into a card's chat makes it hot
   return res;
@@ -913,7 +995,7 @@ function fac0(reqText, P) {
   try {
     if (req.op === 'list') {
       var who0 = String(req.who || '').slice(0, 40), cache = CacheService.getScriptCache(), hit = req.fresh ? null : bigGet(cache, 'FAC_LIST');
-      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { hv.dm = null; } hv.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.lo = facLaisOrders(P, who0, false); hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.rv = RELAY_VER; hv.wroles = facRoles(P, P.getProperty('TRELLO') || P.getProperty('TRELLO_W')); try { hv.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} /* 25 Oct 2026 (Abbas: "no workers list"): the cached answer had no workers */ hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
+      if (hit && !req.fresh) { var hv = JSON.parse(hit); try { hv.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards, who0); } catch (e) {} hv.later = facLater(P, who0); try { hv.dm = facDmFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); } catch (e) { hv.dm = null; } hv.dmno = facDmOk(P, who0) ? 0 : 1; hv.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); hv.lo = facLaisOrders(P, who0, false); hv.live = facLive(P); try { hv.ret = facRetSum(P); } catch (e) {} hv.fast = P.getProperty('FAC_FAST') || ''; hv.rv = RELAY_VER; hv.wroles = facRoles(P, P.getProperty('TRELLO') || P.getProperty('TRELLO_W')); try { hv.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} /* 25 Oct 2026 (Abbas: "no workers list"): the cached answer had no workers */ hv.refs = facRefs(P); hv.limit = FAC.LIMIT; try { hv.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), hv.cards); } catch (e) {} return out(hv); }
       var cf = facCf(rtok), listIds = FAC.LISTS.map(function (l) { return l[1]; });
       // ONE Trello call for the whole board (newest cards first), instead of one per list: Abbas wants the app updated right away, and the
       // phones ask every 10 s - this keeps the relay inside Google's daily fetch quota
@@ -932,7 +1014,7 @@ function fac0(reqText, P) {
       try { bigPut(cache, 'FAC_LIST', JSON.stringify(res), 25); bigPut(cache, 'FAC_LIST_L', JSON.stringify(res), 3600); } catch (e) {}
       try { if (P.getProperty('SLACK_FACTORY_TOKEN')) res.th = facUnread(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc, who0, !!req.fresh); } catch (e) {}
       res.later = facLater(P, who0);
-      try { res.dm = facDm(P, P.getProperty('SLACK_FACTORY_TOKEN')); } catch (e) { res.dm = null; } res.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.lo = facLaisOrders(P, who0, false);
+      try { res.dm = facDmFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); } catch (e) { res.dm = null; } res.dmno = facDmOk(P, who0) ? 0 : 1; res.lais = facLaisFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.rooms = facXRoomsFor(P, P.getProperty('SLACK_FACTORY_TOKEN'), who0); res.lo = facLaisOrders(P, who0, false);
       res.live = facLive(P); try { res.ret = facRetSum(P); } catch (e) {} res.fast = P.getProperty('FAC_FAST') || ''; res.rv = RELAY_VER; res.refs = facRefs(P); res.limit = FAC.LIMIT; try { res.wroles = facRoles(P, rtok); res.workers = facWorkers(P, rtok).map(function (w) { return w.name; }); } catch (e) {} try { res.act = facAct(P, P.getProperty('SLACK_FACTORY_TOKEN'), outc); } catch (e) {}
       return out(res);
     }
@@ -942,10 +1024,10 @@ function fac0(reqText, P) {
       var FTp = P.getProperty('SLACK_FACTORY_TOKEN'), whp = String(req.who || '').slice(0, 40), lc0 = bigGet(CacheService.getScriptCache(), 'FAC_LIST') || bigGet(CacheService.getScriptCache(), 'FAC_LIST_L');
       var pcards = lc0 ? JSON.parse(lc0).cards : Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('FTH_') === 0; }).map(function (k) { return { id: k.slice(4) }; });
       var pth = {}; try { pth = facUnread(P, FTp, pcards, whp, !!req.fresh); } catch (e) {}
-      var pdm = null; try { pdm = facDm(P, FTp); } catch (e) {}
+      var pdm = null; try { pdm = facDmFor(P, FTp, whp); } catch (e) {} try { facPhoneSeen(P, req); } catch (e) {}
       var prs = null; try { prs = facRetSum(P); } catch (e) {}
       var pact; try { pact = facAct(P, FTp, pcards); } catch (e) {}   // 17 Oct 2026: last-line time per chat on every ping, so the Chats tab never shows an older line
-      return out({ ok: true, rv: RELAY_VER, th: pth, later: facLater(P, whp), dm: pdm, lais: facLaisFor(P, FTp, whp), rooms: facXRoomsFor(P, FTp, whp), lo: facLaisOrders(P, whp, false), gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
+      return out({ ok: true, rv: RELAY_VER, th: pth, later: facLater(P, whp), dm: pdm, dmno: facDmOk(P, whp) ? 0 : 1, lais: facLaisFor(P, FTp, whp), rooms: facXRoomsFor(P, FTp, whp), lo: facLaisOrders(P, whp, false), gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
     }
     if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
       var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });
@@ -1000,7 +1082,31 @@ function fac0(reqText, P) {
     }
     // ---- STEP 2 (12 Oct 2026): the card chat = the card's Slack #cutting thread, both ways ----
     var FT = P.getProperty('SLACK_FACTORY_TOKEN');
-    if (isXRoom(req.card) && /^(thread|post|up|upurl|seen|later)$/.test(req.op) && !facOwner(req.who)) return out({ ok: false, error: 'only Abbas can see this chat', noaccess: true });
+    if (isXRoom(req.card) && /^(thread|post|up|upurl|seen|later)$/.test(req.op) && !facOwner(req.who) && req.card !== 'p_' + facSlug(req.who)) return out({ ok: false, error: 'only Abbas can see this chat', noaccess: true });
+    if ((req.card === 'dm' && /^(thread|post|up|upurl|seen|later)$/.test(req.op) || /^(dmch|dmnew|dmset|dmusers)$/.test(req.op)) && !facDmOk(P, req.who)) return out({ ok: false, error: 'this chat is private · এই চ্যাট ব্যক্তিগত', noaccess: true });   // 21 Nov 2026
+    if (req.op === 'people') {                               // 21 Nov 2026: Abbas's People screen - phones, codes, remove, who sees which direct chat
+      if (!facOwner(req.who)) return out({ ok: false, error: 'only Abbas can do this', noaccess: true });
+      var pact = String(req.act || 'list'), pnm = String(req.name || '').replace(/[*\n]/g, ' ').trim().slice(0, 40), ps = facSlug(pnm), PM = facJson(P, 'FAC_PEOPLE'), OFF = facJson(P, 'FAC_OFF'), pex = {};
+      if (pact !== 'list' && pact !== 'lock' && ps.length < 2) return out({ ok: false, error: 'type a name · নাম লিখুন' });
+      if (pact === 'add' || pact === 'code') {
+        if (pact === 'add' && PM[ps] && PM[ps].k) return out({ ok: false, error: pnm + ' is already on the list - use 🔑 New code' });
+        var pcode = String(Math.floor(100000 + Math.random() * 900000)); PM[ps] = { n: (PM[ps] || {}).n || pnm, k: facKeyHex('sjfac|' + ps + '|' + pcode), c: pcode, at: (PM[ps] || {}).at || Date.now() };
+        P.setProperty('FAC_PEOPLE', JSON.stringify(PM)); if (OFF[ps]) { delete OFF[ps]; P.setProperty('FAC_OFF', JSON.stringify(OFF)); } pex.code = pcode; pex.name = PM[ps].n;
+      } else if (pact === 'remove') {
+        if (facOwner(pnm)) return out({ ok: false, error: 'that is you' });
+        var gone = (PM[ps] || {}).n || pnm; delete PM[ps]; P.setProperty('FAC_PEOPLE', JSON.stringify(PM)); OFF[ps] = { n: gone, at: Date.now() }; P.setProperty('FAC_OFF', JSON.stringify(OFF)); P.setProperty('FAC_KEYSONLY', '1');
+        var PH = facJson(P, 'FAC_PHONES'); if (PH[ps]) { delete PH[ps]; P.setProperty('FAC_PHONES', JSON.stringify(PH)); }
+        try { var gk = gone.trim().toUpperCase().slice(0, 40), nmp = facJson(P, 'FNTFY'); if (nmp[gk]) { delete nmp[gk]; P.setProperty('FNTFY', JSON.stringify(nmp)); } P.deleteProperty('FWP_' + gk); } catch (e) {}   // no more notifications to his phone
+        pex.removed = gone;
+      } else if (pact === 'lock') { if (req.on) P.setProperty('FAC_KEYSONLY', '1'); else P.deleteProperty('FAC_KEYSONLY');
+      } else if (pact === 'dmok') {
+        var DL = facDmOkList(P); if (!DL) DL = Object.keys(PM).filter(function (s) { return !facOwner(PM[s].n) && s.indexOf('ibrahim') >= 0; });   // the first change writes the list down
+        DL = DL.filter(function (s) { return s !== ps; }); if (req.on) DL.push(ps); P.setProperty('FAC_DMOK', JSON.stringify(DL)); facBump();
+      } else if (pact === 'room') {
+        try { var prm = facPRoom(P, FT, ps, (PM[ps] || {}).n || pnm, String(req.ch || '').replace(/[^A-Z0-9]/g, '')); pex.room = { k: 'p_' + ps, ch: prm.ch, name: prm.name }; facBump(); } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 300) }); }
+      }
+      return out(facPeopleList(P, pex));
+    }
     if (req.op === 'seen') {                                  // 16 Oct 2026: the phone read a chat through the FAST LANE - remember it as seen (no Slack call)
       var sc = isRoom(req.card) || isLaisOrder(req.card) ? req.card : String(req.card || '').replace(/[^0-9a-f]/g, ''), sts = String(req.ts || '');
       if (!sc || !/^\d+\.\d+$/.test(sts)) return out({ ok: false, error: 'bad request' });
@@ -1357,6 +1463,27 @@ function fac0(reqText, P) {
       try { if (FT) { var kth = facThread(P, FT, kc, rtok, true); if (kth) slackApi(FT, 'chat.postMessage', { channel: kth.ch, thread_ts: kth.ts, text: '→ *WORK* · ' + kwho + ' · ' + kline }); } } catch (e) {}
       CacheService.getScriptCache().remove('FAC_WK_' + kc); CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']); bigDrop(CacheService.getScriptCache(), 'FAC_LIST'); facBump(); facNudge(P, kc);
       return out({ ok: true });
+    }
+    if (req.op === 'workclose') {                             // 21 Nov 2026: close every forgotten batch (pieces "in hand" on a finished card) - Abbas only; a CLOSE comment counts for no day
+      if (!facOwner(req.who)) return out({ ok: false, error: 'only Abbas can do this', noaccess: true });
+      var cw = String(req.who || '').slice(0, 40), crep = facWorkRep(P, rtok, 7), cn = 0, cpcs = 0;
+      crep.workers.forEach(function (w) { w.hand.forEach(function (h) { if (!h.fin) return;
+        try { trApi('post', '/cards/' + h.id + '/actions/comments', { text: '👷 CLOSE · ' + w.name + ' · ' + h.g + ' pcs · ' + cw + ' (factory app) · ' + facWhen(Date.now()) + ' · forgotten batch on a finished card, closed late' }, wtok); cn++; cpcs += h.g; CacheService.getScriptCache().remove('FAC_WK_' + h.id); } catch (e) {} }); });
+      CacheService.getScriptCache().removeAll(['FAC_WKR_7', 'FAC_WKR_30', 'FAC_WKR_90']); facBump();
+      return out({ ok: true, closed: cn, pcs: cpcs });
+    }
+    if (req.op === 'reportfill') {                            // 21 Nov 2026: the production reports that were never written on their Trello card (cards in FINISH since reports began) - a few per call
+      if (!facOwner(req.who)) return out({ ok: false, error: 'only Abbas can do this', noaccess: true });
+      var fc = CacheService.getScriptCache(), fdone = {}; try { fdone = JSON.parse(fc.get('FAC_RFILL') || '{}'); } catch (e) {} if (req.fresh) fdone = {};
+      var FINI = FAC.LISTS.filter(function (l) { return /^FINISH/.test(l[0]); }).map(function (l) { return l[1]; }), fids = [], fseen = {}, fbefore = '';
+      for (var fi = 0; fi < 3; fi++) { var fq = { filter: 'updateCard:idList', since: '2026-10-21T00:00:00.000Z', limit: 1000 }; if (fbefore) fq.before = fbefore; var fpage = trApi('get', '/boards/' + FAC.BOARD + '/actions', fq, rtok) || [];
+        fpage.forEach(function (a) { var d = a.data || {}, id = (d.card || {}).id; if (id && d.listAfter && /^FINISH/.test(String(facLn(d.listAfter) || '')) && !fseen[id]) { fseen[id] = 1; fids.push(id); } }); if (fpage.length < 1000) break; fbefore = fpage[fpage.length - 1].id; }
+      var todo = fids.filter(function (id) { return !fdone[id]; }), wrote = [], t0 = Date.now(), fw = String(req.who || '').slice(0, 40);
+      for (var fj = 0; fj < todo.length && wrote.length < 4 && Date.now() - t0 < 14000; fj++) { var fid = todo[fj];
+        try { var fcard = trApi('get', '/cards/' + fid, { fields: 'name,idList,closed' }, rtok); if (fcard.closed || FINI.indexOf(fcard.idList) < 0) { fdone[fid] = 1; continue; }
+          var fr = facReport(P, wtok, FT, fid, false, fw, true); fdone[fid] = 1; if (fr && fr.ok && !fr.already) wrote.push(String(fcard.name || '').slice(0, 40)); } catch (e) { fdone[fid] = 1; } }
+      try { fc.put('FAC_RFILL', JSON.stringify(fdone), 3600); } catch (e) {}
+      return out({ ok: true, wrote: wrote, left: fids.filter(function (id) { return !fdone[id]; }).length, total: fids.length });
     }
     if (req.op === 'workrep') {                               // 21 Oct 2026: every worker's output over the last N days + what each one has IN HAND right now (from the board's comments)
       var rdays = Math.min(120, Math.max(1, Math.floor(+req.days || 30))), rcache = CacheService.getScriptCache(), rk = 'FAC_WKR_' + rdays, rh = req.fresh ? null : rcache.get(rk); if (rh) return out(JSON.parse(rh));

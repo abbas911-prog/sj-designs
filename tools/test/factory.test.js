@@ -624,6 +624,54 @@ async function suite(fast, browser) {
       ok(ins() === 1, 'one IN comment, not two: ' + ins());
       await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
     });
+    await test('forgotten work: pieces "in hand" on a finished card are flagged; Abbas closes them with one tap and they count for no day', async () => {   // 21 Nov 2026
+      const FIN = '6527c5b41e630c094b619f5e', c = F.addCard(W, FIN, 'SJ-41862 ,195 pcs , COLORS = 5', { ageDays: 20 });
+      W.trello.actions.push({ id: F.hexId(), type: 'commentCard', date: new Date(Date.now() - 6 * 86400000).toISOString(), memberCreator: { fullName: 'Abbas Jamal' }, data: { card: { id: c.id, name: c.name }, text: '👷 IN · Sajjad · 9 pcs · Md ibrahimmiah (factory app) · Sat 14 Nov 10:00' } });
+      const rep = async () => (await page.evaluate(() => window.__call({ op: 'workrep', days: 7, fresh: 1 }))).workers.find(w => /^sajjad$/i.test(w.name)) || { hand: [], today: 0, pcs: 0 };
+      const b4 = await rep(); ok(b4.hand.some(h => h.id === c.id && h.fin === 1 && h.g === 9), 'the relay flags it: ' + JSON.stringify(b4.hand));
+      await home(page); await page.click('#twork'); await page.click('#wksrf');
+      await until(async () => /forgotten batch/.test(await page.textContent('#wksbody')), 20000, 'the red strip'); ok(/9 pcs/.test(await page.textContent('#wksbody .fgot')), 'with the pieces: ' + (await page.textContent('#wksbody .fgot')));
+      ok((await page.locator('#wksbody .hb em.fin').count()) >= 1, 'the batch itself is marked');
+      await page.click('#wkclose');
+      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === c.id && /^👷 CLOSE · Sajjad · 9 pcs · Abbas \(factory app\)/i.test(a.data.text)), 15000, 'CLOSE comment on the card');
+      await until(async () => !/forgotten batch/.test(await page.textContent('#wksbody')), 20000, 'the strip is gone');
+      const af = await rep(); ok(!af.hand.some(h => h.id === c.id), 'no longer in hand'); ok(af.today === b4.today && af.pcs === b4.pcs, 'counts for no day: today ' + b4.today + ' -> ' + af.today + ', pcs ' + b4.pcs + ' -> ' + af.pcs);
+      await page.click('#wksx');
+    });
+    await test('giving more pieces than the card has asks first', async () => {   // 21 Nov 2026
+      const seen = [], h = d => seen.push(d.message()); page.on('dialog', h);
+      await home(page); await openCardNo(page, '17841'); await until(() => page.locator('#work').isVisible(), 8000, 'work box');
+      const name = await page.evaluate(() => { const r = [...document.querySelectorAll('#wkrows .wr')].filter(x => !x.classList.contains('role') && x.querySelector('button.in') && !x.querySelector('button.out')); return r[0].dataset.w; });
+      const r = page.locator('#wkrows .wr[data-w="' + name + '"]'); await r.locator('input').fill('5'); await r.locator('button.in').click();
+      await until(() => W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && new RegExp('^👷 IN · ' + name + ' · 5 pcs').test(a.data.text)), 12000, 'the give went through after OK');
+      page.off('dialog', h); ok(seen.some(m => /This card has 12 pcs/.test(m)), 'asked first: ' + JSON.stringify(seen));
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
+    });
+    await test('the missing production reports are written with one button (on Trello; a chat that has its report is not told twice)', async () => {   // 21 Nov 2026
+      const L = { START: '6527c572b12b208471c080cb', INL: '6527c57cd7e267fbf2a602b4', R2: '699b35ceb77292db0289c473', FIN: '6527c5b41e630c094b619f5e' }, H = 3600000, t0 = Date.now() - 4 * 24 * H;
+      const mk = (nm) => { const c = F.addCard(W, L.FIN, nm, { ageDays: 6 }); const mv = (at, a, an, b, bn) => W.trello.actions.push({ id: F.hexId(), type: 'updateCard', date: new Date(at).toISOString(), memberCreator: { fullName: 'Abbas Jamal' }, data: { card: { id: c.id, name: c.name }, listBefore: { id: a, name: an }, listAfter: { id: b, name: bn } } });
+        mv(t0, L.START, 'START', L.INL, 'IN LINE'); mv(t0 + 30 * H, L.INL, 'IN LINE', L.R2, 'READY 2'); mv(t0 + 50 * H, L.R2, 'READY 2', L.FIN, 'FINISH'); return c; };
+      const c1 = mk('SJ-93810 , 60 PCS , COLORS = 5'), c2 = mk('SJ-80656 , 30 PCS , COLORS = 6');
+      const r2 = F.postSlack(W, CUT, { text: '🧵 SJ-80656\n' + c2.shortUrl, bot_id: 'B1' }); F.postSlack(W, CUT, { text: '📊 *SJ-80656 · PRODUCTION REPORT* · 30 pcs', bot_id: 'B1', thread_ts: r2.ts });
+      Object.keys(T.relay.P).filter(k => /^FMV_/.test(k)).forEach(() => {}); W.trello.actions.filter(a => a.type === 'updateCard' && (a.data.card.id === c1.id || a.data.card.id === c2.id)).forEach(a => T.relay.cache.put('FMV_D_' + a.id, '1', 86400));   // as on the real board: the Trello-moves check saw these moves long ago
+      const reps = c => W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text)).length;
+      ok(reps(c1) === 0 && reps(c2) === 0, 'no report yet');
+      await home(page); await page.click('#tabs button[data-t="more"]'); await page.click('#bfac'); await until(() => page.locator('#repfill').isVisible(), 15000, 'the button (Abbas)');
+      await page.click('#repfill'); await until(() => reps(c1) === 1 && reps(c2) === 1, 60000, 'both reports on Trello: ' + reps(c1) + ' ' + reps(c2));
+      await until(async () => /Done/.test(await page.textContent('#fs-rep')), 60000, 'the screen says Done: ' + (await page.textContent('#fs-rep')));
+      ok(W.slack.ch[CUT].msgs.filter(m => m.thread_ts === r2.ts && /PRODUCTION REPORT/.test(m.text || '')).length === 1, 'the chat that had its report did not get a second one');
+      await page.click('#repfill'); await page.waitForTimeout(4000); ok(reps(c1) === 1 && reps(c2) === 1, 'pressing again writes nothing twice');
+    });
+    if (fast) await test('a big upload shows how far it is (percent)', async () => {   // 21 Nov 2026
+      await home(page); await openCardNo(page, '17841'); await until(async () => /cutting started/.test(await page.textContent('#thread')), 10000, 'chat');
+      T.uploadSlow = 3000;
+      try { await page.setInputFiles('#afiles', { name: 'VID_PCT.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(19 * 1024 * 1024, 4) }); await page.click('#send');
+        await until(async () => /\d+ %/.test(await page.textContent('#outbar')), 15000, 'percent in the upload bar: ' + (await page.textContent('#outbar')));
+      } finally { T.uploadSlow = 0; }
+      const all = () => [].concat(...Object.values(W.slack.ch).map(c => c.msgs));
+      await until(() => all().some(m => (m.files || []).some(f => f.name === 'VID_PCT.mp4')), 40000, 'video in Slack'); await until(() => page.evaluate(() => window.__f.OUT.length === 0), 10000, 'outbox empty');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
+    });
     await test('#cash and #expenses: Abbas sees them in Chats, reads and writes; the bot joins #cash by itself', async () => {
       await home(page); F.postSlack(W, 'C0EXP000001', { text: 'diesel 300', user: 'U1' }); const cm = F.postSlack(W, 'C0CASH00001', { text: 'cash in hand 5000', user: 'U1' });
       T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now(), event: { type: 'message', channel: 'C0CASH00001', ts: cm.ts } }));   // Slack's push, as in real life
@@ -707,6 +755,83 @@ async function staffSuite(browser) {
 }
 // ---- Web Push: 🔔 → Turn on, then a Slack message arrives on the phone as a real (encrypted) notification ----
 const crypto = require('crypto');
+async function peopleSuite(browser) {                         // 21 Nov 2026: each phone its own key, People & phones, remove one person, private direct chats
+  console.log('\n— people, sign-in codes, private chats —');
+  const T = await boot({ browser, who: 'Abbas', setup: world }), W = T.W, PWD = 'fac-test-pw';
+  const rcall = (o, secret) => { const req = JSON.stringify(Object.assign({ t: Date.now() }, o)); return JSON.parse(T.relay.post(JSON.stringify({ job: 'fac', req, sig: crypto.createHmac('sha256', secret || PWD).update(req).digest('hex') }))); };
+  const sha = x => crypto.createHash('sha256').update(x).digest('hex'), fastchk = k => JSON.parse(T.relay.post(JSON.stringify({ job: 'fastchk', k: sha('sjfast|' + k) }))).ok;
+  const facOpen = async page => { await home(page); await page.click('#tabs button[data-t="more"]'); await page.click('#bfac'); await until(async () => (await page.locator('#fs-people .ppr').count()) >= 1, 15000, 'people rows'); };
+  let rahimKey = '', code = '', kk = '';
+  try {
+    const page = await T.open();
+    await test('a phone on the shared password gets its own key and works with it (fast lane too)', async () => {
+      await until(() => page.evaluate(() => /^[0-9a-f]{64}$/.test(localStorage.getItem('sj_fac_pw') || '')), 20000, 'own key on the phone');
+      const key = await page.evaluate(() => localStorage.getItem('sj_fac_pw')); ok(JSON.parse(T.relay.P.FAC_PEOPLE).abbas.k === key, 'it is the key the relay keeps for Abbas');
+      const j = await page.evaluate(() => window.__call({ op: 'ping' })); ok(j.ok && !j.key, 'signed with the key now (no key handed out again): ' + JSON.stringify(j).slice(0, 80));
+      ok(fastchk(key) && fastchk(PWD) && !fastchk('nope'), 'the fast lane takes the key');
+      ok(!rcall({ op: 'ping', who: 'Abbas' }, sha('x')).ok, 'a wrong key is refused');
+    });
+    await test('the main Direct chat is private: Abbas and Ibrahim see it, another person does not', async () => {
+      const ib = rcall({ op: 'list', who: 'Md ibrahimmiah' }), ra = rcall({ op: 'list', who: 'Rahim' });
+      ok(ib.ok && ib.dm && ib.dm.ch === DM && !ib.dmno, 'Ibrahim has it'); ok(ra.ok && !ra.dm && ra.dmno === 1, 'Rahim does not: ' + JSON.stringify({ dm: ra.dm, dmno: ra.dmno }));
+      const t1 = rcall({ op: 'thread', card: 'dm', who: 'Rahim' }), p1 = rcall({ op: 'post', card: 'dm', who: 'Rahim', text: 'let me in', rid: 'x1' });
+      ok(!t1.ok && t1.noaccess && !p1.ok && !W.slack.ch[DM].msgs.some(m => /let me in/.test(m.text || '')), 'reading and writing are refused by the relay');
+      ok(rcall({ op: 'thread', card: 'dm', who: 'Md ibrahimmiah' }).ok, 'Ibrahim reads it');
+      F.postSlack(W, DM, { text: 'private line', user: 'U1' });
+      const pr = rcall({ op: 'ping', who: 'Rahim', fresh: 1, v: '2026-10-31b', dv: 'ph1', ob: 2, ua: 'Android' }), pi = rcall({ op: 'ping', who: 'Md ibrahimmiah', fresh: 1 });
+      rahimKey = pr.key; ok(/^[0-9a-f]{64}$/.test(rahimKey || ''), 'Rahim\'s phone got its key');
+      ok(!(pr.th || {}).dm && (pi.th || {}).dm && pi.th.dm.n >= 1, 'no NEW for Rahim, NEW for Ibrahim: ' + JSON.stringify([(pr.th || {}).dm, (pi.th || {}).dm]));
+    });
+    await test('People & phones (Abbas): each phone with its app version and stuck messages; add a person -> a code he signs in with', async () => {
+      await facOpen(page); await until(async () => (await page.locator('#fs-people .ppr[data-n="Rahim"]').count()) === 1, 15000, 'Rahim listed');
+      const tx = await page.locator('#fs-people .ppr[data-n="Rahim"]').textContent(); ok(/Android/.test(tx) && /2026-10-31b/.test(tx) && /old/.test(tx) && /2 messages stuck/.test(tx), 'his phone: ' + tx);
+      ok(/you/.test(await page.locator('#fs-people .ppr[data-n="Abbas"]').textContent()) && (await page.locator('#fs-people .ppr[data-n="Abbas"] .ppb').count()) === 0, 'Abbas himself has no remove button');
+      await page.evaluate(() => { window.prompt = () => 'Karim'; }); await page.click('#fs-people [data-pp="add"]');
+      await until(async () => /Code: \d{6}/.test(await page.textContent('#tgbody')), 10000, 'the code is shown'); code = (await page.textContent('#tgbody')).match(/Code: (\d{6})/)[1];
+      await page.evaluate(() => { document.getElementById('tg').hidden = true; });
+      ok((await page.locator('#fs-people .ppr[data-n="Karim"] .ppc').textContent()) === code, 'the code stays in the list');
+      kk = sha('sjfac|karim|' + code); ok(rcall({ op: 'ping', who: 'Karim' }, kk).ok, 'Karim signs in with name + code'); ok(!rcall({ op: 'ping', who: 'Karim' }, sha('sjfac|karim|000000')).ok, 'a wrong code is refused');
+      ok(!rcall({ op: 'people', act: 'list', who: 'Karim' }, kk).ok, 'only Abbas reads the people list');
+    });
+    await test('a private chat per person: Abbas opens it from People; the person sees only his own', async () => {
+      await page.click('#fs-people .ppr[data-n="Rahim"] [data-pp="chat"]'); await until(() => page.locator('#card').isVisible(), 15000, 'the chat opens');
+      const ch = Object.values(W.slack.ch).find(c => c.name === 'direct-rahim'); ok(ch && ch.priv, 'a private Slack channel was made: ' + JSON.stringify(ch && { name: ch.name, priv: ch.priv }));
+      await page.fill('#txt', 'hello Rahim, only you'); await page.click('#send'); await until(() => ch.msgs.some(m => /hello Rahim, only you/.test(m.text || '')), 20000, 'the line is in his channel');
+      const pr = rcall({ op: 'ping', who: 'Rahim' }, rahimKey), pk = rcall({ op: 'ping', who: 'Karim' }, kk), pa = await page.evaluate(() => window.__call({ op: 'ping' }));
+      ok((pr.rooms || []).length === 1 && pr.rooms[0].k === 'p_rahim' && /Abbas/.test(pr.rooms[0].title), 'Rahim: one room, "Abbas": ' + JSON.stringify(pr.rooms)); ok((pk.rooms || []).length === 0, 'Karim: none');
+      ok((pa.rooms || []).some(r => r.k === 'p_rahim' && /Rahim/.test(r.title)), 'Abbas sees it as Rahim');
+      const tr = rcall({ op: 'thread', card: 'p_rahim', who: 'Rahim' }, rahimKey), tk = rcall({ op: 'thread', card: 'p_rahim', who: 'Karim' }, kk);
+      ok(tr.ok && tr.msgs.some(m => /only you/.test(m.text || '')), 'Rahim reads it'); ok(!tk.ok && tk.noaccess, 'Karim cannot');
+      ok(rcall({ op: 'post', card: 'p_rahim', who: 'Rahim', text: 'thanks boss', rid: 'x2' }, rahimKey).ok && ch.msgs.some(m => /thanks boss/.test(m.text || '')), 'Rahim answers');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
+      ok((await page.evaluate(() => window.__call({ op: 'people', act: 'dmok', name: 'Rahim', on: 1 }))).ok && rcall({ op: 'list', who: 'Rahim' }, rahimKey).dm, 'Abbas can let Rahim into the main Direct chat');
+      ok(rcall({ op: 'list', who: 'Md ibrahimmiah' }).dm && !rcall({ op: 'list', who: 'Karim' }, kk).dm, 'Ibrahim keeps it, Karim still has none');
+    });
+    await test('Remove a person: his phone is refused, the factory password lets no new name in, everyone else keeps working', async () => {
+      await facOpen(page); await page.click('#fs-people .ppr[data-n="Rahim"] [data-pp="remove"]');
+      await until(async () => /ONE MORE STEP/.test(await page.textContent('#tgbody')), 10000, 'the note about the factory password'); await page.evaluate(() => { document.getElementById('tg').hidden = true; });
+      ok(T.relay.P.FAC_KEYSONLY === '1' && JSON.parse(T.relay.P.FAC_OFF).rahim && !JSON.parse(T.relay.P.FAC_PEOPLE).rahim, 'removed on the relay');
+      const o1 = rcall({ op: 'ping', who: 'Rahim' }, rahimKey), o2 = rcall({ op: 'ping', who: 'Rahim' }), o3 = rcall({ op: 'list', who: 'Rahim Two' });
+      ok(!o1.ok && o1.off, 'his key: off'); ok(!o2.ok && o2.off, 'his name with the factory password: off'); ok(!o3.ok && o3.needcode, 'a new name with the factory password: needs a code — ' + JSON.stringify(o3));
+      ok(!fastchk(rahimKey), 'the fast lane no longer takes his key');
+      ok(rcall({ op: 'ping', who: 'Karim' }, kk).ok && rcall({ op: 'ping', who: 'Abbas' }).ok && (await page.evaluate(() => window.__call({ op: 'ping' }))).ok, 'Karim, and Abbas (key and password) still work');
+      ok(/Rahim/.test(await page.locator('#fs-people .ppoff').textContent()) && (await page.locator('#fs-people .ppr[data-n="Rahim"]').count()) === 0, 'listed under Removed');
+      ok(/ON/.test(await page.locator('#fs-people [data-pp="lock"]').textContent()), 'the lock shows ON');
+    });
+    await test('a person signs in on the phone with his name + code, sees no main Direct chat, and is signed out the moment Abbas removes him', async () => {
+      await page.evaluate(() => { localStorage.removeItem('sj_fac_pw'); localStorage.removeItem('sj_fac_who'); localStorage.removeItem('sj_fac_list'); }); await page.reload();
+      await page.waitForSelector('#login:not([hidden])', { timeout: 10000 }); await page.fill('#lname', 'Karim'); await page.fill('#lpw', '000000'); await page.click('#lgo');
+      await until(async () => /Wrong|code/i.test(await page.textContent('#lerr')), 10000, 'a wrong code says so'); ok(await page.locator('#login').isVisible(), 'still at sign-in');
+      await page.fill('#lpw', code); await page.click('#lgo'); await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length && document.getElementById('login').hidden, null, { timeout: 15000 });
+      ok((await page.evaluate(() => localStorage.getItem('sj_fac_pw'))) === kk, 'the phone keeps his key, not the code');
+      await page.click('#tabs button[data-t="chats"]'); await page.waitForTimeout(1500); ok(await page.locator('#dm').isHidden(), 'no main Direct chat row');
+      ok(rcall({ op: 'people', act: 'remove', name: 'Karim', who: 'Abbas' }).ok, 'Abbas removes Karim');
+      await until(() => page.locator('#login').isVisible(), 30000, 'the phone signs itself out'); ok(/removed/i.test(await page.textContent('#lerr')), 'and says why: ' + (await page.textContent('#lerr')));
+      ok((await page.evaluate(() => localStorage.getItem('sj_fac_pw'))) === null, 'the key is gone from the phone');
+    });
+    await test('no page errors (people)', async () => { ok(!T.errors.length, T.errors.join('\n')); });
+  } finally { await T.close(); }
+}
 async function pushSuite(browser) {
   console.log('\n— phone notifications (Web Push) —');
   const ua = crypto.createECDH('prime256v1'); ua.generateKeys(); const auth = crypto.randomBytes(16);
@@ -783,8 +908,8 @@ async function swSuite(browser) {
 const ONLY = process.argv[2];   // e.g. node tools/test/factory.test.js push
 (async () => {
   const browser = await chromium.launch();
-  if (ONLY) { try { await ({ push: pushSuite, sw: swSuite, staff: staffSuite, main: b => suite(false, b), fast: b => suite(true, b) }[ONLY])(browser); } finally { await browser.close(); } const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed'); process.exit(bad.length ? 1 : 0); }
-  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); await staffSuite(browser); await pushSuite(browser); await swSuite(browser); } finally { await browser.close(); }
+  if (ONLY) { try { await ({ push: pushSuite, sw: swSuite, staff: staffSuite, people: peopleSuite, main: b => suite(false, b), fast: b => suite(true, b) }[ONLY])(browser); } finally { await browser.close(); } const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed'); process.exit(bad.length ? 1 : 0); }
+  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); await staffSuite(browser); await peopleSuite(browser); await pushSuite(browser); await swSuite(browser); } finally { await browser.close(); }
   const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed');
   process.exit(bad.length ? 1 : 0);
 })();

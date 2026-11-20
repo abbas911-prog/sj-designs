@@ -8,7 +8,7 @@ const DIR = path.join(__dirname, '..'), PW = 'test1234', FAST = 'https://sj-fast
 function lock(obj) { const salt = crypto.randomBytes(16), iv = crypto.randomBytes(12), key = crypto.pbkdf2Sync(PW, salt, 1000, 32, 'sha256'); const c = crypto.createCipheriv('aes-256-gcm', key, iv); const ct = Buffer.concat([c.update(JSON.stringify(obj)), c.final(), c.getAuthTag()]); return { salt: salt.toString('base64'), iv: iv.toString('base64'), iter: 1000, ct: ct.toString('base64') }; }
 const enc = lock({ updated: new Date().toISOString(), cards: [{ id: 'c1', idShort: 1, list: 'r', name: 'SJ-18634 (16) colour = (2) (8/8)', attachments: [] }] });
 const ROOT = '1792600000.000100', KEY = crypto.createHash('sha256').update('sjfast|' + PW).digest('hex');
-const S = { files: {}, posts: [], b64: 0, upurl: 0, old: false, fast: false, down: false, hold: false, refuse: false, lose: 0, slackHits: 0, fastHits: 0, fastKeys: [], msgs: [{ ts: '1792600001.000100', who: 'Abbas', app: true, text: 'Send me the video of 48188', files: [] }] };
+const S = { files: {}, posts: [], b64: 0, upurl: 0, old: false, fast: false, fastSlow: 0, down: false, hold: false, refuse: false, lose: 0, slackHits: 0, fastHits: 0, fastKeys: [], msgs: [{ ts: '1792600001.000100', who: 'Abbas', app: true, text: 'Send me the video of 48188', files: [] }] };
 function relay(b) { const req = JSON.parse(b.req);
   if (b.job === 'orders') return { ok: true, orders: [] }; if (b.job === 'bills') return { ok: true, bills: [] }; if (b.job === 'timo') return { ok: true, data: null, at: 0 };
   if (b.job !== 'cchat') return { ok: false, error: 'not in test' };
@@ -38,6 +38,7 @@ async function until(fn, ms, what) { const t0 = Date.now(); while (Date.now() - 
     if (S.lose > 0) S.lose--; else if (f) f.got = n; route.fulfill({ status: 200, body: 'OK', headers: { 'Access-Control-Allow-Origin': '*' } }).catch(() => {}); });
   await ctx.route(/sj-fast\.test/, async (route) => { const rq = route.request(), H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
     if (rq.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: H }); S.fastHits++; const u = new URL(rq.url()); S.fastKeys.push(u.searchParams.get('k'));
+    if (S.fastSlow) await sleep(S.fastSlow);
     if (S.refuse) return route.fulfill({ status: 200, headers: H, contentType: 'application/json', body: JSON.stringify({ ok: false, status: 413, text: '<html>Request Entity Too Large</html>' }) });
     const id = String(u.searchParams.get('u')).split('/upload/')[1], f = S.files[id]; if (f) f.got = (rq.postDataBuffer() || Buffer.alloc(0)).length;
     route.fulfill({ status: 200, headers: H, contentType: 'application/json', body: JSON.stringify({ ok: true, status: 200, text: 'OK' }) }); });
@@ -87,6 +88,9 @@ async function until(fn, ms, what) { const t0 = Date.now(); while (Date.now() - 
   // 5. through the fast lane when the relay names one: Slack's real answer comes back
   S.fast = true; const fh = S.fastHits; await pick(pg, 'IMG_FAST.jpg', 2); await pg.click('#ccsend'); await until(() => !!post('IMG_FAST.jpg'), 20000, 'fast photo');
   ok('with a fast lane the file goes through it, exact bytes, with the phone key', S.fastHits === fh + 1 && (post('IMG_FAST.jpg') || {}).got[0] === 2 * 1024 * 1024 && S.fastKeys[S.fastKeys.length - 1] === KEY);
+  S.fastSlow = 2500; await pick(pg, 'VID_PCT.mp4', 7); await pg.click('#ccsend');
+  ok('a file on its way shows how far it is (percent)', await until(async () => /uploading… \d+ %/.test(await pg.$eval('#ccbody', e => e.textContent)), 8000, 'percent in the bubble'));
+  S.fastSlow = 0; await until(() => !!post('VID_PCT.mp4'), 20000, 'pct video posted');
   S.refuse = true; await pick(pg, 'VID_413.mp4', 6); await pg.click('#ccsend');
   ok('Slack refusing the upload is said in words in the bubble', await until(async () => /Slack answered 413/.test(await pg.$eval('#ccbody', e => e.textContent)), 15000, '413 shown'));
   S.refuse = false; await pg.evaluate(() => { window.__cco.CCO().q.forEach(x => { x.next = 0; }); return window.__cco.run(true); }); ok('… and it goes once Slack takes uploads again', await until(() => !!post('VID_413.mp4'), 20000, 'video after 413'));
