@@ -456,7 +456,7 @@ body{-webkit-tap-highlight-color:transparent}
 .rncols .rnall{font-weight:800}.rnhint{display:block;width:100%;color:var(--mute)!important;font-size:11.5px}
 .rnrow{display:grid;grid-template-columns:1.6fr .8fr .8fr auto;gap:6px;margin:6px 0;align-items:center}.rnrow:has(input[data-f="no"]){grid-template-columns:1fr .7fr .8fr .8fr auto}.rnrow input{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:9px;font:inherit;background:#fff}.rnrow button{border:0;background:#eee;border-radius:999px;width:32px;height:32px}.rnd{font-size:14px}.rnd small{display:block;color:#888;font-size:11.5px}
 .bst{font-size:11px;border-radius:999px;padding:1px 8px;background:#eee;margin-left:4px;vertical-align:middle;font-weight:600}.bst.sent{background:#dfe9ff}.bst.included{background:#1f8a4c;color:#fff}.bst.zero{background:#c0392b;color:#fff}
-.cuse{display:block;margin:6px 0;border:0;border-radius:10px;padding:8px 12px;font:inherit;font-weight:700;background:var(--gold);color:#fff}.gmark{background:#e8f6ee;border:2px solid #1f8a4c;border-radius:14px;padding:10px 12px;margin:8px 0;font-size:13.5px;line-height:1.45}.gmark b{color:#1f6b3d}.gmark small{display:block;color:var(--mute);margin-top:3px}.gmark .zero{color:#c0392b;font-weight:700;display:block;margin-top:6px}
+.cuse{display:block;margin:6px 0;border:0;border-radius:10px;padding:8px 12px;font:inherit;font-weight:700;background:var(--gold);color:#fff}.olk{background:#f1ede4!important;color:#6b6257}.gmark{background:#e8f6ee;border:2px solid #1f8a4c;border-radius:14px;padding:10px 12px;margin:8px 0;font-size:13.5px;line-height:1.45}.gmark b{color:#1f6b3d}.gmark small{display:block;color:var(--mute);margin-top:3px}.gmark .zero{color:#c0392b;font-weight:700;display:block;margin-top:6px}
 .ccrow.ord .av{background:#f3ead6}.ccrow b small.od{font-weight:500;color:#888;font-size:11.5px;margin-left:4px}
 /* 17 Oct 2026 (Abbas): "I want the star at the main page" — the ★ owner button stays in the header */
 #mybtn{width:46px;height:46px;flex:none;border:0;border-radius:14px;background:linear-gradient(150deg,#F3E7CF,#E7D4AE);color:#7E5E27;font-size:22px;font-weight:800;line-height:46px;padding:0;box-shadow:var(--sh)}
@@ -969,7 +969,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-19c';
+var VER = '2026-11-20a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1398,7 +1398,7 @@ function drawForm(){
       + (sz.length ? '<span class="zero">⚠ Sold with NO PRICE: ' + sz.map(function(l){ return 'SJ-' + esc(shown(l.no)) + ' C' + l.c + ' · ' + l.pcs + ' pcs'; }).join(', ') + ' — the statement and 50-50 have 0 for ' + (sz.length > 1 ? 'them' : 'it') + '. Type the price in 50-50 (the red line), and ask Abbas to fix the statement.</span>' : '') + '</div>'); }
   if (k === 'rn' && rnLocked(d)) { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
     f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was shared — it cannot be changed.</b><small>For more pieces back make a new return. · تم التأكيد — لا يمكن التعديل</small><div class="vbtn"><button type="button" class="vgo" data-vnew="1">＋ New return · مرتجع جديد</button></div></div>'); }
-  if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); if (d.name && d.cust === undefined) custLook(); }
+  if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); if (d.name && (d.cust === undefined || (d.cust.found && custLive(k, d) && Date.now() - (d.cust.at || 0) > 60000))) custLook(); }
 }
 function row(k2, v2, cls){ return '<div class="br ' + (cls || '') + '"><span>' + k2 + '</span><span>' + amt(v2) + ' AED</span></div>'; }
 function drawDyn(){   // only the figures change while typing; the boxes being typed in are never rebuilt
@@ -3430,15 +3430,23 @@ function custLike(nm){ var a = String(nm || '').toLowerCase().replace(/[^a-z\u06
 function lev(a, b){ var m = [], i, j; for (i = 0; i <= a.length; i++) { m[i] = [i]; } for (j = 1; j <= b.length; j++) m[0][j] = j;
   for (i = 1; i <= a.length; i++) for (j = 1; j <= b.length; j++) m[i][j] = Math.min(m[i-1][j] + 1, m[i][j-1] + 1, m[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
   return m[a.length][b.length]; }
+// 20 Nov 2026 (Abbas: "the app is changing the opening balances of the customers every time"): the sheet has 9 "… adjust" lines — each one a
+// staff phone whose old-balance box differed from the app's balance (typed from the paper book, or kept from days ago in a saved draft) and an
+// OK on the question that followed. Now a known customer's old balance always comes from the app: on a staff phone the box is locked and
+// follows the shop; only the owner phone can type another figure (and is still asked). A draft's balance is read again when it is opened.
+function custLive(k, d){ return !d.saved && !d.editing && d.status !== 'included' && !(d.status === 'sent' && k !== 'inv'); }   // a bill not yet on the statement
+function custLocked(k, d){ return !isOwner() && !!(d.cust && d.cust.found); }
 function custHint(){
   var k = B.mode, d = B[k], el = $('bcust'); if (!el || !d || k === 'pv') return;
+  var oi0 = document.querySelector('#bform input[data-k="open"]'); if (oi0) { var lk0 = custLocked(k, d); oi0.readOnly = lk0; oi0.classList.toggle('olk', lk0); }
   var nm = (d.name || '').trim(), h = '';
   if (!nm) h = 'Type the customer\'s name — their balance in the app fills the ' + (k === 'inv' ? 'old balance' : 'opening balance') + ' by itself.';
   else if (d.saved) h = '<b class="okc">✓ Saved to the app — ' + esc(d.saved.name) + '\'s balance is now ' + amt(d.saved.bal) + ' AED</b><br><small>' + (k === 'inv' ? 'Old balance' : 'Opening') + ' on this ' + (k === 'inv' ? 'invoice' : 'receipt') + ': ' + amt(n2(d.open)) + ' · sending it again replaces it, never counts it twice.</small>';
   else if (d.cust === undefined) h = 'Looking up ' + esc(nm) + '\'s balance…';
   else if (d.cust && d.cust.err) h = '<span class="miss">Balance not checked: ' + esc(d.cust.err) + '</span>';
   else if (d.cust && d.cust.found) { h = '✓ <b>' + esc(d.cust.name) + '</b> — balance in the app: <b>' + amt(d.cust.bal) + ' AED</b> (' + d.cust.n + ' entr' + (d.cust.n === 1 ? 'y' : 'ies') + ').';
-    if (Math.abs(n2(d.open) - d.cust.bal) > 0.004) h += '<span class="miss">You typed ' + amt(n2(d.open)) + ' — on ' + (k === 'inv' ? 'Include & share' : 'Send') + ' you\'ll be asked to change their balance to it.</span>'; }
+    if (custLocked(k, d)) h += ' <small>🔒 The ' + (k === 'inv' ? 'old' : 'opening') + ' balance comes from the app. Wrong? Tell Abbas — only the owner phone changes a balance. · الرصيد من التطبيق</small>';
+    else if (Math.abs(n2(d.open) - d.cust.bal) > 0.004) h += '<span class="miss">You typed ' + amt(n2(d.open)) + ' — on ' + (k === 'inv' ? 'Include & share' : 'Send') + ' you\'ll be asked to change their balance to it.</span>'; }
   else { var like = custLike(nm);
     h = like ? '<span class="miss">⚠ <b>' + esc(nm) + '</b> is not a customer. Did you mean <b>' + esc(like) + '</b>?</span><button type="button" class="cuse" data-cuse="' + esc(like) + '">Use ' + esc(like) + ' · استخدم</button><small>Only if this really is a new customer, keep the name — the ' + (k === 'inv' ? 'old balance' : 'opening balance') + ' you type becomes their opening balance.</small>'
       : 'New customer — the ' + (k === 'inv' ? 'old balance' : 'opening balance') + ' you type becomes <b>' + esc(nm) + '</b>\'s opening balance in the app.'; }
@@ -3452,9 +3460,9 @@ async function custLook(){
   d.lookName = nm.toUpperCase();
   try { var j = await custCall({ op: 'get', name: nm, except: custId(k, d) });
     if (B[k] !== d || (d.name || '').trim() !== nm) return;
-    d.cust = j.found ? { found: true, name: j.name, bal: j.bal, n: j.n } : { found: false };
-    if (j.found && !d.openTyped && !d.saved) { d.open = String(j.bal); var oi = document.querySelector('#bform input[data-k="open"]'); if (oi && B.mode === k) oi.value = d.open; drawDyn(); soon(); }
-  } catch(e){ if (B[k] === d) d.cust = { err: e.message }; }
+    d.cust = j.found ? { found: true, name: j.name, bal: j.bal, n: j.n, at: Date.now() } : { found: false };
+    if (j.found && custLive(k, d) && (!d.openTyped || custLocked(k, d)) && n2(d.open) !== j.bal) { d.openTyped = false; d.open = String(j.bal); var oi = document.querySelector('#bform input[data-k="open"]'); if (oi && B.mode === k) oi.value = d.open; drawDyn(); soon(); }
+  } catch(e){ if (B[k] === d && !(d.cust && d.cust.found)) d.cust = { err: e.message }; }
   if (B.mode === k) custHint();
 }
 function custBefore(k, d){     // ask before changing a known customer's balance; false = stop the send
@@ -3466,6 +3474,8 @@ function custBefore(k, d){     // ask before changing a known customer's balance
   if (nm && d.cust === undefined) { alert('Still checking ' + nm + '\'s balance — press again in a second.'); if (!CU.t) custLook(); return false; }
   if (!nm || !d.cust || !d.cust.found) return true;
   var diff = Math.round((n2(d.open) - d.cust.bal) * 100) / 100; if (Math.abs(diff) < 0.005) return true;
+  if (custLocked(k, d)) { if (!custLive(k, d)) return true;   // a correction keeps the figure it was sent with — and never adjusts
+    d.open = String(d.cust.bal); d.openTyped = false; redraw(); soon(); alert(d.cust.name + '\'s balance in the app is ' + amt(d.cust.bal) + ' AED — the bill now shows that.\n\nPress the button again to send.\n\nIf the balance is wrong, tell Abbas: only the owner phone changes a balance.'); return false; }
   if (confirm(d.cust.name + '\'s balance in the app is ' + amt(d.cust.bal) + ' AED, but this ' + (k === 'inv' ? 'invoice' : 'receipt') + ' shows ' + amt(n2(d.open)) + ' AED.\n\nOK = change their balance to ' + amt(n2(d.open)) + ' (an adjustment line of ' + amt(diff) + ' is added).\nCancel = go back and use ' + amt(d.cust.bal) + '.')) { d.adj = diff; return true; }
   d.open = String(d.cust.bal); d.openTyped = false; redraw(); return false;
 }

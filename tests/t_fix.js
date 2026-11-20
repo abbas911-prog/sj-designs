@@ -163,7 +163,7 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   const p7 = await br.newPage({ viewport: { width: 390, height: 844 } }); p7.on('pageerror', e => errs.push(e.message)); p7.on('dialog', d => d.accept());
   await p7.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) })); await p7.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
   await p7.addInitScript(() => { try { navigator.clipboard.writeText = async t => { window.__clip = t; }; } catch (e) {} });
-  await p7.goto(URL0); await p7.evaluate(pw => { localStorage.clear(); localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas'); }, PW); await p7.reload(); await p7.waitForSelector('#feed .design', { timeout: 15000 });
+  await p7.goto(URL0); await p7.evaluate(pw => { localStorage.clear(); localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas'); localStorage.setItem('sj_owner', '1'); }, PW); await p7.reload(); await p7.waitForSelector('#feed .design', { timeout: 15000 });
   await p7.click('#nav button[data-nv="more"]'); await p7.click('.mgrid button[data-go="bills"]'); await p7.waitForTimeout(1500);
   const rvRef = await p7.evaluate(() => window.__sj.B().rv && window.__sj.B().rv.ref), myDev0 = await p7.evaluate(() => localStorage.getItem('sj_dev'));
   const rvNo = r => +((String(r).match(/(\d+)$/) || [0, 0])[1]), othersTop = () => Math.max(0, ...Object.values(BILLS).filter(b => b.type === 'rv' && b.dev !== myDev0 && b.status !== 'deleted').map(b => rvNo(b.ref)));
