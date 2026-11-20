@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-11-20a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-11-20b';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -1563,11 +1563,17 @@ function vRead(P, pre) {
 // The channels are fixed here - a request cannot send a file anywhere else. Needs the SLACK_BOT_TOKEN script property (typed in by
 // Abbas, never in this code), the bot's files:write permission, and the bot invited to both channels.
 var MEMO_PDF_CHANNELS = ['C08EDKV94SV', 'C0BP6DSUHSA'];   // #godown, #customer
+// 20 Nov 2026 (Abbas: "whenever he presses the green button, post it to #sales-new automatically; a receipt goes to #receipts-new"):
+// the bill's PDF goes there by itself - job slackpdf2 with to 'sales' / 'receipts'. `once` = never twice for the same bill (a retry after a lost answer).
+var BILL_PDF_CHANNELS = { sales: 'C09DZDVA9S6', receipts: 'C09DX2R1N13' };   // #sales-new, #receipts-new (private - @SJ Memo must be invited)
 function slackPdf(reqText, P, v2) {
   var req = JSON.parse(reqText);
   // v2 (Abbas, 12 Oct 2026): nothing goes to a group unless ticked; #godown gets the godown pick list, #customer the full memo
   var chans = MEMO_PDF_CHANNELS;
-  if (v2) { var to = String(req.to || ''); if (to !== 'godown' && to !== 'customer') return out({ ok: false, error: 'bad channel' }); chans = [MEMO_PDF_CHANNELS[to === 'godown' ? 0 : 1]]; }
+  var billCh = '', onceKey = '';
+  if (v2) { var to = String(req.to || ''); billCh = BILL_PDF_CHANNELS.hasOwnProperty(to) ? BILL_PDF_CHANNELS[to] : '';
+    if (!billCh && to !== 'godown' && to !== 'customer') return out({ ok: false, error: 'bad channel' }); chans = [billCh || MEMO_PDF_CHANNELS[to === 'godown' ? 0 : 1]]; }
+  if (billCh && req.once) { onceKey = 'BP1_' + hex(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, to + '|' + String(req.once))); if (CacheService.getScriptCache().get(onceKey)) return out({ ok: true, dup: true, to: to }); }
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
   var tok = P.getProperty('SLACK_BOT_TOKEN'); if (!tok) return out({ ok: false, error: 'the relay has no SLACK_BOT_TOKEN yet' });
   // 12 Oct 2026 (Abbas): photos / videos / voice notes / a paper go WITH the godown post. Each one is uploaded first (op 'file' -> Slack file id),
@@ -1587,12 +1593,13 @@ function slackPdf(reqText, P, v2) {
   if (up.getResponseCode() !== 200) return out({ ok: false, error: 'Slack upload said ' + up.getResponseCode() });
   var c = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: H, muteHttpExceptions: true,
     payload: { files: JSON.stringify([{ id: a.file_id, title: name.replace(/\.pdf$/i, '') }].concat((v2 && Array.isArray(req.fids) ? req.fids : []).filter(function (f) { return /^F[A-Z0-9]{6,20}$/.test(String(f)); }).slice(0, 25).map(function (f) { return { id: String(f) }; }))), channels: chans.join(','), initial_comment: String(req.text || '').slice(0, 3000) } }).getContentText());
-  if (!c.ok) return out({ ok: false, error: 'Slack said ' + c.error + (c.error === 'not_in_channel' || c.error === 'channel_not_found' ? ' (invite @SJ Memo to #godown and #customer)' : '') });
+  if (!c.ok) return out({ ok: false, error: 'Slack said ' + c.error + (c.error === 'not_in_channel' || c.error === 'channel_not_found' ? (billCh ? ' - open #' + (to === 'sales' ? 'sales-new' : 'receipts-new') + ' in Slack and type /invite @SJ Memo' : ' (invite @SJ Memo to #godown and #customer)') : '') });
+  if (onceKey) try { CacheService.getScriptCache().put(onceKey, '1', 21600); } catch (e) {}
   // 18 Oct 2026 (Abbas: "if an order is sent to customer, right away you have to open a chat for that ... for that specific order"):
   // the #customer post IS the order's chat (its Slack thread). Its ts goes back to the phone so the app can open that chat at once.
   var ts = '';
   try { var sh = ((c.files || [])[0] || {}).shares || {}; [sh.public, sh.private].forEach(function (g) { if (g) Object.keys(g).forEach(function (ch) { (g[ch] || []).forEach(function (x) { if (x.ts) ts = x.ts; }); }); }); } catch (e) {}
-  if (v2) {
+  if (v2 && !billCh) {
     if (!ts) { try { Utilities.sleep(700); var want = String(req.text || '').split('\n')[0].slice(0, 60), hh = slackApi(tok, 'conversations.history', { channel: chans[0], limit: 6 }, true); ((hh.ok && hh.messages) || []).forEach(function (m) { if (!ts && want && String(m.text || '').indexOf(want) === 0) ts = m.ts; }); } catch (e) {} }
     try { bigDrop(CacheService.getScriptCache(), to === 'godown' ? 'GD_HIST' : 'CC_HIST'); } catch (e) {}
   }

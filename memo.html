@@ -969,7 +969,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-20b';
+var VER = '2026-11-20c';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1398,7 +1398,7 @@ function drawForm(){
       + (sz.length ? '<span class="zero">⚠ Sold with NO PRICE: ' + sz.map(function(l){ return 'SJ-' + esc(shown(l.no)) + ' C' + l.c + ' · ' + l.pcs + ' pcs'; }).join(', ') + ' — the statement and 50-50 have 0 for ' + (sz.length > 1 ? 'them' : 'it') + '. Type the price in 50-50 (the red line), and ask Abbas to fix the statement.</span>' : '') + '</div>'); }
   if (k === 'rn' && rnLocked(d)) { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
     f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was shared — it cannot be changed.</b><small>For more pieces back make a new return. · تم التأكيد — لا يمكن التعديل</small><div class="vbtn"><button type="button" class="vgo" data-vnew="1">＋ New return · مرتجع جديد</button></div></div>'); }
-  if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); if (d.name && (d.cust === undefined || (d.cust.found && custLive(k, d) && Date.now() - (d.cust.at || 0) > 60000))) custLook(); }
+  if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); slkPaint(k, d); if (d.name && (d.cust === undefined || (d.cust.found && custLive(k, d) && Date.now() - (d.cust.at || 0) > 60000))) custLook(); }
 }
 function row(k2, v2, cls){ return '<div class="br ' + (cls || '') + '"><span>' + k2 + '</span><span>' + amt(v2) + ' AED</span></div>'; }
 function drawDyn(){   // only the figures change while typing; the boxes being typed in are never rebuilt
@@ -1560,6 +1560,23 @@ async function docFiles(){ if (sendAs() === 'pdf' || !B.pages || !B.pages.length
   var base = B.pdf.name.replace(/\.pdf$/, ''), n = B.pages.length, out = [];
   for (var i = 0; i < n; i++) out.push(new File([await jpgOf(B.pages[i], 0.9)], base + (n > 1 ? '-' + (i + 1) : '') + '.jpg', { type: 'image/jpeg' }));
   return out; }
+// 20 Nov 2026 (Abbas: "it is very problematic for my employee to do many things at once — when he presses the green button, post it to #sales-new
+// automatically; a receipt goes to #receipts-new"): the bill's PDF goes to Slack by itself, right after the green button / Send. Never twice for
+// one bill (`once` at the relay); when it does not go, the bill says why and has a button to post it again.
+function slkCh(k){ return k === 'inv' ? '#sales-new' : '#receipts-new'; }
+async function slkPost(k, d, again){ if (!RELAY || (k !== 'inv' && k !== 'rv')) return; var file = B.pdf, fixing = !!d.editing;
+  if (!file || again) { try { await preview(); } catch(e){} file = B.pdf; } if (!file || B[k] !== d) return;
+  var c = k === 'inv' ? invCalc(d) : vchCalc(d), text = shareText(k, d) + ' · ' + ((d.name || '').trim() || 'no name') + ' · ' + amt(k === 'inv' ? c.total : c.amount) + ' AED' + (k === 'inv' ? ' · ' + c.pcs + ' pcs' : '') + (fixing ? ' · CORRECTED' : '') + (me() ? ' · by ' + me() : '');
+  d.slk = 'busy'; d.slkErr = ''; slkPaint(k, d);
+  try { var j = await relayJson('slackpdf2', { t: Date.now(), dev: devId(), to: k === 'inv' ? 'sales' : 'receipts', name: file.name, text: text, pdf: await pdfB64(file), once: k + ':' + d.ref + ':' + devId() + ':' + (fixing || again ? Date.now() : (d.soldAt || d.date || '')) }, 3);
+    if (!j.ok) throw new Error(j.error === 'bad channel' ? 'the relay needs its new version (2026-11-20b) — Apps Script → Deploy → Manage deployments → ✎ → New version' : (j.error || 'refused'));
+    d.slk = 'ok'; uiToast('Posted to ' + slkCh(k) + ' ✓'); }
+  catch(e){ d.slk = 'err'; d.slkErr = e.message; uiToast('⚠ Not posted to ' + slkCh(k) + ' — see the bill'); }
+  slkPaint(k, d); try { saveWork(); bsSave(true); } catch(e){} }
+function slkPaint(k, d){ if (B[k] !== d || B.mode !== k || (k !== 'inv' && k !== 'rv') || !d.slk) return; var host = $(k === 'inv' ? 'gmark' : 'vlock'); if (!host) return;
+  var el = $('slkst'); if (!el) { el = document.createElement('div'); el.id = 'slkst'; host.appendChild(el); }
+  el.innerHTML = d.slk === 'ok' ? '<small>📨 Posted to ' + slkCh(k) + ' ✓</small>' : d.slk === 'busy' ? '<small>📨 Posting to ' + slkCh(k) + '…</small>'
+    : '<small class="miss">⚠ Not posted to ' + slkCh(k) + ': ' + esc(d.slkErr || '') + '</small><button type="button" class="cuse" data-slk="1">📨 Post to ' + slkCh(k) + ' now</button>'; }
 async function docShare(txt){   // 0 = the person closed the share sheet, 1 = shared, 2 = no share sheet: saved to the phone instead
   var fs = await docFiles(); window.__lastShare = fs.map(function(f){ return f.name + ' ' + f.type; });
   try { if (navigator.canShare && navigator.canShare({ files: fs })) { await navigator.share({ files: fs, text: txt }); return 1; } } catch(e){ if (e && e.name === 'AbortError') return 0; }
@@ -1580,6 +1597,7 @@ function setMode(m){
 $('mode').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; if (b.dataset.m !== B.mode) vchNext(b.dataset.m); setMode(b.dataset.m); };
 $('bform').addEventListener('input', onForm); $('bform').addEventListener('change', onForm);
 $('bform').addEventListener('click', function(e){ var d = B[B.mode];
+  if (e.target.closest('[data-slk]') && d) { slkPost(B.mode, d, true); return; }
   var cu = e.target.closest('[data-cuse]'); if (cu && d) { d.name = cu.dataset.cuse; d.cust = undefined; d.openTyped = false; var ni = document.querySelector('#bform input[data-k="name"]'); if (ni) ni.value = d.name; custHint(); custLook(); return; }
   if (e.target.closest('[data-vnew]')) { if (d && d.editing) vchUndo(d); $('dnew').click(); return; }
   if (e.target.closest('[data-vfix]')) { vchFix(B.mode, d); return; }
@@ -1601,7 +1619,8 @@ $('dsend').onclick = async function(){
   await bsNext(k, d);
   clearTimeout(B.timer); await preview(); if (!B.pdf) return; keepNo(k, d.ref);
   if (!(await docShare(shareText(k, d)))) return;
-  if (k === 'rv') { var hadDisc = d.editing && d.fix && Math.abs(n2(d.fix.disc)) > 0 && !vchCalc(d).disc, was = d.editing && d.fix ? d.fix.name : '';
+  if (k === 'rv') { slkPost(k, d);
+    var hadDisc = d.editing && d.fix && Math.abs(n2(d.fix.disc)) > 0 && !vchCalc(d).disc, was = d.editing && d.fix ? d.fix.name : '';
     custAfter(k, d).then(function(){ if (hadDisc) custCall({ op: 'void', id: 'disc:' + d.ref + ':' + devId(), by: ls('sj_me') || '' }).catch(function(){}); });   // a corrected receipt that no longer has its discount: the old discount line goes too
   }      // a receipt counts once it is sent; an invoice (and a return) only on Include & share
   if (k === 'rv' || k === 'pv') { d.sentDev = d.sentDev || devId(); delete d.editing; delete d.fix; }
@@ -1637,6 +1656,7 @@ $('dinc').onclick = async function(){
   // 21 Oct 2026 (INV-0018 / INV-0021): the bill itself keeps exactly what it sold — every phone and laptop shows these numbers, whatever Trello says later
   d.sold = colLines().filter(function(l){ return l.qty > 0; }).map(function(l){ return { no: l.no, card: (byNo(l.no) || {}).id || '', c: l.c, pcs: l.qty, rate: l.rate, ph: l.photo ? l.photo.att : '', qi: l.qi || 0, n: l.n || 1 }; });   // 31 Oct 2026: ph/qi/n = its photo, kept for a reopened bill after the card is sold
   d.soldAt = Date.now(); d.soldBy = me(); d.soldDev = devId();          // 19 Nov 2026: these two used to sit inside the comment above and never ran
+  slkPost('inv', d);
   if (!d.oid) { var so = curOid(d.name || $('name').value); if (so) d.oid = so; }   // the order this bill belongs to
   d.status = 'included'; bsSave(true); drDone('bd');
   if (B.inv === d && B.mode === 'inv') drawForm();                 // 19 Nov 2026: the green mark + lock show at once
