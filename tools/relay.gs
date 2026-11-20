@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-11-16a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-11-20a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -2280,6 +2280,24 @@ function custBal(L, key, except) {
   var bal = es.reduce(function (a, e) { return a + e.sale - e.recv + e.adj; }, c.open);
   return { name: c.name, open: c.open, odate: c.odate, bal: Math.round(bal * 100) / 100, n: es.length, es: es };
 }
+// 20 Nov 2026 (Abbas: "what can we do so the app is not hacked or problematic"): a copy of the customer book once a day (Dubai), taken before the
+// day's first change, into a second Google Sheet "SJ Customer Balances - BACKUP (last 7 days)": tabs "Mon CUSTOMERS", "Mon ENTRIES", "Mon BILLS" …
+// each overwritten a week later. Never stops a post: any error is only noted (CUST_BK_ERR).
+function custBackup(P, ss) {
+  var d = new Date(Date.now() + 4 * 3600 * 1000), day = d.toISOString().slice(0, 10); if (P.getProperty('CUST_BK_DAY') === day) return;
+  P.setProperty('CUST_BK_DAY', day);
+  try {
+    var id = P.getProperty('CUST_BK_SHEET'), bk = null; if (id) try { bk = SpreadsheetApp.openById(id); } catch (e) { bk = null; }
+    if (!bk) { bk = SpreadsheetApp.create('SJ Customer Balances - BACKUP (last 7 days)'); P.setProperty('CUST_BK_SHEET', bk.getId()); }
+    var dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()];
+    ['CUSTOMERS', 'ENTRIES', 'BILLS'].forEach(function (n) {
+      var src = ss.getSheetByName(n); if (!src) return; var v = src.getDataRange().getDisplayValues(); if (!v.length || !v[0].length) return;
+      var t = bk.getSheetByName(dow + ' ' + n) || bk.insertSheet(dow + ' ' + n); t.clearContents();
+      var rg = t.getRange(1, 1, v.length, v[0].length); rg.setNumberFormat('@'); rg.setValues(v);
+    });
+    P.setProperty('CUST_BK_ERR', '');
+  } catch (e) { P.setProperty('CUST_BK_ERR', day + ' ' + String(e.message || e).slice(0, 200)); }
+}
 function cust(reqText, P) {
   var req = JSON.parse(reqText);
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
@@ -2288,6 +2306,10 @@ function cust(reqText, P) {
     var ss = custBook(P), lock = null;
     if (op === 'post' || op === 'void' || op === 'setopen' || op === 'delcust') { lock = LockService.getScriptLock(); lock.waitLock(15000); }
     try {
+      if (lock) custBackup(P, ss);
+      // 20 Nov 2026: what only the owner phone may do is now refused HERE, not only hidden in the app - changing a balance by an "… adjust" line,
+      // changing an opening balance, deleting a customer, deleting a line that another phone made.
+      var NOOWN = 'only the owner phone can do this (owner password entered on it)';
       var L = custLoad(ss), key = custKey(req.name);
       if (op === 'names') return out({ ok: true, names: L.cs.map(function (c) { return c.name; }).sort() });
       if (op === 'get') {
@@ -2305,6 +2327,9 @@ function cust(reqText, P) {
         if (!key) return out({ ok: false, error: 'no customer name' });
         var id = String(req.id || '').slice(0, 80), type = ['inv', 'rv', 'adj'].indexOf(req.type) >= 0 ? req.type : '';
         if (!id || !type) return out({ ok: false, error: 'bad request' });
+        if (/^adj:/.test(id) && !owner) {      // a staff phone (or an old copy of the app): the line is left out, the answer stays ok so its receipt still goes
+          var b0 = custBal(L, key); return out({ ok: true, skipped: true, name: b0 ? b0.name : String(req.name), bal: b0 ? b0.bal : 0, n: b0 ? b0.n : 0 });
+        }
         var now = new Date().toISOString(), made = false;
         if (!L.cs.some(function (c) { return c.key === key; })) {          // first time: what he typed becomes the opening balance
           L.C.appendRow([key, String(req.name).trim().replace(/\s+/g, ' ').slice(0, 80), String(custNum(req.open)), String(req.date || now.slice(0, 10)), now, String(req.by || '').slice(0, 40)]);
@@ -2320,10 +2345,12 @@ function cust(reqText, P) {
       }
       if (op === 'void') {
         var hv = L.es.filter(function (e) { return e.id === String(req.id || ''); })[0];
+        if (hv && !owner && String(hv.dev || '') !== String(req.dev || '')) return out({ ok: false, error: NOOWN });   // a phone takes back only its own line (Undo)
         if (hv && !hv.voided) L.E.getRange(hv.row, 13).setValue(new Date().toISOString() + ' ' + String(req.by || '').slice(0, 30));
         var b3 = hv ? custBal(custLoad(ss), hv.key) : null;
         return out({ ok: true, name: b3 && b3.name, bal: b3 && b3.bal });
       }
+      if ((op === 'delcust' || op === 'setopen') && !owner) return out({ ok: false, error: NOOWN });
       if (op === 'delcust') {                // 11 Oct 2026 (Abbas): customers can be deleted; the rows stay in the sheet, marked
         var dc = L.cs.filter(function (x) { return x.key === key; })[0]; if (!dc) return out({ ok: false, error: 'no such customer' });
         var mark = new Date().toISOString() + ' ' + String(req.by || '').slice(0, 30);

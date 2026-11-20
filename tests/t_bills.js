@@ -2,11 +2,11 @@
 const crypto = require('crypto'), F = require('../tools/test/fakes');
 const PW = 'shop-test-pw', props = { MEMO_PASSWORD: PW, SLACK_BOT_TOKEN: 'xoxb-memo-test' };
 const W = F.makeWorld(), relay = F.makeRelay(W, props);
-function fakeSS(){ const sheets = {}; const mk = name => { const rows = []; const sh = { getName: () => name, setName: n => { name = n; return sh; }, appendRow: r => { rows.push(r.map(x => String(x == null ? '' : x))); return sh; }, setFrozenRows: () => sh,
+function fakeSS(){ const sheets = {}; const mk = name => { const rows = []; const sh = { getName: () => name, setName: n => { name = n; return sh; }, appendRow: r => { rows.push(r.map(x => String(x == null ? '' : x))); return sh; }, setFrozenRows: () => sh, clearContents: () => { rows.length = 0; return sh; },
     getRange: (a, b, c, d) => { if (typeof a === 'string') return { setNumberFormat: () => {} }; const r0 = a - 1, c0 = b - 1; return { setValue: v => { rows[r0][c0] = String(v); }, setValues: vs => { vs.forEach((vr, i) => { rows[r0 + i] = rows[r0 + i] || []; vr.forEach((v, j) => { rows[r0 + i][c0 + j] = String(v == null ? '' : v); }); }); }, setNumberFormat: () => {} }; },
     getDataRange: () => ({ getDisplayValues: () => rows.map(r => r.slice()) }), getLastRow: () => rows.length }; return sh; };
   const ss = { getId: () => 'ss1', getName: () => 'fake', getUrl: () => 'http://x', getSheets: () => Object.values(sheets), getSheetByName: n => sheets[n] || null, insertSheet: n => (sheets[n] = mk(n)) }; sheets.Sheet1 = mk('Sheet1'); return ss; }
-const SS = {}; relay.ctx.SpreadsheetApp = { openById: id => SS[id], create: () => { const ss = fakeSS(); SS.ss1 = ss; return ss; } };
+const SS = {}; relay.ctx.SpreadsheetApp = { openById: id => SS[id], create: nm => { const ss = fakeSS(); if (/BACKUP/.test(String(nm))) { ss.getId = () => 'bk1'; SS.bk1 = ss; } else SS.ss1 = ss; return ss; } };
 const call = (dev, o) => { const req = JSON.stringify(Object.assign({ t: Date.now(), dev, by: 'T' }, o)); return JSON.parse(relay.post(JSON.stringify({ job: 'bills', req, sig: crypto.createHmac('sha256', PW).update(req).digest('hex') }))); };
 const list = () => call('phA', { op: 'list' }).bills || [];
 const out = [];

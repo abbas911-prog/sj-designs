@@ -38,8 +38,9 @@ body.speaking .orb i{background:var(--b);animation:pulse .35s ease-in-out infini
 #talk{width:56px;height:56px;border-radius:50%;border:0;background:var(--g);color:#06101a;font-size:24px;flex:0 0 auto;touch-action:none;user-select:none;-webkit-user-select:none}
 #talk:active,#talk.on{background:#86efac;transform:scale(1.08)}
 #send{width:44px;height:44px;border-radius:50%;border:0;background:var(--b);color:#06101a;font-size:18px;flex:0 0 auto}
-#setup{position:fixed;inset:0;background:rgba(6,16,26,.96);display:none;flex-direction:column;justify-content:center;padding:24px;gap:10px}
+#setup{position:fixed;inset:0;background:rgba(6,16,26,.96);display:none;flex-direction:column;justify-content:flex-start;padding:24px;gap:10px;overflow-y:auto;z-index:20}
 #setup.show{display:flex}
+#setup select{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(127,152,179,.4);background:#0d1f31;color:var(--fg);font-size:15px}#setup #v_test{color:var(--fg)}#setup #s_x{align-self:flex-end;background:transparent;color:var(--fg);border:1px solid rgba(127,152,179,.4);padding:6px 14px}
 #setup input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(127,152,179,.4);background:#0d1f31;color:var(--fg);font-size:15px}
 #setup button{padding:12px;border-radius:10px;border:0;background:var(--g);color:#06101a;font-weight:700;font-size:16px}
 #setup p{color:var(--dim);font-size:14px;margin:4px 0}
@@ -57,6 +58,7 @@ body.speaking .orb i{background:var(--b);animation:pulse .35s ease-in-out infini
   <button id="talk" type="button" aria-label="Hold to talk">🎤</button>
 </div>
 <div id="setup">
+  <button id="s_x" type="button">✕ Close</button>
   <h2 style="margin:0 0 6px">Connect to the PC</h2>
   <p><b>Deep mode only</b> (optional): the PHONE LINK the PC bridge prints (https://…trycloudflare.com). Fast mode needs only the two boxes below.</p>
   <input id="s_url" type="url" placeholder="https://xxxx.trycloudflare.com" inputmode="url">
@@ -67,6 +69,16 @@ body.speaking .orb i{background:var(--b);animation:pulse .35s ease-in-out infini
   </div>
   <button id="s_ok" type="button">Connect</button>
   <p id="s_err" style="color:var(--r)"></p>
+  <!-- 20 Nov 2026 (Abbas: "I don't like the robotic voice of Jarvis"): the natural voice is set up right here; before, Jarvis fell back to the phone's own voice without saying why -->
+  <h2 style="margin:18px 0 6px">Voice</h2>
+  <p id="v_now">Checking the voice…</p>
+  <p>For a natural, human voice paste ONE key here (it is kept in your Assistant script, never on this phone): an <b>OpenAI</b> key (platform.openai.com → API keys) or an <b>ElevenLabs</b> key (elevenlabs.io → API keys). Cost: a few dirhams a month.</p>
+  <select id="v_kind"><option value="openai">OpenAI</option><option value="eleven">ElevenLabs</option></select>
+  <select id="v_voice"><option value="">Voice: default (deep, calm)</option><option value="ash">Ash — warm man</option><option value="onyx">Onyx — deep man</option><option value="echo">Echo — light man</option><option value="sage">Sage — calm woman</option><option value="coral">Coral — friendly woman</option><option value="nova">Nova — bright woman</option></select>
+  <input id="v_key" type="password" placeholder="Paste the key (sk-…)" autocomplete="off">
+  <button id="v_ok" type="button">Save &amp; hear it</button>
+  <button id="v_test" type="button" style="background:transparent;border:1px solid currentColor">🔊 Test the voice now</button>
+  <p id="v_err" style="color:var(--fg)"></p>
 </div>
 <script>
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -100,12 +112,16 @@ function unlockAudio(){ if (!AUD) { AUD = new Audio(); try { AUD.play().catch(fu
 function clean(t){ return String(t).replace(/\[\[file:[^\]]+\]\]/g, ' ').replace(/```[\s\S]*?```/g, ' ').replace(/[*_#`>|•→↪✓⚠✨🟢📎🎤📷🗓]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500); }
 function say(t, cb){ var txt = clean(t); if (!txt) { cb && cb(); return; }
   state('speaking', 'Speaking…');
-  if (TTS && AS_URL && PW && AUD) { signed(AS_URL, { op: 'tts', text: txt }, 30000).then(function(r){ if (!r.ok || !r.b64) return fallback();
+  if (TTS && AS_URL && PW && AUD) { signed(AS_URL, { op: 'tts', text: txt }, 30000).then(function(r){ if (!r.ok || !r.b64) { VWHY = r.error || 'no answer'; return fallback(); } VWHY = '';
       var done = false, fin = function(){ if (done) return; done = true; state('', ''); cb && cb(); };
       try { AUD.onended = fin; AUD.onerror = fin; AUD.src = 'data:audio/mpeg;base64,' + r.b64; var p = AUD.play(); if (p && p.catch) p.catch(fin); } catch(e){ fin(); } }); return; }
   fallback();
-  function fallback(){ try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(txt); var L = speechSynthesis.getVoices(), v = L.filter(function(x){ return /en-(US|GB)/.test(x.lang) && /premium|enhanced|natural|siri|google/i.test(x.name); })[0] || L.filter(function(x){ return /en-(US|GB)/.test(x.lang); })[0]; if (v) u.voice = v; u.onend = u.onerror = function(){ state('', ''); cb && cb(); }; speechSynthesis.speak(u); } catch(e){ state('', ''); cb && cb(); } }
+  function fallback(){ try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(txt); var L = speechSynthesis.getVoices(), v = L.filter(function(x){ return /en-(US|GB)/.test(x.lang) && /premium|enhanced|natural|siri|google/i.test(x.name); })[0] || L.filter(function(x){ return /en-(US|GB)/.test(x.lang); })[0]; if (v) u.voice = v; u.onend = u.onerror = function(){ state('', ''); cb && cb(); }; speechSynthesis.speak(u); if (VWHY && !VTOLD) { VTOLD = 1; $('st').textContent = 'Phone voice in use (' + (/no voice key/.test(VWHY) ? 'no voice key yet' : VWHY) + ') — tap ⚙︎ → Voice for the natural one.'; } } catch(e){ state('', ''); cb && cb(); } }
 }
+var VWHY = '', VTOLD = 0;
+function playB64(b64){ unlockAudio(); try { AUD.src = 'data:audio/mpeg;base64,' + b64; var p = AUD.play(); if (p && p.catch) p.catch(function(){}); } catch(e){} }
+function voiceNow(kind){ $('v_now').innerHTML = kind ? 'Voice now: <b>' + (kind === 'eleven' ? 'ElevenLabs' : 'OpenAI') + ' ✓</b> — the natural voice.' : 'Voice now: <b>the phone\'s own voice</b> (robotic) — no voice key saved yet.'; if (kind) $('v_kind').value = kind; voiceOpts(); }
+function voiceOpts(){ $('v_voice').hidden = $('v_kind').value !== 'openai'; $('v_key').placeholder = $('v_kind').value === 'openai' ? 'Paste the OpenAI key (sk-…)' : 'Paste the ElevenLabs key'; }
 var MODE = ls('jv_mode') || 'cloud', HIST = [];
 async function ask(text){ text = String(text || '').trim(); if (!text || BUSY) return;
   if (MODE === 'pc' && !BR) { setup('Deep mode needs the PC link — or switch to Fast.'); return; }
@@ -146,6 +162,7 @@ $('txt').addEventListener('keydown', function(e){ if (e.key === 'Enter') { unloc
 // ---- setup ----
 function setup(err){ $('s_url').value = BR; $('s_err').textContent = err || ''; $('s_asurl').value = AS_URL; $('s_aspw').value = PW; $('setup').classList.add('show'); }
 $('gear').onclick = function(){ setup(); };
+$('s_x').onclick = function(){ if (AS_URL && PW) $('setup').classList.remove('show'); else $('s_err').textContent = 'Fill the Assistant link and password first.'; };
 $('s_ok').onclick = async function(){ var u = $('s_url').value.trim().replace(/\/+$/, '');
   var au = $('s_asurl').value.trim(), ap = $('s_aspw').value;
   if (!au || !/\/exec$/.test(au)) { $('s_err').textContent = 'The Assistant link (ending in /exec) is needed.'; return; }
@@ -157,8 +174,22 @@ $('s_ok').onclick = async function(){ var u = $('s_url').value.trim().replace(/\
     var r = await signed(u, { op: 'ping', rid: rid() }, 15000); if (!r.ok) { $('s_err').textContent = 'Fast mode is ready. PC link: ' + (r.error || 'no answer') + ' — leave it empty if the PC is off.'; BR = ''; ls('jv_bridge', null); return; }
     BR = u; ls('jv_bridge', BR); } else { BR = ''; ls('jv_bridge', null); }
   $('setup').classList.remove('show'); modeDraw(); state('', 'Ready. Hold the green button and talk, or type.'); };
+$('v_kind').onchange = voiceOpts;
+$('v_ok').onclick = async function(){ unlockAudio(); var key = $('v_key').value.trim(), kind = $('v_kind').value, voice = kind === 'openai' ? $('v_voice').value : '';
+  if (!(AS_URL && PW)) { $('v_err').textContent = 'Fill the Assistant link and password above first, then Connect.'; return; }
+  $('v_err').textContent = 'Checking…';
+  if (!key) { if (!voice) { $('v_err').textContent = 'Paste the key first.'; return; }      // only the voice changed
+    var r0 = await signed(AS_URL, { op: 'ttsvoice', voice: voice }, 20000); if (!r0.ok) { $('v_err').textContent = r0.error || 'not saved'; return; }
+    var t0 = await signed(AS_URL, { op: 'tts', text: 'Hello Abbas. This is my new voice.' }, 30000); if (t0.ok && t0.b64) { playB64(t0.b64); $('v_err').textContent = 'Voice changed ✓'; } else $('v_err').textContent = t0.error || 'no answer'; return; }
+  var r = await signed(AS_URL, { op: 'ttskey', kind: kind, key: key, voice: voice }, 40000);
+  if (!r.ok) { $('v_err').textContent = 'Not accepted: ' + (r.error || 'no answer'); return; }
+  $('v_key').value = ''; TTS = 'x'; ls('as2_tts', TTS); VWHY = ''; VTOLD = 0; voiceNow(r.tts); $('v_err').textContent = 'Saved ✓ — this is how Jarvis sounds now.'; if (r.b64) playB64(r.b64); };
+$('v_test').onclick = async function(){ unlockAudio(); if (!(AS_URL && PW)) { $('v_err').textContent = 'Connect first.'; return; } $('v_err').textContent = 'Asking for the voice…';
+  var r = await signed(AS_URL, { op: 'tts', text: 'Hello Abbas. This is how I sound.' }, 30000);
+  if (r.ok && r.b64) { playB64(r.b64); $('v_err').textContent = 'That is the natural voice ✓'; } else $('v_err').textContent = /no voice key/.test(r.error || '') ? 'No voice key saved yet — paste one above. Until then Jarvis uses the phone\'s robotic voice.' : 'The natural voice did not work: ' + (r.error || 'no answer'); };
 async function hello(){ modeDraw();
   if (!(AS_URL && PW)) { setup(); return; }
+  signed(AS_URL, { op: 'hello' }, 20000).then(function(h){ if (h && h.ok) { voiceNow(h.tts || ''); if (!TTS) { TTS = 'x'; ls('as2_tts', TTS); } } else $('v_now').textContent = 'Voice: could not check (' + ((h && h.error) || 'no answer') + ').'; });
   if (MODE === 'pc') { if (!BR) { state('', 'Deep mode: no PC link — tap ⚙︎, or tap the badge for Fast.'); return; }
     var r = await signed(BR, { op: 'ping', rid: rid() }, 12000); if (!r.ok) state('', 'PC not reachable (' + (r.error || 'offline') + ') — tap the badge for Fast mode.'); else state('', 'Deep mode: PC connected.'); }
 }

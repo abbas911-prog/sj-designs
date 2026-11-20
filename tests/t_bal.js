@@ -17,8 +17,9 @@ async function phone(br, URL0, owner) {
   pg.on('dialog', d => { dl.push(d.message()); d.accept(); });
   await pg.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) }));
   await pg.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());
+  await pg.route(/costs\.enc|costing\.enc/, r => r.fulfill({ status: 404, body: 'nf' }));
   await pg.addInitScript(() => { window.navigator.canShare = () => false; });
-  await pg.goto(URL0); await pg.evaluate(a => { localStorage.clear(); localStorage.setItem('sj_memo_pw', a[0]); localStorage.setItem('sj_me', a[1] ? 'Abbas' : 'Muhammad'); if (a[1]) localStorage.setItem('sj_owner', '1'); }, [PW, owner]); await pg.reload();
+  await pg.goto(URL0); await pg.evaluate(a => { localStorage.clear(); localStorage.setItem('sj_memo_pw', a[0]); localStorage.setItem('sj_me', a[1] ? 'Abbas' : 'Muhammad'); if (a[1]) { localStorage.setItem('sj_owner', '1'); localStorage.setItem('sj_owner_pin', '1234'); localStorage.setItem('sj_costs', JSON.stringify({ d: '2026-11-20', c: { '18634': 100 } })); } }, [PW, owner]); await pg.reload();
   await pg.waitForSelector('#feed .design', { timeout: 15000 });
   await pg.click('#nav button[data-nv="more"]'); await pg.click('.mgrid button[data-go="bills"]'); await pg.waitForTimeout(300);
   await pg.click('#mode button[data-m="rv"]'); await pg.waitForTimeout(400);

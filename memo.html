@@ -969,7 +969,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-20a';
+var VER = '2026-11-20b';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -3435,7 +3435,7 @@ function lev(a, b){ var m = [], i, j; for (i = 0; i <= a.length; i++) { m[i] = [
 // OK on the question that followed. Now a known customer's old balance always comes from the app: on a staff phone the box is locked and
 // follows the shop; only the owner phone can type another figure (and is still asked). A draft's balance is read again when it is opened.
 function custLive(k, d){ return !d.saved && !d.editing && d.status !== 'included' && !(d.status === 'sent' && k !== 'inv'); }   // a bill not yet on the statement
-function custLocked(k, d){ return !isOwner() && !!(d.cust && d.cust.found); }
+function custLocked(k, d){ return !isBoss() && !!(d.cust && d.cust.found); }   // isBoss = the phone that can prove it to the relay (owner password entered)
 function custHint(){
   var k = B.mode, d = B[k], el = $('bcust'); if (!el || !d || k === 'pv') return;
   var oi0 = document.querySelector('#bform input[data-k="open"]'); if (oi0) { var lk0 = custLocked(k, d); oi0.readOnly = lk0; oi0.classList.toggle('olk', lk0); }
