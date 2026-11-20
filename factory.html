@@ -273,7 +273,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-10-31b';
+var VER = '2026-11-20a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -708,14 +708,18 @@ $('shrows').onclick = async function(e){ var b = e.target.closest('button[data-k
   b.disabled = true; b.textContent = '⏳'; var j = await call(req); if (!j.ok) { toast('✗ ' + j.error); sheetDraw(c); return; }
   c._sheet = j.sheet || c._sheet; if (k === 'due') c.due = j.due || ''; toast('✓ ' + (SHK[k] ? SHK[k][1] : k === 'due' ? (c.due ? 'Due date set' : 'Due date removed') : 'First piece approved') + ' · সেভ হয়েছে');
   sheetDraw(c); workDraw(c); if (k === 'due') { paintCard(); draw(true); } TH.force = true; thPull(); };
+var WKB = {}, workDraw0 = workDraw;                             // rows with a request on its way stay locked through every redraw
+workDraw = function(c){ workDraw0(c); if (c) Array.prototype.forEach.call(document.querySelectorAll('#wkrows .wr'), function(r){ if (WKB[c.id + '|' + r.dataset.w]) Array.prototype.forEach.call(r.querySelectorAll('button[data-k]'), function(x){ x.disabled = true; }); }); };
 $('wkrows').onclick = async function(e){ var b = e.target.closest('button[data-k]'); if (!b || !open) return; var row = b.closest('.wr'), w = row.dataset.w, k = b.dataset.k, pcs = Math.floor(+row.querySelector('input').value || 0), c = open;
   var rem = Math.floor(+b.dataset.g || 0);
   if (k === 'out' && !(pcs > 0)) pcs = rem;                      // All done with the box empty = everything still in his hands came back
   if (k === 'part' && !rvOk('part')) { toast('⚠ The relay needs its new code first (relaycode.html) · রিলে আপডেট দরকার'); return; }
   if (k === 'part' && !(pcs > 0 && pcs < rem)) { row.querySelector('input').focus(); toast(pcs >= rem ? 'That is all of it - press All done · সব হলে All done চাপুন' : 'How many pieces are done? · কত পিস হয়েছে?'); return; }   // 23 Oct 2026 (Abbas): "20 given, 2 done, 18 remaining"
   if (!(pcs > 0) && !(k === 'out' && rem === 0)) { row.querySelector('input').focus(); toast(k === 'in' ? 'How many pieces? · কত পিস?' : 'How many pieces came back? · কত পিস ফেরত এল?'); return; }
+  if (k === 'out' && rem > 0 && pcs > rem && !confirm(w + ' holds ' + rem + ' pcs - ' + pcs + ' done?\n' + w + ' · হাতে ' + rem + ' পিস - ' + pcs + ' পিস হয়েছে?')) return;   // 20 Nov 2026: more done than he was given (27 of 26) - ask once
+  var bk = c.id + '|' + w; if (WKB[bk]) return; WKB[bk] = 1;      // 20 Nov 2026: a row redrawn while the relay was still answering (10+ s) showed a fresh button - a second tap gave the pieces twice (SJ-49712: 81 + 81)
   b.disabled = true; b.textContent = '⏳';
-  var j = await call({ op: 'workset', card: c.id, worker: w, pcs: pcs, kind: k, who: WHO });
+  var j; try { j = await call({ op: 'workset', card: c.id, worker: w, pcs: pcs, kind: k, who: WHO }); } finally { delete WKB[bk]; }
   if (!j.ok) { toast('✗ ' + j.error); b.disabled = false; workDraw(c); return; }
   toast(k === 'in' ? '▶ ' + w + ' · ' + pcs + ' pcs · timer started · টাইমার চালু' : k === 'part' ? '✓ ' + w + ' · ' + pcs + ' pcs done · ' + (rem - pcs) + ' still in hand · হাতে' : '■ ' + w + ' · batch done · হয়ে গেছে');
   var wk = c._wk = c._wk || {}, bs = wk[w.toUpperCase()] = wk[w.toUpperCase()] || [];   // on screen at once; the relay's copy comes right after
@@ -1285,7 +1289,13 @@ async function outOne(it){
   if (!it.fids) { var big = tot > UPLIM, wl = null; if (big) { UPNOW = { size: tot, t0: Date.now(), cname: it.cname, kind: it.files.some(function(x){ return x.kind === 'video'; }) ? 'video' : 'file' }; outPaint(); try { if (navigator.wakeLock) wl = await navigator.wakeLock.request('screen'); } catch(e){} }   // 31 Oct 2026: a big upload keeps the screen awake and says "keep the app open" (Android stopped it when the phone slept)
     try { it.fids = await slackDirect(it.files, null, it.card); it.derr = ''; oput(it); } catch(e){ it.fids = null; it.derr = upWhy(e, tot); }
     finally { if (big) { UPNOW = null; try { if (wl) wl.release(); } catch(e){} outPaint(); } } }      // originals straight to Slack (full quality)
-  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.fset || 0) }); if (j.ok || tot > UPLIM) return j; if (/not_found|invalid|upload/i.test(j.error || '')) { it.fids = null; it.fset = (it.fset || 0) + 1; oput(it); } }   // 20 Oct 2026: the same once-only id on every retry of the same upload (it used to change each try, so an answer lost on a weak line could post the photos twice)
+  if (it.fids) { var j = await call({ op: 'up', card: it.card, fids: it.fids, sizes: it.files.map(function(x){ return x.blob.size; }), labels: labels, text: it.text, who: it.who, rid: it.id + 'd' + (it.fset || 0) }); if (j.ok) return j;
+    // 20 Nov 2026: a BIG file whose bytes never reached Slack kept its dead upload ticket for ever - every "Try again" only asked Slack about the
+    // same broken upload and the video was never sent again (the line that throws the ticket away sat AFTER the return for big files). Now a
+    // refusal that the relay or Slack really answered (not a lost line) throws the ticket away, so the next try uploads the file again.
+    var lost = /check the internet|still sending/i.test(j.error || ''); it.fbad = lost ? (it.fbad || 0) : (it.fbad || 0) + 1;
+    if (!lost && (/not_found|invalid|upload|incomplete|file/i.test(j.error || '') || it.fbad >= 2)) { it.fids = null; it.fbad = 0; it.fset = (it.fset || 0) + 1; oput(it); }
+    if (tot > UPLIM) return j; }   // 20 Oct 2026: the same once-only id on every retry of the same upload (it used to change each try, so an answer lost on a weak line could post the photos twice)
   if (tot > UPLIM) return { ok: false, error: it.derr || 'Slack did not take the upload (' + mb(tot) + ')' };
   var files = []; for (var i = 0; i < it.files.length; i++) files.push({ name: it.files[i].name, b64: await b64of(it.files[i].blob) });
   return await call({ op: 'up', card: it.card, files: files, text: it.text, who: it.who, rid: it.id + 'b' });
@@ -1661,7 +1671,7 @@ if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } 
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, hotq: function(){ return HOTQ; }, mvr: function(){ return MVR; }, wdTxt: wdTxt, outRun: outRun };
+window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, hotq: function(){ return HOTQ; }, mvr: function(){ return MVR; }, wdTxt: wdTxt, wkd: function(){ if (open) workDraw(open); }, outRun: outRun };
 })();
 </script>
 </body></html>

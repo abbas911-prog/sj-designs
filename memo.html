@@ -423,7 +423,7 @@ header{backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate
 .ccrow .t{flex:1;min-width:0}.ccrow b{display:block;font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ccrow small{display:block;color:var(--mute);font-size:12.5px}.ccrow .tm{font-size:12px;color:var(--mute);white-space:nowrap}
 .ccm{max-width:84%;margin:0 0 8px;background:#fff;font-size:15px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;}
 .ccm.me{margin-left:auto;border-color:#e6d3ac;}.ccm .w{font-weight:700;color:#8E6C33;}.ccm .d{display:block;font-size:11px;color:var(--mute);margin-top:3px;text-align:right}
-.ccm.memo{max-width:100%;background:#fffaf0;border:1.5px solid var(--gold)}.ccm.pend{opacity:.6}
+.ccm.memo{max-width:100%;background:#fffaf0;border:1.5px solid var(--gold)}.ccm.pend{opacity:.6}.ccwhy{display:block;margin-top:5px;font-size:12px;color:#b3261e;white-space:normal}.ccoact{display:flex;gap:6px;margin-top:7px}.ccoact button{border:0;border-radius:999px;padding:7px 11px;font:inherit;font-size:12.5px;font-weight:800;background:#fff;color:#222;box-shadow:0 0 0 1px rgba(0,0,0,.18)}.ccoact button[data-ccdrop]{color:#b3261e}.ccm.pend:has(.ccoact){opacity:1}
 .ccf{display:inline-flex;align-items:center;gap:6px;margin:6px 6px 0 0;border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13.5px;font-weight:700;background:#fff;color:var(--ink);cursor:pointer}
 .ccimg{display:block;max-width:230px;max-height:260px;border-radius:10px;margin-top:6px;background:#f1ebe0;min-width:120px;min-height:90px}
 #cccomp{display:flex;align-items:flex-end;background:#fff;}#cccomp[hidden]{display:none}
@@ -969,12 +969,13 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-20c';
+var VER = '2026-11-20d';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
   var t = await r.text(), m = t.match(/var VER = '([^']+)'/), ne = r.headers.get('ETag') || '';
-  if (m && m[1] > VER) { saveWork();   // only ever forward: a stale cached copy must not send the phone back to an older version
+  if (m && m[1] > VER) { if (ccBusy()) { setTimeout(checkVer, 30000); return; }   // 20 Nov 2026: never reload over a picked photo / a video on its way
+    saveWork();   // only ever forward: a stale cached copy must not send the phone back to an older version
     location.replace(location.pathname + '?v=' + encodeURIComponent(m[1])); return; }
   if (ne && m && m[1] === VER) ls('sj_memo_etag', ne); } catch(e){} }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) { checkVer(); setTimeout(custFlush, 1500); } });
@@ -2737,6 +2738,7 @@ $('ffbody').addEventListener('click', async function(e){
     ffLoad(); }
 });
 window.__ff = { FF: FF, ffText: ffText };
+window.__cco = { CCO: function(){ return CCO; }, run: function(n){ return ccORun(n); }, checkVer: function(){ return checkVer(); } };   // tests (t_ccfiles)
 
 // ----- ORDER TRACKER (Abbas, 10 Oct 2026): every order memo sent becomes an order with 4 steps that staff tick off.
 // 1 memo sent to godown · 2 goods arrived in office · 3 packed completely · 4 sent = bill made + delivery note + sent to customer.
@@ -3830,12 +3832,12 @@ function ccCuEnd(){ CC.cu = null; $('cccu').hidden = true; ccList(); }
 // ---- one customer
 function ccChat(name, root, ch){ CC.bell = false; if (!ch || ch === 'direct') { CC.ord = null; $('cc').classList.remove('isord'); } CC.ch = ch || ''; CC.cur = name; CC.root = root || ''; CC.msgs = []; CC.sig = ''; CC.drawn = false; CC.touched = Date.now(); var oo = CC.root ? (CC.orders || []).filter(function(x){ return x.ts === CC.root; })[0] : null;
   $('cct').innerHTML = (CC.ch === 'direct' ? '💬 ' + esc(ccK(ccWho()).indexOf('ABBAS') === 0 ? name : 'Abbas') : esc(name)) + '<small>' + (CC.ch === 'direct' ? 'direct chat · only you two see it' : CC.ord ? '📦 order of ' + ordWhen(CC.ord.created) + ' · ' + (CC.ch === 'godown' ? '#godown' : '#customer') : CC.root ? '📄 order of ' + ccDay(CC.root) + ((oo && oo.head) ? ' · ' + esc(oo.head) : '') : 'general chat · #customer') + (CC.es ? ' · ⚡ live' : '') + '</small>';
-  $('cccomp').hidden = CC.ord && !CC.root; ccPend(); var mk = ccCurK(), mc = CC.mc[mk]; if (mc) { CC.msgs = mc.slice(); CC.sig = JSON.stringify(mc.map(function(m){ return m.ts; })); }
+  $('cccomp').hidden = CC.ord && !CC.root; ccPend(); var mk = ccCurK(), mc = CC.mc[mk]; if (mc) { CC.msgs = mc.slice(); CC.sig = JSON.stringify(mc.map(function(m){ return m.ts; })); } ccOSync();
   if (CC.ord || mc) ccDraw(); else $('ccbody').innerHTML = '<div class="ffempty">Loading… · جارٍ التحميل</div>'; if (CC.root || !CC.ord) ccPull(false); clearInterval(CC.timer); CC.timer = setInterval(function(){ if (!document.hidden && CC.cur) ccPull(false); }, CC.es ? 15000 : 6000); }
 async function ccPull(fresh){ var name = CC.cur, root = CC.root, ch = CC.ch, ck = ccCurK(); if (!name) return; if (CC.busyK === ck) { CC.again = true; return; } if (CC.ord && !root) return; CC.busyK = ck; var look = ccLooking();   // 20 Oct 2026: only the SAME chat waits; another chat is read at once
   try { var j = await ccCall({ op: 'thread', name: name, root: root || undefined, ch: ch || undefined, fresh: fresh ? 1 : 0, look: look ? 1 : 0 }, 2); if (!j.ok) throw new Error(j.error);
     if (Array.isArray(j.msgs)) { delete CC.mc[ck]; CC.mc[ck] = j.msgs; cKeepMc(); } if (CC.cur !== name || CC.root !== root || CC.ch !== ch) return;   // the user moved on: kept for next time
-    var sig = JSON.stringify(j.msgs.map(function(m){ return m.ts; })); if (sig !== CC.sig) { CC.sig = sig; CC.msgs = j.msgs.concat(CC.msgs.filter(function(m){ return m.rid && !m.sent && CCO.q.some(function(it){ return it.rid === m.rid; }); })); ccDraw(); }   // keep lines still in the outbox
+    var sig = JSON.stringify(j.msgs.map(function(m){ return m.ts; })); if (sig !== CC.sig) { CC.sig = sig; CC.msgs = j.msgs.concat(CC.msgs.filter(function(m){ return m.rid && !m.sent && CCO.q.some(function(it){ return it.rid === m.rid; }); })); ccOSync(); ccDraw(); }   // keep lines still in the outbox
     if (look && CC.un[ck]) { CC.tot -= CC.un[ck].n; if (CC.tot < 0) CC.tot = 0; delete CC.un[ck]; ccBadge(); } }
   catch(e){ if (ccCurK() === ck && !CC.msgs.length) $('ccbody').innerHTML = (CC.ord ? ordPanel(CC.ord) : '') + '<div class="stk bad">' + esc(e.message) + (/missing_scope/.test(e.message) ? '<br><br>Until the Slack scopes are added, messages you send still reach #customer, but the chat cannot be read here.' : '') + '</div>'; }
   finally { if (CC.busyK === ck) { CC.busyK = ''; if (CC.again) { CC.again = false; if (ccCurK() === ck) setTimeout(function(){ ccPull(true); }, 300); } } } }
@@ -3849,7 +3851,9 @@ function ccColor(name){ var k = ccK(name); if (!k) return 'p7'; if (k === ccK(cc
 function ccBubble(m, my){ var mine = !m.memo && my && ccK(m.who) === my;
   var fs = (m.files || []).map(function(f){ return /^image\//.test(f.type) ? '<img class="ccimg" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" alt="">' : '<span class="ccf" data-f="' + esc(f.id) + '" data-nm="' + esc(f.name) + '" data-t="' + esc(f.type) + '">' + (/pdf/.test(f.type + f.name) ? '📄 ' + esc(f.name.slice(0, 40)) : /^audio/.test(f.type) || /^voice-/i.test(f.name) ? '▶ voice note · tap to play' : /^video/.test(f.type) ? '🎬 video · tap to play' : '📎 ' + esc(f.name.slice(0, 40))) + '</span>'; }).join('');
   var who = m.memo ? (CC.ch === 'godown' ? '📦 GODOWN PICK LIST' : '📄 ORDER MEMO') : '<i>' + esc(String(m.who || '?').trim().charAt(0).toUpperCase()) + '</i>' + esc(m.who);
-  return '<div class="ccm' + (m.memo ? ' memo' : ' ' + ccColor(m.who)) + (mine ? ' me' : '') + (m.pend ? ' pend' : '') + '"><span class="w">' + who + ' <em>' + (m.pend ? (m.err ? '⚠ retrying…' : '🕓 sending…') : ccWhen(m.ts)) + '</em></span>' + esc(fs && /^\s*📎\s*$/.test(m.text || '') ? '' : m.text || '') + fs + '</div>'; }
+  return '<div class="ccm' + (m.memo ? ' memo' : ' ' + ccColor(m.who)) + (mine ? ' me' : '') + (m.pend ? ' pend' : '') + '"><span class="w">' + who + ' <em>' + (m.pend ? (m.note === 'stuck' ? '⚠ not sent' : m.note === 'up' ? '📤 uploading…' : m.err ? '⚠ retrying…' : '🕓 sending…') : ccWhen(m.ts)) + '</em></span>' + esc(fs && /^\s*📎\s*$/.test(m.text || '') ? '' : m.text || '') + fs +
+    (m.pend && m.note === 'up' ? '<small class="ccwhy">Keep the app open until it is sent · أبقِ التطبيق مفتوحاً حتى يُرسل</small>' : m.pend && m.err ? '<small class="ccwhy">' + esc(String(m.err).slice(0, 160)) + '</small>' : '') +
+    (m.pend && m.note === 'stuck' ? '<span class="ccoact"><button type="button" data-ccretry="' + esc(m.rid) + '">↻ Try again · حاول مجدداً</button><button type="button" data-ccdrop="' + esc(m.rid) + '">✕ Remove · حذف</button></span>' : '') + '</div>'; }
 function ordPanelSig(o){ return JSON.stringify([ordPvSrc(o).length, (o.items || []).map(function(x){ return x.no + x.c; }).join(), o.id, o.name, o.steps, o.bill, o.gts, o.cts, ordUn(o, 'g'), ordUn(o, 'c'), CC.ch, !!CC.ordOpen, !!CC.fullOpen, isBoss(), (o.items || []).length, o.pcs, o.dl]); }
 // 20 Oct 2026 (Abbas: "the chats are not smooth"): a redraw now keeps every bubble that did not change (no flicker, photos and players stay)
 // and keeps the order panel at the top unless something in it changed. Each person has their own colour (ccColor).
@@ -3862,7 +3866,7 @@ function ccDraw(){ var b = $('ccbody'), atEnd = b.scrollHeight - b.scrollTop - b
   var oldM = {}; b.querySelectorAll('.ccm[data-key]').forEach(function(e){ oldM[e.dataset.key] = e; });
   CC.msgs.forEach(function(m){ var d = new Date(+m.ts * 1000), day = d.toDateString();
     if (day !== lastDay) { lastDay = day; var n = new Date(), dd = document.createElement('div'); dd.className = 'ccday'; dd.innerHTML = '<span>' + (day === n.toDateString() ? 'Today' : d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + (d.getFullYear() !== n.getFullYear() ? ' ' + d.getFullYear() : '')) + '</span>'; frag.appendChild(dd); }
-    var key = m.rid || m.ts, bsig = key + '|' + (m.pend ? 1 : 0) + '|' + (m.err || '') + '|' + (m.text || '').length + '|' + (m.files || []).length + '|' + m.who + '|' + CC.ch, e = oldM[key];
+    var key = m.rid || m.ts, bsig = key + '|' + (m.pend ? 1 : 0) + '|' + (m.err || '') + '|' + (m.note || '') + '|' + (m.text || '').length + '|' + (m.files || []).length + '|' + m.who + '|' + CC.ch, e = oldM[key];
     if (e && e.dataset.bsig === bsig) { frag.appendChild(e); delete oldM[key]; return; }
     var t = document.createElement('div'); t.innerHTML = ccBubble(m, my); e = t.firstChild; e.dataset.key = key; e.dataset.bsig = bsig; frag.appendChild(e); fresh.push(e); });
   b.innerHTML = ''; b.appendChild(frag);
@@ -3882,7 +3886,7 @@ async function ccOpenFile(id, nm, el){ var old = el.textContent; if (el.tagName 
 $('ccfile').onchange = function(){ ccAdd(this.files); this.value = ''; };
 $('cccam').onchange = function(){ ccAdd(this.files); this.value = ''; };
 // 17 Oct 2026 (Abbas): "in the customer chat there is no option of speaking on the mic — give me mic, copy and paste, video and photo"
-function ccAdd(list){ var big = 0; Array.from(list || []).forEach(function(f){ if (f.size > 18 * 1024 * 1024) { big++; return; } CC.files.push(f); }); ccPend(); if (big) alert(big + ' file' + (big > 1 ? 's are' : ' is') + ' over 18 MB — too big to send from here · الملف كبير جدًا'); }
+function ccAdd(list){ var big = 0; Array.from(list || []).forEach(function(f){ if (f.size > 1000 * 1024 * 1024) { big++; return; } CC.files.push(f); }); ccPend(); if (big) alert(big + ' file' + (big > 1 ? 's are' : ' is') + ' over 1 GB — Slack does not take it · الملف كبير جدًا'); }   // 20 Nov 2026: was 18 MB (most phone videos are bigger)
 $('cctxt').addEventListener('paste', function(e){ var it = (e.clipboardData || {}).items || [], fs = []; Array.from(it).forEach(function(x){ var f = x.kind === 'file' ? x.getAsFile() : null; if (f) fs.push(f.name && f.name !== 'image.png' ? f : new File([f], 'pasted-' + Date.now() + (/png/.test(f.type) ? '.png' : /^image/.test(f.type) ? '.jpg' : /^video/.test(f.type) ? '.mp4' : ''), { type: f.type })); }); if (fs.length) { e.preventDefault(); ccAdd(fs); } });
 $('ccpaste').onclick = async function(){ try { if (!navigator.clipboard || !navigator.clipboard.read) throw 0; var its = await navigator.clipboard.read(), fs = [];
     for (var i = 0; i < its.length; i++) { var ty = its[i].types.filter(function(t){ return /^(image|video|audio)\//.test(t); })[0]; if (ty) { var bl = await its[i].getType(ty); fs.push(new File([bl], 'pasted-' + Date.now() + (/png/.test(ty) ? '.png' : /^image/.test(ty) ? '.jpg' : /^video/.test(ty) ? '.mp4' : '.m4a'), { type: ty })); } else if (its[i].types.indexOf('text/plain') >= 0) { var tx = await (await its[i].getType('text/plain')).text(); $('cctxt').value += tx; } }
@@ -3904,25 +3908,82 @@ function ccPend(){ $('ccpend').innerHTML = CC.files.map(function(f, i){ return '
 $('ccpend').onclick = function(e){ var x = e.target.closest('[data-i]'); if (!x) return; CC.files.splice(+x.dataset.i, 1); ccPend(); };
 $('cctxt').addEventListener('input', function(){ this.style.height = 'auto'; this.style.height = Math.min(120, this.scrollHeight) + 'px'; });
 // ---- OUTBOX: Send never waits. The message is kept on this phone and posted in the background; a lost answer is retried with the same
-// once-only id, so it can never post twice. Files are not kept across a reload (too big for localStorage) - only the text lines are.
-var CCO = { q: [], busy: false }; try { CCO.q = JSON.parse(ls('sj_cc_outbox') || '[]'); } catch(e){ CCO.q = []; }
+// once-only id, so it can never post twice.
+// 20 Nov 2026 (Abbas: "sometimes the videos and photos we send on the chats do not go through — Muhammad complained many times"). A photo / video
+// (1) was refused over 18 MB, (2) went as ONE huge block of text through Google, which often dropped it, (3) lived only in the page's memory —
+// an app update (the app reloads itself when it comes back to the front, e.g. from the gallery) or the phone closing the page lost it without
+// a word, (4) held back every line written after it, and (5) was thrown away after 6 tries. Now the file goes straight from the phone to Slack
+// in its original quality (the relay only hands out the upload address and posts the message), is kept on the phone (IndexedDB) until Slack
+// has it, never blocks the lines after it, and a file that keeps failing stays in its chat with the reason and Try again / Remove.
+var CCO = { q: [], busy: false, db: null }; try { CCO.q = JSON.parse(ls('sj_cc_outbox') || '[]'); } catch(e){ CCO.q = []; }
 function ccOSave(){ try { ls('sj_cc_outbox', JSON.stringify(CCO.q.filter(function(x){ return !x.files; }).map(function(x){ return { name: x.name, root: x.root || '', ch: x.ch || '', text: x.text, who: x.who, rid: x.rid, ts: x.ts, tries: 0 }; }))); } catch(e){} }
-async function ccORun(){ if (CCO.busy || !CCO.q.length || !navigator.onLine) return; CCO.busy = true; var it = CCO.q[0];
-  try { var j;
-    if (it.files) { var fs = []; for (var i = 0; i < it.files.length; i++) fs.push({ name: it.files[i].name || 'photo.jpg', b64: await new Promise(function(ok, no){ var r = new FileReader(); r.onload = function(){ ok(String(r.result).split(',')[1] || ''); }; r.onerror = no; r.readAsDataURL(it.files[i]); }) });
-      j = await ccCall({ op: 'up', name: it.name, root: it.root || undefined, ch: it.ch || undefined, text: it.text, who: it.who, files: fs, rid: it.rid }, 2); }
-    else j = await ccCall({ op: 'post', name: it.name, root: it.root || undefined, ch: it.ch || undefined, text: it.text, who: it.who, rid: it.rid }, 2);
-    if (!j.ok) throw new Error(j.error);
-    CCO.q.shift(); ccOSave(); it.done = true; if (ccIsCur(it)) { CC.msgs.forEach(function(m){ if (m.rid === it.rid) { m.pend = false; m.sent = true; } }); ccDraw(); ccPull(true); } CC.list = null;
-  } catch(e){ it.tries = (it.tries || 0) + 1; it.err = e.message; var hard = /empty|no customer|too big|wrong password|no file/.test(e.message);
-    if (hard || it.tries >= 6) { CCO.q.shift(); ccOSave(); if (ccIsCur(it)) { CC.msgs = CC.msgs.filter(function(m){ return m.rid !== it.rid; }); ccDraw(); $('cctxt').value = it.text || $('cctxt').value; if (it.files) { CC.files = it.files.slice(); ccPend(); } } alert('Not sent to ' + it.name + ' — ' + e.message); }
-    else if (ccIsCur(it)) { CC.msgs.forEach(function(m){ if (m.rid === it.rid) m.err = e.message; }); ccDraw(); } }
-  finally { CCO.busy = false; if (CCO.q.length) setTimeout(ccORun, Math.min(60000, 3000 * (CCO.q[0].tries || 0) + 1500)); } }
-setInterval(ccORun, 10000); window.addEventListener('online', ccORun);
+function ccODb(){ return new Promise(function(ok){ if (CCO.db) return ok(CCO.db); try { var r = indexedDB.open('sj-cc-outbox', 1); r.onupgradeneeded = function(){ r.result.createObjectStore('q', { keyPath: 'rid' }); }; r.onsuccess = function(){ CCO.db = r.result; ok(CCO.db); }; r.onerror = function(){ ok(null); }; } catch(e){ ok(null); } }); }
+async function ccOPut(it){ if (!it.files) return; var d = await ccODb(); if (!d) return; try { d.transaction('q', 'readwrite').objectStore('q').put({ name: it.name, root: it.root || '', ch: it.ch || '', text: it.text, who: it.who, rid: it.rid, ts: it.ts, files: it.files, fids: it.fids || null, fset: it.fset || 0, tries: it.tries || 0, stuck: !!it.stuck, err: it.err || '' }); } catch(e){} }
+async function ccODel(rid){ var d = await ccODb(); if (!d) return; try { d.transaction('q', 'readwrite').objectStore('q').delete(rid); } catch(e){} }
+async function ccOLoad(){ var d = await ccODb(); if (!d) return; await new Promise(function(ok){ try { var rq = d.transaction('q').objectStore('q').getAll(); rq.onsuccess = function(){ (rq.result || []).forEach(function(x){ if (x && x.rid && Array.isArray(x.files) && x.files.length && !CCO.q.some(function(y){ return y.rid === x.rid; })) CCO.q.push(x); }); CCO.q.sort(function(a, b){ return +a.ts - +b.ts; }); ok(); }; rq.onerror = function(){ ok(); }; } catch(e){ ok(); } }); if (ccOSync()) ccDraw(); ccORun(); }
+function ccMb(n){ return n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function ccOSize(it){ return (it.files || []).reduce(function(a, f){ return a + (f.size || 0); }, 0); }
+function ccOLabel(it){ return (it.text || '') + (it.files ? (it.text ? '\n' : '') + it.files.map(function(f){ return '📎 ' + (f.name || 'file'); }).join(' · ') : ''); }
+// every line of the open chat that is still in the outbox has its bubble (also after the app was closed and opened again), with its state
+function ccOSync(){ if (!CC.cur) return false; var ch = false; CCO.q.forEach(function(it){ if (!ccIsCur(it)) return; var m = CC.msgs.filter(function(x){ return x.rid === it.rid; })[0];
+    if (!m) { m = { ts: it.ts, who: it.who, rid: it.rid, text: ccOLabel(it), pend: true }; CC.msgs.push(m); ch = true; }
+    var note = it.stuck ? 'stuck' : it.upn ? 'up' : '', er = it.err || ''; if ((m.err || '') !== er || (m.note || '') !== note) { m.err = er; m.note = note; ch = true; } }); return ch; }
+function ccOGone(it){ var k = CCO.q.indexOf(it); if (k >= 0) CCO.q.splice(k, 1); ccOSave(); if (it.files) ccODel(it.rid); }
+function ccBusy(){ try { return !!(CC.files.length || CCR.r || CCO.q.some(function(x){ return x.files && !x.stuck; })); } catch(e){ return false; } }   // a photo / video picked, being recorded or on its way
+async function ccFastKey(){ var b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('sjfast|' + token)); return Array.from(new Uint8Array(b)).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join(''); }
+// one file -> Slack's own upload address. Through the fast lane when there is one (it hands back Slack's real answer, so a refusal is known
+// with its reason); else, or when the fast lane cannot be reached, straight from the browser (Slack's answer cannot be read there - the relay
+// checks every byte arrived before it posts the message).
+async function ccPutSlack(url, f, fast){
+  var ac = window.AbortController ? new AbortController() : null, tm = ac ? setTimeout(function(){ ac.abort(); }, 20 * 60000) : null, slow = function(){ return ac && ac.signal.aborted; };
+  try {
+    if (fast && f.size <= 95 * 1024 * 1024) { var wj = null;
+      try { var wr = await fetch(fast.replace(/\/+$/, '') + '/up?u=' + encodeURIComponent(url) + '&k=' + (await ccFastKey()), { method: 'POST', body: f, headers: { 'Content-Type': f.type || 'application/octet-stream' }, signal: ac ? ac.signal : undefined }); try { wj = await wr.json(); } catch(e2){} }
+      catch(e1){ if (slow()) throw new Error('the upload took longer than 20 min (' + ccMb(f.size) + ')'); }
+      if (wj && wj.ok) return;
+      if (wj && !wj.auth && (wj.status || wj.error)) throw new Error(wj.error ? String(wj.error) : 'Slack answered ' + wj.status + (wj.text ? ' ' + String(wj.text).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) : '')); }
+    var fd = new FormData(); fd.append('filename', f, f.name || 'file');
+    try { await fetch(url, { method: 'POST', mode: 'no-cors', body: fd, signal: ac ? ac.signal : undefined }); }
+    catch(e3){ throw new Error(slow() ? 'the upload took longer than 20 min (' + ccMb(f.size) + ')' : 'the line dropped during the upload (' + ccMb(f.size) + ') · انقطع الاتصال أثناء الرفع'); }
+  } finally { clearTimeout(tm); } }
+async function ccSendFiles(it){
+  var base = { name: it.name, root: it.root || undefined, ch: it.ch || undefined, text: it.text, who: it.who }, tot = ccOSize(it);
+  if (!it.fids && !it.old) {
+    var u = await ccCall({ op: 'upurl', files: it.files.map(function(f){ return { name: f.name || 'photo.jpg', size: f.size }; }) }, 2);
+    if (!u.ok && /does not know/.test(u.error || '')) it.old = 1;            // the relay has not been updated yet: the old way below (18 MB at most)
+    else if (!u.ok || !Array.isArray(u.urls) || u.urls.length !== it.files.length) throw new Error(u.error || 'no upload address');
+    else { var wl = null; it.upn = 1; if (ccOSync()) ccDraw();
+      try { if (tot > 18 * 1024 * 1024 && navigator.wakeLock) wl = await navigator.wakeLock.request('screen'); } catch(e){}      // a big upload keeps the screen awake (Android stops it when the phone sleeps)
+      try { for (var i = 0; i < it.files.length; i++) await ccPutSlack(u.urls[i].url, it.files[i], u.fast || ''); } finally { it.upn = 0; try { if (wl) wl.release(); } catch(e){} }
+      it.fids = u.urls.map(function(x){ return x.id; }); ccOPut(it); } }
+  if (it.fids) { var j = await ccCall(Object.assign({ op: 'up', fids: it.fids, sizes: it.files.map(function(f){ return f.size; }), rid: it.rid + 'd' + (it.fset || 0) }, base), 2);
+    if (!j.ok) { it.fids = null; it.fset = (it.fset || 0) + 1; ccOPut(it); }      // the relay / Slack really refused these uploads (a lost line throws instead): the next try uploads the file again
+    return j; }
+  if (it.files.some(function(f){ return f.size > 18 * 1024 * 1024; })) throw new Error('too big for the relay that is running now (' + ccMb(tot) + ') — Abbas must deploy the new relay version');
+  var fs = []; for (var k = 0; k < it.files.length; k++) fs.push({ name: it.files[k].name || 'photo.jpg', b64: await new Promise(function(ok, no){ var r = new FileReader(); r.onload = function(){ ok(String(r.result).split(',')[1] || ''); }; r.onerror = no; r.readAsDataURL(it.files[k]); }) });
+  return await ccCall(Object.assign({ op: 'up', files: fs, rid: it.rid }, base), 2); }
+// the sender walks the WHOLE outbox: each line has its own next-try time, so a video that will not go never holds back the lines after it
+async function ccORun(now){ if (CCO.busy || !CCO.q.length || !token || (now !== true && !navigator.onLine)) return; CCO.busy = true;   // !token: not signed in yet - nothing is sent (or thrown away) before the password is there
+  try { var list = CCO.q.slice();
+    for (var i = 0; i < list.length; i++) { var it = list[i]; if (CCO.q.indexOf(it) < 0) continue; if (now !== true && (it.stuck || (it.next || 0) > Date.now())) continue;
+      try { var j = it.files ? await ccSendFiles(it) : await ccCall({ op: 'post', name: it.name, root: it.root || undefined, ch: it.ch || undefined, text: it.text, who: it.who, rid: it.rid }, 2);
+        if (!j.ok) throw new Error(j.error);
+        ccOGone(it); it.done = true; if (ccIsCur(it)) { CC.msgs.forEach(function(m){ if (m.rid === it.rid) { m.pend = false; m.sent = true; m.err = ''; m.note = ''; } }); ccDraw(); ccPull(true); } CC.list = null;
+      } catch(e){ it.tries = (it.tries || 0) + 1; it.err = String((e && e.message) || e || 'not sent'); it.upn = 0; var hard = /empty|no customer|too big|wrong password|no file|noaccess/.test(it.err);
+        if (hard || (!it.files && it.tries >= 6)) { ccOGone(it); if (ccIsCur(it)) { CC.msgs = CC.msgs.filter(function(m){ return m.rid !== it.rid; }); ccDraw(); $('cctxt').value = it.text || $('cctxt').value; if (it.files) { CC.files = it.files.slice(); ccPend(); } } alert('Not sent to ' + it.name + ' — ' + it.err); }
+        else { if (it.files && it.tries >= 6) it.stuck = true;                 // a file is never thrown away: it waits in its chat for Try again / Remove
+          it.next = Date.now() + Math.min(60000, 3000 * it.tries + 1500); ccOPut(it); if (ccOSync()) ccDraw(); } } } }
+  finally { CCO.busy = false; var w = CCO.q.filter(function(x){ return !x.stuck; }).map(function(x){ return x.next || 0; }); clearTimeout(CCO.t); if (w.length) CCO.t = setTimeout(ccORun, Math.max(1000, Math.min.apply(null, w) - Date.now())); } }
+setInterval(ccORun, 10000); window.addEventListener('online', ccORun); setTimeout(ccOLoad, 800);
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && navigator.onLine && CCO.q.some(function(x){ return x.stuck; })) { CCO.q.forEach(function(x){ if (x.stuck) { x.stuck = false; x.tries = 3; x.next = 0; } }); if (ccOSync()) ccDraw(); ccORun(); } });   // back in the app: a stuck file gets another go
+window.addEventListener('pagehide', function(){ CCO.q.forEach(function(x){ ccOPut(x); }); });
+$('ccbody').addEventListener('click', function(e){ var b = e.target.closest('[data-ccretry],[data-ccdrop]'); if (!b) return; e.stopPropagation(); var rid = b.dataset.ccretry || b.dataset.ccdrop, it = CCO.q.filter(function(x){ return x.rid === rid; })[0]; if (!it) return;
+  if (b.dataset.ccdrop) { if (!confirm('Remove this message? It will not be sent. · حذف هذه الرسالة؟ لن تُرسل')) return; ccOGone(it); CC.msgs = CC.msgs.filter(function(m){ return m.rid !== rid; }); ccDraw(); return; }
+  it.stuck = false; it.tries = 3; it.next = 0; it.err = ''; if (ccOSync()) ccDraw(); ccORun(true); });
 $('ccsend').onclick = function(){ var name = CC.cur, txt = $('cctxt').value.trim(), files = CC.files.slice(); if (!name || (!txt && !files.length)) return; if (CC.ord && !CC.root) { alert('Start the chat for this order first (button above).'); return; }
   var who = ccWho(), rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), it = { name: name, root: CC.root || '', ch: CC.ch || '', text: txt, who: who, rid: rid, ts: String(Date.now() / 1000), files: files.length ? files : null, tries: 0 };
-  CC.msgs.push({ ts: it.ts, who: who, rid: rid, text: txt + (files.length ? (txt ? '\n' : '') + files.map(function(f){ return '📎 ' + f.name; }).join(' · ') : ''), pend: true }); ccDraw(); $('ccbody').scrollTop = 1e9; $('cctxt').value = ''; $('cctxt').style.height = ''; CC.files = []; ccPend();
-  CCO.q.push(it); ccOSave(); ccORun(); };
+  CC.msgs.push({ ts: it.ts, who: who, rid: rid, text: ccOLabel(it), pend: true }); ccDraw(); $('ccbody').scrollTop = 1e9; $('cctxt').value = ''; $('cctxt').style.height = ''; CC.files = []; ccPend();
+  CCO.q.push(it); ccOSave(); ccOPut(it); ccORun(); };
 // ---- 🔔 phone notifications through the free ntfy app (same way as the factory app): a secret topic made on this phone, kept by the relay for this person
 $('ccbell').onclick = ccBellOpen;
 function bst(t){ var e = $('bellst'); if (e) e.textContent = t; }   // 28 Oct 2026: the relay's answer may come back after the screen was left

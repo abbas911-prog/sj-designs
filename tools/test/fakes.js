@@ -51,7 +51,8 @@ function handle(W, method, url, body, headers) {
   if (u.hostname === 'slack.com') return slack(W, u.pathname.replace(/^\/api\//, ''), A, J);
   if (u.hostname === 'files.slack.com') {
     const m = u.pathname.match(/^\/(dl|thumb|upload)\/(\w+)/); if (!m) return { status: 404, body: Buffer.from('no'), type: 'text/plain' };
-    if (m[1] === 'upload') { if (W.uploadRefuse) return { status: 413, body: Buffer.from('<html>Request Entity Too Large</html>'), type: 'text/html' }; const f = W.slack.files[m[2]]; if (f) { f.uploaded = Buffer.isBuffer(body) ? body.length : typeof body === 'string' ? body.length : f.size; f.size = f.want || f.size; } return { status: 200, body: Buffer.from('OK'), type: 'text/plain' }; }
+    if (m[1] === 'upload') { if (W.uploadLose > 0) { W.uploadLose--; W.uploadLost = (W.uploadLost || 0) + 1; return { status: 200, body: Buffer.from('OK'), type: 'text/plain' }; }   // the answer looks fine but the bytes never arrived (20 Nov 2026)
+      if (W.uploadRefuse) return { status: 413, body: Buffer.from('<html>Request Entity Too Large</html>'), type: 'text/html' }; const f = W.slack.files[m[2]]; if (f) { f.uploaded = Buffer.isBuffer(body) ? body.length : typeof body === 'string' ? body.length : f.size; f.size = f.want || f.size; } return { status: 200, body: Buffer.from('OK'), type: 'text/plain' }; }
     const f = W.slack.files[m[2]]; if (!f) return { status: 404, body: Buffer.from('no'), type: 'text/plain' };
     return { status: 200, body: f.bytes || Buffer.alloc(f.size || 10, 7), type: f.mimetype };
   }
@@ -118,6 +119,7 @@ function slack(W, m, A, J) {
       return J({ ok: true, upload_url: 'https://files.slack.com/upload/' + id, file_id: id }); }
     case 'files.completeUploadExternal': { const chs = C ? [C] : String(A.channels || '').split(',').filter(Boolean).map(id => S.ch[id]);   // one channel, or `channels` = a comma list (new design order)
       if (!chs.length || chs.some(x => !x)) return J({ ok: false, error: 'channel_not_found' }); const ids = JSON.parse(A.files).map(x => x.id), files = ids.map(id => S.files[id]).filter(Boolean), sh = {};
+      if (files.some(f => !f.size && !f.uploaded)) return J({ ok: false, error: 'file_not_found' });   // like Slack: a ticket whose bytes never arrived cannot be posted
       chs.forEach(c => { const r = postSlack(W, c.id, { text: A.initial_comment || '', bot_id: 'B1', thread_ts: A.thread_ts || undefined, files }); sh[c.id] = [{ ts: r.ts }]; }); return J({ ok: true, files: files.map(f => ({ id: f.id, shares: { public: sh } })) }); }
   }
   return J({ ok: false, error: 'fake slack: unknown method ' + m });
@@ -135,7 +137,8 @@ function makeRelay(W, props) {
   const cache = { get: cget, put: (k, v, ttl) => { if (String(v).length > 100000) throw new Error('Argument too large: value'); CACHE.set(k, { v: String(v), exp: Date.now() + (ttl || 600) * 1000 }); },
     putAll: (o, ttl) => Object.keys(o).forEach(k => cache.put(k, o[k], ttl)), getAll: ks => { const r = {}; ks.forEach(k => { const v = cget(k); if (v != null) r[k] = v; }); return r; }, remove: k => CACHE.delete(k), removeAll: ks => ks.forEach(k => CACHE.delete(k)) };
   const props_ = { getProperty: k => (k in P ? P[k] : null), setProperty: (k, v) => { if (String(v).length > 9000) throw new Error('property too large ' + k); P[k] = String(v); return props_; }, deleteProperty: k => { delete P[k]; return props_; }, getProperties: () => Object.assign({}, P), setProperties: o => { Object.assign(P, o); return props_; } };
-  const fetchSync = (url, o) => { o = o || {}; let body = o.payload; if (body && typeof body === 'object' && body._b) body = body._b;
+  const fetchSync = (url, o) => { o = o || {}; if (String(url).length > 2082) throw new Error('Limit Exceeded: URLFetch URL Length.');   // like Google (20 Nov 2026)
+    let body = o.payload; if (body && typeof body === 'object' && body._b) body = body._b;
     if (W.fastSync && /\.workers\.dev\//.test(url)) { const r = W.fastSync.call(url, String(body)); (r.pushes || []).forEach(x => { W.pushes = W.pushes || []; W.pushes.push({ url: x.url, headers: x.headers, body: Buffer.from(x.body) }); }); W.log.push(['fetch', 'POST', url]);
       return { getResponseCode: () => r.status, getContentText: () => r.text, getBlob: () => blob(Buffer.from(r.text), 'application/json'), getHeaders: () => ({}) }; }
     const r = handle(W, o.method || 'get', url, body, o.headers || {}); W.log.push(['fetch', (o.method || 'get').toUpperCase(), url.replace(/token=[^&]+/, 'token=…').slice(0, 140)]);

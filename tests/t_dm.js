@@ -61,4 +61,19 @@ W5.slack.ch['C0BP6DSUHSA'] = { id: 'C0BP6DSUHSA', name: 'customer', member: true
 const call5 = o => { const req = JSON.stringify(Object.assign({ t: Date.now() }, o)); return JSON.parse(relay5.post(JSON.stringify({ job: 'cchat', req, sig: crypto.createHmac('sha256', PW).update(req).digest('hex') }))); };
 const l5 = call5({ op: 'list', who: 'Abbas' });
 ok('a bot that may not see private channels says so (groups:read)', l5.ok && /groups:read/.test(l5.dmerr || ''));
+// 20 Nov 2026: a photo / video goes phone -> Slack's upload address; the relay hands out the address (upurl) and posts the message (up + fids)
+const uu = call({ op: 'upurl', who: 'Muhammad', files: [{ name: 'VID 1.mp4', size: 30 * 1024 * 1024 }, { name: 'IMG_2.jpg', size: 5 * 1024 * 1024 }] });
+ok('upurl: one Slack upload address per file', uu.ok && uu.urls.length === 2 && uu.urls.every(x => /^https:\/\/files\.slack\.com\/upload\//.test(x.url) && /^F[A-Z0-9]+$/.test(x.id)) && uu.fast === '');
+const lostUp = call({ op: 'up', ch: 'direct', root: rootM, name: 'Muhammad', who: 'Muhammad', text: 'the cutting video', fids: uu.urls.map(x => x.id), sizes: [30 * 1024 * 1024, 5 * 1024 * 1024], rid: 'f1d0' });
+ok('up before the bytes arrived is refused (nothing posted)', !lostUp.ok && !dmch.msgs.some(x => (x.files || []).length));
+F.handle(W, 'POST', uu.urls[0].url, Buffer.alloc(30 * 1024 * 1024, 1)); F.handle(W, 'POST', uu.urls[1].url, Buffer.alloc(5 * 1024 * 1024, 2));
+const goodUp = call({ op: 'up', ch: 'direct', root: rootM, name: 'Muhammad', who: 'Muhammad', text: 'the cutting video', fids: uu.urls.map(x => x.id), sizes: [30 * 1024 * 1024, 5 * 1024 * 1024], rid: 'f1d1' });
+const fm = dmch.msgs.filter(x => (x.files || []).length);
+ok('up with fids posts ONE message with both files in the person\'s thread (30 MB video included)', goodUp.ok && goodUp.files === 2 && fm.length === 1 && fm[0].thread_ts === rootM && fm[0].files.length === 2 && fm[0].files[0].size === 30 * 1024 * 1024 && /\*Muhammad:\* the cutting video/.test(fm[0].text));
+ok('the same send asked twice posts once', call({ op: 'up', ch: 'direct', root: rootM, name: 'Muhammad', who: 'Muhammad', text: 'the cutting video', fids: uu.urls.map(x => x.id), sizes: [30 * 1024 * 1024, 5 * 1024 * 1024], rid: 'f1d1' }).ok && dmch.msgs.filter(x => (x.files || []).length).length === 1);
+const uc = call({ op: 'upurl', who: 'Abbas', files: [{ name: 'p.jpg', size: 1000 }] }); F.handle(W, 'POST', uc.urls[0].url, Buffer.alloc(1000, 3));
+const cu = call({ op: 'up', name: 'Nasir Libya', who: 'Abbas', text: '', fids: [uc.urls[0].id], sizes: [1000], rid: 'f2d0' }), cch = W.slack.ch['C0BP6DSUHSA'];
+ok('a customer chat takes fids too', cu.ok && cch.msgs.some(x => (x.files || []).length === 1));
+const ob = call({ op: 'up', name: 'Nasir Libya', who: 'Abbas', text: 'old way', files: [{ name: 'o.jpg', b64: Buffer.alloc(2000, 4).toString('base64') }], rid: 'f3' });
+ok('the old base64 way still works', ob.ok && cch.msgs.filter(x => (x.files || []).length === 1).length === 2);
 out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); if (!out.every(o => o[1])) { console.log(JSON.stringify({ a, m, i, r, p1, m2, th, a2 }).slice(0, 2500)); process.exit(1); }

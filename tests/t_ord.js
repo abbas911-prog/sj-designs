@@ -19,6 +19,7 @@ function relay(b) { const req = JSON.parse(b.req);
     if (req.op === 'thread' && req.ch === 'godown') return { ok: true, root: req.root, msgs: [{ ts: req.root, root: true, memo: true, who: 'Godown pick list', text: 'Pick: SJ-18634', files: [] }].concat(posts.filter(p => p.ch === 'godown').map(p => ({ ts: p.ts, who: p.who, text: p.text, files: [] }))) };
     if (req.op === 'thread') return { ok: true, root: req.root, msgs: [{ ts: req.root, memo: true, who: 'Order memo', text: 'memo', files: [] }].concat(posts.filter(p => p.ch !== 'godown' && p.root === req.root).map(p => ({ ts: p.ts, who: p.who, text: p.text, files: [] }))) };
     if (req.op === 'post' || req.op === 'up') { posts.push({ ch: req.ch || '', root: req.root, who: req.who, text: req.text, op: req.op, files: (req.files || []).length, ts: String(Date.now() / 1000) }); return { ok: true, ts: '1' }; }
+    if (req.op === 'upurl') return { ok: false, error: 'the relay does not know "upurl" yet - Abbas must deploy the new version' };   // a relay from before 20 Nov 2026: the photo goes the old way
     if (req.op === 'findroot') return { ok: true, gts: req.name === '#50 Matiullah naif' ? '1760800000.5' : '', cts: '' };
     if (req.op === 'mkroot') { slack.push({ mk: req.ch, text: req.text }); return { ok: true, ts: '1760900000.9' }; }
   }

@@ -78,7 +78,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-11-20b';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-11-20c';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -507,10 +507,10 @@ function facTrelloMoves(P, wtok, FT) {
       .sort(function (x, y) { return Date.parse(x.date) - Date.parse(y.date); }).forEach(function (a) {
         if (Date.parse(a.date) > Date.parse(newest)) newest = a.date;
         if (c.get('FMV_D_' + a.id)) return; c.put('FMV_D_' + a.id, '1', 86400);
-        if (/^(FINISH|FINISH SAMPLES)$/.test(String(a.data.listAfter.name || ''))) { try { facReport(P, wtok, FT, a.data.card.id, false); } catch (e) {} }   // 21 Oct 2026: report once, whoever moved it
+        if (/^(FINISH|FINISH SAMPLES)$/.test(String(facLn(a.data.listAfter) || ''))) { try { facReport(P, wtok, FT, a.data.card.id, false); } catch (e) {} }   // 21 Oct 2026: report once, whoever moved it
         var cid = a.data.card.id, t = Date.parse(a.date); if ((app[cid] || []).some(function (d) { return d >= t - 5000 && d <= t + 120000; })) return;   // the app (or the stock job) already wrote it
         var th = P.getProperty('FTH_' + cid); if (!th) return; th = JSON.parse(th);
-        var who = String(((a.memberCreator || {}).fullName) || 'Trello').slice(0, 40), to = String(a.data.listAfter.name || '?'), fr = String((a.data.listBefore || {}).name || '');
+        var who = String(((a.memberCreator || {}).fullName) || 'Trello').slice(0, 40), to = String(facLn(a.data.listAfter) || '?'), fr = String(facLn(a.data.listBefore) || '');
         var pr = slackApi(FT, 'chat.postMessage', { channel: th.ch, thread_ts: th.ts, text: '→ *' + to + '* · ' + who + ' · in Trello' + (fr ? ' (from ' + fr + ')' : '') + ' · 🕒 ' + facWhen(t) });   // 24 Oct 2026 (Abbas): the time with every move
         if (pr.ok) { try { facNudge(P, cid); facNudge(P, 'list:' + cid); } catch (e) {} }
       });
@@ -664,7 +664,7 @@ function facDailyText(P, rtok, when) {
   if (pres.length || abs.length) L.push('📅 *Present ' + pres.length + '* · *Absent ' + abs.length + '*' + (abs.length ? ' (' + abs.join(', ') + ')' : '') + (lateL.length ? ' · ⏰ late: ' + lateL.map(function (n) { return n + ' ' + att[n.toUpperCase()].late + ' min'; }).join(', ') : '') + ' · উপস্থিত ' + pres.length + ' · অনুপস্থিত ' + abs.length);
   var noOut = names.filter(function (n) { var r = att[n.toUpperCase()]; return r && r.in && !r.out; }); if (noOut.length) L.push('⏱ *No Out yet · আউট হয়নি:* ' + noOut.join(', '));
   try { var day0 = new Date(Date.parse(ymd + 'T00:00:00Z') - 4 * 3600000).toISOString(), mv = trApi('get', '/boards/' + FAC.BOARD + '/actions', { filter: 'updateCard:idList', since: day0, limit: 200 }, rtok) || [], byL = {}, seen = {};
-    mv.forEach(function (a) { var d = a.data || {}, c = d.card || {}; if (!d.listAfter || seen[c.id]) return; seen[c.id] = 1; (byL[d.listAfter.name] = byL[d.listAfter.name] || []).push(sj(c.name)); });
+    mv.forEach(function (a) { var d = a.data || {}, c = d.card || {}; if (!d.listAfter || seen[c.id]) return; seen[c.id] = 1; var ln = facLn(d.listAfter); (byL[ln] = byL[ln] || []).push(sj(c.name)); });
     var ks = Object.keys(byL); if (ks.length) L.push('🔀 *Moved today · আজ সরানো:* ' + ks.map(function (k) { return k + ' ← ' + byL[k].join(', '); }).join(' · ')); } catch (e) {}
   var late = rep.late || [], over = late.filter(function (x) { return x.days < 0; }), soon = late.filter(function (x) { return x.days >= 0; });
   if (over.length) L.push('⏰ *Late · দেরি:* ' + over.map(function (x) { return sj(x.name) + ' (' + (-x.days) + ' d)'; }).join(' · '));
@@ -684,11 +684,14 @@ function facDailyTick(P) {                                       // from the 1-m
   P.setProperty('FAC_DAILY_LAST', ymd); try { facDaily(P, ''); } catch (e) {}
 }
 function facWkLine(w, b) { var r = b.out ? ' · ' + facWorkDur(facWorkMs(b.in, b.out)) + ' · ≈' + facRate(b.d, facWorkMs(b.in, b.out)) + '/day' : ' · since ' + facDay(b.in); return w + ' ' + (b.out ? b.d + ' pcs ✓' : b.g + ' pcs ⏳') + r; }
+// the list's name as the app knows it (by its id) - a title somebody changed by accident in Trello ("IRON/CHECKINGnm", "IN LINE (2)/jnum") no
+// longer shows in reports and chat lines, and a renamed FINISH still gets its report (20 Nov 2026)
+function facLn(l) { l = l || {}; var k = l.id ? FAC.LISTS.filter(function (x) { return x[1] === l.id; })[0] : null; return k ? k[0] : (l.name || null); }
 function facStages(acts, card) {                               // time in each list, from the card's birth to its (last) arrival in READY / READY 2
   var born = null, cur = null, evs = [];
   acts.forEach(function (a) { var d = a.data || {};
-    if (/^(createCard|copyCard|moveCardToBoard|convertToCardFromCheckItem)$/.test(a.type)) { if (!born) { born = Date.parse(a.date); cur = (d.list || {}).name || null; } return; }
-    if (a.type === 'updateCard' && d.listAfter) evs.push({ t: Date.parse(a.date), from: (d.listBefore || {}).name || null, to: d.listAfter.name }); });
+    if (/^(createCard|copyCard|moveCardToBoard|convertToCardFromCheckItem)$/.test(a.type)) { if (!born) { born = Date.parse(a.date); cur = facLn(d.list); } return; }
+    if (a.type === 'updateCard' && d.listAfter) evs.push({ t: Date.parse(a.date), from: facLn(d.listBefore), to: facLn(d.listAfter) }); });
   if (!born) born = idTime(card.id); if (evs.length && evs[0].from) cur = evs[0].from;   // Trello's own history wins over the creation note
   if (!cur) cur = '?';
   var FIN = /^(FINISH|FINISH SAMPLES)$/, RDY = /^(READY|READY 2)$/, cut = null, fin = null;
@@ -1630,6 +1633,10 @@ function ownerOk(P, chk) {
 function trApi(method, path, params, tok, body, raw) {
   var q = Object.keys(params || {}).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
   var o = { method: method, muteHttpExceptions: true };
+  // 20 Nov 2026: Google refuses an address longer than ~2,000 characters ("URLFetch URL Length") and every text went IN the address - a
+  // production report with a longer timeline (emoji and Bengali count 9 each) was never written on its Trello card (16 of 17 in three weeks),
+  // silently. A write whose text is long now goes in the request body (Trello reads both).
+  if (body === undefined && !/^get$/i.test(method) && q.length > 1200) { var fp = {}; Object.keys(params).forEach(function (k) { fp[k] = String(params[k]); }); o.payload = fp; q = ''; }
   if (body !== undefined) { if (raw) o.payload = body; else { o.contentType = 'application/json'; o.payload = JSON.stringify(body); } }
   var r = UrlFetchApp.fetch('https://api.trello.com/1' + path + '?key=' + TKEY + '&token=' + tok + (q ? '&' + q : ''), o), c = r.getResponseCode(), t = r.getContentText();
   if (c >= 300) throw new Error('Trello said ' + c + (c === 401 ? ' (the relay\'s Trello key cannot change cards - add TRELLO_W)' : '') + ': ' + t.slice(0, 120));
@@ -1908,6 +1915,13 @@ function cchat(reqText, P) {
       var dms = [], dmerr = ''; try { dms = dmList(P, tok, who, req.op === 'ping' ? 2 : 4, !!req.fresh); dmerr = String(dmList.err || '').slice(0, 400); } catch (e) { dms = []; dmerr = String(e.message || e).slice(0, 300); }   // 22 Oct 2026: the reason is shown in the app, never swallowed
       var ev = cR.get('CC_EV_AT'); return out({ ok: true, dms: dms, dmerr: dmerr, gun: gun, customers: Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return +b.last - +a.last; }), orders: ords.slice(0, 150), live: ccLive(P), nt: !!ntf[ccWhoKey(who)], ev: !!ev });
     }
+    if (req.op === 'upurl') {                                 // 20 Nov 2026 (Abbas: "the videos and photos we send on the chats do not go through - Muhammad complained many times"):
+      // the phone sends the ORIGINAL file straight to Slack (any size Slack takes) - the relay only hands out the upload address; 'up' with fids then posts the message.
+      var uf = Array.isArray(req.files) ? req.files.slice(0, 10) : []; if (!uf.length) return out({ ok: false, error: 'no file' });
+      var uurls = uf.map(function (f) { var a = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+        payload: { filename: String(f.name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80), length: String(Math.max(1, +f.size || 1)) } }).getContentText()); if (!a.ok) throw new Error(ccErr(a.error)); return { id: a.file_id, url: a.upload_url }; });
+      return out({ ok: true, urls: uurls, fast: P.getProperty('FAC_FAST') || '' });
+    }
     if ((req.ch === 'godown' || req.ch === 'direct') && (req.op === 'thread' || req.op === 'seen' || req.op === 'post' || req.op === 'up')) {
       var gr = String(req.root || '').replace(/[^\d.]/g, ''); if (!gr) return out({ ok: false, error: req.ch === 'direct' ? 'no direct chat yet' : 'no #godown post for this order' });
       var isDm = req.ch === 'direct', XCH = GD_CH, XP = 'G';
@@ -1922,8 +1936,7 @@ function cchat(reqText, P) {
       var gtx = String(req.text || '').slice(0, 3000), gres;
       if (req.op === 'post') { if (!gtx.trim()) return out({ ok: false, error: 'empty' }); var gp = slackApi(tok, 'chat.postMessage', { channel: XCH, thread_ts: gr, text: '*' + who + ':* ' + gtx }); if (!gp.ok) return out({ ok: false, error: ccErr(gp.error) }); gres = { ok: true, ts: gp.ts, root: gr }; }
       else {
-        var gfs = Array.isArray(req.files) ? req.files.slice(0, 10) : [], gids = [], gtot = 0;
-        for (var gi = 0; gi < gfs.length; gi++) { var gb = Utilities.base64Decode(String(gfs[gi].b64 || '')); gtot += gb.length; if (gb.length > 18000000 || gtot > 40000000) return out({ ok: false, error: 'files too big (18 MB each, 40 MB together)' }); gids.push(slackUp(tok, String(gfs[gi].name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80), gb)); }
+        var gids = ccFileIds(tok, req);
         if (!gids.length) return out({ ok: false, error: 'no file' });
         var gj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
           payload: { files: JSON.stringify(gids.map(function (f) { return { id: f }; })), channel_id: XCH, thread_ts: gr, initial_comment: '*' + who + ':* ' + (gtx || '📎') } }).getContentText());
@@ -2001,8 +2014,7 @@ function cchat(reqText, P) {
       var rootTs = oroot || ccRoot(P, tok, nm, k2, cR), res, sk2 = oroot ? 'O' + oroot : k2;
       if (req.op === 'post') { if (!txt.trim()) return out({ ok: false, error: 'empty' }); var pj = slackApi(tok, 'chat.postMessage', { channel: CC_CH, thread_ts: rootTs, text: '*' + who + ':* ' + txt }); if (!pj.ok) return out({ ok: false, error: ccErr(pj.error) }); res = { ok: true, ts: pj.ts, root: rootTs }; }
       else {
-        var fs = Array.isArray(req.files) ? req.files.slice(0, 10) : [], ids = [], tot = 0;
-        for (var i = 0; i < fs.length; i++) { var b = Utilities.base64Decode(String(fs[i].b64 || '')); tot += b.length; if (b.length > 18000000 || tot > 40000000) return out({ ok: false, error: 'files too big (18 MB each, 40 MB together)' }); ids.push(slackUp(tok, String(fs[i].name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80), b)); }
+        var ids = ccFileIds(tok, req);
         if (!ids.length) return out({ ok: false, error: 'no file' });
         var cj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
           payload: { files: JSON.stringify(ids.map(function (f) { return { id: f }; })), channel_id: CC_CH, thread_ts: rootTs, initial_comment: '*' + who + ':* ' + (txt || '📎') } }).getContentText());
@@ -2024,6 +2036,19 @@ function cchat(reqText, P) {
     }
     return out({ ok: false, error: 'the relay does not know "' + req.op + '" yet - Abbas must deploy the new version' });
   } catch (e) { return out({ ok: false, error: String(e.message || e).slice(0, 300) }); }
+}
+// the Slack file ids of a chat 'up' (20 Nov 2026): files the phone already sent straight to Slack (fids - every byte is checked against the
+// size the phone gave before the message is posted), or files that came along as base64 (the older way, 18 MB each)
+function ccFileIds(tok, req) {
+  var pre = Array.isArray(req.fids) ? req.fids.map(function (x) { return String(x).replace(/[^A-Z0-9]/g, ''); }).filter(String).slice(0, 10) : [];
+  if (pre.length) {
+    for (var i = 0; i < pre.length; i++) { var vf = slackApi(tok, 'files.info', { file: pre[i] }, true), vs = vf.ok ? +((vf.file || {}).size || 0) : -1, want = Array.isArray(req.sizes) ? +req.sizes[i] || 0 : 0;
+      if (vf.ok && vs > 0 && want > 0 && vs !== want) throw new Error('upload incomplete (' + vs + ' of ' + want + ' bytes)'); }
+    return pre;
+  }
+  var fs = Array.isArray(req.files) ? req.files.slice(0, 10) : [], ids = [], tot = 0;
+  for (var j = 0; j < fs.length; j++) { var b = Utilities.base64Decode(String(fs[j].b64 || '')); tot += b.length; if (b.length > 18000000 || tot > 40000000) throw new Error('files too big (18 MB each, 40 MB together)'); ids.push(slackUp(tok, String(fs[j].name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80), b)); }
+  return ids;
 }
 function slackUp(tok, name, bytes) {
   var a = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,

@@ -109,6 +109,19 @@ async function suite(fast, browser) {
         }
       } finally { await page.evaluate(() => { window.__f.OUT.length = 0; }); if (await page.locator('#card').isVisible()) { await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000).catch(() => {}); } }
     });
+    await test('a big video whose bytes never reached Slack is uploaded again by itself (not stuck on the dead upload)', async () => {   // 20 Nov 2026
+      await openCardNo(page, '17841'); await until(async () => /cutting started/.test(await page.textContent('#thread')), 10000, 'chat');
+      const all = () => [].concat(...Object.values(W.slack.ch).map(c => c.msgs));
+      W.uploadLose = 1; W.uploadLost = 0;
+      try { await page.setInputFiles('#afiles', { name: 'VID_LOST.mp4', mimeType: 'video/mp4', buffer: Buffer.alloc(19 * 1024 * 1024, 9) }); await page.click('#send');
+        await until(() => all().some(m => (m.files || []).some(f => f.name === 'VID_LOST.mp4')), 60000, 'the video reached Slack on a later try (lost uploads: ' + W.uploadLost + ')');
+      } finally { W.uploadLose = 0; }
+      ok(W.uploadLost === 1, 'the first upload was lost: ' + W.uploadLost);
+      const f = all().map(m => (m.files || []).find(f => f.name === 'VID_LOST.mp4')).find(Boolean); ok(f.size === 19 * 1024 * 1024, 'whole file: ' + f.size);
+      ok(all().filter(m => (m.files || []).some(f => f.name === 'VID_LOST.mp4')).length === 1, 'posted once');
+      await until(() => page.evaluate(() => window.__f.OUT.length === 0), 10000, 'outbox empty');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
+    });
     await test('a big video Slack will not take does not hold back the text messages after it; it can be removed', async () => {   // 30 Oct 2026
       await openCardNo(page, '17841'); await until(async () => /cutting started/.test(await page.textContent('#thread')), 10000, 'chat');
       T.uploadDown = true;
@@ -364,7 +377,7 @@ async function suite(fast, browser) {
       await page.click('#tgx');
       await page.click('#dailynow'); await until(() => W.slack.ch[DM].msgs.some(m => /DAILY CLOSING/.test(m.text || '') && /Abbas \(factory app\)/.test(m.text)), 10000, 'posted in the direct chat');
       // the timer: before 10 pm nothing; after 10 pm once (not twice); switched off -> nothing
-      const n0 = W.slack.ch[DM].msgs.length, ctx = T.relay.ctx, realNow = Date.now, at = h => { const d = new Date(); d.setUTCHours(h - 4, 30, 0, 0); return d.getTime(); };
+      const n0 = W.slack.ch[DM].msgs.length, ctx = T.relay.ctx, realNow = Date.now, at = h => { const d = new Date(realNow() + 4 * 3600000); d.setUTCHours(h, 30, 0, 0); return d.getTime() - 4 * 3600000; };   // h:30 of TODAY IN DUBAI (20 Nov 2026: between 00:00 and 04:00 Dubai the UTC day is still yesterday - the test took Friday's hours on a Saturday)
       delete T.relay.P.FAC_DAILY_LAST;
       const fri = new Date(Date.now() + 4 * 3600000).getUTCDay() === 5, hBefore = fri ? 10 : 15, hClose = fri ? 12 : 22, hAfter = fri ? 13 : 23;   // Friday closes at noon
       Date.now = () => at(hBefore); ctx.facNotifyTick(); ok(W.slack.ch[DM].msgs.length === n0, 'nothing before closing time');
@@ -582,6 +595,34 @@ async function suite(fast, browser) {
       await until(() => W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text)).length === 1, 20000, 'report comment');
       T.relay.cache.remove('FMV_AT'); await page.waitForTimeout(5000);
       ok(W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text)).length === 1, 'still one report');
+    });
+    await test('a long production report is written on its Trello card too, with the app\'s list names (not a title mistyped in Trello)', async () => {   // 20 Nov 2026
+      const L = { START: '6527c572b12b208471c080cb', CS: '6ae07f38a77a2321736ef9da', INL: '6527c57cd7e267fbf2a602b4', IRON: '6527c5a93db4d8b8e91a8be9', R1: '6527c5b13129a9ba37acd3ad', R2: '699b35ceb77292db0289c473', FIN: '6527c5b41e630c094b619f5e' };
+      const c = F.addCard(W, L.FIN, 'SJ-89990 , 4 pcs OP , COLORS = 2 , SIZE = L,XL,XXL,XXXL(ALL SILVER)', { ageDays: 6 }), H = 3600000, t0 = Date.now() - 5 * 24 * H;
+      const act = (type, at, data) => W.trello.actions.push({ id: F.hexId(), type, date: new Date(at).toISOString(), memberCreator: { fullName: 'Abbas Jamal' }, data: Object.assign({ card: { id: c.id, name: c.name } }, data) });
+      const mv = (at, a, an, b, bn) => act('updateCard', at, { listBefore: { id: a, name: an }, listAfter: { id: b, name: bn } });
+      mv(t0, L.START, 'START', L.CS, 'Cutting///START'); mv(t0 + 3000, L.CS, 'Cutting///START', L.START, 'START'); mv(t0 + 30 * H, L.START, 'START', L.CS, 'Cutting///START'); mv(t0 + 34 * H, L.CS, 'Cutting///START', L.INL, 'IN LINE');
+      ['Islam', 'Moshtaq', 'Nahid'].forEach((w, i) => { act('commentCard', t0 + 33 * H + i * 1000, { text: '👷 IN · ' + w + ' · 4 pcs · Md ibrahimmiah (factory app) · Mon 2 Nov 18:25' }); act('commentCard', t0 + 52 * H + i * 1000, { text: '👷 OUT · ' + w + ' · 4 pcs · 18 h 35 min · Md ibrahimmiah (factory app) · Tue 3 Nov 13:00 · got Mon 2 Nov 18:25 · 7.9 work h · ≈6/day' }); });
+      mv(t0 + 53 * H, L.INL, 'IN LINE', L.IRON, 'IRON/CHECKINGnm'); mv(t0 + 55 * H, L.IRON, 'IRON/CHECKINGnm', L.R2, 'READY 2'); mv(t0 + 55 * H + 5000, L.R2, 'READY 2', L.R1, 'READY'); mv(t0 + 59 * H, L.R1, 'READY', L.R2, 'READY 2');
+      mv(Date.now() - 30000, L.R2, 'READY 2', L.FIN, 'FINISH');                                   // moved in Trello, by hand
+      T.relay.cache.remove('FMV_AT'); const rep = () => W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text));
+      await until(() => rep().length === 1, 25000, 'the #report comment on the Trello card'); const tx = (rep()[0] || { data: { text: '' } }).data.text;
+      ok(encodeURIComponent(tx).length > 2082, 'it is a long one (longer than Google lets an address be): ' + encodeURIComponent(tx).length);
+      ok(/IRON\/CHECKING · /.test(tx) && !/CHECKINGnm/.test(tx), 'the list is named as in the app, not as mistyped in Trello: ' + (tx.match(/IRON[^\n]*/) || [''])[0]);
+      ok(/Islam/i.test(tx) && /Moshtaq/i.test(tx) && /Nahid/i.test(tx), 'workers listed: ' + tx.slice(-300));
+    });
+    await test('Give tapped twice while the relay is still answering gives the pieces once (the row stays locked through a redraw)', async () => {   // 20 Nov 2026
+      await home(page); await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '17841'); await until(() => page.locator('#work').isVisible(), 8000, 'work box');
+      const name = await page.evaluate(() => { const r = [...document.querySelectorAll('#wkrows .wr')].filter(x => !x.classList.contains('role') && x.querySelector('button.in') && !x.querySelector('button.out')); return r[r.length - 1].dataset.w; });
+      const r = page.locator('#wkrows .wr[data-w="' + name + '"]'), ins = () => W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && new RegExp('^👷 IN · ' + name + ' · 7 pcs').test(a.data.text)).length;
+      T.opDelay = { workset: 3500 };
+      try { await r.locator('input').fill('7'); await r.locator('button.in').click(); await page.waitForTimeout(500);
+        await page.evaluate(() => window.__f.wkd());                         // the row is drawn again while the request is on its way
+        await r.locator('input').fill('7').catch(() => {}); await r.locator('button.in').click({ timeout: 1500, force: true }).catch(() => {});   // the second tap
+        await until(() => ins() >= 1, 12000, 'the give reached Trello'); await page.waitForTimeout(5000);
+      } finally { T.opDelay = null; }
+      ok(ins() === 1, 'one IN comment, not two: ' + ins());
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000);
     });
     await test('#cash and #expenses: Abbas sees them in Chats, reads and writes; the bot joins #cash by itself', async () => {
       await home(page); F.postSlack(W, 'C0EXP000001', { text: 'diesel 300', user: 'U1' }); const cm = F.postSlack(W, 'C0CASH00001', { text: 'cash in hand 5000', user: 'U1' });
