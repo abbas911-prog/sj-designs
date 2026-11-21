@@ -1,0 +1,29 @@
+{
+ "ok": true,
+ "page": "sj-1121.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/sj-1121.html?v=1",
+ "cover": "og-sj-1121.jpg",
+ "name": "",
+ "country": "",
+ "designs": [
+  "28463",
+  "93810",
+  "27846"
+ ],
+ "report": [
+  "SJ-28463 SETS  6+6+6+6+6+6+6 = 42 ✓ (card: 42) → 7 colours",
+  "SJ-93810 SETS  8+8+8+8+8 = 40 ✓ (card: 40) → 5 colours",
+  "SJ-27846 SETS  20+8+8+8+20+20+12+0+0+0+12+12 = 120 ✓ (card: 120) → 9 colours"
+ ],
+ "flags": [
+  "SJ-28463 has 2 READY cards — used the newest: Sj = **(28463)** (42) pcs __ colour= (7)__(6/6/6/6)__(6/6/6) (type \"28463 all\" for every card)",
+  "SJ-28463: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-27846: 3 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo."
+ ],
+ "videos": [
+  "27846",
+  "93810"
+ ],
+ "bytes": 1841534,
+ "id": "j1a1fe9ea9331cdz"
+}
