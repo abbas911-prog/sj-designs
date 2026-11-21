@@ -28,14 +28,48 @@
 var REPO = 'abbas911-prog/sj-designs';
 var JOBS = { stock: 'memo-stock.yml', catalog: 'memo-catalog.yml' };
 
-function doPost(e) {
+// ===== 22 Nov 2026 (Abbas: "Google's daily limit for outside calls has run out on 19, 20 and 21 Nov in the evening ... cut the relay's own use ...
+// show in the app how many outside calls were made today, counted in the script"). Google gives ONE Google account 20,000 UrlFetch calls
+// a day (all its scripts together: this relay AND the Assistant script). Every outside call of this relay now goes through ufFetch /
+// ufFetchAll, which count it under who asked (UF.src: 'fac:ping', 'timer:notify', 'cchat', ...). ufFlush adds the counts of one run to
+// UF_LOG = { h: {hour: n} (48 h), d: {Dubai day: {source: n}} (3 days) } - kept in the cache, written to the properties every 2 min.
+// ufStat = the last 24 hours, today, per hour, per source (fac op `usage`; the ping answer carries the 24-h total as `uf`).
+var UF = { n: 0, src: '', by: {} }, UF_LIMIT = 20000;
+function ufFetch(url, o) { UF.n++; var k = UF.src || '?'; UF.by[k] = (UF.by[k] || 0) + 1; return o ? UrlFetchApp.fetch(url, o) : UrlFetchApp.fetch(url); }
+function ufFetchAll(rs) { var n = (rs || []).length, k = UF.src || '?'; UF.n += n; UF.by[k] = (UF.by[k] || 0) + n; return UrlFetchApp.fetchAll(rs); }
+function ufFlush() {
+  if (!UF.n) return; var by = UF.by; UF.n = 0; UF.by = {};
+  var lock = LockService.getScriptLock(), got = false; try { got = lock.tryLock(150); } catch (e) {}
   try {
-    var b = JSON.parse(e.postData.contents);
+    var c = CacheService.getScriptCache(), P = PropertiesService.getScriptProperties(), raw = c.get('UF_LOG') || P.getProperty('UF_LOG'), L = raw ? JSON.parse(raw) : {}, now = Date.now(), hk = Math.floor(now / 3600000), dk = facYmd(now), add = 0;
+    L.h = L.h || {}; L.d = L.d || {}; var day = L.d[dk] = L.d[dk] || {};
+    Object.keys(by).forEach(function (k) { add += by[k]; var kk = String(k).slice(0, 24); day[kk] = (day[kk] || 0) + by[k]; });
+    L.h[hk] = (L.h[hk] || 0) + add;
+    Object.keys(L.h).forEach(function (k) { if (+k < hk - 47) delete L.h[k]; }); Object.keys(L.d).sort().slice(0, -3).forEach(function (k) { delete L.d[k]; });
+    var save = !(now - (L.s || 0) < 120000); if (save) L.s = now; var txt = JSON.stringify(L); c.put('UF_LOG', txt, 21600); if (save) P.setProperty('UF_LOG', txt);
+  } catch (e) {} finally { if (got) { try { lock.releaseLock(); } catch (e) {} } }
+}
+function ufStat() {
+  var raw = CacheService.getScriptCache().get('UF_LOG') || PropertiesService.getScriptProperties().getProperty('UF_LOG'), L = raw ? JSON.parse(raw) : {}, now = Date.now(), hk = Math.floor(now / 3600000), h24 = 0, hours = [];
+  for (var i = 23; i >= 0; i--) { var n = +((L.h || {})[hk - i] || 0); h24 += n; hours.push(n); }
+  var sum = function (o) { var t = 0; Object.keys(o || {}).forEach(function (k) { t += o[k]; }); return t; }, td = (L.d || {})[facYmd(now)] || {}, yd = (L.d || {})[facYmd(now - 86400000)] || {};
+  return { h24: h24, today: sum(td), yest: sum(yd), lim: UF_LIMIT, hours: hours, hour: new Date(now + 4 * 3600000).getUTCHours(), by: td, byY: yd };
+}
+// The timers still fire every minute (no trigger to set up again), but they do their Slack / Trello work only every `mins` minutes and only
+// between 08:00 and 23:00 Dubai. A run that is not due returns at once and makes no outside call.
+function tickDue(name, mins) {
+  var h = new Date(Date.now() + 4 * 3600000).getUTCHours(); if (h < 8 || h >= 23) return false;
+  var c = CacheService.getScriptCache(), k = 'TICK_' + name; if (c.get(k)) return false; c.put(k, '1', Math.max(30, mins * 60 - 30)); return true;
+}
+function doPost(e) { try { return doPost0(e); } finally { try { ufFlush(); } catch (x) {} } }
+function doPost0(e) {
+  try {
+    var b = JSON.parse(e.postData.contents); UF.src = b.type === 'event_callback' ? 'slack-event' : String(b.job || b.type || '?');
     var P = PropertiesService.getScriptProperties();
     // 15 Oct 2026: Slack's Event Subscriptions point here. The event is only a nudge ("something was written in a channel"): it makes every
     // phone's next poll re-read Slack at once. Nothing in it is trusted or stored, so a fake one can only cause an extra re-read.
     if (b.type === 'url_verification' && b.challenge) return ContentService.createTextOutput(String(b.challenge)).setMimeType(ContentService.MimeType.TEXT);
-    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') { var evcid = facCardOf(P, evc); if (!b.fw) facNudge(P, evcid); if (/^[0-9a-f]{24}$/.test(evcid || '') && evc.ts) { var evh = {}; evh[evcid] = String(evc.ts); facHotAdd(P, evh); } } } catch (x) {} /* 31 Oct 2026: a Slack event on a card's chat makes it hot */ try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { var evm = b.event || {}; if (evm.type === 'message' && evm.channel === CC_CH) { var cEE = CacheService.getScriptCache(); cEE.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEE, 'CC_HIST'); var rk = ''; try { var hh = ccHist(P.getProperty('SLACK_BOT_TOKEN'), true).filter(function (m) { return m.ts === (evm.thread_ts || evm.ts); })[0]; rk = hh ? ccKey(ccName(hh.text)) : ''; } catch (x) {} ccNudge(P, rk); if (evm.thread_ts) ccNudge(P, 'O' + evm.thread_ts); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel === GD_CH) { var cEG = CacheService.getScriptCache(); cEG.put('CC_EV_AT', String(Date.now()), 900); bigDrop(cEG, 'GD_HIST'); ccNudge(P, 'G' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && dmIsCh(P, evm.channel)) { var cED = CacheService.getScriptCache(); cED.put('CC_EV_AT', String(Date.now()), 900); cED.remove('DM_HIST_' + evm.channel); ccNudge(P, 'D' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
+    if (b.type === 'event_callback') { var cE = CacheService.getScriptCache(), eid = String(b.event_id || '').slice(0, 40); if (eid && cE.get('FEV_' + eid)) return out({ ok: true }); if (eid) cE.put('FEV_' + eid, '1', 3600); try { var evc = b.event || {}; if (evc.type === 'message') { var evcid = facCardOf(P, evc); if (!b.fw) facNudge(P, evcid); if (/^[0-9a-f]{24}$/.test(evcid || '') && evc.ts) { var evh = {}; evh[evcid] = String(evc.ts); facHotAdd(P, evh); } } } catch (x) {} /* 31 Oct 2026: a Slack event on a card's chat makes it hot */ try { facBump(); cE.put('FAC_EV_AT', String(Date.now()), 900); if (!P.getProperty('FAC_EVENTS_ON')) P.setProperty('FAC_EVENTS_ON', String(Date.now())); } catch (x) {} try { var evm = b.event || {}; if (evm.type === 'message' && evm.channel === CC_CH) { var cEE = CacheService.getScriptCache(); cEE.put('CC_EV_AT', String(Date.now()), 900); if (!P.getProperty('CC_EVENTS_ON')) P.setProperty('CC_EVENTS_ON', String(Date.now())); bigDrop(cEE, 'CC_HIST'); var rk = ''; try { var hh = ccHist(P.getProperty('SLACK_BOT_TOKEN'), true).filter(function (m) { return m.ts === (evm.thread_ts || evm.ts); })[0]; rk = hh ? ccKey(ccName(hh.text)) : ''; } catch (x) {} ccNudge(P, rk); if (evm.thread_ts) ccNudge(P, 'O' + evm.thread_ts); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && evm.channel === GD_CH) { var cEG = CacheService.getScriptCache(); cEG.put('CC_EV_AT', String(Date.now()), 900); if (!P.getProperty('CC_EVENTS_ON')) P.setProperty('CC_EVENTS_ON', String(Date.now())); bigDrop(cEG, 'GD_HIST'); ccNudge(P, 'G' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } else if (evm.type === 'message' && dmIsCh(P, evm.channel)) { var cED = CacheService.getScriptCache(); cED.put('CC_EV_AT', String(Date.now()), 900); if (!P.getProperty('CC_EVENTS_ON')) P.setProperty('CC_EVENTS_ON', String(Date.now())); cED.remove('DM_HIST_' + evm.channel); ccNudge(P, 'D' + (evm.thread_ts || evm.ts)); ccNotifyScan(P, 'event'); } } catch (x) {} try { if ((b.event || {}).type === 'message') facNotifyScan(P, 'event'); } catch (x) {} try { facWarm(P, b.event || {}); } catch (x) {} return out({ ok: true }); }
     var pw = P.getProperty('MEMO_PASSWORD'), gh = P.getProperty('GH');
     if (!pw) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
     if (b.job === 'fastchk') {                                // 16 Oct 2026: the FAST LANE worker (Cloudflare) asks "is this phone key right?" - key = sha256("sjfast|" + password)
@@ -67,7 +101,7 @@ function doPost(e) {
     var wf = JOBS[b.job];
     if (!wf) return out({ ok: false, error: 'bad request' });
     if (!gh) return out({ ok: false, error: 'Relay not set up (script properties missing)' });
-    var r = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/' + wf + '/dispatches', {
+    var r = ufFetch('https://api.github.com/repos/' + REPO + '/actions/workflows/' + wf + '/dispatches', {
       method: 'post', contentType: 'application/json', muteHttpExceptions: true,
       headers: { Authorization: 'Bearer ' + gh, Accept: 'application/vnd.github+json' },
       payload: JSON.stringify({ ref: 'main', inputs: { req: b.req, sig: b.sig } })
@@ -81,7 +115,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-11-21b';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-11-22a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -111,8 +145,8 @@ function facCf(tok) {                                         // custom-field na
   c.put('FAC_CF', JSON.stringify(m), 21600); return m;
 }
 function slackApi(tok, method, args, get) {            // one Slack Web API call with the bot token
-  var r = get ? UrlFetchApp.fetch('https://slack.com/api/' + method + '?' + Object.keys(args).map(function (k) { return k + '=' + encodeURIComponent(args[k]); }).join('&'), { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true })
-              : UrlFetchApp.fetch('https://slack.com/api/' + method, { method: 'post', headers: { Authorization: 'Bearer ' + tok }, contentType: 'application/json', payload: JSON.stringify(args), muteHttpExceptions: true });
+  var r = get ? ufFetch('https://slack.com/api/' + method + '?' + Object.keys(args).map(function (k) { return k + '=' + encodeURIComponent(args[k]); }).join('&'), { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true })
+              : ufFetch('https://slack.com/api/' + method, { method: 'post', headers: { Authorization: 'Bearer ' + tok }, contentType: 'application/json', payload: JSON.stringify(args), muteHttpExceptions: true });
   return JSON.parse(r.getContentText());
 }
 function facThread(P, FT, card, rtok, make) {                 // the #cutting message a card's chat lives under: remembered, else found by the card link, else made
@@ -162,7 +196,7 @@ function facNote(mm, who) { if (!mm || !mm.sys) return false; var t = String(mm.
   return !(act && me && (act === me || (act.length >= 3 && me.length >= 3 && (act.indexOf(me) === 0 || me.indexOf(act) === 0)))); }
 function facLine(mm) { var t = String(mm.text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(); if (mm.sys) return t.replace(/^→ /, '🔀 ').slice(0, 160); if (!t && (mm.files || []).length) t = mm.files.map(function (f) { return f.audio ? '🎤 voice note' : f.img ? '📷 photo' : f.video ? '🎬 video' : '📎 ' + f.name; }).join(' · '); return (mm.who ? mm.who + ': ' : '') + t.slice(0, 160); }
 function facNtfy(topic, o) {
-  try { var r = UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify({ topic: topic, title: o.title, message: o.msg, click: o.click, tags: ['speech_balloon'], priority: 4 }) }); return r.getResponseCode() === 200; } catch (e) { return false; }
+  try { var r = ufFetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify({ topic: topic, title: o.title, message: o.msg, click: o.click, tags: ['speech_balloon'], priority: 4 }) }); return r.getResponseCode() === 200; } catch (e) { return false; }
 }
 // ---- 20 Oct 2026 (Abbas: "do all" - notifications without the ntfy app): WEB PUSH. A phone that has the app on its Home Screen turns it on
 // from 🔔; its push address is kept per person (FWP_<NAME>, up to 4 phones). Google cannot do the push encryption, so the fast-lane worker
@@ -172,7 +206,7 @@ function facFastKey(P) { var pw = P.getProperty('FACTORY_PASSWORD') || P.getProp
 function facWorker(P, body) {
   var fu = P.getProperty('FAC_FAST'); if (!fu) throw new Error('phone notifications need the fast lane (status line -> Fast lane)');
   body.k = facFastKey(P);
-  var r = UrlFetchApp.fetch(fu + '/', { method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true }), j = null;
+  var r = ufFetch(fu + '/', { method: 'post', contentType: 'application/json', payload: JSON.stringify(body), muteHttpExceptions: true }), j = null;
   try { j = JSON.parse(r.getContentText()); } catch (e) {}
   if (!j) throw new Error('the fast lane answered ' + r.getResponseCode());
   if (j.error === 'unknown op') throw new Error('paste the new tools/fast-worker.js into Cloudflare and press Deploy first');
@@ -218,10 +252,11 @@ function facNotifyScan(P, why) {
   } finally { lock.releaseLock(); }
   return sent;
 }
-function facNotifyTick() {                                       // the fallback timer (every minute): when Slack's push is on, only every 5th minute
-  var P = PropertiesService.getScriptProperties(); try { facDailyTick(P); } catch (e) {}   // 22 Oct 2026: the daily closing report at 10 pm
-  if (P.getProperty('FAC_EVENTS_ON') && new Date().getMinutes() % 5) return;
-  try { facNotifyScan(P, 'tick'); } catch (e) {}
+function facNotifyTick() {                                       // the fallback timer: fires every minute, scans Slack every 5 min, 08:00-23:00 Dubai (22 Nov 2026; a message still notifies at once through Slack's push, day and night)
+  UF.src = 'timer:notify';
+  try { var P = PropertiesService.getScriptProperties(); try { facDailyTick(P); } catch (e) {}   // 22 Oct 2026: the daily closing report at 10 pm (checked every minute, no outside call until it posts)
+    if (!tickDue('notify', 5)) return;
+    try { facNotifyScan(P, 'tick'); } catch (e) {} } finally { try { ufFlush(); } catch (x) {} }
 }
 function setupFacNotify() {                                      // Abbas can also run this once from the editor (▶ Run) if the 🔔 screen says the timer could not start
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'facNotifyTick') ScriptApp.deleteTrigger(t); });
@@ -234,7 +269,7 @@ function facMedia(FT, mf, full) {
   var fi = slackApi(FT, 'files.info', { file: mf }, true); if (!fi.ok) return { ok: false, error: 'Slack said ' + fi.error + (fi.error === 'missing_scope' ? ' (the factory bot needs files:read)' : '') };
   var f = fi.file || {}, mu = (full ? null : (f.thumb_720 || f.thumb_480 || f.thumb_360)) || f.url_private_download || f.url_private;
   if ((f.size || 0) > 20 * 1024 * 1024 && full) return { ok: false, error: 'file too big', link: f.permalink || '' };   // 13 Oct 2026: a big video opens in Slack instead
-  var mr = UrlFetchApp.fetch(mu, { muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + FT } });
+  var mr = ufFetch(mu, { muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + FT } });
   if (mr.getResponseCode() !== 200) return { ok: false, error: 'Slack file said ' + mr.getResponseCode(), link: f.permalink || '' };
   var mb = mr.getBlob(), by = mb.getBytes(); if (by.length > 20 * 1024 * 1024) return { ok: false, error: 'file too big', link: f.permalink || '' };
   var res = { ok: true, b64: Utilities.base64Encode(by), type: mb.getContentType() || f.mimetype || '', name: f.name || '' };
@@ -252,7 +287,7 @@ function facWarm(P, ev) {                                        // a message wi
 // sends a tiny "card X changed" (no text, no names) to a private ntfy.sh topic. Every open app listens on that topic and pulls that chat
 // at once - a message shows on the other phone in about a second instead of up to 4-10 s of polling. If the doorbell is down, polling still works.
 function facLive(P) { var t = P.getProperty('FAC_LIVE'); if (!t) { t = 'sjlive-' + Utilities.getUuid().replace(/-/g, '').slice(0, 22); P.setProperty('FAC_LIVE', t); } return t; }
-function facNudge(P, card) { try { UrlFetchApp.fetch('https://ntfy.sh/' + facLive(P), { method: 'post', payload: 'c=' + String(card || ''), headers: { 'Cache': 'no', 'Firebase': 'no' }, muteHttpExceptions: true }); } catch (e) {} }
+function facNudge(P, card) { try { ufFetch('https://ntfy.sh/' + facLive(P), { method: 'post', payload: 'c=' + String(card || ''), headers: { 'Cache': 'no', 'Firebase': 'no' }, muteHttpExceptions: true }); } catch (e) {} }
 function facCardOf(P, ev) {                                     // which card (or 'dm' / '') a Slack message belongs to
   var ch = String(ev.channel || ''), ts = String(ev.thread_ts || ev.ts || ''); if (!ch) return '';
   var dm = JSON.parse(P.getProperty('FAC_DM') || 'null'); if (dm && dm.ch === ch) return 'dm';
@@ -280,7 +315,7 @@ function facRetSum(P) {                                         // the home-scre
 }
 function facBump() { CacheService.getScriptCache().put('FAC_GEN', String(Date.now()), 21600); CacheService.getScriptCache().remove('FAC_LATE'); }
 function facGen() { return CacheService.getScriptCache().get('FAC_GEN') || '0'; }   // bumped by every Slack event: all "what's new" caches start again
-function facTtl(P) { return CacheService.getScriptCache().get('FAC_EV_AT') ? 45 : 10; }   // Slack push seen in the last 15 min -> slower fallback re-scan               // with Slack pushing changes, the fallback re-scan can be slow
+function facTtl(P) { return P && P.getProperty('FAC_EVENTS_ON') ? 60 : 30; }   // 22 Nov 2026: how long a channel's read is kept when nothing was written: 60 s with Slack's push set up, 30 s without (was 10 s whenever the chats were QUIET for 15 min - one open phone then cost ~36 Slack calls a minute, the whole day's allowance in 9 hours). Anything written (app post, Slack push) still restarts every read at once (facGen).   // Slack push seen in the last 15 min -> slower fallback re-scan               // with Slack pushing changes, the fallback re-scan can be slow
 function facHist(P, FT, CH, fresh) {                            // newest 400 top-level messages of a channel, compact {t, rc, lr, l}; shared by every phone
   var c = CacheService.getScriptCache(), g = facGen(), k = 'FAC_H_' + CH + '_' + g, h = fresh ? null : c.get(k); if (h) return JSON.parse(h);
   var cut = function (m) { var lk = String(m.text || '').match(/trello\.com\/c\/([A-Za-z0-9]+)/); return { t: m.ts, rc: m.reply_count || 0, lr: m.latest_reply || '', l: lk ? lk[1] : '' }; };
@@ -487,7 +522,7 @@ function facLaisTop(P, LT, L, fresh) {
   var ms = (j.messages || []).filter(function (m) { return !m.subtype || m.subtype === 'bot_message' || m.subtype === 'file_share' || m.subtype === 'thread_broadcast'; })
     .map(function (m) { return { ts: m.ts, text: String(m.text || ''), user: m.user, bot_id: m.bot_id, username: m.username, subtype: m.subtype, rc: m.reply_count || 0, lr: m.latest_reply || '',
       files: (m.files || []).map(function (f) { return { id: f.id, name: f.name, mimetype: f.mimetype, size: f.size }; }) }; }).sort(function (a, b) { return +a.ts - +b.ts; });
-  try { c.put(k, JSON.stringify(ms), 15); } catch (e) {} return ms;
+  try { c.put(k, JSON.stringify(ms), facTtl(P)); } catch (e) {} return ms;
 }
 function facLaisOrders(P, who, fresh) {                          // the order cards for this person (null if they may not see #laisfactory)
   var L = facLaisFor(P, null, who), LT = P.getProperty('SLACK_BOT_TOKEN'); if (!L || !LT) return null;
@@ -535,7 +570,7 @@ function facSampleLabel(P, wtok) {
 function snDate(d, full) { var u = new Date(+d + 4 * 3600000), M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][u.getUTCMonth()]; return u.getUTCDate() + ' ' + M + (full ? ' ' + u.getUTCFullYear() + ' ' + ('0' + u.getUTCHours()).slice(-2) + ':' + ('0' + u.getUTCMinutes()).slice(-2) : ''); }   // Dubai time
 function facSampleNeed(P, wtok) {
   var ST = P.getProperty('SLACK_BOT_TOKEN'); if (!ST || !wtok) return;
-  var c = CacheService.getScriptCache(); if (c.get('SNEED_AT')) return; c.put('SNEED_AT', '1', 60);
+  var c = CacheService.getScriptCache(); if (c.get('SNEED_AT')) return; c.put('SNEED_AT', '1', 180);   // 22 Nov 2026: 3 min (was 1)
   var lock = LockService.getScriptLock(); if (!lock.tryLock(200)) return;
   try {
     var last = P.getProperty('SNEED_LAST');
@@ -554,10 +589,10 @@ function facSampleNeed(P, wtok) {
       var name = no ? 'SJ-' + no + ' SAMPLE' : (txt.split('\n')[0].slice(0, 80) || 'SAMPLE · ' + snDate(d, false));
       var card = trApi('post', '/cards', { idList: rl.ret, name: name, pos: 'top', idLabels: lab, desc: (txt ? txt + '\n\n' : '') + '_From #samplesneed · ' + snDate(d, true) + '_' }, wtok);
       for (var k = 0; k < imgs.length && k < 6; k++) { try {
-        var fr = UrlFetchApp.fetch(imgs[k].url_private_download || imgs[k].url_private, { headers: { Authorization: 'Bearer ' + ST }, muteHttpExceptions: true });
+        var fr = ufFetch(imgs[k].url_private_download || imgs[k].url_private, { headers: { Authorization: 'Bearer ' + ST }, muteHttpExceptions: true });
         if (fr.getResponseCode() !== 200) continue; var bl = fr.getBlob(); if (/text\/html/.test(String(bl.getContentType() || '')) || bl.getBytes().length > 10 * 1024 * 1024) continue;
         var fn = String(imgs[k].name || 'sample.jpg').replace(/[^\w.\-]/g, '_').slice(0, 60);
-        UrlFetchApp.fetch('https://api.trello.com/1/cards/' + card.id + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true, payload: { file: bl.setName ? bl.setName(fn) : bl, name: fn, setCover: k === 0 ? 'true' : 'false' } });
+        ufFetch('https://api.trello.com/1/cards/' + card.id + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true, payload: { file: bl.setName ? bl.setName(fn) : bl, name: fn, setCover: k === 0 ? 'true' : 'false' } });
       } catch (e) {} }
       try { trApi('post', '/cards/' + card.id + '/actions/comments', { text: '📌 SAMPLE NEEDED · from #samplesneed (made by the factory app relay)' }, wtok); } catch (e) {}
       P.setProperty('SNEED_LAST', m.ts); c.remove(tk);
@@ -570,7 +605,7 @@ function facSampleNeed(P, wtok) {
 // the app already wrote their own line (and left the Trello comment "→ LIST · who (factory app)"), so those are skipped. Only cards that already
 // have a chat get the line (no new #cutting posts). First run only notes "now".
 function facTrelloMoves(P, wtok, FT) {
-  if (!wtok || !FT) return; var c = CacheService.getScriptCache(); if (c.get('FMV_AT')) return; c.put('FMV_AT', '1', 45);
+  if (!wtok || !FT) return; var c = CacheService.getScriptCache(); if (c.get('FMV_AT')) return; c.put('FMV_AT', '1', 120);   // 22 Nov 2026: 2 min (was 45 s)
   var last = P.getProperty('FMOVE_LAST'); if (!last) { P.setProperty('FMOVE_LAST', new Date().toISOString()); return; }
   var lock = LockService.getScriptLock(); if (!lock.tryLock(200)) return;
   try {
@@ -723,7 +758,7 @@ function facWorkRep(P, rtok, rdays) {                            // every worker
   try { var hids = {}; Object.keys(rw).forEach(function (k) { rw[k].hand.forEach(function (h) { hids[h.id] = 1; }); }); var hl = Object.keys(hids).slice(0, 40), FINL = FAC.LISTS.filter(function (l) { return /^FINISH/.test(l[0]); }).map(function (l) { return l[1]; });
     if (hl.length) { var fc = CacheService.getScriptCache(), fk = fc.getAll(hl.map(function (id) { return 'FAC_FIN_' + id; })) || {}, ask = hl.filter(function (id) { return fk['FAC_FIN_' + id] == null; }), fin = {};   // 21 Nov 2026 (relay 21b): one Trello call per card used to be made on EVERY report (~20 calls a minute while a phone showed Home) - that used up Google's daily urlfetch limit; a card's answer is now kept 30 min (6 h once finished)
       hl.forEach(function (id) { if (fk['FAC_FIN_' + id] === '1') fin[id] = 1; });
-      if (ask.length) { var hr = UrlFetchApp.fetchAll(ask.map(function (id) { return { url: 'https://api.trello.com/1/cards/' + id + '?key=' + TKEY + '&token=' + rtok + '&fields=idList,closed', muteHttpExceptions: true }; }));
+      if (ask.length) { var hr = ufFetchAll(ask.map(function (id) { return { url: 'https://api.trello.com/1/cards/' + id + '?key=' + TKEY + '&token=' + rtok + '&fields=idList,closed', muteHttpExceptions: true }; }));
         hr.forEach(function (x, i) { try { var cj = JSON.parse(x.getContentText()), f1 = cj.closed || FINL.indexOf(cj.idList) >= 0; if (f1) fin[ask[i]] = 1; if (cj.id) fc.put('FAC_FIN_' + ask[i], f1 ? '1' : '0', f1 ? 21600 : 1800); } catch (e) {} }); }
       Object.keys(rw).forEach(function (k) { rw[k].hand.forEach(function (h) { if (fin[h.id]) h.fin = 1; }); }); } } catch (e) {}
   var rout = { ok: true, t: Date.now(), days: rdays, todayN: Object.keys(rw).filter(function (k) { return rw[k].today; }).length, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, today: r.today || 0, pcs: r.pcs, dur: facWorkDur(r.ms), perDay: r.ms ? facRate(r.pcs, r.ms) : 0, batches: r.batches, open: r.open, last: r.last, byDay: r.byDay, hand: r.hand.sort(function (a, b) { return a.in - b.in; }), cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
@@ -901,7 +936,7 @@ function facDmMsgs(P, FT, dm, fresh) {                         // the direct cha
     }
   });
   outm.sort(function (a, b) { return +a.ts - +b.ts; });
-  try { c.put(k, JSON.stringify(outm), facTtl(P) > 10 ? 30 : 6); c.put('FAC_DMH_' + dm.ch + '_L', JSON.stringify(outm), 3600); } catch (e) {}
+  try { c.put(k, JSON.stringify(outm), facTtl(P)); c.put('FAC_DMH_' + dm.ch + '_L', JSON.stringify(outm), 3600); } catch (e) {}
   return outm;
 }
 function facUser(P, FT, uid) {                               // {n: first name as shown, wn: every name Slack has for this person (for the "my side" match)}
@@ -928,7 +963,7 @@ function facMsg(P, FT, m, root) {                             // one Slack messa
 // 6-letter code to the bot. Needs script property TG_FACTORY_TOKEN (the bot token from @BotFather, typed in by Abbas).
 function tgApi(P, method, args) {
   var tok = P.getProperty('TG_FACTORY_TOKEN'); if (!tok) return { ok: false, error: 'no token' };
-  try { return JSON.parse(UrlFetchApp.fetch('https://api.telegram.org/bot' + tok + '/' + method, { method: 'post', contentType: 'application/json', payload: JSON.stringify(args || {}), muteHttpExceptions: true }).getContentText()); }
+  try { return JSON.parse(ufFetch('https://api.telegram.org/bot' + tok + '/' + method, { method: 'post', contentType: 'application/json', payload: JSON.stringify(args || {}), muteHttpExceptions: true }).getContentText()); }
   catch (e) { return { ok: false, error: String(e.message || e) }; }
 }
 function facTgPoll(P) {                                        // read what people sent to the bot: a 6-letter code links that chat to a factory phone
@@ -944,7 +979,8 @@ function facTgPoll(P) {                                        // read what peop
   });
   P.setProperty('TG_OFFSET', String(off));
 }
-function facWatch() {                                          // every minute: new replies by a person (not the bot) in a card's thread -> Telegram to the factory phones
+function facWatch() { if (!tickDue('watch', 5)) return; UF.src = 'timer:facWatch'; try { facWatch0(); } finally { try { ufFlush(); } catch (x) {} } }   // 22 Nov 2026: every 5 min, 08:00-23:00 Dubai (was every minute, all night)
+function facWatch0() {                                         // new replies by a person (not the bot) in a card's thread -> Telegram to the factory phones
   var P = PropertiesService.getScriptProperties(), FT = P.getProperty('SLACK_FACTORY_TOKEN'); if (!FT || !P.getProperty('TG_FACTORY_TOKEN')) return;
   var all = P.getProperties(), phones = Object.keys(all).filter(function (k) { return k.indexOf('TG_FAC_') === 0; }).map(function (k) { return JSON.parse(all[k]); });
   facTgPoll(P);
@@ -987,7 +1023,7 @@ function fac(reqText, P, amode) {
   return res;
 }
 function fac0(reqText, P) {
-  var req = JSON.parse(reqText);
+  var req = JSON.parse(reqText); UF.src = 'fac:' + String(req.op || '?');
   if (Math.abs(Date.now() - (+req.t || 0)) > 10 * 60 * 1000) return out({ ok: false, error: 'request too old - check the phone clock' });
   if (req.hot) { try { facHotAdd(P, req.hot); } catch (e) {} }
   var rtok = P.getProperty('TRELLO') || P.getProperty('TRELLO_W'), wtok = P.getProperty('TRELLO_W');
@@ -1029,7 +1065,7 @@ function fac0(reqText, P) {
       var pdm = null; try { pdm = facDmFor(P, FTp, whp); } catch (e) {} try { facPhoneSeen(P, req); } catch (e) {}
       var prs = null; try { prs = facRetSum(P); } catch (e) {}
       var pact; try { pact = facAct(P, FTp, pcards); } catch (e) {}   // 17 Oct 2026: last-line time per chat on every ping, so the Chats tab never shows an older line
-      return out({ ok: true, rv: RELAY_VER, th: pth, later: facLater(P, whp), dm: pdm, dmno: facDmOk(P, whp) ? 0 : 1, lais: facLaisFor(P, FTp, whp), rooms: facXRoomsFor(P, FTp, whp), lo: facLaisOrders(P, whp, false), gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
+      return out({ ok: true, rv: RELAY_VER, uf: ufStat().h24, ufl: UF_LIMIT, th: pth, later: facLater(P, whp), dm: pdm, dmno: facDmOk(P, whp) ? 0 : 1, lais: facLaisFor(P, FTp, whp), rooms: facXRoomsFor(P, FTp, whp), lo: facLaisOrders(P, whp, false), gen: facGen(), ev: !!P.getProperty('FAC_EVENTS_ON'), live: facLive(P), ret: prs, fast: P.getProperty('FAC_FAST') || '', refs: facRefs(P), act: pact });
     }
     if (req.op === 'ntfyset') {                               // turn phone notifications on/off for this person (topic made on the phone)
       var nw = String(req.who || '').trim().toUpperCase().slice(0, 40), ntp = String(req.topic || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); if (!nw) return out({ ok: false, error: 'bad request' });
@@ -1075,7 +1111,7 @@ function fac0(reqText, P) {
       if (!pv) return out({ ok: false, error: /^image\//.test(at.mimeType || '') ? 'photo preview not ready yet' : 'not a picture' });
       // big = the sharpest we can get: Trello's largest preview, or the ORIGINAL file when the preview is small and the original is a photo under 8 MB (Abbas 13 Oct: "very blurry")
       var u = (req.big && pv.width < 1600 && /^image\//.test(at.mimeType || '') && (at.bytes || 0) <= 8 * 1024 * 1024 && at.url) ? at.url : pv.url;
-      var r = UrlFetchApp.fetch(u, { muteHttpExceptions: true, headers: { Authorization: 'OAuth oauth_consumer_key="' + TKEY + '", oauth_token="' + rtok + '"' } });
+      var r = ufFetch(u, { muteHttpExceptions: true, headers: { Authorization: 'OAuth oauth_consumer_key="' + TKEY + '", oauth_token="' + rtok + '"' } });
       if (r.getResponseCode() !== 200) return out({ ok: false, error: 'photo: Trello said ' + r.getResponseCode() });
       var b64 = Utilities.base64Encode(r.getBlob().getBytes());
       if (b64.length > (req.big ? 12000000 : 2600000)) return out({ ok: false, error: 'photo too big' });
@@ -1118,7 +1154,7 @@ function fac0(reqText, P) {
       var fu = String(req.url || '').trim().replace(/\/+$/, '');
       if (!fu) { P.deleteProperty('FAC_FAST'); return out({ ok: true, fast: '' }); }
       if (!/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.workers\.dev$/i.test(fu)) return out({ ok: false, error: 'the link must look like https://sj-fast.NAME.workers.dev' });
-      var fr = null; try { fr = JSON.parse(UrlFetchApp.fetch(fu + '/', { muteHttpExceptions: true }).getContentText()); } catch (e) {}
+      var fr = null; try { fr = JSON.parse(ufFetch(fu + '/', { muteHttpExceptions: true }).getContentText()); } catch (e) {}
       if (!fr || fr.sj !== 'fast') return out({ ok: false, error: 'that link is not the SJ fast-lane worker (paste the code and press Deploy first)' });
       if (!fr.slack) return out({ ok: false, error: 'the worker has no SLACK_TOKEN secret yet (Settings -> Variables and Secrets)' });
       P.setProperty('FAC_FAST', fu); return out({ ok: true, fast: fu });
@@ -1253,7 +1289,7 @@ function fac0(reqText, P) {
     if (req.op === 'upurl') {                                 // 15 Oct 2026 (Abbas: "don't compress my photos and videos"): the phone sends the ORIGINAL file straight to Slack
       if (!FT) return out({ ok: false, error: 'the relay has no SLACK_FACTORY_TOKEN' });
       var uf = Array.isArray(req.files) ? req.files.slice(0, 10) : []; if (!uf.length) return out({ ok: false, error: 'bad request' });
-      var UUT = isLaisOrder(req.card) ? P.getProperty('SLACK_BOT_TOKEN') : roomTok(P, req.card, FT); var urls = uf.map(function (f) { var a = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: { Authorization: 'Bearer ' + UUT }, muteHttpExceptions: true,
+      var UUT = isLaisOrder(req.card) ? P.getProperty('SLACK_BOT_TOKEN') : roomTok(P, req.card, FT); var urls = uf.map(function (f) { var a = JSON.parse(ufFetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: { Authorization: 'Bearer ' + UUT }, muteHttpExceptions: true,
         payload: { filename: String(f.name || 'file').replace(/[^\w.\-]/g, '_').slice(0, 80), length: String(Math.max(1, +f.size || 1)) } }).getContentText()); if (!a.ok) throw new Error('Slack said ' + a.error); return { id: a.file_id, url: a.upload_url }; });
       return out({ ok: true, urls: urls });
     }
@@ -1275,7 +1311,7 @@ function fac0(reqText, P) {
         fids.push(slackUp(UT, un, ub));
       }
       var utext = '*' + uwho + ':* ' + (req.text ? String(req.text).slice(0, 3000) : (req.labels || []).concat(ufs.map(function (f) { return f.name; })).map(function (f) { f = { name: String(f || '') }; var n = String(f.name || ''); return /^voice/i.test(n) ? '🎤 voice note' : /\.(jpe?g|png|webp|heic)$/i.test(n) ? '📷 photo' : /\.(mp4|mov|webm)$/i.test(n) ? '🎬 video' : '📎 ' + n; }).join(' · '));
-      var uj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + UT }, muteHttpExceptions: true,
+      var uj = JSON.parse(ufFetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + UT }, muteHttpExceptions: true,
         payload: uth.ts ? { files: JSON.stringify(fids.map(function (f) { return { id: f }; })), channel_id: uth.ch, thread_ts: uth.ts, initial_comment: utext } : { files: JSON.stringify(fids.map(function (f) { return { id: f }; })), channel_id: uth.ch, initial_comment: utext } }).getContentText());
       if (!uj.ok) return out({ ok: false, error: 'Slack said ' + uj.error });
       try { facSeen(P, uwho, uc, String(Date.now() / 1000)); } catch (e) {} facBump(); facNudge(P, uc);
@@ -1319,7 +1355,7 @@ function fac0(reqText, P) {
       for (var xi = 0; xi < xfs.length; xi++) {
         var xn = String(xfs[xi].name || 'photo.jpg').replace(/[^\w.\-]/g, '_').slice(0, 60), xb = Utilities.base64Decode(String(xfs[xi].b64 || ''));
         if (xb.length > 10 * 1024 * 1024) return out({ ok: false, error: 'file too big (max 10 MB)' });
-        var xr = UrlFetchApp.fetch('https://api.trello.com/1/cards/' + xc + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true,
+        var xr = ufFetch('https://api.trello.com/1/cards/' + xc + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true,
           payload: { file: Utilities.newBlob(xb, String(xfs[xi].type || 'image/jpeg'), xn), name: xn, setCover: (noCover && xi === 0 && !!req.cover) ? 'true' : 'false' } });
         if (xr.getResponseCode() >= 300) return out({ ok: false, error: 'Trello said ' + xr.getResponseCode() + ': ' + xr.getContentText().slice(0, 100) });
         var xj = JSON.parse(xr.getContentText()); added.push(xj.id);
@@ -1341,7 +1377,7 @@ function fac0(reqText, P) {
       // Abbas 13 Oct: the Trello card gets ONLY a cover - the first photo, or a frame of the video (made on the phone) - everything else goes to Slack only
       var satt = 0; if (req.cover && req.cover.b64) { try {
         var cb = Utilities.base64Decode(String(req.cover.b64)), cn = String(req.cover.name || 'cover.jpg').replace(/[^\w.\-]/g, '_').slice(0, 60);
-        if (cb.length <= DOX.TRELLO_MAX) { var xr2 = UrlFetchApp.fetch('https://api.trello.com/1/cards/' + scard2.id + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true,
+        if (cb.length <= DOX.TRELLO_MAX) { var xr2 = ufFetch('https://api.trello.com/1/cards/' + scard2.id + '/attachments?key=' + TKEY + '&token=' + wtok, { method: 'post', muteHttpExceptions: true,
           payload: { file: Utilities.newBlob(cb, 'image/jpeg', cn), name: cn, setCover: 'true' } }); if (xr2.getResponseCode() < 300) satt = 1; } } catch (e) {} }
       var sids = (Array.isArray(req.fids) ? req.fids : []).map(function (x) { return String(x).replace(/[^A-Z0-9]/g, ''); }).filter(String).slice(0, 10), stot = 0;   // originals already sent to Slack by the phone
       for (var si = 0; si < sfs.length; si++) {
@@ -1351,7 +1387,7 @@ function fac0(reqText, P) {
       }
       var stext = (SRET ? '↩️ *RETURN* · pieces given back to the factory' + (sdesc ? '\n' + sdesc : '') + '\n_ফেরত - ঠিক করে ফেরত দিন_' : '⭐ *SAMPLE* · ' + sname + (SUSM ? '\n🧵 USMAN hand work' : '') + (sdesc ? '\n' + sdesc : '')) + '\n' + scard2.shortUrl + '\n_' + swho + ' · factory app_', sts = '';
       if (sids.length) {
-        var sj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + FT }, muteHttpExceptions: true,
+        var sj = JSON.parse(ufFetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + FT }, muteHttpExceptions: true,
           payload: { files: JSON.stringify(sids.map(function (f) { return { id: f }; })), channel_id: SCH, initial_comment: stext } }).getContentText());
         if (!sj.ok) return out({ ok: false, error: 'Slack said ' + sj.error + (sj.error === 'not_in_channel' ? ' (invite the factory bot to ' + SCHN + ')' : ''), card: scard2.id, list: SLIST });
         try { var sh = (sj.files || [])[0].shares || {}, grp = sh.public || sh.private || {}, arr = grp[SCH] || []; sts = arr.length ? arr[0].ts : ''; } catch (e) {}
@@ -1536,6 +1572,7 @@ function fac0(reqText, P) {
       if (req.op === 'salset') { var ss = {}, sin = req.sal && typeof req.sal === 'object' ? req.sal : {}; Object.keys(sin).slice(0, 60).forEach(function (n) { var k = String(n).trim().toUpperCase().slice(0, 30), v = +sin[n]; if (k && v > 0 && v < 10000000) ss[k] = Math.round(v); }); P.setProperty('FAC_SAL', JSON.stringify(ss)); }
       return out({ ok: true, sal: facSal(P) });
     }
+    if (req.op === 'usage') { var us = ufStat(); us.ok = true; return out(us); }   // 22 Nov 2026: outside calls counted by the relay (last 24 h, today, per hour, per source)
     if (req.op === 'mat') return out({ ok: true, items: facMat(P), low: facMatLow(P) });   // 22 Oct 2026: materials (thread, labels, elastic …)
     if (req.op === 'matset') {
       var mi = Array.isArray(req.items) ? req.items.slice(0, 80).map(function (m) { m = m || {}; var n = String(m.n || '').replace(/[<>]/g, '').trim().slice(0, 40); if (!n) return null;
@@ -1587,7 +1624,7 @@ function live(reqText, P) {
   var tok = P.getProperty('TRELLO');
   if (!tok) return out({ ok: false, error: 'the relay has no TRELLO key yet' });
   var q = '/cards?fields=name,pos,idShort&attachments=true&attachment_fields=id,name,mimeType,date&key=' + TKEY + '&token=' + tok;
-  var rs = UrlFetchApp.fetchAll([LIVE_LISTS.r, LIVE_LISTS.s].map(function (id) { return { url: 'https://api.trello.com/1/lists/' + id + q, muteHttpExceptions: true }; }));
+  var rs = ufFetchAll([LIVE_LISTS.r, LIVE_LISTS.s].map(function (id) { return { url: 'https://api.trello.com/1/lists/' + id + q, muteHttpExceptions: true }; }));
   var cards = [];
   for (var i = 0; i < rs.length; i++) {
     if (rs[i].getResponseCode() !== 200) return out({ ok: false, error: 'Trello said ' + rs[i].getResponseCode() });
@@ -1718,12 +1755,12 @@ function slackPdf(reqText, P, v2) {
   var bytes = Utilities.base64Decode(String(req.pdf || '')); if (bytes.length < 100 || bytes.length > 18000000) return out({ ok: false, error: 'bad PDF' });
   var name = String(req.name || 'SJ-memo.pdf').replace(/[^\w.\- ]+/g, '-').slice(0, 80); if (!/\.pdf$/i.test(name)) name += '.pdf';
   var H = { Authorization: 'Bearer ' + tok };
-  var a = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: H, muteHttpExceptions: true,
+  var a = JSON.parse(ufFetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: H, muteHttpExceptions: true,
     payload: { filename: name, length: String(bytes.length) } }).getContentText());
   if (!a.ok) return out({ ok: false, error: 'Slack said ' + a.error + (a.error === 'missing_scope' ? ' (the SJ Memo app needs files:write)' : '') });
-  var up = UrlFetchApp.fetch(a.upload_url, { method: 'post', payload: Utilities.newBlob(bytes, 'application/pdf', name), muteHttpExceptions: true });
+  var up = ufFetch(a.upload_url, { method: 'post', payload: Utilities.newBlob(bytes, 'application/pdf', name), muteHttpExceptions: true });
   if (up.getResponseCode() !== 200) return out({ ok: false, error: 'Slack upload said ' + up.getResponseCode() });
-  var c = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: H, muteHttpExceptions: true,
+  var c = JSON.parse(ufFetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: H, muteHttpExceptions: true,
     payload: { files: JSON.stringify([{ id: a.file_id, title: name.replace(/\.pdf$/i, '') }].concat((v2 && Array.isArray(req.fids) ? req.fids : []).filter(function (f) { return /^F[A-Z0-9]{6,20}$/.test(String(f)); }).slice(0, 25).map(function (f) { return { id: String(f) }; }))), channels: chans.join(','), initial_comment: String(req.text || '').slice(0, 3000) } }).getContentText());
   if (!c.ok) return out({ ok: false, error: 'Slack said ' + c.error + (c.error === 'not_in_channel' || c.error === 'channel_not_found' ? (billCh ? ' - open #' + (to === 'sales' ? 'sales-new' : 'receipts-new') + ' in Slack and type /invite @SJ Memo' : ' (invite @SJ Memo to #godown and #customer)') : '') });
   if (onceKey) try { CacheService.getScriptCache().put(onceKey, '1', 21600); } catch (e) {}
@@ -1767,7 +1804,7 @@ function trApi(method, path, params, tok, body, raw) {
   // silently. A write whose text is long now goes in the request body (Trello reads both).
   if (body === undefined && !/^get$/i.test(method) && q.length > 1200) { var fp = {}; Object.keys(params).forEach(function (k) { fp[k] = String(params[k]); }); o.payload = fp; q = ''; }
   if (body !== undefined) { if (raw) o.payload = body; else { o.contentType = 'application/json'; o.payload = JSON.stringify(body); } }
-  var r = UrlFetchApp.fetch('https://api.trello.com/1' + path + '?key=' + TKEY + '&token=' + tok + (q ? '&' + q : ''), o), c = r.getResponseCode(), t = r.getContentText();
+  var r = ufFetch('https://api.trello.com/1' + path + '?key=' + TKEY + '&token=' + tok + (q ? '&' + q : ''), o), c = r.getResponseCode(), t = r.getContentText();
   if (c >= 300) throw new Error('Trello said ' + c + (c === 401 ? ' (the relay\'s Trello key cannot change cards - add TRELLO_W)' : '') + ': ' + t.slice(0, 120));
   try { return JSON.parse(t); } catch (e) { return t; }
 }
@@ -1830,13 +1867,14 @@ function ccMemoHead(t) { var L = String(t || '').split('\n').slice(1).map(functi
 function ccName(t) { var s = String(t || ''), m = s.match(/^\*ORDER MEMO[^*\n]*\*[^\n]*?[—-]\s*([^\n]+)/) || s.match(/^\s*(?:👤|:bust_in_silhouette:)\s*\*CUSTOMER\*\s*·\s*([^\n]+)/); if (!m) return ''; var n = m[1].replace(/[*_]/g, '').trim(); return /^no name$/i.test(n) ? '' : n.slice(0, 60); }
 function ccKey(n) { return String(n || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
 function ccErr(e) { return 'Slack said ' + e + (e === 'missing_scope' ? ' — the SJ Memo Slack app needs channels:history (or groups:history), files:read and users:read: api.slack.com/apps → SJ Memo → OAuth & Permissions → Bot Token Scopes → add → Reinstall' : e === 'not_in_channel' ? ' — invite @SJ Memo to #customer' : ''); }
+function ccTtl() { return PropertiesService.getScriptProperties().getProperty('CC_EVENTS_ON') ? 60 : 30; }   // 22 Nov 2026 (Google's daily limit): SJ Stock's chat reads (#customer, #godown, the direct channels) are kept 60 s once Slack's push has reached the relay for them, 30 s before that (was 20 s); a post from the app or a Slack push still drops them at once
 function ccHist(tok, fresh) {                                   // newest 400 messages of #customer, kept 20 s for every phone
   var c = CacheService.getScriptCache(), h = fresh ? null : bigGet(c, 'CC_HIST'); if (h) return JSON.parse(h);
   var all = [], cur = '';
   for (var i = 0; i < 2; i++) { var j = slackApi(tok, 'conversations.history', { channel: CC_CH, limit: 200, cursor: cur }, true); if (!j.ok) throw new Error(ccErr(j.error));
     (j.messages || []).forEach(function (m) { all.push({ ts: m.ts, text: String(m.text || '').slice(0, 1500), user: m.user || '', bot: !!m.bot_id, rc: m.reply_count || 0, lr: m.latest_reply || '', files: (m.files || []).map(function (f) { return { id: f.id, name: f.name || '', type: f.mimetype || '', size: f.size || 0 }; }) }); });
     cur = (j.response_metadata || {}).next_cursor || ''; if (!cur) break; }
-  try { bigPut(c, 'CC_HIST', JSON.stringify(all), 20); } catch (e) {}
+  try { bigPut(c, 'CC_HIST', JSON.stringify(all), ccTtl()); } catch (e) {}
   return all;
 }
 function ccWho(tok, m) {                                        // "*Abbas:* text" (written in the app) or a person in Slack
@@ -1848,7 +1886,7 @@ function ccWho(tok, m) {                                        // "*Abbas:* tex
 }
 function ccDiag() {                                            // read-only check, run from the editor: which scopes the SJ Memo bot has and whether it can read #customer
   var tok = PropertiesService.getScriptProperties().getProperty('SLACK_BOT_TOKEN'), L = [];
-  var r = UrlFetchApp.fetch('https://slack.com/api/conversations.history?channel=' + CC_CH + '&limit=3', { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true }), h = r.getHeaders(), j = JSON.parse(r.getContentText());
+  var r = ufFetch('https://slack.com/api/conversations.history?channel=' + CC_CH + '&limit=3', { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true }), h = r.getHeaders(), j = JSON.parse(r.getContentText());
   L.push('scopes: ' + (h['x-oauth-scopes'] || h['X-OAuth-Scopes'] || '?')); L.push('#customer history ok=' + j.ok + (j.ok ? ' · ' + (j.messages || []).length + ' msgs' : ' err=' + j.error + ' needed=' + (j.needed || '')));
   (j.messages || []).forEach(function (m) { L.push('  ' + String(m.text || '').slice(0, 60).replace(/\n/g, ' ') + ((m.files || []).length ? ' [+' + m.files.length + ' file]' : '')); });
   var P = PropertiesService.getScriptProperties(); L.push('live topic set: ' + !!P.getProperty('CC_LIVE') + ' · notify people: ' + Object.keys(JSON.parse(P.getProperty('CCNTFY') || '{}')).join(',') + ' · seen records: ' + Object.keys(P.getProperties()).filter(function (k) { return k.indexOf('CCSEEN_') === 0; }).length);
@@ -1886,7 +1924,7 @@ function ccUnread(P, tok, hist, who, budget) {                  // {key: {n, las
   return out;
 }
 function ccLive(P) { var t = P.getProperty('CC_LIVE'); if (!t) { t = 'sjcust-' + Utilities.getUuid().replace(/-/g, '').slice(0, 22); P.setProperty('CC_LIVE', t); } return t; }
-function ccNudge(P, key) { try { UrlFetchApp.fetch('https://ntfy.sh/' + ccLive(P), { method: 'post', payload: 'k=' + encodeURIComponent(String(key || '').slice(0, 60)), headers: { 'Cache': 'no', 'Firebase': 'no' }, muteHttpExceptions: true }); } catch (e) {} }
+function ccNudge(P, key) { try { ufFetch('https://ntfy.sh/' + ccLive(P), { method: 'post', payload: 'k=' + encodeURIComponent(String(key || '').slice(0, 60)), headers: { 'Cache': 'no', 'Firebase': 'no' }, muteHttpExceptions: true }); } catch (e) {} }
 // ---- 19 Oct 2026 (Abbas: "when an order is made to send to godown, bring the #godown chat for it directly ... two options of the chats in that
 // order, one #godown, one #customers"). Each ORDER has two chats: the thread under its pick-list post in #godown (key 'G' + ts) and the thread under
 // its memo post in #customer (key 'O' + ts). The order (ORD_<id>) remembers both ts (gts / cts, op "link").
@@ -1895,7 +1933,7 @@ function gdHist(tok, fresh) {                                    // newest 200 t
   var c = CacheService.getScriptCache(), h = fresh ? null : bigGet(c, 'GD_HIST'); if (h) return JSON.parse(h);
   var j = slackApi(tok, 'conversations.history', { channel: GD_CH, limit: 200 }, true); if (!j.ok) throw new Error(ccErr(j.error).replace('#customer', '#godown'));
   var all = (j.messages || []).map(function (m) { return { ts: m.ts, rc: m.reply_count || 0, lr: m.latest_reply || '', text: String(m.text || '').slice(0, 300) }; });
-  try { bigPut(c, 'GD_HIST', JSON.stringify(all), 20); } catch (e) {} return all;
+  try { bigPut(c, 'GD_HIST', JSON.stringify(all), ccTtl()); } catch (e) {} return all;
 }
 function chReplies(tok, ch, root, lr) {                          // one thread of #godown or #customer: root first, then the replies (cached by its newest reply)
   var c = CacheService.getScriptCache(), k = 'CH_TH_' + ch + '_' + root + '_' + (lr || '0'), h = lr ? bigGet(c, k) : null; if (h) return JSON.parse(h);
@@ -1959,7 +1997,7 @@ function dmHist(tok, ch, fresh) {                                 // newest 100 
   var c = CacheService.getScriptCache(), ck = 'DM_HIST_' + ch, h = fresh ? null : c.get(ck); if (h) return JSON.parse(h);
   var j = slackApi(tok, 'conversations.history', { channel: ch, limit: 100 }, true); if (!j.ok) throw new Error(ccErr(j.error).replace('#customer', 'the direct channel'));
   var all = (j.messages || []).map(function (m) { return { ts: m.ts, rc: m.reply_count || 0, lr: m.latest_reply || '', text: String(m.text || '').slice(0, 120) }; });
-  try { c.put(ck, JSON.stringify(all), 20); } catch (e) {} return all;
+  try { c.put(ck, JSON.stringify(all), ccTtl()); } catch (e) {} return all;
 }
 function dmDrop(P) { var c = CacheService.getScriptCache(); Object.keys(P.getProperties()).forEach(function (k) { if (k.indexOf('CC_DM_CH') === 0) c.remove('DM_HIST_' + P.getProperty(k)); }); }
 function dmIsCh(P, id) { if (!id) return false; var all = P.getProperties(); return Object.keys(all).some(function (k) { return k.indexOf('CC_DM_CH') === 0 && all[k] === id; }); }
@@ -2047,7 +2085,7 @@ function cchat(reqText, P) {
     if (req.op === 'upurl') {                                 // 20 Nov 2026 (Abbas: "the videos and photos we send on the chats do not go through - Muhammad complained many times"):
       // the phone sends the ORIGINAL file straight to Slack (any size Slack takes) - the relay only hands out the upload address; 'up' with fids then posts the message.
       var uf = Array.isArray(req.files) ? req.files.slice(0, 10) : []; if (!uf.length) return out({ ok: false, error: 'no file' });
-      var uurls = uf.map(function (f) { var a = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+      var uurls = uf.map(function (f) { var a = JSON.parse(ufFetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
         payload: { filename: String(f.name || 'file').replace(/[^\w.\- ]+/g, '-').slice(0, 80), length: String(Math.max(1, +f.size || 1)) } }).getContentText()); if (!a.ok) throw new Error(ccErr(a.error)); return { id: a.file_id, url: a.upload_url }; });
       return out({ ok: true, urls: uurls, fast: P.getProperty('FAC_FAST') || '' });
     }
@@ -2067,7 +2105,7 @@ function cchat(reqText, P) {
       else {
         var gids = ccFileIds(tok, req);
         if (!gids.length) return out({ ok: false, error: 'no file' });
-        var gj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+        var gj = JSON.parse(ufFetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
           payload: { files: JSON.stringify(gids.map(function (f) { return { id: f }; })), channel_id: XCH, thread_ts: gr, initial_comment: '*' + who + ':* ' + (gtx || '📎') } }).getContentText());
         if (!gj.ok) return out({ ok: false, error: ccErr(gj.error) }); gres = { ok: true, root: gr, files: gids.length };
       }
@@ -2131,7 +2169,7 @@ function cchat(reqText, P) {
       return out({ ok: true }); }
     if (req.op === 'ntfyoff') { var omap = {}; try { omap = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} delete omap[ccWhoKey(who)]; P.setProperty('CCNTFY', JSON.stringify(omap)); return out({ ok: true }); }
     if (req.op === 'ntfytest') { var tmap = {}; try { tmap = JSON.parse(P.getProperty('CCNTFY') || '{}'); } catch (e) {} var tt = tmap[ccWhoKey(who)]; if (!tt) return out({ ok: false, error: 'notifications are off for ' + who }); // 20 Oct 2026: a failed SJ Stock test now says WHY (ntfy's own answer), so the phone shows the real reason instead of "ntfy did not answer"
-      try { var tr = UrlFetchApp.fetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify({ topic: tt, title: 'SJ Stock · test', message: 'Notifications are on for ' + who + ' ✓', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#chat=', tags: ['speech_balloon'], priority: 4 }) });
+      try { var tr = ufFetch('https://ntfy.sh/', { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify({ topic: tt, title: 'SJ Stock · test', message: 'Notifications are on for ' + who + ' ✓', click: 'https://abbas911-prog.github.io/sj-designs/memo.html#chat=', tags: ['speech_balloon'], priority: 4 }) });
         var tc = tr.getResponseCode(); if (tc === 200) return out({ ok: true });
         var tb = ''; try { var tj = JSON.parse(tr.getContentText()); tb = tj.error || ''; } catch (e) { tb = String(tr.getContentText() || '').slice(0, 120); }
         return out({ ok: false, error: 'ntfy refused it (' + tc + (tb ? ': ' + tb : '') + ')' + (tc === 429 ? ' - ntfy limits messages from Google servers; tell Claude' : '') });
@@ -2145,7 +2183,7 @@ function cchat(reqText, P) {
       else {
         var ids = ccFileIds(tok, req);
         if (!ids.length) return out({ ok: false, error: 'no file' });
-        var cj = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+        var cj = JSON.parse(ufFetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
           payload: { files: JSON.stringify(ids.map(function (f) { return { id: f }; })), channel_id: CC_CH, thread_ts: rootTs, initial_comment: '*' + who + ':* ' + (txt || '📎') } }).getContentText());
         if (!cj.ok) return out({ ok: false, error: ccErr(cj.error) }); res = { ok: true, root: rootTs, files: ids.length };
       }
@@ -2158,7 +2196,7 @@ function cchat(reqText, P) {
       var fid = String(req.id || '').replace(/[^A-Z0-9]/g, ''), fi = slackApi(tok, 'files.info', { file: fid }, true); if (!fi.ok) return out({ ok: false, error: ccErr(fi.error) });
       var f = fi.file || {}, u = req.thumb ? (f.thumb_720 || f.thumb_480 || f.url_private) : (f.url_private_download || f.url_private); if (!u) return out({ ok: false, error: 'no file link' });
       if (!req.thumb && (f.size || 0) > 14000000) return out({ ok: false, error: 'file too big for the app', link: f.permalink || '' });
-      var r = UrlFetchApp.fetch(u, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });
+      var r = ufFetch(u, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true });
       var fbl = r.getResponseCode() === 200 ? r.getBlob() : null;
       if (!fbl || /text\/html/.test(String(fbl.getContentType() || ''))) return out({ ok: false, error: 'Slack refused the file (the SJ Memo app needs files:read)', link: f.permalink || '' });
       return out({ ok: true, b64: Utilities.base64Encode(fbl.getBytes()), type: f.mimetype || 'application/octet-stream', name: f.name || fid });
@@ -2180,21 +2218,21 @@ function ccFileIds(tok, req) {
   return ids;
 }
 function slackUp(tok, name, bytes) {
-  var a = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+  var a = JSON.parse(ufFetch('https://slack.com/api/files.getUploadURLExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
     payload: { filename: name, length: String(bytes.length) } }).getContentText());
   if (!a.ok) throw new Error('Slack said ' + a.error + (a.error === 'missing_scope' ? ' (the bot needs files:write)' : ''));
-  var up = UrlFetchApp.fetch(a.upload_url, { method: 'post', payload: Utilities.newBlob(bytes, 'application/octet-stream', name), muteHttpExceptions: true });
+  var up = ufFetch(a.upload_url, { method: 'post', payload: Utilities.newBlob(bytes, 'application/octet-stream', name), muteHttpExceptions: true });
   if (up.getResponseCode() !== 200) throw new Error('Slack upload said ' + up.getResponseCode());
   return a.file_id;
 }
 function slackShare(tok, fileIds, channels, text) {
   var r = fileIds.length
-    ? UrlFetchApp.fetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+    ? ufFetch('https://slack.com/api/files.completeUploadExternal', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
         payload: { files: JSON.stringify(fileIds.map(function (f) { return { id: f }; })), channels: channels.join(','), initial_comment: text } })
     : null;
   if (r) { var j = JSON.parse(r.getContentText()); if (!j.ok) throw new Error('Slack said ' + j.error + (j.error === 'not_in_channel' || j.error === 'channel_not_found' ? ' (invite the bot to the channel)' : '')); return; }
   channels.forEach(function (ch) {
-    var j2 = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/chat.postMessage', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+    var j2 = JSON.parse(ufFetch('https://slack.com/api/chat.postMessage', { method: 'post', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
       contentType: 'application/json', payload: JSON.stringify({ channel: ch, text: text }) }).getContentText());
     if (!j2.ok) throw new Error('Slack said ' + j2.error);
   });
@@ -2203,7 +2241,7 @@ function factoryChannel(P, tok, name) {
   var key = 'FCH_' + name, have = P.getProperty(key); if (have) return have;
   var cur = '';
   for (var k = 0; k < 10; k++) {
-    var j = JSON.parse(UrlFetchApp.fetch('https://slack.com/api/users.conversations?types=public_channel,private_channel&limit=1000' + (cur ? '&cursor=' + encodeURIComponent(cur) : ''),
+    var j = JSON.parse(ufFetch('https://slack.com/api/users.conversations?types=public_channel,private_channel&limit=1000' + (cur ? '&cursor=' + encodeURIComponent(cur) : ''),
       { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true }).getContentText());
     if (!j.ok) throw new Error('Slack said ' + j.error + ' while looking for #' + name);
     var c = (j.channels || []).filter(function (x) { return x.name === name; })[0];
@@ -2272,7 +2310,7 @@ function dorder(reqText, P) {
         if (req.customer) labs2.push(doLabel(hand ? DOX.USB : DOX.ALM, req.customer, tok));
         labs2.forEach(function (l) { trApi('post', '/cards/' + card.id + '/idLabels', { value: l }, tok); });
         if (cover) {                                          // the design cover always goes to Slack
-          var dl = UrlFetchApp.fetch('https://api.trello.com/1/cards/' + src.id + '/attachments/' + cover.id + '/download/' + encodeURIComponent(cover.name),
+          var dl = ufFetch('https://api.trello.com/1/cards/' + src.id + '/attachments/' + cover.id + '/download/' + encodeURIComponent(cover.name),
             { headers: { Authorization: 'OAuth oauth_consumer_key="' + TKEY + '", oauth_token="' + tok + '"' }, muteHttpExceptions: true });
           if (dl.getResponseCode() === 200) {
             var cb = dl.getBlob().getBytes(), cname = 'SJ-' + st.no + '-design.' + ((cover.name.match(/\.(\w+)$/) || [, 'jpg'])[1]);
@@ -2386,7 +2424,8 @@ function doSchedAdd(P, oid, at) {
   if (!ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'doSchedTick'; })) ScriptApp.newTrigger('doSchedTick').timeBased().everyMinutes(1).create();
 }
 function doSchedDrop(P, oid) { var L = JSON.parse(P.getProperty('DO_SCHED') || '[]'), K = L.filter(function (x) { return x.oid !== oid; }); if (K.length !== L.length) P.setProperty('DO_SCHED', JSON.stringify(K)); }
-function doSchedTick() {                                    // every minute while an order waits: send the ones whose time has come
+function doSchedTick() { UF.src = 'timer:sched'; try { doSchedTick0(); } finally { try { ufFlush(); } catch (x) {} } }
+function doSchedTick0() {                                   // every minute while an order waits: send the ones whose time has come
   var P = PropertiesService.getScriptProperties(), lock = LockService.getScriptLock(); if (!lock.tryLock(5000)) return;
   try {
     var L = JSON.parse(P.getProperty('DO_SCHED') || '[]'), now = Date.now(), keep = [], FT = P.getProperty('SLACK_FACTORY_TOKEN'), ST = P.getProperty('SLACK_BOT_TOKEN');
@@ -2615,16 +2654,17 @@ function sheetCheck() { var P = PropertiesService.getScriptProperties(), ss = cu
 function out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
 var READY = '66254dc6f8ade3c3a0c9b7d4', TKEY = '83fea3748717dd1e3fe28a15f2371759';
-function watchTrello() {
+function watchTrello() { if (!tickDue('ready', 5)) return; UF.src = 'timer:watchTrello'; try { watchTrello0(); } finally { try { ufFlush(); } catch (x) {} } }   // 22 Nov 2026: every 5 min, 08:00-23:00 Dubai (was every minute); `kick` still starts the photo job every 10 min
+function watchTrello0() {
   var P = PropertiesService.getScriptProperties(), tok = P.getProperty('TRELLO'), gh = P.getProperty('GH');
   if (!tok || !gh) return;
-  var r = UrlFetchApp.fetch('https://api.trello.com/1/lists/' + READY + '/cards?fields=id,name,dateLastActivity&attachments=true&attachment_fields=id&key=' + TKEY + '&token=' + tok, { muteHttpExceptions: true });
+  var r = ufFetch('https://api.trello.com/1/lists/' + READY + '/cards?fields=id,name,dateLastActivity&attachments=true&attachment_fields=id&key=' + TKEY + '&token=' + tok, { muteHttpExceptions: true });
   if (r.getResponseCode() !== 200) { console.log('Trello said ' + r.getResponseCode()); return; }
   var cards = JSON.parse(r.getContentText());
   var sig = cards.map(function (c) { return c.id + '|' + c.name + '|' + (c.attachments || []).map(function (a) { return a.id; }).join(','); }).sort().join('\n');
   var h = hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, sig, Utilities.Charset.UTF_8));
   if (h === P.getProperty('READY_SIG')) return;
-  var g = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/memo-thumbs.yml/dispatches', {
+  var g = ufFetch('https://api.github.com/repos/' + REPO + '/actions/workflows/memo-thumbs.yml/dispatches', {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     headers: { Authorization: 'Bearer ' + gh, Accept: 'application/vnd.github+json' }, payload: JSON.stringify({ ref: 'main' })
   });
@@ -2641,12 +2681,12 @@ function setupWatch() {
 // (16:31 -> 17:40 UTC that day, while Abbas waited on his SJ-12985 edits). This timer simply starts memo-thumbs every 10 minutes.
 // It needs only the GH property (already there) - no Trello key. Run setupTimer() once and allow the permission.
 function kick() {
-  var gh = PropertiesService.getScriptProperties().getProperty('GH'); if (!gh) return;
-  var g = UrlFetchApp.fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/memo-thumbs.yml/dispatches', {
+  var gh = PropertiesService.getScriptProperties().getProperty('GH'); if (!gh) return; UF.src = 'timer:kick';
+  var g = ufFetch('https://api.github.com/repos/' + REPO + '/actions/workflows/memo-thumbs.yml/dispatches', {
     method: 'post', contentType: 'application/json', muteHttpExceptions: true,
     headers: { Authorization: 'Bearer ' + gh, Accept: 'application/vnd.github+json' }, payload: JSON.stringify({ ref: 'main' })
   });
-  console.log(g.getResponseCode() === 204 ? 'memo-thumbs started' : 'GitHub said ' + g.getResponseCode() + ': ' + g.getContentText().slice(0, 200));
+  console.log(g.getResponseCode() === 204 ? 'memo-thumbs started' : 'GitHub said ' + g.getResponseCode() + ': ' + g.getContentText().slice(0, 200)); try { ufFlush(); } catch (x) {}
 }
 function setupTimer() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'kick') ScriptApp.deleteTrigger(t); });

@@ -934,6 +934,7 @@ async function lookSuite(browser) {
       ok(await page.evaluate(() => window.__f.tab()) === 'home' && await page.locator('#hm').isVisible() && await page.locator('#hcards').isHidden(), 'Home is the first screen');
       ok(/Good (morning|afternoon|evening), Abbas/.test(await page.textContent('#hm h1')), 'greets by name: ' + await page.textContent('#hm h1'));
       F.postSlack(W, CUT, { text: 'thread finished, send more', user: 'U1', thread_ts: W.rootB });
+      T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));   // Slack's push (22 Nov 2026: without it a line typed in Slack is found within 30 s, no longer 10)
       await until(async () => /new message/.test(await page.textContent('#hneeds')), 15000, 'new messages under NEEDS YOU');
       ok(/নতুন মেসেজ/.test(await page.textContent('#hneeds')), 'Bengali on the row');
       await until(async () => /1 design is late/.test(await page.textContent('#hneeds')) && /SJ-66001/.test(await page.textContent('#hneeds')), 8000, 'the late design is named: ' + await page.textContent('#hneeds'));
@@ -1037,6 +1038,34 @@ async function lookSuite(browser) {
       const f0 = W.ufetch; const a = await page.evaluate(() => window.__call({ op: 'workrep', days: 30, fresh: 1 })); const f1 = W.ufetch; const b = await page.evaluate(() => window.__call({ op: 'workrep', days: 30 })); const f2 = W.ufetch;
       const c = await page.evaluate(() => window.__call({ op: 'workrep', days: 30, fresh: 1 })); const f3 = W.ufetch;
       ok(a.ok && b.ok && c.ok && f2 === f1, 'a repeat costs the relay no Trello call (' + (f2 - f1) + ')'); ok(f3 - f2 < f1 - f0 || f1 - f0 <= 3, 'a fresh one right after asks Trello less: the cards it already checked are remembered (' + (f1 - f0) + ' then ' + (f3 - f2) + ')');
+    });
+    // ===== 22 Nov 2026 (Abbas: "the daily limit ran out on 19, 20 and 21 Nov ... cut the relay's own use ... show the calls in the app") =====
+    await test('an idle phone no longer makes the relay re-read every Slack channel every 10 seconds', async () => {
+      await home(page); await page.click('#tabs button[data-t="home"]'); T.relay.P.FAC_EVENTS_ON = String(Date.now()); await page.waitForTimeout(1500);
+      const f0 = W.ufetch; await page.waitForTimeout(35000); const n = W.ufetch - f0;
+      ok(n <= 12, 'at most one round of channel reads in 35 s with Slack\'s push set up (saw ' + n + ' outside calls; the old relay made ~25)'); delete T.relay.P.FAC_EVENTS_ON;
+    });
+    await test('the relay counts its outside calls; More -> Google calls shows the last 24 hours and who used them; Home warns from 70 %', async () => {
+      const u = await page.evaluate(() => window.__call({ op: 'usage' })); ok(u.ok && u.lim === 20000 && u.h24 > 0 && u.hours.length === 24, 'usage: ' + JSON.stringify({ h24: u.h24, today: u.today }));
+      ok(u.by['fac:ping'] > 0 && Object.keys(u.by).every(k => u.by[k] > 0), 'counted per source: ' + JSON.stringify(u.by)); ok(u.today <= W.ufetch && u.today >= W.ufetch * 0.6, 'the count follows the real number of calls (' + u.today + ' of ' + W.ufetch + ' since the test began)');
+      await page.click('#tmore'); await until(async () => /%/.test(await page.textContent('#te-uf')), 15000, 'percent on the tile'); await page.click('#buf');
+      await until(async () => /of 20,000 in the last 24 hours/.test(await page.textContent('#ufbody')), 8000, 'the sheet'); const tx = await page.textContent('#ufbody');
+      ok(/Factory phones checking for new messages/.test(tx) && /WHO USED THEM TODAY/.test(tx) && /গতকাল/.test(tx) && /Assistant \/ Jarvis script uses the SAME Google allowance/.test(tx) && (await page.locator('#ufbody .ufh i').count()) === 24, 'total, hours, sources in plain names, Bengali, the note about the Assistant'); await page.click('#ufx');
+      const L = JSON.parse(T.relay.cache.get('UF_LOG')), hk = Math.floor(Date.now() / 3600000); L.h[hk - 3] = 15600; T.relay.cache.put('UF_LOG', JSON.stringify(L), 21600);       // a heavy hour earlier today
+      await page.click('#tabs button[data-t="home"]'); await until(async () => /Google calls: 1[5-9],\d{3} of 20,000 used/.test(await page.textContent('#hneeds')), 20000, 'warning row on Home'); ok(/7\d%|8\d%/.test(await page.textContent('#hneeds')), 'with the percent');
+      await page.click('#hneeds .need[data-go="uf"]'); await until(() => page.locator('#ufs').isVisible(), 3000, 'the row opens the sheet'); await page.click('#ufx');
+      delete L.h[hk - 3]; T.relay.cache.put('UF_LOG', JSON.stringify(L), 21600); T.relay.P.UF_LOG = JSON.stringify(L);
+    });
+    await test('the every-minute timers do their Slack work every 5 minutes and only 8 am - 11 pm Dubai', async () => {
+      const ctx = T.relay.ctx, realNow = Date.now, at = (h, m) => { const d = new Date(realNow() + 4 * 3600000); d.setUTCHours(h, m, 0, 0); return d.getTime() - 4 * 3600000; }, scan0 = ctx.facNotifyScan; let scans = 0; ctx.facNotifyScan = () => { scans++; return 0; };
+      try { T.relay.cache.remove('TICK_notify');
+        Date.now = () => at(10, 0); ctx.facNotifyTick(); ctx.facNotifyTick(); Date.now = () => at(10, 2); ctx.facNotifyTick(); ok(scans === 1, 'three ticks within 3 minutes = one scan (saw ' + scans + ')');
+        Date.now = () => at(10, 6); ctx.facNotifyTick(); ok(scans === 2, 'the next one after 5 minutes (saw ' + scans + ')');
+        Date.now = () => at(2, 0); ctx.facNotifyTick(); Date.now = () => at(7, 30); ctx.facNotifyTick(); Date.now = () => at(23, 20); ctx.facNotifyTick(); ok(scans === 2, 'none at 2 am, 7:30 am or 11:20 pm (saw ' + scans + ')');
+        Date.now = () => at(12, 0); ok(ctx.tickDue('t1', 5) === true && ctx.tickDue('t1', 5) === false && ctx.tickDue('t2', 5) === true, 'each timer has its own 5-minute gate');
+        const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'relay.gs'), 'utf8');
+        ok(/function facWatch\(\) \{ if \(!tickDue\('watch', 5\)\) return;/.test(src) && /function watchTrello\(\) \{ if \(!tickDue\('ready', 5\)\) return;/.test(src) && !/UrlFetchApp\.fetch(All)?\((?!url|rs)/.test(src), 'facWatch and watchTrello are gated; every outside call goes through the counter');
+      } finally { Date.now = realNow; ctx.facNotifyScan = scan0; }
     });
     await test('Google\'s daily limit reached: the app says so in plain words (English + Bengali), not Google\'s sentence, and Home shows it', async () => {   // 21 Nov 2026
       W.quota = true;

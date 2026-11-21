@@ -65,6 +65,10 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 #fabs .fabimg{height:210px;border-radius:14px;background:#f1ece2 center/contain no-repeat;position:relative;margin-bottom:10px}#fabs .fabimg button{position:absolute;right:8px;bottom:8px;width:auto;margin:0;padding:8px 12px;font-size:13px;background:rgba(255,255,255,.94);box-shadow:0 1px 4px rgba(0,0,0,.2)}
 #fabs .fabst{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:15px;font-weight:700}#fabs .fabst span{flex:1}#fabs .fabst button{width:52px;height:48px;margin:0;padding:0;text-align:center;font-size:24px;border-radius:12px;background:#f1ece2}#fabs .fabst button:disabled{opacity:.35}#fabs .fabst b{min-width:44px;text-align:center;font-size:26px}
 #faberr{margin:0 2px 8px;padding:10px 12px;border-radius:10px;background:#fde8e8;color:#b71c1c;font-size:13.5px;font-weight:700;line-height:1.35}
+/* 22 Nov 2026: outside calls of the relay (Google's daily limit) */
+#ufbody .ufbig{font-size:22px;font-weight:800}#ufbody .ufbar{height:12px;border-radius:6px;background:#ece6db;overflow:hidden;margin:6px 0 10px}#ufbody .ufbar i{display:block;height:100%;background:var(--green)}#ufbody .ufbar.a i{background:#d9962b}#ufbody .ufbar.r i{background:#c62828}
+#ufbody .ufh{display:flex;align-items:flex-end;gap:2px;height:54px;margin:4px 0 2px}#ufbody .ufh i{flex:1;background:#cdb48a;border-radius:2px 2px 0 0;min-height:1px}#ufbody .ufh i.now{background:var(--gold)}#ufbody .ufhl{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-bottom:10px}
+#ufbody .ufr{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--line)}#ufbody .ufr b{white-space:nowrap}#ufbody .ufn{font-size:12.5px;color:var(--mute);margin-top:10px}#ufbody h4{margin:12px 0 2px;font-size:12px;letter-spacing:.06em;color:var(--mute)}
 #nserr{margin:8px 2px 0;padding:10px 12px;border-radius:10px;background:#fde8e8;color:#b71c1c;font-size:13.5px;font-weight:700;line-height:1.35}
 .age{display:inline-block;margin-top:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.01em;white-space:nowrap}.age.g{background:#e3f4e8;color:#1b6b35}.age.a{background:#fff1d6;color:#8a5a00}.age.r{background:#c62828;color:#fff}#cnm .age{display:block;width:max-content;margin-top:3px;font-size:11.5px}
 .cardrow .lst{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.05em}
@@ -253,7 +257,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
     <div class="sect">NEW · নতুন</div>
     <div class="tiles3"><button class="tl" id="badd"><i>＋</i><b>New card</b><small>নতুন কার্ড</small></button><button class="tl" id="bstar"><i>⭐</i><b>New sample</b><small>নতুন স্যাম্পল</small></button><button class="tl" id="bretm"><i>↩️</i><b>New return</b><small>নতুন ফেরত</small></button></div>
     <div class="sect">SETTINGS · সেটিংস</div>
-    <div class="tiles3"><button class="tl" id="bell" hidden><i>🔔</i><b>Notifications</b><small>নোটিফিকেশন</small></button><button class="tl" id="bspeed"><i>🚀</i><b>Speed</b><small>গতি · fast lane</small></button><button class="tl" id="bslk"><i>⚡</i><b>Instant Slack</b><small>সাথে সাথে মেসেজ</small></button>
+    <div class="tiles3"><button class="tl" id="bell" hidden><i>🔔</i><b>Notifications</b><small>নোটিফিকেশন</small></button><button class="tl" id="bspeed"><i>🚀</i><b>Speed</b><small>গতি · fast lane</small></button><button class="tl" id="buf"><i>📊</i><b>Google calls</b><small>আজকের কল · daily limit</small><em id="te-uf"></em></button><button class="tl" id="bslk"><i>⚡</i><b>Instant Slack</b><small>সাথে সাথে মেসেজ</small></button>
       <button class="tl" id="bdmset"><i>💬</i><b>Direct chat</b><small>চ্যানেল</small></button><button class="tl" id="rf"><i>↻</i><b>Refresh</b><small>আবার লোড করুন</small></button></div>
     <div style="text-align:center;color:var(--mute);font-size:12px;margin-top:10px" id="verline"></div>
   </section>
@@ -309,6 +313,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 <div class="fabst"><span>Rolls · রোল</span><button type="button" id="fabminus">−</button><b id="fabn">1</b><button type="button" id="fabplus">＋</button></div>
 <input id="fabname" maxlength="60" autocomplete="off" placeholder="Colour or fabric name (optional) · রং বা কাপড়ের নাম">
 <div id="faberr" hidden></div><button class="go" id="fabgo">📤 Send · পাঠান</button><button class="x" id="fabx">Cancel · বাতিল</button></div></div>
+<div class="sheet" id="ufs" hidden><div class="in"><h3>📊 Google calls · গুগল কল <small style="font-weight:600;color:var(--mute)">the relay's daily allowance</small></h3><div id="ufbody" style="font-size:14px;line-height:1.45"></div><button class="x" id="ufx">Close · বন্ধ</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
 <div class="sheet" id="cmenu" hidden><div class="in"><h3 id="cmh">Card · কার্ড</h3><button id="bmove">↔ Move to… · অন্য জায়গায়</button><button id="battach">📷 Add photo to Trello · ট্রেলোতে ছবি যোগ করুন</button><button id="bedit">✏️ Edit card · বিবরণ বদলান</button><button id="bcopy">⧉ Copy card · কার্ড কপি করুন</button><button id="bwrep">📊 Production report · উৎপাদন রিপোর্ট</button><button id="btrello">Open in Trello · ট্রেলোতে খুলুন</button><button class="x" id="cmx">Cancel</button></div></div>
@@ -318,7 +323,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-11-21e';
+var VER = '2026-11-22a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -637,6 +642,7 @@ function homeLoad(){ if ((TAB !== 'home' && TAB !== 'cards') || !PW || !D.cards 
   if (isOwner() && rvOk('people') && now - HM.pat > 900000) { HM.pat = now; call({ op: 'people', act: 'list' }).then(function(j){ if (j && j.ok) { FD.people = j; if (TAB === 'home') homeDraw(); } }); } }
 setInterval(function(){ if ((TAB === 'home' || TAB === 'cards') && !document.hidden && $('card').hidden) homeLoad(); }, 30000);
 function homeNeeds(){ var N = [], tot = totUnread();
+  var up = ufPct(); if (up != null && up >= 70 && !quotaHit()) N.push({ ic: '📊', c: up >= 90 ? 'red' : 'amb', n: up + '%', t: 'Google calls: ' + nfmt(D.uf) + ' of ' + nfmt(D.ufl) + ' used · দৈনিক সীমা', s: up >= 90 ? 'almost at the daily limit — the relay may stop until it resets' : 'the relay\'s daily allowance is filling up · tap to see who uses it', go: 'uf' });
   if (quotaHit()) N.push({ ic: '⏳', c: 'amb', n: '!', t: "Google's daily limit is used up · দৈনিক সীমা শেষ", s: 'new cards / Work / Sheet wait until it comes back by itself · chats still work', go: 'chats' });
   if (tot) { var top = null; Object.keys(D.th || {}).forEach(function(k){ var t = D.th[k]; if (t && t.n && (!top || +t.last > +top.last)) top = { k: k, last: t.last, tx: t.tx }; }); var tc = top && D.byId[top.k];
     N.push({ ic: '💬', c: 'blue', n: tot, t: tot + ' new message' + (tot > 1 ? 's' : '') + ' · নতুন মেসেজ', s: (tc ? (tc.dm ? tc.title : cardTitle(tc).replace(/<[^>]+>/g, '')) + ' · ' : '') + String((top && top.tx) || '').slice(0, 60), go: 'chats' }); }
@@ -661,11 +667,11 @@ function homeDraw(){ var el = $('hm'); if (!el || !D.cards || !D.cards.length) r
       return '<div class="hlab">RETURNS · ফেরত</div><div class="hsec" id="hret"><button class="need" data-go="returns"><div class="ic amb">↩️</div><div class="t"><b>Returns · alter pieces · sample requests</b><small>' + (rs.length ? rs.length + ' at the factory · কারখানায়' : 'Nothing at the factory · কিছু নেই') + ' · ফেরত · অল্টার · স্যাম্পল</small></div>' + (ru ? '<span class="newb">NEW ' + ru + '</span>' : '') + '<span class="n amb">' + rs.length + '</span></button></div>'; })()
     + '<div class="hlab">TODAY · আজ</div><div class="htiles"><button class="htile" data-go="work"><b style="color:var(--green)">' + (WKR ? tod : '…') + '</b><span>pcs done · আজ হয়েছে</span></button><button class="htile" data-go="work"><b>' + (WKR ? busy : '…') + '</b><span>working · কাজে</span></button><button class="htile" data-go="work"><b style="color:#c98a12">' + (WKR ? free : '…') + '</b><span>free · ফাঁকা</span></button></div>'; }
 $('hm').onclick = function(e){ var g = e.target.closest('.gp'); if (g) { groupGo(+g.dataset.g); return; } var b = e.target.closest('[data-go]'); if (!b) return; var go = b.dataset.go;
-  if (go === 'chats') setTab('chats'); else if (go === 'returns') setTab('returns'); else if (go === 'work') wksShow(); else facShow(go); };
+  if (go === 'chats') setTab('chats'); else if (go === 'uf') ufShow(); else if (go === 'returns') setTab('returns'); else if (go === 'work') wksShow(); else facShow(go); };
 function moreDraw(){ var own = isOwner(); $('mrep').hidden = !own; $('mpeople').hidden = !own; $('mrole').textContent = (own ? 'Owner · মালিক' : 'Factory · কারখানা') + ' · app ' + VER; $('tmore').textContent = String(WHO || '').trim().split(/\s+/).map(function(w){ return w.charAt(0); }).join('').slice(0, 2).toUpperCase() || '☰';
   var late = D.cards ? D.cards.filter(function(c){ var d = dueDays(c); return d !== null && d < 0 && !AGEOFF.test(lname(c.l)); }).length : 0; $('te-late').textContent = late ? String(late) : '';
   var ws = (WKR && WKR.workers) || []; $('tn-wk').textContent = WKR ? ws.filter(function(w){ return (w.hand || []).length; }).length + ' working · কাজে' : 'কর্মী';
-  var low = (WKR && WKR.low) || []; $('te-mat').textContent = low.length ? String(low.length) : '';
+  var low = (WKR && WKR.low) || []; $('te-mat').textContent = low.length ? String(low.length) : ''; var upm = ufPct(); $('te-uf').textContent = upm != null ? upm + '%' : '';
   if (own && FD.people) { var pp = FD.people.people || [], bad = pp.filter(function(x){ return !x.own && x.d.some(function(d){ return d.ob > 0 || (d.v && d.v < VER); }); }).length; $('tn-pp').textContent = pp.length + ' people · লোক'; $('te-pp').textContent = bad ? String(bad) : ''; } }
 $('plusx').onclick = function(){ $('plus').hidden = true; };
 $('pcard').onclick = function(){ $('plus').hidden = true; $('badd').click(); };
@@ -1542,6 +1548,25 @@ async function pendAdd(file, name, kind){
   if (!$('ns').hidden) { SP.push(it); spDraw(); toast((kind === 'audio' ? 'Voice note' : kind === 'photo' ? 'Photo' : 'File') + ' added · যোগ হয়েছে'); return; }
   PEND.push(it); pendDraw(); toast((kind === 'audio' ? 'Voice note' : kind === 'photo' ? 'Photo' : 'File') + ' added — press Send · পাঠাতে Send চাপুন');
 }
+// ===== 22 Nov 2026 (Abbas: "show in the app how many outside calls were made today, counted in the script, so we can see it coming") =====
+// Google gives one Google account 20,000 outside calls (Trello / Slack / GitHub) a day. The relay counts its own (ufFetch) and the ping
+// answer carries the last 24 hours (`uf`). More -> 📊 Google calls shows the total, the hours and who used them; Home warns from 70 %.
+function nfmt(n){ return String(Math.round(+n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function ufPct(){ return D.uf != null && D.ufl ? Math.round(D.uf / D.ufl * 100) : null; }
+var UFN = { 'fac:ping': 'Factory phones checking for new messages', 'fac:list': 'Factory card list', 'fac:thread': 'Factory chats read through the relay', 'fac:media': 'Photos / voice notes through the relay', 'fac:workrep': 'Workers report', 'fac:work': 'Work box of a card', 'fac:post': 'Factory messages sent', 'fac:up': 'Factory files sent', 'fac:upurl': 'Factory files sent', 'fac:move': 'Done / moves', 'fac:seen': 'Marking chats as read', 'fac:sample': 'New sample / return cards',
+  'timer:notify': 'Notification timer (every 5 min, 8 am - 11 pm)', 'timer:facWatch': 'Telegram timer (every 5 min, 8 am - 11 pm)', 'timer:watchTrello': 'READY watcher for photos (every 5 min, 8 am - 11 pm)', 'timer:kick': 'Photo job starter (every 10 min)', 'timer:sched': 'Scheduled orders', 'slack-event': 'Slack push (a message was written)', cchat: 'SJ Stock chats', live: 'SJ Stock stock list', orders: 'SJ Stock orders', dorder: 'SJ Stock design orders', slackpdf: 'SJ Stock PDFs to Slack', slackpdf2: 'SJ Stock PDFs to Slack', fastchk: 'Fast-lane key check' };
+function ufDraw(j){ var pct = j.lim ? Math.round(j.h24 / j.lim * 100) : 0, mx = Math.max.apply(null, j.hours.concat([1])), by = Object.keys(j.by || {}).map(function(k){ return [k, j.by[k]]; }).sort(function(a, b){ return b[1] - a[1]; });
+  var h0 = (j.hour + 1) % 24, lab = function(h){ return ('0' + h).slice(-2) + ':00'; };
+  $('ufbody').innerHTML = '<div class="ufbig">' + nfmt(j.h24) + ' <span style="font-size:14px;font-weight:600;color:var(--mute)">of ' + nfmt(j.lim) + ' in the last 24 hours · ' + pct + ' %</span></div><div class="ufbar' + (pct >= 85 ? ' r' : pct >= 60 ? ' a' : '') + '"><i style="width:' + Math.min(100, pct) + '%"></i></div>'
+    + '<div class="ufr"><span>Today (Dubai) · আজ</span><b>' + nfmt(j.today) + '</b></div><div class="ufr"><span>Yesterday · গতকাল</span><b>' + nfmt(j.yest) + '</b></div>'
+    + '<h4>PER HOUR · LAST 24 HOURS · ঘণ্টায়</h4><div class="ufh">' + j.hours.map(function(n, i){ return '<i' + (i === 23 ? ' class="now"' : '') + ' style="height:' + Math.round(n / mx * 100) + '%" title="' + n + '"></i>'; }).join('') + '</div><div class="ufhl"><span>' + lab(h0) + '</span><span>busiest hour: ' + nfmt(mx) + '</span><span>now</span></div>'
+    + '<h4>WHO USED THEM TODAY · কে ব্যবহার করেছে</h4>' + (by.length ? by.slice(0, 12).map(function(x){ return '<div class="ufr"><span>' + esc(UFN[x[0]] || x[0]) + '</span><b>' + nfmt(x[1]) + '</b></div>'; }).join('') : '<div class="empty">Nothing counted yet today · এখনো কিছু নেই</div>')
+    + '<div class="ufn">Counted by the relay (SJ memo script) since its new code was put in. The Assistant / Jarvis script uses the SAME Google allowance and is not in this number. When the limit is reached, the relay stops until Google resets it · সীমা শেষ হলে গুগল রিসেট না করা পর্যন্ত রিলে বন্ধ থাকে</div>'; }
+function ufShow(){ $('ufs').hidden = false;
+  if (!rvOk('usage')) { $('ufbody').innerHTML = '<div class="empty">The relay needs its new code (version 2026-11-22a) before it can count · রিলের নতুন কোড দরকার</div>'; return; }
+  $('ufbody').innerHTML = '<div class="empty">Loading… · লোড হচ্ছে</div>';
+  call({ op: 'usage' }).then(function(j){ if ($('ufs').hidden) return; if (!j || !j.ok) { $('ufbody').innerHTML = '<div class="empty">' + esc((j && j.error) || 'no answer') + '</div>'; return; } D.uf = j.h24; D.ufl = j.lim; ufDraw(j); moreDraw(); }); }
+$('buf').onclick = ufShow; $('ufx').onclick = function(){ $('ufs').hidden = true; }; $('ufs').onclick = function(e){ if (e.target === $('ufs')) $('ufs').hidden = true; };
 // ===== 21 Nov 2026 (Abbas): NEED FABRIC. When a card lands in START Ibrahim checks which fabric colours the factory has; for a missing one he
 // sends ONE photo of the vendor's colour sheet (the colour marked) + how many rolls. No new backend: it is a normal chat message with a photo,
 // with a text another program reads - these three are EXACT, never reword them:
@@ -1832,6 +1857,7 @@ async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now
   var hq = hotTake(), j = await call({ op: 'ping', fresh: fresh ? 1 : 0, hot: hq, v: VER, dv: DEV, ob: OUT.filter(function(x){ return x.tries >= 3; }).length, ua: /Android/i.test(navigator.userAgent) ? 'Android' : /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone' : 'PC' }); PINGING = 0;
   if (j && j.ok && j.key && /^[0-9a-f]{64}$/.test(j.key) && j.key !== PW) { PW = j.key; ls('sj_fac_pw', PW); FAST.k = ''; }   // this phone's own key (it was on the shared password) if (!j || !j.ok) hotBack(hq); if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
+  if (j.uf != null) { D.uf = +j.uf || 0; D.ufl = +j.ufl || 20000; }   // 22 Nov 2026: outside calls the relay made in the last 24 h (Google's daily limit)
   D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.dmno !== undefined) D.dmno = !!j.dmno; if (j.lais !== undefined) D.lais = j.lais; if (j.rooms !== undefined) { D.rooms = j.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (j.lo !== undefined) { D.lo = j.lo || []; loSync(); } if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); if (j.rv) rvSet(j.rv); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; draw(); alertNew(); liveMark(); prefetch(); }
 // 15 Oct 2026 (Abbas: "you see how long it is taking refreshing? I run a business - when a message comes I want it as instant as possible, without
 // any long loading of the chats"): (a) the "anything new?" check no longer waits behind the card-list refresh; (b) the status line shows the
@@ -1928,7 +1954,7 @@ async function checkVer(){ if (busyWork()) { if (!VBUSY) VBUSY = setTimeout(func
 $('who').textContent = WHO;
 thcLoad(); oload(); setInterval(function(){ if (OUT.length && !OUTRUN) outRun(); }, 10000);
 // 24 Oct 2026: the relay tells its version (rv); the app shows it under More and refuses a button the deployed relay does not know yet
-var RV_NEED = { part: '2026-10-24a', people: '2026-11-21a', close: '2026-11-21a' };
+var RV_NEED = { part: '2026-10-24a', people: '2026-11-21a', close: '2026-11-21a', usage: '2026-11-22a' };
 function rvSet(v){ D.rv = String(v || ''); ls('sj_fac_rv', D.rv); verLine(); }
 function rvOk(k){ return !RV_NEED[k] || (D.rv || ls('sj_fac_rv') || '') >= RV_NEED[k]; }
 function verLine(){ var rv = D.rv || ls('sj_fac_rv') || ''; $('verline').textContent = 'AL MUTAGADED GARMENTS · app ' + VER + (rv ? ' · relay ' + rv : ' · relay ?'); }
