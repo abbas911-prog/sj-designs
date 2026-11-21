@@ -318,7 +318,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-11-21d';
+var VER = '2026-11-21e';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -372,6 +372,14 @@ async function call(obj, pw, top){
   NET.log.unshift({ op: obj.op, ms: Date.now() - t0, ok: !!(res && res.ok), e: res && !res.ok ? String(res.error || '').slice(0, 60) : '', at: new Date() }); NET.log.length = Math.min(NET.log.length, 40);
   return res;
 }
+// 21 Nov 2026 (Abbas, screenshot "Not made: تم تفعيل الخدمة مرات كثيرة جدًا ليوم واحد: urlfetch"): Google gives the relay a fixed number of
+// outside calls (Trello / Slack) per day. When they are used up every relay action fails with that sentence until Google resets the count.
+// The app now says so in plain words, and stops its own background reads of the workers report while the limit is hit.
+var QUOTA = 0;
+function quotaHit(){ return Date.now() - QUOTA < 20 * 60000; }
+function quotaFix(j){ if (j && j.ok === false && /urlfetch|too many times|مرات كثيرة|quota/i.test(String(j.error || ''))) { QUOTA = Date.now();
+    j.error = "Google's daily limit for the relay is used up — it comes back by itself (within hours). Chats, photos and Done still work through the fast lane · গুগলের দৈনিক সীমা শেষ — কয়েক ঘণ্টায় নিজে ফিরে আসবে; চ্যাট চলবে"; }
+  return j; }
 async function call0(obj, pw){
   if (!(pw || PW)) return { ok: false, error: 'signed out · আবার ঢুকুন' };   // 21 Nov 2026: a timer that fires after the phone was signed out sends nothing
   obj.t = Date.now(); if (!obj.who) obj.who = WHO; var req = JSON.stringify(obj), sig = await hmacHex(pw || PW, req), last = '';
@@ -384,7 +392,7 @@ async function call0(obj, pw){
       var t = await r.text(), j = null; clearTimeout(tm); try { j = JSON.parse(t); } catch(e){}
       if (j && j.relay === 'sj-memo' && Object.keys(j).length <= 2) { last = 'Google passed the request on without its contents'; continue; }
       if (j && j.busy && (obj._bw = (obj._bw || 0) + 1) < 40) { await sleep(1500); n--; continue; }   // the first try is still running on the relay: wait for its answer
-      if (j) return j;
+      if (j) return quotaFix(j);
       last = 'Google sent a web page instead of an answer (' + r.status + ')';
     } catch(e){ clearTimeout(tm); last = e.name === 'AbortError' ? 'no answer in ' + Math.round(lim / 1000) + ' s' : e.message; if (obj.op === 'ping' || (obj.op === 'media' && n >= 1)) break; }
   }
@@ -623,11 +631,13 @@ function groupsHtml(sel){ return GRP.map(function(G, gi){ var cs = D.cards.filte
 function groupGo(gi){ var G = GRP[gi]; if (!G) return; var i = G[3].indexOf(cur) >= 0 ? cur : (G[3].filter(function(x){ return D.cards.some(function(c){ return inChip(c, x); }); })[0]); if (i === undefined) i = G[3][0];
   cur = i; ls('sj_fac_chip', String(cur)); $('q').value = ''; if (TAB !== 'cards') setTab('cards'); draw(true); window.scrollTo(0, 0); }
 var HM = { at: 0, pat: 0 };
-function homeLoad(){ if ((TAB !== 'home' && TAB !== 'cards') || !PW || !D.cards || !D.cards.length) return; var now = Date.now();   // Cards too: its rows show who holds each design
-  if (now - HM.at > 55000) { HM.at = now; call({ op: 'workrep', days: WKD }).then(function(j){ if (j && j.ok) { WKR = j; if (TAB === 'home') homeDraw(); else if (TAB === 'cards') draw(); } }); }
-  if (isOwner() && rvOk('people') && now - HM.pat > 300000) { HM.pat = now; call({ op: 'people', act: 'list' }).then(function(j){ if (j && j.ok) { FD.people = j; if (TAB === 'home') homeDraw(); } }); } }
+function homeLoad(){ if ((TAB !== 'home' && TAB !== 'cards') || !PW || !D.cards || !D.cards.length || quotaHit()) return; var now = Date.now();   // Cards too: its rows show who holds each design
+  if (now - HM.at > 900000) {   // 21 Nov 2026: every 15 min by itself (and once after a Give / Done on this phone) - it was every 55 s, and each read costs the relay ~20 Trello calls: Google's daily limit was used up by the evening
+    HM.at = now; call({ op: 'workrep', days: WKD }).then(function(j){ if (j && j.ok) { WKR = j; if (TAB === 'home') homeDraw(); else if (TAB === 'cards') draw(); } }); }
+  if (isOwner() && rvOk('people') && now - HM.pat > 900000) { HM.pat = now; call({ op: 'people', act: 'list' }).then(function(j){ if (j && j.ok) { FD.people = j; if (TAB === 'home') homeDraw(); } }); } }
 setInterval(function(){ if ((TAB === 'home' || TAB === 'cards') && !document.hidden && $('card').hidden) homeLoad(); }, 30000);
 function homeNeeds(){ var N = [], tot = totUnread();
+  if (quotaHit()) N.push({ ic: '⏳', c: 'amb', n: '!', t: "Google's daily limit is used up · দৈনিক সীমা শেষ", s: 'new cards / Work / Sheet wait until it comes back by itself · chats still work', go: 'chats' });
   if (tot) { var top = null; Object.keys(D.th || {}).forEach(function(k){ var t = D.th[k]; if (t && t.n && (!top || +t.last > +top.last)) top = { k: k, last: t.last, tx: t.tx }; }); var tc = top && D.byId[top.k];
     N.push({ ic: '💬', c: 'blue', n: tot, t: tot + ' new message' + (tot > 1 ? 's' : '') + ' · নতুন মেসেজ', s: (tc ? (tc.dm ? tc.title : cardTitle(tc).replace(/<[^>]+>/g, '')) + ' · ' : '') + String((top && top.tx) || '').slice(0, 60), go: 'chats' }); }
   var st = OUT.filter(function(x){ return x.tries >= 3; }).length; if (st) N.push({ ic: '📤', c: 'red', n: st, t: st + ' message' + (st > 1 ? 's' : '') + ' not sent from this phone · পাঠানো যায়নি', s: 'tap to see why · কারণ দেখুন', go: 'chats' });
@@ -951,7 +961,7 @@ function wkWeekText(){ var j = WKR; if (!j) return ''; var days = wkDays(j), L =
 async function wksLoad(fresh){ var j = await call({ op: 'workrep', days: WKD, fresh: fresh ? 1 : 0 }); if (!j.ok) { if (!WKR) $('wksbody').innerHTML = '<div class="empty">' + esc(j.error) + '</div>'; return; } WKR = j; if (!$('wks').hidden) wksDraw(); }
 function wksShow(){ $('wks').hidden = false; document.querySelectorAll('#wkseg button').forEach(function(x){ x.classList.toggle('on', +x.dataset.d === WKD); }); document.querySelectorAll('#wkview button').forEach(function(x){ x.classList.toggle('on', x.dataset.v === WKV); }); document.querySelectorAll('#wksort button').forEach(function(x){ x.classList.toggle('on', x.dataset.s === WKS); });
   if (WKR && WKR.days === WKD) wksDraw(); else $('wksbody').innerHTML = '<div class="empty">Loading… · লোড হচ্ছে</div>'; wksLoad(false);
-  clearInterval(WKT); WKT = setInterval(function(){ if ($('wks').hidden || document.hidden) return; wksDraw(); if (Date.now() - (WKR ? WKR.t : 0) > 45000) wksLoad(true); }, 30000); }
+  clearInterval(WKT); WKT = setInterval(function(){ if ($('wks').hidden || document.hidden) return; wksDraw(); if (!quotaHit() && Date.now() - (WKR ? WKR.t : 0) > 300000) wksLoad(false); }, 30000); }
 function wksHide(){ $('wks').hidden = true; clearInterval(WKT); }
 $('bwork').onclick = wksShow; $('wksx').onclick = wksHide; $('wksrf').onclick = function(){ wksLoad(true); toast('↻ Refreshing… · আবার লোড হচ্ছে'); };
 $('wkview').onclick = function(e){ var b = e.target.closest('button[data-v]'); if (!b) return; WKV = b.dataset.v; wksShow(); };

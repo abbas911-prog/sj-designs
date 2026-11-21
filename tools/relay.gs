@@ -81,7 +81,7 @@ function doPost(e) {
 // ---------- FACTORY APP (Abbas, 12 Oct 2026: "a remote control" for the factory — one place like the memo is for the office) ----------
 // Step 1: the live ALM production cards by stage, each card's photo and fields, and "Done -> next stage" which moves the real Trello
 // card (and leaves a comment). Step 2 (the card chat = the card's Slack #cutting thread) comes next.
-var RELAY_VER = '2026-11-21a';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
+var RELAY_VER = '2026-11-21b';   // shown on relaycode.html and sent to the factory app (rv) - bump it with every relay change
 var FAC = { SAMPLES_CH: 'C09T1BGHC6L', SAMPLE_LISTS: ['65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '68b77a221eef6fbb9a305e0e'],   // #samples-discuss (ChatGPT workspace): sample cards chat THERE, not in #cutting (Abbas 13 Oct)
   BOARD: '6527c52485d9627f63157296', LISTS: [                 // in the order Abbas wants them shown (13 Oct 2026)
   ['SAMPLES', '65f8c9fd96d90dda4b355f0a'], ['SAMPLE DONE', '65a121d2829a36ccacd05593'],
@@ -706,7 +706,7 @@ function facLate(P, rtok) {                                     // cards with a 
   var done = {}; FAC.LISTS.forEach(function (l) { if (/^(READY|READY 2|FINISH|FINISH SAMPLES|SAMPLE DONE|RETURNS BACK)$/.test(l[0])) done[l[1]] = 1; });
   var today = Date.parse(facYmd(Date.now()) + 'T00:00:00Z');
   var late = cards.filter(function (x) { return x.due && !done[x.l]; }).map(function (x) { return { id: x.id, name: x.name, l: x.l, due: x.due, days: Math.round((Date.parse(x.due + 'T00:00:00Z') - today) / 86400000) }; }).filter(function (x) { return x.days <= 2; }).sort(function (a, b) { return a.days - b.days; });
-  try { c.put('FAC_LATE', JSON.stringify(late), 60); } catch (e) {} return late;
+  try { c.put('FAC_LATE', JSON.stringify(late), 300); } catch (e) {} return late;
 }
 function facWorkRep(P, rtok, rdays) {                            // every worker's output over the last N days + what each has in hand + per-day pieces, attendance, late cards, low stock
   var rsince = new Date(Date.now() - 120 * 86400000).toISOString(), rcut = Date.now() - rdays * 86400000, rday0 = Math.floor((Date.now() + 4 * 3600000) / 86400000) * 86400000 - 4 * 3600000, racts = [], rbefore = '';   // rday0 = today 00:00 Dubai   // read 120 days back: a batch still in hand may be old
@@ -721,8 +721,10 @@ function facWorkRep(P, rtok, rdays) {                            // every worker
       else { r.open++; if (b.pd && evs.length && evs[evs.length - 1].t >= rcut) r.ms += facWorkMs(b.in, evs[evs.length - 1].t); r.hand.push({ id: cid0, name: bc.name, g: b.g - (b.pd || 0), given: b.g, pd: b.pd || 0, in: b.in, adds: b.adds || [], by: b.by, wd: facWorkDur(facWorkMs(b.in, Date.now())) }); } }); }); });
   // 21 Nov 2026: pieces still "in hand" on a card that is already finished (FINISH / FINISH SAMPLES / archived) = forgotten, never closed
   try { var hids = {}; Object.keys(rw).forEach(function (k) { rw[k].hand.forEach(function (h) { hids[h.id] = 1; }); }); var hl = Object.keys(hids).slice(0, 40), FINL = FAC.LISTS.filter(function (l) { return /^FINISH/.test(l[0]); }).map(function (l) { return l[1]; });
-    if (hl.length) { var hr = UrlFetchApp.fetchAll(hl.map(function (id) { return { url: 'https://api.trello.com/1/cards/' + id + '?key=' + TKEY + '&token=' + rtok + '&fields=idList,closed', muteHttpExceptions: true }; })), fin = {};
-      hr.forEach(function (x, i) { try { var cj = JSON.parse(x.getContentText()); if (cj.closed || FINL.indexOf(cj.idList) >= 0) fin[hl[i]] = 1; } catch (e) {} });
+    if (hl.length) { var fc = CacheService.getScriptCache(), fk = fc.getAll(hl.map(function (id) { return 'FAC_FIN_' + id; })) || {}, ask = hl.filter(function (id) { return fk['FAC_FIN_' + id] == null; }), fin = {};   // 21 Nov 2026 (relay 21b): one Trello call per card used to be made on EVERY report (~20 calls a minute while a phone showed Home) - that used up Google's daily urlfetch limit; a card's answer is now kept 30 min (6 h once finished)
+      hl.forEach(function (id) { if (fk['FAC_FIN_' + id] === '1') fin[id] = 1; });
+      if (ask.length) { var hr = UrlFetchApp.fetchAll(ask.map(function (id) { return { url: 'https://api.trello.com/1/cards/' + id + '?key=' + TKEY + '&token=' + rtok + '&fields=idList,closed', muteHttpExceptions: true }; }));
+        hr.forEach(function (x, i) { try { var cj = JSON.parse(x.getContentText()), f1 = cj.closed || FINL.indexOf(cj.idList) >= 0; if (f1) fin[ask[i]] = 1; if (cj.id) fc.put('FAC_FIN_' + ask[i], f1 ? '1' : '0', f1 ? 21600 : 1800); } catch (e) {} }); }
       Object.keys(rw).forEach(function (k) { rw[k].hand.forEach(function (h) { if (fin[h.id]) h.fin = 1; }); }); } } catch (e) {}
   var rout = { ok: true, t: Date.now(), days: rdays, todayN: Object.keys(rw).filter(function (k) { return rw[k].today; }).length, workers: Object.keys(rw).map(function (k) { var r = rw[k]; return { name: r.name, today: r.today || 0, pcs: r.pcs, dur: facWorkDur(r.ms), perDay: r.ms ? facRate(r.pcs, r.ms) : 0, batches: r.batches, open: r.open, last: r.last, byDay: r.byDay, hand: r.hand.sort(function (a, b) { return a.in - b.in; }), cards: Object.keys(r.cards).map(function (cid0) { return { id: cid0, name: (byCard[cid0] || {}).name || '', pcs: r.cards[cid0] }; }) }; }) };
   rout.att = facAttWeek(P); rout.roles = facRoles(P, rtok); rout.today = facYmd(Date.now()); try { rout.late = facLate(P, rtok); } catch (e) { rout.late = []; } rout.low = facMatLow(P).map(function (m) { return { n: m.n, q: m.q, u: m.u || '' }; });
@@ -1488,7 +1490,7 @@ function fac0(reqText, P) {
     if (req.op === 'workrep') {                               // 21 Oct 2026: every worker's output over the last N days + what each one has IN HAND right now (from the board's comments)
       var rdays = Math.min(120, Math.max(1, Math.floor(+req.days || 30))), rcache = CacheService.getScriptCache(), rk = 'FAC_WKR_' + rdays, rh = req.fresh ? null : rcache.get(rk); if (rh) return out(JSON.parse(rh));
       var rout = facWorkRep(P, rtok, rdays);
-      try { rcache.put(rk, JSON.stringify(rout), 60); } catch (e) {} return out(rout);
+      try { rcache.put(rk, JSON.stringify(rout), 300); } catch (e) {} return out(rout);   // 5 min (was 60 s); every Give / Done / sheet / attendance change drops it at once
     }
     if (req.op === 'sheetset') {                              // 22 Oct 2026: the card sheet - cut / rejected / packed / hand work out-in / first piece OK / due date
       if (!wtok) return out({ ok: false, error: 'the relay\'s Trello key can only READ - add TRELLO_W' });

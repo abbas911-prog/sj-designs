@@ -1026,6 +1026,27 @@ async function lookSuite(browser) {
       await until(() => W.trello.cards[W.cardR.id].idList === '6ae07f38a77a2321736ef9da', 12000, 'moved to Cutting///START in Trello');
       await until(async () => !/77001/.test(await page.textContent('#list')), 5000, 'left the START list');
     });
+    await test('Home and Cards ask the relay for the workers report once, not every minute; the relay answers a repeat from its kept copy (Google\'s daily limit)', async () => {   // 21 Nov 2026 (Abbas, screenshot: "Not made … urlfetch")
+      await home(page); await page.click('#tabs button[data-t="home"]'); await page.waitForTimeout(800); const reps = () => T.relayCalls.filter(o => o === 'workrep').length;
+      await page.evaluate(() => { window.__f.HM.at = Date.now() - 60000; }); const n0 = reps();          // the last report is one minute old
+      for (let i = 0; i < 5; i++) { await page.click('#tabs button[data-t="cards"]'); await page.click('#tabs button[data-t="home"]'); } await page.waitForTimeout(700);
+      ok(reps() === n0, 'tab changes within minutes ask for no new workers report (saw ' + (reps() - n0) + ')');
+      await page.evaluate(() => { window.__f.HM.at = Date.now() - 14 * 60000; }); await page.click('#tabs button[data-t="cards"]'); await page.click('#tabs button[data-t="home"]'); await page.waitForTimeout(700);
+      ok(reps() === n0, 'still none after 14 minutes');
+      await page.evaluate(() => { window.__f.HM.at = Date.now() - 16 * 60000; }); await page.click('#tabs button[data-t="cards"]'); await until(() => reps() === n0 + 1, 8000, 'one after 15 minutes'); await page.click('#tabs button[data-t="home"]'); await page.waitForTimeout(500); ok(reps() === n0 + 1, 'exactly one');
+      const f0 = W.ufetch; const a = await page.evaluate(() => window.__call({ op: 'workrep', days: 30, fresh: 1 })); const f1 = W.ufetch; const b = await page.evaluate(() => window.__call({ op: 'workrep', days: 30 })); const f2 = W.ufetch;
+      const c = await page.evaluate(() => window.__call({ op: 'workrep', days: 30, fresh: 1 })); const f3 = W.ufetch;
+      ok(a.ok && b.ok && c.ok && f2 === f1, 'a repeat costs the relay no Trello call (' + (f2 - f1) + ')'); ok(f3 - f2 < f1 - f0 || f1 - f0 <= 3, 'a fresh one right after asks Trello less: the cards it already checked are remembered (' + (f1 - f0) + ' then ' + (f3 - f2) + ')');
+    });
+    await test('Google\'s daily limit reached: the app says so in plain words (English + Bengali), not Google\'s sentence, and Home shows it', async () => {   // 21 Nov 2026
+      W.quota = true;
+      try { await home(page); await page.click('#tplus'); await page.click('#pret');
+        await until(() => page.locator('#ns').isVisible(), 5000, 'new return sheet'); await page.fill('#nsdesc', 'zip broken'); await page.click('#nsgo');
+        await until(async () => await page.locator('#nserr').isVisible() && /daily limit/.test(await page.textContent('#nserr')), 60000, 'the reason in plain words');
+        const t = await page.textContent('#nserr'); ok(/comes back by itself/.test(t) && /দৈনিক সীমা/.test(t) && !/urlfetch|تم تفعيل/.test(t), 'message: ' + t);
+        await page.click('#nsx'); await page.click('#tabs button[data-t="home"]'); await until(async () => /daily limit is used up/.test(await page.textContent('#hneeds')), 5000, 'row on Home');
+      } finally { W.quota = false; await page.evaluate(() => { document.querySelectorAll('.sheet:not([hidden])').forEach(x => { x.hidden = true; }); }); }
+    });
     await test('no page errors (new look)', async () => { ok(!T.errors.length, T.errors.join('\n')); });
   } finally { await T.close(); }
 }
