@@ -57,6 +57,14 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 .cardrow.sw::after{content:attr(data-nx);position:absolute;left:calc(100% + 8px);top:0;bottom:0;width:170px;display:flex;align-items:center;padding-left:14px;border-radius:var(--r);background:#d9efe0;color:#1f8a4c;font-weight:800;font-size:14px;white-space:nowrap}.cardrow.go::after{background:#1f8a4c;color:#fff}
 .ph{width:88px;height:88px;border-radius:14px;background:#efe8db center/cover no-repeat;flex:none;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:11px}
 .cardrow .t{flex:1;min-width:0}.cardrow .no{font-weight:800;font-size:19px;letter-spacing:-.01em}.cardrow .sub{color:var(--mute);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* 21 Nov 2026: NEED FABRIC (Ibrahim asks Abbas for rolls with a photo of the vendor's colour sheet; the answers show as chips under the photo) */
+#fabbar{display:flex;gap:8px;padding:8px 10px 0}#fabbar[hidden],#fabbar button[hidden]{display:none}#fabbar button{flex:1;border:1.5px solid #cdb48a;background:#fff8ea;color:#6b4a12;border-radius:12px;padding:7px 10px;font-size:14px;font-weight:800;line-height:1.15}#fabbar button small{display:block;font-size:11px;font-weight:600;opacity:.85}#fabbar #fabarr{border-color:#9ccfa9;background:#eaf7ee;color:#1d6b35}
+.fchip{margin-top:6px;border-radius:10px;padding:7px 10px;font-size:13px;font-weight:800;line-height:1.3}.fchip small{display:block;font-weight:600;font-size:11.5px;opacity:.85}.fchip.a{background:#fff1d6;color:#8a5a00}.fchip.g{background:#dff3e4;color:#17602e}.fchip.r{background:#fde7e7;color:#a11c1c}.fchip.d{background:#ece6db;color:#4d453a}.fchip button{display:block;width:100%;margin-top:7px;border:0;border-radius:10px;background:#c62828;color:#fff;font-weight:800;font-size:13.5px;padding:9px}
+.fab{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}.fab.a{background:#fff1d6;color:#8a5a00}.fab.g{background:#dff3e4;color:#17602e}.fab.r{background:#fde7e7;color:#a11c1c}
+#fabs .fabpk{display:flex;gap:8px}#fabs .fabpk button{flex:1;text-align:center;padding:18px 8px;border:2px dashed #cdb48a;background:#fffaf0;margin-bottom:4px}#fabs .fabpk button small,#fabs .fabimg button small{display:block;font-size:12px;font-weight:600;color:var(--mute)}#fabs .fabhint{font-size:12.5px;color:var(--mute);margin:2px 2px 10px}
+#fabs .fabimg{height:210px;border-radius:14px;background:#f1ece2 center/contain no-repeat;position:relative;margin-bottom:10px}#fabs .fabimg button{position:absolute;right:8px;bottom:8px;width:auto;margin:0;padding:8px 12px;font-size:13px;background:rgba(255,255,255,.94);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+#fabs .fabst{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:15px;font-weight:700}#fabs .fabst span{flex:1}#fabs .fabst button{width:52px;height:48px;margin:0;padding:0;text-align:center;font-size:24px;border-radius:12px;background:#f1ece2}#fabs .fabst button:disabled{opacity:.35}#fabs .fabst b{min-width:44px;text-align:center;font-size:26px}
+#faberr{margin:0 2px 8px;padding:10px 12px;border-radius:10px;background:#fde8e8;color:#b71c1c;font-size:13.5px;font-weight:700;line-height:1.35}
 #nserr{margin:8px 2px 0;padding:10px 12px;border-radius:10px;background:#fde8e8;color:#b71c1c;font-size:13.5px;font-weight:700;line-height:1.35}
 .age{display:inline-block;margin-top:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.01em;white-space:nowrap}.age.g{background:#e3f4e8;color:#1b6b35}.age.a{background:#fff1d6;color:#8a5a00}.age.r{background:#c62828;color:#fff}#cnm .age{display:block;width:max-content;margin-top:3px;font-size:11.5px}
 .cardrow .lst{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.05em}
@@ -265,7 +273,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
     <div class="work" id="sheet" hidden><h3 id="shh">📋 SHEET · শিট<small id="shsum"></small><i id="sharr">▾</i></h3><div class="wkbody" id="shbody" hidden><div id="shrows"></div><div style="font-size:11.5px;color:var(--mute);padding:6px 4px 0">Cut / packed = the latest number. Rejected and hand work add up. Every save goes to the chat and Trello. · কাটা / প্যাক = শেষ সংখ্যা; বাতিল ও হ্যান্ড ওয়ার্ক যোগ হয়</div></div></div>
     <div class="thr"><h3><span id="thh" style="float:none">CARD CHAT · কার্ড চ্যাট</span> <span id="tcount"></span></h3><div id="tmsg"></div><div id="thread"><div class="empty" style="padding:14px">Loading chat…</div></div></div>
   </div>
-  <div class="compw"><div id="rbar" hidden></div><div class="pend" id="pend"></div><div class="chint">🎤 tap to record, tap again to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo &nbsp;·&nbsp; 📎 files</div><div class="comp"><button class="mic" id="mic" title="tap to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Message · মেসেজ"></textarea><button id="send">Send</button></div></div>
+  <div class="compw"><div id="fabbar" hidden><button id="fabneed">🧵 Need fabric<small>কাপড় দরকার</small></button><button id="fabarr" hidden>📦 Fabric arrived<small>কাপড় এসেছে</small></button></div><div id="rbar" hidden></div><div class="pend" id="pend"></div><div class="chint">🎤 tap to record, tap again to stop · মাইক চাপুন, থামাতে আবার চাপুন &nbsp;·&nbsp; 📷 photo &nbsp;·&nbsp; 📎 files</div><div class="comp"><button class="mic" id="mic" title="tap to record">🎤</button><button class="cam" id="cam" title="photo">📷</button><label class="att" style="display:flex;align-items:center;border-radius:12px;height:44px" title="files">📎<input type="file" id="afiles" accept="image/*,video/*,audio/*,.pdf,.opus,.ogg,.oga,.m4a,.mp3,.aac,.amr,.wav,.mov,.mp4" multiple hidden></label><textarea id="txt" rows="1" placeholder="Message · মেসেজ"></textarea><button id="send">Send</button></div></div>
 </div>
 <div class="sheet" id="probs" hidden><div class="in"><h3>What is the problem? · সমস্যা কী?</h3>
 <button data-p="🚩 Fabric short · কাপড় কম">🧵 Fabric short · কাপড় কম</button>
@@ -296,6 +304,11 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 <div class="sheet" id="atte" hidden><div class="in"><h3 id="atteh">✏️ Correct the times</h3><p style="margin:0 0 8px;color:var(--mute);font-size:13px">24-hour Dubai time · In first, then Out (leave Out empty if still working)</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label style="font-size:13px;font-weight:700">In · ইন<input type="time" id="attein"></label><label style="font-size:13px;font-weight:700">Out · আউট<input type="time" id="atteout"></label></div><button class="go" id="attego">Save · সেভ</button><button class="x" id="attex">Cancel</button></div></div>
 <div class="sheet" id="mate" hidden><div class="in"><h3>📦 Materials · মাল</h3><p style="margin:0 0 8px;color:var(--mute);font-size:13px">name · quantity · unit · alert when at or under · নাম · পরিমাণ · একক · কমের সীমা</p><div id="materows"></div><button id="mateadd" style="background:#fff;border:1.5px dashed var(--line);color:var(--mute);text-align:center">＋ Add · যোগ করুন</button><button class="go" id="matego">Save · সেভ</button><button class="x" id="matex">Cancel</button></div></div>
 <div class="sheet" id="wke" hidden><div class="in"><h3>✏️ Workers · কর্মী</h3><p style="margin:0 0 8px;color:var(--mute);font-size:13.5px">One name per line, in the order you want them · প্রতি লাইনে একটি নাম<br>Not a machine worker? Put the job in brackets: <b>Ram (checking)</b>, <b>Arif (iron)</b> — he stays on attendance and salary, but is not counted as free for pieces.</p><textarea id="wkenames" style="min-height:220px"></textarea><button class="go" id="wkego">Save · সেভ</button><button class="x" id="wkex">Cancel</button></div></div>
+<div class="sheet" id="fabs" hidden><div class="in"><h3>🧵 Need fabric · কাপড় দরকার <small id="fabsno" style="font-weight:600;color:var(--mute)"></small></h3>
+<div id="fabph"></div><input type="file" id="fabcam" accept="image/*" capture="environment" hidden><input type="file" id="fabpick" accept="image/*" hidden>
+<div class="fabst"><span>Rolls · রোল</span><button type="button" id="fabminus">−</button><b id="fabn">1</b><button type="button" id="fabplus">＋</button></div>
+<input id="fabname" maxlength="60" autocomplete="off" placeholder="Colour or fabric name (optional) · রং বা কাপড়ের নাম">
+<div id="faberr" hidden></div><button class="go" id="fabgo">📤 Send · পাঠান</button><button class="x" id="fabx">Cancel · বাতিল</button></div></div>
 <div class="sheet" id="mv" hidden><div class="in"><h3>Move this card to · কার্ড কোথায় পাঠাবেন</h3><div id="mvl"></div><button class="x" id="mvx">Cancel</button></div></div>
 <div class="sheet" id="tg" hidden><div class="in"><h3>🔔 Messages from Abbas · আব্বাসের মেসেজ</h3><div id="tgbody" style="font-size:15px;line-height:1.5"></div><button class="x" id="tgx">Close</button></div></div>
 <div class="sheet" id="cmenu" hidden><div class="in"><h3 id="cmh">Card · কার্ড</h3><button id="bmove">↔ Move to… · অন্য জায়গায়</button><button id="battach">📷 Add photo to Trello · ট্রেলোতে ছবি যোগ করুন</button><button id="bedit">✏️ Edit card · বিবরণ বদলান</button><button id="bcopy">⧉ Copy card · কার্ড কপি করুন</button><button id="bwrep">📊 Production report · উৎপাদন রিপোর্ট</button><button id="btrello">Open in Trello · ট্রেলোতে খুলুন</button><button class="x" id="cmx">Cancel</button></div></div>
@@ -305,7 +318,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-11-21b';
+var VER = '2026-11-21c';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -549,6 +562,7 @@ var DRAWN = '';
 function draw(force){
   mvApply();
   var sig = cur + '|' + Math.floor(Date.now() / 86400000) + '|' + $('q').value + '|' + D.cards.map(function(c){ return c.id + c.l + c.pos + c.img + c.name + (c.due || '') + JSON.stringify(c.lb || '') + (D.th[c.id] ? D.th[c.id].n : 0) + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|' + D.w;
+  if (!FABINIT) { FABINIT = 1; fabAll(true); } sig += '|fb' + FABV + '.' + OUT.filter(function(x){ return /^FABRIC NEEDED/.test(x.text || ''); }).length;
   sig += '|xr' + xrooms().map(function(c){ return c.id + unread(c) + ((D.th[c.id] || {}).tx || '') + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|dm' + unread(DMC) + ((D.dm || {}).name || '') + ((D.later || {}).dm ? 'L' : '') + '|lais' + unread(LAISC) + ((D.lais || {}).name || '') + ((D.later || {}).lais ? 'L' : '');
   sig += '|wk' + (WKR ? WKR.t : 0);
   if (!force && sig === DRAWN) { inbox(); chatsDraw(); if (TAB === 'home') { homeDraw(); homeLoad(); } return; } DRAWN = sig;   // the Chats tab has its own check (newest line / time per chat)
@@ -588,7 +602,7 @@ function dueHtml(c){ if (!c || c.dm || c.lo || !c.due) return ''; var d = dueDay
 function rowHtml(c, showStage){ var u = unread(c), p = parse(c.name), nx = !c.dm && D.w && NEXT[lname(c.l)], wk = wkOf(c.id), tot = +p.pcs || 0, wh = '';
   if (wk && (wk.hand || wk.done)) { var pd = tot ? Math.min(100, Math.round(wk.done / tot * 100)) : 0, ph = tot ? Math.min(100 - pd, Math.round(wk.hand / tot * 100)) : 0;
     wh = '<div class="rwk">' + (wk.ws.length ? '<span class="mini">' + wk.ws.slice(0, 3).map(function(n){ return avHtml(n, 's'); }).join('') + (wk.ws.length > 3 ? '<span class="av s more">+' + (wk.ws.length - 3) + '</span>' : '') + '</span>' : '') + (tot ? '<span class="rpb"><i class="d" style="width:' + pd + '%"></i><i class="h" style="width:' + ph + '%"></i></span>' : '<span class="rtx">✓ ' + wk.done + ' · ⏳ ' + wk.hand + '</span>') + '</div>'; }
-  return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + cardTitle(c) + (p.pcs ? '<em>' + esc(p.pcs) + ' pcs</em>' : '') + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + '<div class="rmeta">' + ageHtml(c) + dueHtml(c) + (showStage ? '<span class="lst">' + esc(lname(c.l)) + '</span>' : '') + '</div>' + wh + '</div>'
+  return '<div class="cardrow" data-id="' + c.id + '"><div class="ph" data-img="' + esc(c.img) + '"></div><div class="t"><div class="no">' + cardTitle(c) + (p.pcs ? '<em>' + esc(p.pcs) + ' pcs</em>' : '') + '</div><div class="sub">' + esc(c.name) + '</div>' + labels(c) + '<div class="rmeta">' + ageHtml(c) + dueHtml(c) + fabHtml(c) + (showStage ? '<span class="lst">' + esc(lname(c.l)) + '</span>' : '') + '</div>' + wh + '</div>'
     + '<div class="rend">' + (u ? '<span class="newb">NEW ' + u + '</span>' : (D.later || {})[c.id] ? '<span class="pinb">📌 LATER</span>' : '') + (nx ? '<button class="rdone" data-nx="' + esc(nx) + '">Done →<small>' + esc(UR[nx] || '') + '</small></button>' : '') + '</div></div>'; }
 // ===== 17 Oct 2026 REDESIGN (Abbas: "redesign the app to make the UI smoother … change the design completely for efficiency"):
 // bottom tabs CARDS · CHATS · ＋ · RETURNS · MORE; Chats = every conversation like WhatsApp (newest / unread first); Returns = its own tab;
@@ -736,7 +750,7 @@ function kbFit(){ var vv = window.visualViewport; if (!vv || !$('card').hidden) 
 setInterval(function(){ if ($('card').hidden) kbFit(); }, 1500);
 function vvFit(){ kbFit(); var vv = window.visualViewport, el = $('card'); if (!vv || el.hidden) return; var full = Math.abs(vv.height - window.innerHeight) < 2 && vv.offsetTop < 2; el.style.height = full ? '' : vv.height + 'px'; el.style.top = full ? '' : vv.offsetTop + 'px'; if (full) window.scrollTo(0, 0); }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', vvFit); window.visualViewport.addEventListener('scroll', vvFit); }
-function openCard(c){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } open = c; c._wkAt = 0; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); WKGIVE = {}; ctSet('chat'); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
+function openCard(c){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } open = c; c._wkAt = 0; $('card').hidden = false; cardShow(true); thStart(c); pinPaint(); paintCard(); fabBar(); WKGIVE = {}; ctSet('chat'); $('cbody').scrollTop = 0; history.pushState({ card: 1 }, ''); }
 function paintCard(){
   mvApply(); var c = open; $('card').classList.toggle('dm', !!c.dm);
   if (c.lo) { $('cnm').innerHTML = '<span class="loph" data-img="' + esc(c.img) + '"></span>🧵 ' + esc(c.title) + '<small>' + esc(c.sub || '') + ' · #' + esc((D.lais || {}).name || 'laisfactory') + '</small>'; var lp = $('cnm').querySelector('.loph'); if (c.img) photo(phc(c), lp); else lp.remove();
@@ -1327,6 +1341,7 @@ function bubble(m, un){
     else if (f.video) body += '<div class="fph" data-f="' + esc(f.id) + '" data-n="' + esc(f.name || '') + '" data-k="video" style="height:120px;flex-direction:column"><span style="font-size:28px">🎬</span>video · tap to play · ভিডিও</div>';
     else body += '<div class="fl">📎 ' + esc(f.name) + '</div>';
   });
+  var fbr = TH.fab && !m.pend && TH.fab.by[m.ts]; if (fbr) body += fabChip(fbr);   // 21 Nov 2026: the answer to a fabric request, under its photo
   var t = new Date(m.pend ? Date.now() : +m.ts * 1000), hh = t.getHours().toString().padStart(2, '0') + ':' + t.getMinutes().toString().padStart(2, '0'), dd = DAYN[t.getDay()] + ' ' + t.getDate() + '/' + (t.getMonth() + 1);   // 19 Oct 2026 (Abbas): the day name next to the name - "Mon 19/10 · 18:48"
   return '<div class="msg ' + cls + (m.pend ? ' pend' : '') + (m.nw ? ' nw' : '') + '" data-ts="' + esc(m.ts) + '">' + (m.sys ? '' : '<div class="who"><span class="nm" style="background:' + pcol(m.who) + '">' + esc(m.who || '?') + '</span>' + (m.app ? '' : '<span class="sl">Slack</span>') + (m.pend ? '' : '<span class="wt">' + dd + ' · ' + hh + '</span><button class="rp" data-ts="' + esc(m.ts) + '" title="Reply">↩</button>') + '</div>') + '<div class="bub"' + (m.sys ? '' : ' style="border-' + (me ? 'right' : 'left') + ':4px solid ' + pcol(m.who) + '"') + '>' + body + (m.pend || m.sys ? '<span class="tm">' + (m.pend ? '🕓 sending…' : dd + ' ' + hh) + '</span>' : '') + '</div></div>';   // 17 Oct 2026 (Abbas): date and time ABOVE the message, with the name
 }
@@ -1334,6 +1349,7 @@ function thDedupe(){ var seenTs = {}; TH.msgs = TH.msgs.filter(function(m){ if (
 // 27 Oct 2026 (Abbas: "when I open Catch up I am not sure which messages I have seen"): the lines that were NEW when the chat was opened get an
 // amber ring and a red "▼ N NEW" divider before the first of them; the chat opens at that divider (or at the bottom when they all fit).
 function thDraw(){ thDedupe(); var real = TH.msgs.filter(function(m){ return !m.pend; }), from = '';
+  TH.fab = null; if (TH.card && fabCard(TH.card)) { TH.fab = fabView(real); fabSync(TH.card.id, real, !THCP[TH.card.id]); } fabBar();
   if (TH.un && TH.un.n && !TH.unTs) { var left = TH.un.n; for (var i = real.length - 1; i >= 0 && left > 0; i--) { var mm = real[i]; if (mm.root || isMe(mm) || (mm.sys && !noteOf(mm))) continue; left--; from = mm.ts; } TH.unTs = from; }
   from = TH.unTs || '';
   $('thread').innerHTML = real.map(function(m){ return (from && m.ts === from ? '<div class="undiv"><span>▼ ' + TH.un.n + ' NEW · নতুন মেসেজ</span></div>' : '') + bubble(m, from && +m.ts >= +from); }).join('') + (TH.card ? outBubbles(TH.card.id) : ''); $('tcount').textContent = TH.msgs.length + ' messages';
@@ -1514,6 +1530,79 @@ async function pendAdd(file, name, kind){
   if (!$('ns').hidden) { SP.push(it); spDraw(); toast((kind === 'audio' ? 'Voice note' : kind === 'photo' ? 'Photo' : 'File') + ' added · যোগ হয়েছে'); return; }
   PEND.push(it); pendDraw(); toast((kind === 'audio' ? 'Voice note' : kind === 'photo' ? 'Photo' : 'File') + ' added — press Send · পাঠাতে Send চাপুন');
 }
+// ===== 21 Nov 2026 (Abbas): NEED FABRIC. When a card lands in START Ibrahim checks which fabric colours the factory has; for a missing one he
+// sends ONE photo of the vendor's colour sheet (the colour marked) + how many rolls. No new backend: it is a normal chat message with a photo,
+// with a text another program reads - these three are EXACT, never reword them:
+//   FABRIC NEEDED · <N> roll · <name>      (the name is optional)        - this app, "Need fabric"
+//   ORDERED · <vendor> · <N> roll                                        - Abbas's answer -> green chip under the photo
+//   FABRIC ARRIVED                                                       - this app, "Fabric arrived" -> the ordered photos say Arrived
+// Any message containing "not available" answers the waiting photos with a red chip + "Send another colour".
+// An answer belongs to the fabric photos posted before it that had no answer yet. Old photos / old "ORDERED" lines stay plain messages.
+var FABLISTS = /^(START|Cutting\/\/\/START|CUTTING)$/, FABSEP = '[·•|,:\\-–—]', FAB = {}, FABV = 0, FABINIT = 0, FABT = null;
+try { FAB = JSON.parse(ls('sj_fac_fab') || '{}') || {}; } catch(e){ FAB = {}; }
+function fabCard(c){ return !!(c && !c.dm && !c.lo && !c.xr && c.id !== 'lais' && c.id !== 'dm'); }
+function fabTxt(m){ return sdec(qstrip(String(m.text || ''))).replace(/\*/g, '').replace(/\s+/g, ' ').trim(); }
+function fabParts(rest){ var ps = (rest.indexOf('·') >= 0 ? rest.split('·') : rest.split(/\s+[•|,:\-–—]\s+|\s*[•|]\s*/)).map(function(x){ return x.trim(); }).filter(Boolean), o = { n: 0, name: '' };
+  ps.forEach(function(x){ var r = /^(\d+)\s*rolls?$/i.exec(x); if (r && !o.n) o.n = Math.min(99, +r[1]); else if (!o.name) o.name = x; }); return o; }
+function fabKind(m){ if (!m || m.sys || m.root) return null; var t = fabTxt(m), x;
+  if ((x = new RegExp('^FABRIC NEEDED(?:\\s*' + FABSEP + '\\s*(.*))?$', 'i').exec(t))) { var a = fabParts(x[1] || ''); return { k: 'need', n: a.n || 1, name: a.name }; }
+  if (/^FABRIC ARRIVED\b/i.test(t)) return { k: 'arr' };
+  if ((x = new RegExp('^ORDERED(?:\\s*' + FABSEP + '\\s*(.*))?$', 'i').exec(t))) { var b = fabParts(x[1] || ''); return { k: 'ord', n: b.n, vendor: b.name }; }
+  if (/not available/i.test(t)) return { k: 'no' };
+  return null; }
+// every fabric request of a chat with its answer: by[ts of the photo] = { st: ask | ord | no | arr, n, name, vendor, on (rolls ordered), at, arr }
+function fabView(msgs){ var req = [], by = {};
+  (msgs || []).forEach(function(m){ if (m.pend) return; var k = fabKind(m); if (!k) return;
+    if (k.k === 'need') { var r = { ts: m.ts, st: 'ask', n: k.n, name: k.name }; req.push(r); by[m.ts] = r; }
+    else if (k.k === 'ord') req.forEach(function(r){ if (r.st === 'ask') { r.st = 'ord'; r.vendor = k.vendor; r.on = k.n || r.n; r.at = m.ts; } });
+    else if (k.k === 'no') req.forEach(function(r){ if (r.st === 'ask') { r.st = 'no'; r.at = m.ts; } });
+    else if (k.k === 'arr') req.forEach(function(r){ if (r.st === 'ord') { r.st = 'arr'; r.arr = m.ts; } }); });
+  return { by: by, n: req.length, a: req.filter(function(r){ return r.st === 'ask'; }).length, o: req.filter(function(r){ return r.st === 'ord'; }).length, no: req.length && req[req.length - 1].st === 'no' ? 1 : 0 }; }
+function fabStep(S, k){ if (!k) return; if (k.k === 'need') { S.a++; S.no = 0; } else if (k.k === 'ord') { S.o += S.a; S.a = 0; } else if (k.k === 'no') { if (S.a) { S.a = 0; S.no = 1; } } else if (k.k === 'arr') S.o = 0; }
+// per card, kept on the phone: { a: asked, o: ordered, no: the last one was refused, ts: newest line counted, c: lines counted, f: from the whole chat }.
+// The open chat is counted from its start; a chat read in the background (new lines only) is counted on from where it stood.
+function fabSync(cid, msgs, full){ var real = (msgs || []).filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }); if (!cid || !real.length) return;
+  var last = real[real.length - 1].ts, S = FAB[cid], N; if (S && S.ts === last && (full ? S.f && S.c === real.length : true)) return;
+  if (full || !S) { var v = fabView(real); N = { a: v.a, o: v.o, no: v.no, ts: last, c: real.length, f: full ? 1 : 0 }; }
+  else { if (!(+last > +S.ts)) return; N = { a: S.a, o: S.o, no: S.no, ts: last, c: S.c, f: S.f }; real.forEach(function(m){ if (+m.ts > +S.ts) fabStep(N, fabKind(m)); }); }
+  if (!S || S.a !== N.a || S.o !== N.o || S.no !== N.no) FABV++;
+  FAB[cid] = N; clearTimeout(FABT); FABT = setTimeout(function(){ try { var o = {}; Object.keys(FAB).forEach(function(k){ var x = FAB[k]; if (x && (x.a || x.o || x.no || (D.byId && D.byId[k]))) o[k] = x; }); ls('sj_fac_fab', JSON.stringify(o)); } catch(e){} }, 600); }
+function fabAll(quiet){ var v0 = FABV; Object.keys(THC).forEach(function(k){ var c = D.byId && D.byId[k]; if (c && fabCard(c) && !(open && open.id === k)) fabSync(k, THC[k], false); }); if (!quiet && FABV !== v0 && TAB === 'cards' && $('card').hidden) draw(); }
+function fabOut(cid, re){ return OUT.some(function(x){ return x.card === cid && re.test(x.text || ''); }); }
+function fabState(cid){ var S = FAB[cid] || {}, o = { a: S.a || 0, o: S.o || 0, no: S.no || 0 }; if (fabOut(cid, /^FABRIC NEEDED/)) { o.a++; o.no = 0; } if (fabOut(cid, /^FABRIC ARRIVED$/)) o.o = 0; return o; }
+function fabHtml(c){ if (!fabCard(c)) return ''; var s = fabState(c.id);
+  return (s.a ? '<span class="fab a">🧵 fabric asked · কাপড় চাওয়া</span>' : s.o ? '<span class="fab g">🧵 ordered · অর্ডার হয়েছে</span>' : '') + (s.no ? '<span class="fab r">🧵 choose another · অন্য রং</span>' : ''); }   // waiting for something, and / or the last colour was refused
+function fabRolls(n){ return n + (n === 1 ? ' roll' : ' rolls'); }
+function fabDay(ts){ var t = new Date(+ts * 1000); return DAYN[t.getDay()] + ' ' + t.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][t.getMonth()]; }
+function fabChip(r){
+  if (r.st === 'ord') return '<div class="fchip g">✅ Ordered' + (r.vendor ? ' · ' + esc(r.vendor) : '') + ' · ' + fabRolls(r.on) + ' · ' + fabDay(r.at) + '<small>অর্ডার হয়েছে</small></div>';
+  if (r.st === 'arr') return '<div class="fchip d">📦 Arrived' + (r.vendor ? ' · ' + esc(r.vendor) : '') + ' · ' + fabRolls(r.on) + ' · ' + fabDay(r.arr) + '<small>কাপড় এসে গেছে</small></div>';
+  if (r.st === 'no') return '<div class="fchip r">✗ Not available — choose another colour<small>পাওয়া যায়নি — অন্য রং বাছুন</small><button type="button" class="fagain">🧵 Send another colour · অন্য রং পাঠান</button></div>';
+  return '<div class="fchip a">⏳ Asked · ' + fabRolls(r.n) + ' · waiting for the answer<small>চাওয়া হয়েছে · উত্তরের অপেক্ষা</small></div>'; }
+function fabBar(){ var c = open, el = $('fabbar'); if (!c || !fabCard(c) || !D.lists) { el.hidden = true; return; }
+  var s = fabState(c.id), need = FABLISTS.test(lname(c.l)), arr = s.o > 0; $('fabneed').hidden = !need; $('fabarr').hidden = !arr; el.hidden = !need && !arr; }
+var FBS = { n: 1, blob: null, url: '', fname: '' };
+function fabPhoto(f){ if (FBS.url) { try { URL.revokeObjectURL(FBS.url); } catch(e){} } FBS.blob = f || null; FBS.url = f ? URL.createObjectURL(f) : ''; var nm = (f && f.name) || '';
+  if (f && !/\.(jpe?g|png|webp|heic|heif|gif)$/i.test(nm)) nm = 'fabric-' + Date.now() + (/png/.test(f.type) ? '.png' : /heic|heif/.test(f.type) ? '.heic' : '.jpg'); FBS.fname = nm;   // the photo goes as it is - never compressed
+  $('fabph').innerHTML = f ? '<div class="fabimg" style="background-image:url(' + FBS.url + ')"><button type="button" id="fabchg">↻ Change photo<small>ছবি বদলান</small></button></div>'
+    : '<div class="fabpk"><button type="button" id="fabcamb">📷 Take photo<small>ছবি তুলুন</small></button><button type="button" id="fabpickb">🖼 Choose photo<small>ছবি বাছুন</small></button></div><div class="fabhint">One photo: the vendor\'s colour sheet with the colour marked · একটি ছবি: রং চিহ্নিত করা শিট</div>'; $('faberr').hidden = true; }
+function fabN(n){ FBS.n = Math.max(1, Math.min(20, n)); $('fabn').textContent = FBS.n; $('fabminus').disabled = FBS.n <= 1; $('fabplus').disabled = FBS.n >= 20; }
+function fabOpen(){ var c = open; if (!c || !fabCard(c)) return; var p = parse(c.name); $('fabsno').textContent = p.no ? 'SJ-' + p.no : ''; fabPhoto(null); fabN(1); $('fabname').value = ''; $('fabs').hidden = false; }
+$('fabneed').onclick = fabOpen;
+$('fabph').onclick = function(e){ if (e.target.closest('#fabcamb')) { $('fabcam').value = ''; $('fabcam').click(); } else if (e.target.closest('#fabpickb, #fabchg')) { $('fabpick').value = ''; $('fabpick').click(); } };
+$('fabcam').onchange = $('fabpick').onchange = function(){ var f = this.files[0]; if (f) fabPhoto(f); };
+$('fabminus').onclick = function(){ fabN(FBS.n - 1); }; $('fabplus').onclick = function(){ fabN(FBS.n + 1); };
+$('fabx').onclick = function(){ $('fabs').hidden = true; fabPhoto(null); };
+$('fabs').onclick = function(e){ if (e.target === $('fabs')) $('fabx').onclick(); };
+$('fabgo').onclick = function(){ var c = open; if (!c) return;
+  if (!FBS.blob) { $('faberr').textContent = 'Add the photo of the colour sheet first · আগে শিটের ছবি দিন'; $('faberr').hidden = false; return; }
+  var nm = $('fabname').value.replace(/[·\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60), text = 'FABRIC NEEDED · ' + FBS.n + ' roll' + (nm ? ' · ' + nm : '');
+  outAdd(c, text, [{ name: FBS.fname, kind: 'photo', blob: FBS.blob }]); TH.none = false; TH.stick = true; FBS.blob = null; $('fabs').hidden = true; fabPhoto(null); fabBar();
+  toast('🧵 Sent: ' + FBS.n + (FBS.n === 1 ? ' roll' : ' rolls') + (nm ? ' · ' + nm : '') + ' · পাঠানো হচ্ছে'); };
+$('fabarr').onclick = function(){ var c = open; if (!c || fabOut(c.id, /^FABRIC ARRIVED$/)) return;
+  if (!confirm('Fabric arrived?\nThe ordered rolls for this design are in the factory.\n\nকাপড় এসেছে? অর্ডার করা রোল কারখানায় পৌঁছেছে।')) return;
+  outAdd(c, 'FABRIC ARRIVED', []); TH.none = false; TH.stick = true; fabBar(); toast('📦 Fabric arrived · কাপড় এসেছে'); };
+$('thread').addEventListener('click', function(e){ if (e.target.closest('.fagain')) fabOpen(); });
 // ---- 13 Oct 2026 (Abbas): ⭐ NEW SAMPLE - a SAMPLES card + the details (photo / video / voice notes) in #samples-discuss, which is that card's chat ----
 var SP = [];
 function spDraw(){ $('nspend').innerHTML = SP.map(function(x, i){ return '<div class="pi"' + (x.url ? ' style="background-image:url(' + x.url + ')"' : '') + '>' + (x.url ? '' : x.kind === 'audio' ? '🎤' : x.kind === 'video' ? '🎬' : '📎') + '<small>' + esc(x.label) + '</small><b data-i="' + i + '">✕</b></div>'; }).join(''); }
@@ -1756,7 +1845,7 @@ async function prefetch(){ var ids = Object.keys(D.th || {}).filter(function(id)
 var THCP = {};
 function thcLoad(){ try { var o = JSON.parse(ls('sj_fac_thc') || '{}'); Object.keys(o).forEach(function(k){ if (!THC[k]) { THC[k] = (o[k] || []).filter(function(m){ return /^\d+\.\d+$/.test(m.ts); }); if (THC[k].length >= 40) THCP[k] = 1; } }); } catch(e){} }
 var THCT = null;
-function thcSave(){ CHATSIG = ''; if (TAB === 'chats' && $('card').hidden) chatsDraw(); clearTimeout(THCT); THCT = setTimeout(function(){ try { var o = {}, ks = Object.keys(THC).filter(function(k){ return THC[k] && THC[k].length; });
+function thcSave(){ fabAll(); CHATSIG = ''; if (TAB === 'chats' && $('card').hidden) chatsDraw(); clearTimeout(THCT); THCT = setTimeout(function(){ try { var o = {}, ks = Object.keys(THC).filter(function(k){ return THC[k] && THC[k].length; });
   ks.sort(function(a, b){ return +(THC[b][THC[b].length - 1].ts) - +(THC[a][THC[a].length - 1].ts); }).slice(0, 40).forEach(function(k){ o[k] = THC[k].filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }).slice(-40).map(function(m){ var x = {}; for (var q in m) if (q !== 'nw' && q !== 'pend') x[q] = m[q]; return x; }); });
   ls('sj_fac_thc', JSON.stringify(o)); } catch(e){} }, 800); }
 // ---- LIVE (15 Oct 2026, Abbas: "just make my existing chats more flawless"): the relay rings a free doorbell (ntfy.sh, private topic, only
@@ -1792,7 +1881,7 @@ async function liveFetch(cid){ if (!fastOn() || cid === 'lais') return; var room
   var j = await fast(room ? { op: 'dm', ch: rf[0], since: last } : { op: 'thread', ch: rf[0], ts: rf[1], since: last }); if (!j || !j.ok || !j.msgs) return;
   var hv = {}; have.forEach(function(m){ hv[m.ts] = 1; }); var add = j.msgs.filter(function(m){ return /^\d+\.\d+$/.test(m.ts) && !hv[m.ts]; }); if (!add.length) return;
   if (open && (open.id === cid || (cid === 'dm' && open.dm))) return;
-  THC[cid] = have.concat(add); hotAdd(cid, add[add.length - 1].ts); var news = add.filter(function(m){ return (!m.sys || noteOf(m)) && !isMe(m) && +m.ts > Date.now() / 1000 - 180; });
+  THC[cid] = have.concat(add); fabAll(); hotAdd(cid, add[add.length - 1].ts); var news = add.filter(function(m){ return (!m.sys || noteOf(m)) && !isMe(m) && +m.ts > Date.now() / 1000 - 180; });
   if (news.length) { var u = (D.th = D.th || {})[cid] || {}, nl = news[news.length - 1];
     if (!(+u.last >= +nl.ts)) { var t = String(nl.text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim(); if (!t && (nl.files || []).length) t = nl.files.map(function(f){ return f.audio ? '🎤 voice note' : f.img ? '📷 photo' : f.video ? '🎬 video' : '📎 ' + f.name; }).join(' · ');
       D.th[cid] = { n: (u.n || 0) + news.length, last: nl.ts, tx: (nl.who ? nl.who + ': ' : '') + t.slice(0, 160) }; draw(); alertNew(); } }
@@ -1840,7 +1929,7 @@ if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } 
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, hotq: function(){ return HOTQ; }, mvr: function(){ return MVR; }, wdTxt: wdTxt, wkd: function(){ if (open) workDraw(open); }, outRun: outRun, HM: HM, tab: function(){ return TAB; } };
+window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, hotq: function(){ return HOTQ; }, mvr: function(){ return MVR; }, wdTxt: wdTxt, wkd: function(){ if (open) workDraw(open); }, outRun: outRun, HM: HM, fabView: fabView, fabKind: fabKind, fab: function(){ return FAB; }, tab: function(){ return TAB; } };
 })();
 </script>
 </body></html>

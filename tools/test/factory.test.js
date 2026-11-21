@@ -1018,11 +1018,100 @@ async function lookSuite(browser) {
   } finally { await T.close(); }
 }
 
+// ---- 21 Nov 2026 (Abbas): NEED FABRIC - a photo + rolls in the card's chat, Abbas's answer as a chip under it, Fabric arrived, a mark in the list ----
+async function fabricSuite(fast, browser) {
+  console.log('\n— Need fabric (' + (fast ? 'fast lane' : 'relay only') + ') —');
+  const INLINE = '6527c57cd7e267fbf2a602b4';
+  const T = await boot({ fast, browser, who: 'Ibrahim', setup: W => { world(W); W.cardF = F.addCard(W, START, 'SJ-88001 (40) pcs fabric test', { ageDays: 1 }); W.cardG = F.addCard(W, INLINE, 'SJ-88002 (10) pcs in line');
+    F.postSlack(W, CUT, { text: 'ORDERED', user: 'U2', thread_ts: W.rootB }); F.postSlack(W, CUT, { text: 'that lace is not available in the market', user: 'U2', thread_ts: W.rootB }); } });   // old loose lines in an old chat
+  const W = T.W, all = () => [].concat(...Object.values(W.slack.ch).map(c => c.msgs));
+  const rowF = page => page.locator('#list .cardrow', { hasText: '88001' });
+  const abbas = (text, extra) => { const root = all().find(m => /FABRIC NEEDED/.test(m.text || '')).thread_ts, ch = Object.keys(W.slack.ch).find(k => W.slack.ch[k].msgs.some(m => m.thread_ts === root && /FABRIC NEEDED/.test(m.text || '')));
+    F.postSlack(W, ch, Object.assign({ text, thread_ts: root }, extra || { bot_id: 'B1' }));
+    T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now() + Math.random(), event: { type: 'message', channel: ch, thread_ts: root, ts: F.slackTs() } })); };
+  const pic = (name, kb) => { const b = Buffer.alloc(kb * 1024, 7); b[0] = 0xff; b[1] = 0xd8; return { name, mimeType: 'image/jpeg', buffer: b }; };
+  try {
+    const page = await T.open();
+    await test('Need fabric shows on START / CUTTING START / CUTTING cards only; old "ORDERED" / "not available" lines stay plain messages', async () => {
+      await openCardNo(page, '88001'); await until(() => page.locator('#fabneed').isVisible(), 5000, 'button on a START card');
+      ok(/Need fabric/.test(await page.textContent('#fabneed')) && /কাপড় দরকার/.test(await page.textContent('#fabneed')), 'English + Bengali: ' + await page.textContent('#fabneed'));
+      ok(await page.locator('#fabarr').isHidden(), 'no Fabric arrived yet');
+      ok(await page.locator('#bdone').isVisible() && await page.locator('#send').isVisible() && await page.locator('#cam').isVisible(), 'Done and the chat box are where they were');
+      await page.goBack(); await openCardNo(page, '88002'); await page.waitForTimeout(400); ok(await page.locator('#fabbar').isHidden(), 'not on an IN LINE card');
+      await page.goBack(); await openCardNo(page, '17841'); await until(async () => (await bubbles(page)).some(t => /not available in the market/.test(t)), 8000, 'the old lines are in the chat');
+      ok(await page.locator('#fabneed').isVisible(), 'on a CUTTING card');
+      ok((await page.locator('#thread .fchip').count()) === 0 && await page.locator('#fabarr').isHidden() && (await bubbles(page)).some(t => t.trim().startsWith('ORDERED')), 'old ORDERED = a plain message, no chip, no Fabric arrived');
+      await home(page); await chip(page, 4); ok((await page.locator('#list .cardrow .fab').count()) === 0, 'no fabric mark from old lines');
+    });
+    await test('Need fabric: one photo + 2 rolls + the name = ONE chat message "FABRIC NEEDED · 2 roll · maroon mokhmol" with the photo', async () => {
+      await home(page); await openCardNo(page, '88001'); await page.click('#fabneed'); await until(() => page.locator('#fabs').isVisible(), 3000, 'the sheet');
+      ok(/SJ-88001/.test(await page.textContent('#fabs h3')) && /রোল/.test(await page.textContent('#fabs .fabst')), 'card number + Bengali on the sheet');
+      ok((await page.textContent('#fabn')).trim() === '1' && await page.locator('#fabminus').isDisabled(), 'starts at 1 roll, cannot go under');
+      await page.click('#fabgo'); ok(await page.locator('#faberr').isVisible() && await page.locator('#fabs').isVisible(), 'no photo = not sent, says why');
+      for (let i = 0; i < 24; i++) await page.click('#fabplus', { force: true }).catch(() => {});
+      ok((await page.textContent('#fabn')).trim() === '20' && await page.locator('#fabplus').isDisabled(), 'stops at 20');
+      for (let i = 0; i < 18; i++) await page.click('#fabminus'); ok((await page.textContent('#fabn')).trim() === '2', '2 rolls');
+      await page.setInputFiles('#fabpick', pic('sheet.jpg', 1300)); await until(() => page.locator('#fabs .fabimg').isVisible(), 3000, 'photo preview');
+      await page.fill('#fabname', '  maroon   mokhmol '); await page.click('#fabgo'); await until(() => page.locator('#fabs').isHidden(), 3000, 'sheet closed');
+      await until(() => all().some(m => (m.files || []).some(f => f.name === 'sheet.jpg')), 20000, 'the photo reached Slack'); await page.waitForTimeout(2500);
+      const posts = all().filter(m => /FABRIC NEEDED/.test(m.text || '')); ok(posts.length === 1, 'ONE message (saw ' + posts.length + ')');
+      ok(posts[0].text === '*Ibrahim:* FABRIC NEEDED · 2 roll · maroon mokhmol', 'exact text: ' + JSON.stringify(posts[0].text));
+      ok((posts[0].files || []).length === 1 && posts[0].files[0].size === 1300 * 1024, 'its photo, full size'); ok(!!posts[0].thread_ts, 'in the card\'s own chat thread');
+      await until(async () => (await page.locator('#thread .msg:not(.out) .fchip.a').count()) === 1, 15000, 'amber chip under the photo');
+      ok(/Asked · 2 rolls/.test(await page.textContent('#thread .fchip.a')) && await page.locator('#fabarr').isHidden(), 'chip: ' + await page.textContent('#thread .fchip.a'));
+      ok((await bubbles(page)).some(t => /FABRIC NEEDED · 2 roll · maroon mokhmol/.test(t)), 'the line itself is in the chat');
+      await home(page); await chip(page, 2); await until(() => rowF(page).locator('.fab.a').count(), 5000, 'fabric mark in the list'); ok(/কাপড়/.test(await rowF(page).locator('.fab').textContent()), 'Bengali on the mark');
+      ok((await page.locator('#list .cardrow .fab').count()) === 1, 'only on that card');
+    });
+    await test('Abbas answers "ORDERED · Test vendor · 2 roll": the list mark turns green by itself, green chip under the photo, Fabric arrived appears', async () => {
+      abbas('*Abbas:* ORDERED · Test vendor · 2 roll');
+      await until(() => rowF(page).locator('.fab.g').count(), 30000, 'mark = ordered, without opening the chat');
+      await openCardNo(page, '88001'); await until(() => page.locator('#thread .fchip.g').count(), 10000, 'green chip');
+      const t = await page.textContent('#thread .fchip.g'); ok(/Ordered · Test vendor · 2 rolls · (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d+ [A-Z][a-z]{2}/.test(t) && /অর্ডার হয়েছে/.test(t), 'chip: ' + t);
+      ok(await page.locator('#thread .msg:has(.fchip.g) img, #thread .msg:has(.fchip.g) .fph').count() === 1, 'the chip sits under the fabric photo');
+      ok((await page.locator('#thread .fchip').count()) === 1 && await page.locator('#fabarr').isVisible() && /কাপড় এসেছে/.test(await page.textContent('#fabarr')), 'Fabric arrived button');
+    });
+    await test('Fabric arrived posts "FABRIC ARRIVED" once; the chip says Arrived; the list mark is gone', async () => {
+      await page.click('#fabarr'); await until(() => all().some(m => /FABRIC ARRIVED/.test(m.text || '')), 15000, 'in Slack'); await page.waitForTimeout(1500);
+      const ps = all().filter(m => /FABRIC ARRIVED/.test(m.text || '')); ok(ps.length === 1 && ps[0].text === '*Ibrahim:* FABRIC ARRIVED', 'exact text, once: ' + JSON.stringify(ps.map(m => m.text)));
+      await until(() => page.locator('#thread .fchip.d').count(), 10000, 'chip turned'); ok(/Arrived · Test vendor · 2 rolls/.test(await page.textContent('#thread .fchip.d')) && (await page.locator('#thread .fchip.g').count()) === 0, 'chip: ' + await page.textContent('#thread .fchip.d'));
+      await until(() => page.locator('#fabarr').isHidden(), 5000, 'button gone'); ok(await page.locator('#fabneed').isVisible(), 'Need fabric stays');
+      await home(page); await chip(page, 2); await rowF(page).waitFor(); ok((await rowF(page).locator('.fab').count()) === 0, 'no mark on the row');
+    });
+    await test('"not available" (typed in Slack): red chip + Send another colour on the waiting photo only; 1 roll without a name = "FABRIC NEEDED · 1 roll"', async () => {
+      await openCardNo(page, '88001'); await page.click('#fabneed'); await page.setInputFiles('#fabpick', pic('sheet2.jpg', 300)); await page.click('#fabgo');
+      await until(() => all().some(m => (m.files || []).some(f => f.name === 'sheet2.jpg')), 20000, 'second photo in Slack');
+      ok(all().filter(m => /FABRIC NEEDED/.test(m.text || '')).pop().text === '*Ibrahim:* FABRIC NEEDED · 1 roll', 'exact text without a name');
+      await until(() => page.locator('#thread .msg:not(.out) .fchip.a').count(), 15000, 'asked');
+      abbas('sorry this colour is Not Available at the vendor', { user: 'U2' });
+      await until(() => page.locator('#thread .fchip.r').count(), 20000, 'red chip'); const t = await page.textContent('#thread .fchip.r');
+      ok(/Not available/.test(t) && /choose another colour/.test(t) && /অন্য রং/.test(t), 'chip: ' + t);
+      ok((await page.locator('#thread .fchip.d').count()) === 1 && (await page.locator('#thread .fchip.r').count()) === 1, 'the photo that already arrived keeps its chip');
+      await page.click('#thread .fchip.r .fagain'); await until(() => page.locator('#fabs').isVisible(), 3000, 'the same flow opens');
+      ok((await page.textContent('#fabn')).trim() === '1' && (await page.locator('#fabs .fabimg').count()) === 0, 'fresh: 1 roll, no photo'); await page.click('#fabx');
+      await home(page); await chip(page, 2); await until(() => rowF(page).locator('.fab.r').count(), 5000, 'red mark: choose another colour');
+    });
+    await test('rule: an answer belongs to the fabric photos before it that had no answer yet', async () => {
+      const r = await page.evaluate(() => { const m = (ts, text, x) => Object.assign({ ts: String(ts), text, who: 'x' }, x || {});
+        const v = window.__f.fabView([m(1, 'please check'), m(2, 'ORDERED · Old vendor · 9 roll'), m(3, 'FABRIC NEEDED · 2 roll · red'), m(4, 'FABRIC NEEDED · 1 roll'), m(5, 'ORDERED · Naeem · 3 roll'), m(6, 'FABRIC NEEDED · 4 roll · blue net'),
+          m(7, 'this one is not available'), m(8, 'FABRIC NEEDED · 5 roll · green'), m(9, '> *Ibrahim:* FABRIC NEEDED\nORDERED · Al-Noor Textiles · 5 roll'), m(10, '→ *WORK* · FABRIC ARRIVED', { sys: 1 }), m(11, 'FABRIC NEEDED · 6 roll · black')]);
+        const w = window.__f.fabView([m(1, 'FABRIC NEEDED · 2 roll · red'), m(2, 'ORDERED · V · 2 roll'), m(3, 'FABRIC ARRIVED'), m(4, 'FABRIC NEEDED · 1 roll'), m(5, 'ORDERED')]);
+        return { v, w, k: [window.__f.fabKind(m(1, 'ordered food for the workers')), window.__f.fabKind(m(1, 'FABRIC NEEDED · 12 roll · maroon · mokhmol')), window.__f.fabKind(m(1, 'ORDERED - Naeem - 2 roll'))] }; });
+      const st = k => r.v.by[k] && r.v.by[k].st; ok(st('3') === 'ord' && st('4') === 'ord' && r.v.by['3'].vendor === 'Naeem' && r.v.by['3'].on === 3, 'one ORDERED answers both waiting photos: ' + JSON.stringify(r.v.by['3']));
+      ok(st('6') === 'no' && st('8') === 'ord' && r.v.by['8'].vendor === 'Al-Noor Textiles' && st('11') === 'ask', 'not available / a quoted reply / a system line are told apart: ' + JSON.stringify(r.v.by));
+      ok(r.v.a === 1 && r.v.o === 3 && r.v.no === 0 && !r.v.by['2'], 'counts: ' + r.v.a + ' asked, ' + r.v.o + ' ordered; an ORDERED before any request is nothing');
+      ok(r.w.by['1'].st === 'arr' && r.w.by['4'].st === 'ord' && r.w.by['4'].on === 1 && r.w.o === 1, 'arrived closes only what was ordered before it; a bare ORDERED still answers');
+      ok(r.k[0] === null && r.k[1].n === 12 && r.k[1].name === 'maroon' && r.k[2].vendor === 'Naeem' && r.k[2].n === 2, 'readers: ' + JSON.stringify(r.k));
+    });
+    await test('no page errors (fabric)', async () => { ok(!T.errors.length, T.errors.join('\n')); });
+  } finally { await T.close(); }
+}
+
 const ONLY = process.argv[2];   // e.g. node tools/test/factory.test.js push
 (async () => {
   const browser = await chromium.launch();
-  if (ONLY) { try { await ({ push: pushSuite, sw: swSuite, staff: staffSuite, people: peopleSuite, look: lookSuite, main: b => suite(false, b), fast: b => suite(true, b) }[ONLY])(browser); } finally { await browser.close(); } const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed'); process.exit(bad.length ? 1 : 0); }
-  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); await staffSuite(browser); await peopleSuite(browser); await lookSuite(browser); await pushSuite(browser); await swSuite(browser); } finally { await browser.close(); }
+  if (ONLY) { try { await ({ push: pushSuite, sw: swSuite, staff: staffSuite, people: peopleSuite, look: lookSuite, fabric: async b => { await fabricSuite(false, b); await fabricSuite(true, b); }, main: b => suite(false, b), fast: b => suite(true, b) }[ONLY])(browser); } finally { await browser.close(); } const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed'); process.exit(bad.length ? 1 : 0); }
+  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); await staffSuite(browser); await peopleSuite(browser); await lookSuite(browser); await fabricSuite(false, browser); await fabricSuite(true, browser); await pushSuite(browser); await swSuite(browser); } finally { await browser.close(); }
   const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed');
   process.exit(bad.length ? 1 : 0);
 })();
