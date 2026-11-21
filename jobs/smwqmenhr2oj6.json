@@ -1,0 +1,77 @@
+{
+ "id": "smwqmenhr2oj6",
+ "op": "sell",
+ "ref": "INV-0065",
+ "ok": false,
+ "cards": [
+  {
+   "card": "68f395082b67308b22a3944e",
+   "no": "22335",
+   "before": "SJ-22335 , (20PCS , COLORS =7 …(4/4/4/0/0)..(0/0/4/4/0)(",
+   "after": "SJ-22335 , (0PCS , COLORS =7 …(0/0/0/0/0)..(0/0/0/0/0)(",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 8: 4 → 0 (−4)",
+    "colour 9: 4 → 0 (−4)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  },
+  {
+   "card": "69271fd2be38518cc4c408f2",
+   "no": "40032",
+   "before": "Sj= (40032) ..(56) pcs colour= 1 ___(56)",
+   "after": "Sj= (40032) ..(48) pcs colour= 1 ___(48)",
+   "left": 48,
+   "lines": [
+    "colour 1: 56 → 48 (−8)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "68f7bb4d348523bc3241d766",
+   "no": "74106",
+   "before": "SJ-74106 , (31) PCS , COLORS = 1__(31) ",
+   "after": "SJ-74106 , (23) PCS , COLORS = 1__(23) ",
+   "left": 23,
+   "lines": [
+    "colour 1: 31 → 23 (−8)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69318b309975829d23ad0ebe",
+   "no": "94642",
+   "before": "Sj= (94642)..(38) pcs color = 5…(8/6/7/7/10)",
+   "after": "Sj= (94642)..(18) pcs color = 5…(4/2/3/3/6)",
+   "left": 18,
+   "lines": [
+    "colour 1: 8 → 4 (−4)",
+    "colour 2: 6 → 2 (−4)",
+    "colour 3: 7 → 3 (−4)",
+    "colour 4: 7 → 3 (−4)",
+    "colour 5: 10 → 6 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "6a98aacdee55eebc1df7eea1",
+   "no": "22108",
+   "before": "SJ-22108",
+   "after": "SJ-22108",
+   "left": 0,
+   "lines": [
+    "sample: 1 → 0 (−1)"
+   ],
+   "moved": "moved to FINISH (sample sold)"
+  },
+  {
+   "card": "69188ed28467a402872c47e8",
+   "no": "37196",
+   "err": "card title does not add up (0+5+12+9+4 = 30, card says 31) — not changed"
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
