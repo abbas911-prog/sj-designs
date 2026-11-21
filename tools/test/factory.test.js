@@ -957,21 +957,33 @@ async function lookSuite(browser) {
       ok(await page.locator('#groups .gp[data-g="1"]').evaluate(e => e.classList.contains('on')), 'CUTTING box is the chosen one');
       ok(!/48188/.test(await page.textContent('#list')), 'no START card in it');
     });
+    await test('Returns is in front: a row on Home and a button in the bottom bar, with how many are at the factory', async () => {   // 21 Nov 2026 (Abbas: "why have you removed the return process?")
+      await page.click('#tabs button[data-t="home"]'); await until(() => page.locator('#hret .need').count(), 5000, 'Returns row on Home');
+      ok(/Returns/.test(await page.textContent('#hret')) && /ফেরত/.test(await page.textContent('#hret')) && /Nothing at the factory/.test(await page.textContent('#hret')), 'row: ' + await page.textContent('#hret'));
+      const RET = W.trello.lists.find(l => l.name === 'RETURNS'); ok(!!RET, 'the RETURNS list exists');
+      F.addCard(W, RET.id, 'SJ-70001 return alter 6 pcs'); F.addCard(W, RET.id, 'SJ-70002 SAMPLE'); await page.evaluate(() => window.__f.load(true));
+      await until(async () => /2 at the factory/.test(await page.textContent('#hret')), 15000, 'count on Home'); ok((await page.textContent('#tbret2')).trim() === '2', 'badge on the bar button');
+      await page.click('#hret .need'); await until(() => page.locator('#home section[data-t="returns"]').isVisible(), 3000, 'Returns screen from Home');
+      await until(async () => /70001/.test(await page.textContent('#retlist')) && /70002/.test(await page.textContent('#retlist')), 5000, 'both cards listed');
+      ok(await page.locator('#rnewb').isVisible(), '＋ New return is there');
+      await page.click('#tabs button[data-t="cards"]'); await page.click('#tabs button[data-t="returns"]'); await until(() => page.locator('#retlist').isVisible(), 3000, 'Returns screen from the bar');
+      await page.click('#tabs button[data-t="cards"]'); await page.click('#groups .gp[data-g="1"]');
+    });
     await test('Cards: a group with two lists shows its two chips, a group with one list shows none', async () => {
       ok((await page.locator('#stages button:visible').count()) === 2 && /CUTTING START/.test(await page.textContent('#stages')) && /কাটিং শুরু/.test(await page.textContent('#stages')), 'CUTTING START + CUTTING chips: ' + await page.textContent('#stages'));
       await page.click('#groups .gp[data-g="0"]'); await until(async () => /48188/.test(await page.textContent('#list')), 5000, 'START cards');
       ok((await page.locator('#stages button:visible').count()) === 0, 'no chips for START');
       ok((await page.locator('#groups .gp').count()) === 8, 'all 8 boxes stay on top');
     });
-    await test('bottom bar = Home · Cards · ＋ · Chats · Workers; Returns and More live behind the top-right button', async () => {
-      const ids = await page.$$eval('#tabs > button', b => b.map(x => x.id || x.dataset.t)); ok(ids.join(',') === 'home,cards,tplus,chats,twork', 'bar: ' + ids.join(','));
+    await test('bottom bar = Home · Cards · ＋ · Chats · Returns · Workers; More lives behind the top-right button (Returns has a tile there too)', async () => {
+      const ids = await page.$$eval('#tabs > button', b => b.map(x => x.id || x.dataset.t)); ok(ids.join(',') === 'home,cards,tplus,chats,returns,twork', 'bar: ' + ids.join(','));
       ok(/^(A|AB|AJ)/.test((await page.textContent('#tmore')).trim()), 'the button carries his initials: ' + await page.textContent('#tmore'));
       await page.click('#tmore'); await until(() => page.locator('#home section[data-t="more"]').isVisible(), 3000, 'More');
       ok((await page.locator('#home section[data-t="more"] .tl:visible').count()) >= 12, 'tiles: ' + await page.locator('#home section[data-t="more"] .tl:visible').count());
       ok(await page.locator('#mpeople').isVisible() && await page.locator('#mrep').isVisible(), 'owner tiles for Abbas');
       ok(/Owner/.test(await page.textContent('#mrole')) && /app \d{4}-\d\d-\d\d[a-z]/.test(await page.textContent('#mrole')), 'profile card: ' + await page.textContent('#mrole'));
       await page.click('#mret'); await until(() => page.locator('#home section[data-t="returns"]').isVisible(), 3000, 'Returns opens from its tile');
-      ok(await page.locator('#tmore').evaluate(e => e.classList.contains('on')), 'the top button stays lit on Returns');
+      ok(await page.locator('#tabs button[data-t="returns"]').evaluate(e => e.classList.contains('on')), 'the Returns button in the bar is lit');
       await page.click('#tmore'); await page.click('#mlate'); await until(() => page.locator('#fac').isVisible(), 5000, 'Late screen'); await until(async () => /66001/.test(await page.textContent('#fac')), 8000, 'the late design on it');
       await page.goBack(); await until(() => page.locator('#fac').isHidden(), 5000, 'closed');
       await page.click('#mpeople'); await until(async () => await page.locator('#fac').isVisible() && /PEOPLE & PHONES/.test(await page.textContent('#fac')), 8000, 'People & phones'); await page.goBack(); await until(() => page.locator('#fac').isHidden(), 5000, 'closed');

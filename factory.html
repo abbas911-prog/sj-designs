@@ -258,7 +258,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
     <div style="text-align:center;color:var(--mute);font-size:12px;margin-top:10px" id="verline"></div>
   </section>
 </main>
-<nav id="tabs"><button data-t="home" class="on"><i>🏠</i>Home</button><button data-t="cards"><i>🗂️</i>Cards</button><button class="plus" id="tplus"><i>＋</i></button><button data-t="chats"><i>💬</i>Chats<b id="tbchat"></b></button><button data-t="work" id="twork"><i>👷</i>Workers</button></nav>
+<nav id="tabs"><button data-t="home" class="on"><i>🏠</i>Home</button><button data-t="cards"><i>🗂️</i>Cards</button><button class="plus" id="tplus"><i>＋</i></button><button data-t="chats"><i>💬</i>Chats<b id="tbchat"></b></button><button data-t="returns"><i>↩️</i>Returns<b id="tbret2"></b></button><button data-t="work" id="twork"><i>👷</i>Workers</button></nav>
 
 <div id="card" hidden>
   <div class="chd"><button id="back">‹</button><div class="nm" id="cnm"></div><span class="pill" id="cstage"></span><button class="pin" id="bpin" title="Later">📌</button><button class="more" id="bmore" title="More">⋯</button></div>
@@ -318,7 +318,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-11-21c';
+var VER = '2026-11-21d';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -608,7 +608,7 @@ function rowHtml(c, showStage){ var u = unread(c), p = parse(c.name), nx = !c.dm
 // bottom tabs CARDS · CHATS · ＋ · RETURNS · MORE; Chats = every conversation like WhatsApp (newest / unread first); Returns = its own tab;
 // the card screen keeps Done + Problem in front and folds Move / Trello / Add photo / Edit / Copy into one ⋯ menu.
 var TAB = 'home';   // 21 Nov 2026: the app opens on Home (what needs you), not on the last tab
-function setTab(t){ TAB = t; ls('sj_fac_tab', t); document.querySelectorAll('#home > section').forEach(function(x){ x.hidden = x.dataset.t !== t; }); document.querySelectorAll('#tabs button[data-t]').forEach(function(b){ b.classList.toggle('on', b.dataset.t === t); }); $('hcards').hidden = t !== 'cards'; $('tmore').classList.toggle('on', t === 'more' || t === 'returns'); if (t === 'home') { homeDraw(); homeLoad(); } if (t === 'cards') homeLoad(); if (t === 'more') moreDraw(); try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(e){} document.body.classList.remove('kb'); window.scrollTo(0, 0); if (t === 'chats') chatsDraw(); if (t === 'returns') retDraw(); }
+function setTab(t){ TAB = t; ls('sj_fac_tab', t); document.querySelectorAll('#home > section').forEach(function(x){ x.hidden = x.dataset.t !== t; }); document.querySelectorAll('#tabs button[data-t]').forEach(function(b){ b.classList.toggle('on', b.dataset.t === t); }); $('hcards').hidden = t !== 'cards'; $('tmore').classList.toggle('on', t === 'more'); if (t === 'home') { homeDraw(); homeLoad(); } if (t === 'cards') homeLoad(); if (t === 'more') moreDraw(); try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(e){} document.body.classList.remove('kb'); window.scrollTo(0, 0); if (t === 'chats') chatsDraw(); if (t === 'returns') retDraw(); }
 // 21 Oct 2026 (Abbas): the Workers dashboard opens from the 👷 icon in the bar (More → Workers still works too)
 $('tabs').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; if (b.id === 'tplus') { $('plus').hidden = false; return; } if (b.id === 'twork') { wksShow(); return; } if (b.dataset.t === TAB) window.scrollTo({ top: 0, behavior: 'smooth' }); setTab(b.dataset.t); };
 $('tmore').onclick = function(){ if (TAB === 'more') window.scrollTo({ top: 0, behavior: 'smooth' }); setTab('more'); };
@@ -647,9 +647,11 @@ function homeDraw(){ var el = $('hm'); if (!el || !D.cards || !D.cards.length) r
   el.innerHTML = '<h1>' + gr[0] + (first ? ', ' + esc(first.charAt(0).toUpperCase() + first.slice(1)) : '') + '<small>' + DAYN[dd.getUTCDay()] + ' ' + dd.getUTCDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dd.getUTCMonth()] + ' · ' + gr[1] + '</small></h1>'
     + '<div class="hlab">NEEDS YOU · আপনার দরকার' + (N.length ? '<b>' + N.length + '</b>' : '') + '</div><div class="hsec" id="hneeds">' + (N.length ? N.map(function(x){ return '<button class="need" data-go="' + x.go + '"><div class="ic ' + x.c + '">' + x.ic + '</div><div class="t"><b>' + esc(x.t) + '</b><small>' + esc(x.s) + '</small></div><span class="n ' + x.c + '">' + x.n + '</span></button>'; }).join('') : '<div class="hok">✓ Nothing needs you right now<small>সব ঠিক আছে</small></div>') + '</div>'
     + '<div class="hlab">FACTORY NOW · কারখানা<b>' + act + ' design' + (act === 1 ? '' : 's') + ' in work</b></div><div class="groups" id="hgroups">' + groupsHtml(-1) + '</div>'
+    + (function(){ var rs = D.cards.filter(function(c){ return lname(c.l) === 'RETURNS'; }), ru = rs.reduce(function(x, c){ return x + (unread(c) ? 1 : 0); }, 0);   // 21 Nov 2026 (Abbas: "why have you removed the return process?"): Returns is back in front - on Home and in the bottom bar
+      return '<div class="hlab">RETURNS · ফেরত</div><div class="hsec" id="hret"><button class="need" data-go="returns"><div class="ic amb">↩️</div><div class="t"><b>Returns · alter pieces · sample requests</b><small>' + (rs.length ? rs.length + ' at the factory · কারখানায়' : 'Nothing at the factory · কিছু নেই') + ' · ফেরত · অল্টার · স্যাম্পল</small></div>' + (ru ? '<span class="newb">NEW ' + ru + '</span>' : '') + '<span class="n amb">' + rs.length + '</span></button></div>'; })()
     + '<div class="hlab">TODAY · আজ</div><div class="htiles"><button class="htile" data-go="work"><b style="color:var(--green)">' + (WKR ? tod : '…') + '</b><span>pcs done · আজ হয়েছে</span></button><button class="htile" data-go="work"><b>' + (WKR ? busy : '…') + '</b><span>working · কাজে</span></button><button class="htile" data-go="work"><b style="color:#c98a12">' + (WKR ? free : '…') + '</b><span>free · ফাঁকা</span></button></div>'; }
 $('hm').onclick = function(e){ var g = e.target.closest('.gp'); if (g) { groupGo(+g.dataset.g); return; } var b = e.target.closest('[data-go]'); if (!b) return; var go = b.dataset.go;
-  if (go === 'chats') setTab('chats'); else if (go === 'work') wksShow(); else facShow(go); };
+  if (go === 'chats') setTab('chats'); else if (go === 'returns') setTab('returns'); else if (go === 'work') wksShow(); else facShow(go); };
 function moreDraw(){ var own = isOwner(); $('mrep').hidden = !own; $('mpeople').hidden = !own; $('mrole').textContent = (own ? 'Owner · মালিক' : 'Factory · কারখানা') + ' · app ' + VER; $('tmore').textContent = String(WHO || '').trim().split(/\s+/).map(function(w){ return w.charAt(0); }).join('').slice(0, 2).toUpperCase() || '☰';
   var late = D.cards ? D.cards.filter(function(c){ var d = dueDays(c); return d !== null && d < 0 && !AGEOFF.test(lname(c.l)); }).length : 0; $('te-late').textContent = late ? String(late) : '';
   var ws = (WKR && WKR.workers) || []; $('tn-wk').textContent = WKR ? ws.filter(function(w){ return (w.hand || []).length; }).length + ' working · কাজে' : 'কর্মী';
@@ -671,7 +673,7 @@ $('bout').onclick = function(){ if (!confirm('Sign in as someone else? · অন
 $('bmore').onclick = function(){ if (!open) return; $('cmh').textContent = cardTitle(open).replace(/<[^>]+>/g, '') + ' · ' + lname(open.l); $('cmenu').hidden = false; };
 $('cmx').onclick = function(){ $('cmenu').hidden = true; };
 $('cmenu').addEventListener('click', function(e){ if (e.target.closest('button')) $('cmenu').hidden = true; }, true);
-function tabBadges(){ var t = totUnread(); $('tbchat').textContent = t ? String(t) : ''; var n = D.cards.filter(function(c){ return lname(c.l) === 'RETURNS'; }).length; $('tbret').textContent = n ? String(n) : ''; }
+function tabBadges(){ var t = totUnread(); $('tbchat').textContent = t ? String(t) : ''; var n = D.cards.filter(function(c){ return lname(c.l) === 'RETURNS'; }).length; $('tbret').textContent = $('tbret2').textContent = n ? String(n) : ''; }
 var DAYN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function when(ts){ var d = new Date(+ts * 1000), n = new Date(); if (isNaN(d)) return ''; var hm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); return d.toDateString() === n.toDateString() ? hm : DAYN[d.getDay()] + ' ' + d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; }
 // 17 Oct 2026: Slack sends emoji as :names: (":microphone: voice note") - shown as the emoji
