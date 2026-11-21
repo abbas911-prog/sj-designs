@@ -56,6 +56,7 @@ async function boot(opts) {
     await page.goto(base + 'factory.html');
     if (signIn !== false && await page.locator('#login').isVisible()) { await page.fill('#lpw', PROPS.FACTORY_PASSWORD); await page.fill('#lname', opts.who || 'Abbas'); await page.click('#lgo'); }
     await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length, null, { timeout: 15000 });
+    if (opts.home !== true && await page.locator('#tabs button[data-t="cards"]').isVisible()) await page.click('#tabs button[data-t="cards"]');   // 21 Nov 2026: the app opens on Home; the tests start on Cards as before (boot({ home: true }) stays on Home)
     return page;
   };
   T.close = async () => { await ctx.close(); if (!opts.browser) await browser.close(); srv.close(); if (W.fastSync) await W.fastSync.stop(); };

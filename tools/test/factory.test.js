@@ -25,6 +25,16 @@ async function openCardNo(page, no) {
   if (!(await page.locator('#hcards').isVisible())) await page.click('#tabs button[data-t="cards"]');
   const q = page.locator('#q'); await q.fill(no); await page.locator('#list .cardrow').first().click(); await page.waitForSelector('#card:not([hidden])');
 }
+async function chip(page, i) {                                // a list by its CHIPS index: its group box, then its chip (when the group has more than one list)
+  if (!(await page.locator('#hcards').isVisible())) await page.click('#tabs button[data-t="cards"]');
+  await page.click('#groups button[data-chips~="' + i + '"]');
+  const b = page.locator('#stages button[data-i="' + i + '"]'); if (await b.count() && await b.isVisible()) await b.click();
+}
+async function workTab(page, all) {                           // the card's Work tab; all = also show the workers who hold nothing
+  await page.click('#ctabs button[data-ct="work"]'); await until(() => page.locator('#work').isVisible(), 8000, 'work box');
+  if (all) { await until(() => page.locator('#wkrows .wr').count(), 8000, 'worker rows'); const g = page.locator('#wkgive'); if (await g.count() && await g.isVisible() && !(await page.locator('.wkfree').isVisible())) await g.click(); }
+}
+async function sheetTab(page) { await page.click('#ctabs button[data-ct="sheet"]'); await until(() => page.locator('#sheet').isVisible(), 8000, 'sheet box'); }
 const lidOf = (W, name) => (W.trello.lists.find(l => l.name === name) || {}).id;
 const bubbles = page => page.$$eval('#thread .msg:not(.out) .bub', els => els.map(e => e.textContent));
 
@@ -36,7 +46,7 @@ async function suite(fast, browser) {
     const page = await T.open();
     await test('cards load and show the day count', async () => {
       await until(() => page.locator('#list .cardrow').count(), 5000, 'cards');
-      await page.click('#stages button[data-i="2"]'); await until(async () => (await page.textContent('#list')).includes('SJ-48188'), 5000, 'START card');
+      await chip(page, 2); await until(async () => (await page.textContent('#list')).includes('SJ-48188'), 5000, 'START card');
       ok(/3 days/.test(await page.textContent('#list')), 'age badge "3 days"');
     });
     await test('open a card chat and see its messages', async () => {
@@ -173,13 +183,13 @@ async function suite(fast, browser) {
       await page.goBack();
     });
     await test('the new stage CUTTING START (Trello list Cutting///START) is a chip of its own and holds the card', async () => {   // 27 Oct 2026
-      await page.click('#tabs button[data-t="cards"]'); const st = await page.textContent('#stages'); ok(/CUTTING START/.test(st) && /কাটিং শুরু/.test(st), 'chip with the Bengali label: ' + st.slice(0, 120));
-      await page.click('#stages button[data-i="3"]'); await until(async () => /48188/.test(await page.textContent('#list')), 5000, 'the card is under CUTTING START');
+      await chip(page, 3); const st = await page.textContent('#stages'); ok(/CUTTING START/.test(st) && /কাটিং শুরু/.test(st), 'chip with the Bengali label: ' + st.slice(0, 120));
+      await chip(page, 3); await until(async () => /48188/.test(await page.textContent('#list')), 5000, 'the card is under CUTTING START');
       await openCardNo(page, '48188'); ok((await page.textContent('#bnext')).trim() === 'CUTTING', 'next after it = CUTTING');
       await page.goBack();
     });
     await test('Done then leaving the app: the move is sent at once', async () => {
-      await page.click('#stages button[data-i="3"]'); await openCardNo(page, '48188');
+      await chip(page, 3); await openCardNo(page, '48188');
       await page.click('#bdone'); await page.waitForTimeout(300);
       await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
       await until(() => W.trello.cards[W.cardA.id].idList === '6527c57751007e81a43f55a6', 3000, 'sent on going to the background (Cutting///START → CUTTING)');
@@ -217,7 +227,7 @@ async function suite(fast, browser) {
     });
     await test('swipe a card row left = Done → next stage (with Undo)', async () => {
       await page.fill('#q', '');
-      await page.click('#stages button[data-i="4"]');           // CUTTING (27 Oct 2026: index 3 = CUTTING START)
+      await chip(page, 4);           // CUTTING (27 Oct 2026: index 3 = CUTTING START)
       const row = page.locator('#list .cardrow', { hasText: '48188' }); await row.waitFor();
       const b = await row.boundingBox(), y = b.y + b.height / 2;
       await page.mouse.move(b.x + b.width - 20, y); await page.mouse.down();
@@ -229,7 +239,7 @@ async function suite(fast, browser) {
     });
     await test('work: give pieces to a worker, timer runs, Done stops it - Trello comment, field and chat line', async () => {
       await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '17841');
-      await until(() => page.locator('#work').isVisible(), 8000, 'work box');
+      await workTab(page, true);
       const rows = page.locator('#wkrows .wr'); await until(async () => (await rows.count()) === 17, 8000, '17 workers (the sheet list minus Ibraheem and Waris - 23 Oct)');
       const wtxt = await page.textContent('#wkrows'); ok(!/Ibraheem|Waris/.test(wtxt) && /Checking · iron/.test(wtxt), 'Ibraheem / Waris gone, the role divider shown');
       ok(await page.locator('#wkrows .wr').last().evaluate(e => /Arif/.test(e.textContent) && /iron/.test(e.textContent) && e.classList.contains('role')), 'Arif (iron) is the last row, with his job');
@@ -247,7 +257,7 @@ async function suite(fast, browser) {
       const r2 = page.locator('#wkrows .wr[data-w="Arif"]'); await r2.locator('input').fill('6'); await r2.locator('button.in').click();
       await until(async () => /6 pcs/.test(await r2.textContent()) && /since/.test(await r2.textContent()), 10000, 'Arif has 6 of the same card');
       W.trello.actions.filter(a => a.type === 'commentCard' && /👷 IN/.test(a.data.text)).forEach(a => a.date = new Date(Date.now() - 26 * 3600000).toISOString()); T.relay.cache.remove('FAC_WK_' + W.cardB.id);   // a day passes
-      await page.reload(); await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length); await openCardNo(page, '17841');
+      await page.reload(); await page.waitForFunction(() => window.__f && window.__f.D.cards && window.__f.D.cards.length); await openCardNo(page, '17841'); await workTab(page, true);
       await until(async () => /1 d 2 h/.test(await r.textContent()), 10000, 'timer shows 1 d 2 h');
       // 23 Oct 2026 (Abbas: "20 given, 2 done, 18 remaining"): a PART delivery keeps the batch open
       await r.locator('input').fill('24'); await r.locator('button.part').click(); await until(async () => /All done/.test(await page.textContent('#toast')), 3000, 'part = all is refused'); 
@@ -268,7 +278,7 @@ async function suite(fast, browser) {
       await page.goBack();
     });
     await test('a card list refresh does not blank the WORK box of the open card', async () => {   // 25 Oct 2026
-      await home(page); await openCardNo(page, '17841'); await until(async () => /Rifat/.test(await page.textContent('#wkrows')) && !/…/.test(await page.textContent('#wksum')), 8000, 'work box ready');
+      await home(page); await openCardNo(page, '17841'); await workTab(page, true); await until(async () => /Rifat/.test(await page.textContent('#wkrows')) && !/…/.test(await page.textContent('#wksum')), 8000, 'work box ready');
       const before = await page.textContent('#wksum'); T.opDelay = { work: 3000 };
       await until(() => page.evaluate(() => window.__f.load(true)), 15000, 'a card list refresh ran'); await page.waitForTimeout(300);
       ok((await page.textContent('#wksum')) === before, 'WORK summary unchanged after the refresh: "' + (await page.textContent('#wksum')) + '" vs "' + before + '"'); T.opDelay = null; await home(page);
@@ -285,7 +295,7 @@ async function suite(fast, browser) {
       await until(async () => (await page.locator('#wksbody .dgc').count()) === 1, 5000, 'by design: one design in work');
       ok(await page.locator('#wksbody .dgc').first().evaluate(e => /SJ-17841/.test(e.textContent) && /Arif · 6/.test(e.textContent)), 'SJ-17841 with the Arif chip');
       await page.click('#wksbody .dgc'); await until(() => page.locator('#card').isVisible(), 5000, 'tapping the design opens its card'); ok(/17841/.test(await page.textContent('#cnm')), 'the right card');
-      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000); await page.click('#tabs button[data-t="more"]'); await page.click('#bwork'); await page.click('#wkview button[data-v="w"]');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000); await page.click('#tmore'); await page.click('#bwork'); await page.click('#wkview button[data-v="w"]');
       await until(async () => /Rifat/.test(await page.textContent('#wksbody')), 8000, 'back on the dashboard');
       // pieces per day are counted over working hours (Dubai, Sat-Thu 8 am - 10 pm = 1 day, Fri 8 - 12): same sum as the relay, IN comment time -> OUT time
       const inT = Date.parse(W.trello.actions.find(a => a.type === 'commentCard' && /👷 IN · Rifat/.test(a.data.text)).date), outT = Date.parse(W.trello.actions.find(a => a.type === 'commentCard' && /👷 OUT · Rifat/.test(a.data.text)).date);
@@ -302,8 +312,8 @@ async function suite(fast, browser) {
     });
     // ===== 22 Oct 2026 (Abbas: "a complete factory app"): the card sheet, the Factory screen, the redone dashboard =====
     await test('card sheet: cut / rejected / first piece / due date -> Trello comments, chat lines, progress bar, late badge', async () => {
-      await openCardNo(page, '17841'); await until(() => page.locator('#sheet').isVisible(), 8000, 'sheet box');
-      await page.click('#shh'); await until(() => page.locator('#shrows .sr').count(), 5000, 'sheet rows');
+      await openCardNo(page, '17841'); await sheetTab(page);
+      await until(() => page.locator('#shrows .sr').count(), 5000, 'sheet rows');
       const row = k => page.locator('#shrows .sr[data-k="' + k + '"]');
       await row('cut').locator('input').fill('12'); await row('cut').locator('button').click();
       await until(() => W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && /^📋 CUT · 12 pcs · Abbas \(factory app\)/.test(a.data.text)), 10000, 'CUT comment on Trello');
@@ -347,7 +357,7 @@ async function suite(fast, browser) {
     });
     await test('Factory screen: attendance clock, month + salaries (Abbas), materials with a low alert, daily closing preview + post + the 10 pm tick', async () => {
       await home(page);
-      await page.click('#tabs button[data-t="more"]'); await page.click('#bfac'); await until(async () => /ATTENDANCE/.test(await page.textContent('#facbody')) && (await page.locator('#fs-att .ar').count()) === 3, 10000, 'attendance rows');
+      await page.click('#tmore'); await page.click('#bfac'); await until(async () => /ATTENDANCE/.test(await page.textContent('#facbody')) && (await page.locator('#fs-att .ar').count()) === 3, 10000, 'attendance rows');
       await page.locator('#fs-att .ar[data-n="Rifat"] button.in').click(); await page.locator('#fs-att .ar[data-n="Arif"] button.x').click();
       const today = new Date(Date.now() + 4 * 3600000).toISOString().slice(0, 10);
       await until(() => { try { const a = JSON.parse(T.relay.P['FAC_ATT_' + today] || '{}'); return a.RIFAT && a.RIFAT.in > 0 && a.ARIF && a.ARIF.a === 1; } catch (e) { return false; } }, 8000, 'clock-in and absent saved on the relay');
@@ -391,7 +401,7 @@ async function suite(fast, browser) {
     });
     await test('search by words: "fabric" finds the card with that word, numbers as before', async () => {
       await home(page);
-      W.trello.cards[W.cardB.id].name = 'SJ-17841 (12) pcs red lace'; await page.click('#tabs button[data-t="more"]'); await page.click('#rf'); await page.waitForTimeout(1500); await page.click('#tabs button[data-t="cards"]');
+      W.trello.cards[W.cardB.id].name = 'SJ-17841 (12) pcs red lace'; await page.click('#tmore'); await page.click('#rf'); await page.waitForTimeout(1500); await page.click('#tabs button[data-t="cards"]');
       await page.fill('#q', 'LACE red');
       await until(async () => (await page.$$eval('#list .cardrow', r => r.map(x => x.textContent))).join('|').includes('17841'), 4000, 'word match');
       ok(!(await page.textContent('#list')).includes('48188'), 'other cards hidden');
@@ -577,8 +587,8 @@ async function suite(fast, browser) {
       // the card was born 9 days ago in START, moved through the stages, and is on READY since yesterday
       W.trello.actions.find(a => a.type === 'createCard' && a.data.card.id === c.id).date = new Date(born - 9 * D).toISOString(); const b0 = born - 9 * D;
       mv('START', 'CUTTING', b0 + 1 * D + 3 * H); mv('CUTTING', 'IN LINE', b0 + 3 * D); mv('IN LINE', 'IRON/CHECKING', b0 + 7 * D); mv('IRON/CHECKING', 'READY', b0 + 8 * D);
-      W.trello.cards[c.id].idList = '6527c5b13129a9ba37acd3ad'; await page.click('#tabs button[data-t="more"]'); await page.click('#rf'); await page.waitForTimeout(1500); await page.click('#tabs button[data-t="cards"]');
-      await page.click('#stages button[data-i="11"]'); await openCardNo(page, '55555');
+      W.trello.cards[c.id].idList = '6527c5b13129a9ba37acd3ad'; await page.click('#tmore'); await page.click('#rf'); await page.waitForTimeout(1500); await page.click('#tabs button[data-t="cards"]');
+      await chip(page, 11); await openCardNo(page, '55555');
       await page.click('#bdone');                                 // READY → FINISH (Undo bar, then sent)
       await until(() => W.slack.ch[CUT].msgs.some(m => m.thread_ts === W.rootL && /PRODUCTION REPORT/.test(m.text || '')), 15000, 'report in the chat');
       const rp = W.slack.ch[CUT].msgs.find(m => /PRODUCTION REPORT/.test(m.text || '')).text;
@@ -612,7 +622,7 @@ async function suite(fast, browser) {
       ok(/Islam/i.test(tx) && /Moshtaq/i.test(tx) && /Nahid/i.test(tx), 'workers listed: ' + tx.slice(-300));
     });
     await test('Give tapped twice while the relay is still answering gives the pieces once (the row stays locked through a redraw)', async () => {   // 20 Nov 2026
-      await home(page); await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '17841'); await until(() => page.locator('#work').isVisible(), 8000, 'work box');
+      await home(page); await page.click('#tabs button[data-t="cards"]'); await openCardNo(page, '17841'); await workTab(page, true);
       const name = await page.evaluate(() => { const r = [...document.querySelectorAll('#wkrows .wr')].filter(x => !x.classList.contains('role') && x.querySelector('button.in') && !x.querySelector('button.out')); return r[r.length - 1].dataset.w; });
       const r = page.locator('#wkrows .wr[data-w="' + name + '"]'), ins = () => W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && new RegExp('^👷 IN · ' + name + ' · 7 pcs').test(a.data.text)).length;
       T.opDelay = { workset: 3500 };
@@ -640,7 +650,7 @@ async function suite(fast, browser) {
     });
     await test('giving more pieces than the card has asks first', async () => {   // 21 Nov 2026
       const seen = [], h = d => seen.push(d.message()); page.on('dialog', h);
-      await home(page); await openCardNo(page, '17841'); await until(() => page.locator('#work').isVisible(), 8000, 'work box');
+      await home(page); await openCardNo(page, '17841'); await workTab(page, true);
       const name = await page.evaluate(() => { const r = [...document.querySelectorAll('#wkrows .wr')].filter(x => !x.classList.contains('role') && x.querySelector('button.in') && !x.querySelector('button.out')); return r[0].dataset.w; });
       const r = page.locator('#wkrows .wr[data-w="' + name + '"]'); await r.locator('input').fill('5'); await r.locator('button.in').click();
       await until(() => W.trello.actions.some(a => a.type === 'commentCard' && a.data.card.id === W.cardB.id && new RegExp('^👷 IN · ' + name + ' · 5 pcs').test(a.data.text)), 12000, 'the give went through after OK');
@@ -656,7 +666,7 @@ async function suite(fast, browser) {
       Object.keys(T.relay.P).filter(k => /^FMV_/.test(k)).forEach(() => {}); W.trello.actions.filter(a => a.type === 'updateCard' && (a.data.card.id === c1.id || a.data.card.id === c2.id)).forEach(a => T.relay.cache.put('FMV_D_' + a.id, '1', 86400));   // as on the real board: the Trello-moves check saw these moves long ago
       const reps = c => W.trello.actions.filter(a => a.type === 'commentCard' && a.data.card.id === c.id && /#report/.test(a.data.text)).length;
       ok(reps(c1) === 0 && reps(c2) === 0, 'no report yet');
-      await home(page); await page.click('#tabs button[data-t="more"]'); await page.click('#bfac'); await until(() => page.locator('#repfill').isVisible(), 15000, 'the button (Abbas)');
+      await home(page); await page.click('#tmore'); await page.click('#bfac'); await until(() => page.locator('#repfill').isVisible(), 15000, 'the button (Abbas)');
       await page.click('#repfill'); await until(() => reps(c1) === 1 && reps(c2) === 1, 60000, 'both reports on Trello: ' + reps(c1) + ' ' + reps(c2));
       await until(async () => /Done/.test(await page.textContent('#fs-rep')), 60000, 'the screen says Done: ' + (await page.textContent('#fs-rep')));
       ok(W.slack.ch[CUT].msgs.filter(m => m.thread_ts === r2.ts && /PRODUCTION REPORT/.test(m.text || '')).length === 1, 'the chat that had its report did not get a second one');
@@ -739,8 +749,15 @@ async function staffSuite(browser) {
       ok(!j2.ok, 'relay refuses a post too');
       ok(!T.errors.length, T.errors.join('\n'));
     });
+    await test('staff: More shows no owner tiles (People, missing reports); Home shows no phones row', async () => {   // 21 Nov 2026
+      await page.click('#tmore'); await until(() => page.locator('#home section[data-t="more"]').isVisible(), 3000, 'More');
+      ok(await page.locator('#mpeople').isHidden() && await page.locator('#mrep').isHidden() && await page.locator('#bfac').isVisible() && await page.locator('#mret').isVisible(), 'owner tiles hidden, the rest there');
+      ok(/Factory/.test(await page.textContent('#mrole')) && !/Owner/.test(await page.textContent('#mrole')), 'profile: ' + await page.textContent('#mrole'));
+      await page.click('#tabs button[data-t="home"]'); await until(() => page.locator('#hm h1').count(), 5000, 'Home'); ok(/Ibrahim/.test(await page.textContent('#hm h1')) && !/phone/.test(await page.textContent('#hneeds')), 'Home for a staff phone: ' + await page.textContent('#hm h1'));
+      await page.click('#tabs button[data-t="cards"]');
+    });
     await test('staff: Factory screen without salaries or Post now; salaries and daily post refused; attendance allowed', async () => {
-      await page.click('#tabs button[data-t="more"]'); await page.click('#bfac'); await until(async () => /ATTENDANCE/.test(await page.textContent('#facbody')) && /Rifat/.test(await page.textContent('#facbody')), 10000, 'factory screen');
+      await page.click('#tmore'); await page.click('#bfac'); await until(async () => /ATTENDANCE/.test(await page.textContent('#facbody')) && /Rifat/.test(await page.textContent('#facbody')), 10000, 'factory screen');
       const body = await page.textContent('#facbody'); ok(!/SALARIES/.test(body) && !/Post now/.test(body), 'no salaries, no Post now');
       ok(!(await page.evaluate(() => window.__call({ op: 'daily', kind: 'now' }))).ok, 'daily post refused');
       await page.locator('#fs-att .ar[data-n="Rifat"] button.in').click();
@@ -760,7 +777,7 @@ async function peopleSuite(browser) {                         // 21 Nov 2026: ea
   const T = await boot({ browser, who: 'Abbas', setup: world }), W = T.W, PWD = 'fac-test-pw';
   const rcall = (o, secret) => { const req = JSON.stringify(Object.assign({ t: Date.now() }, o)); return JSON.parse(T.relay.post(JSON.stringify({ job: 'fac', req, sig: crypto.createHmac('sha256', secret || PWD).update(req).digest('hex') }))); };
   const sha = x => crypto.createHash('sha256').update(x).digest('hex'), fastchk = k => JSON.parse(T.relay.post(JSON.stringify({ job: 'fastchk', k: sha('sjfast|' + k) }))).ok;
-  const facOpen = async page => { await home(page); await page.click('#tabs button[data-t="more"]'); await page.click('#bfac'); await until(async () => (await page.locator('#fs-people .ppr').count()) >= 1, 15000, 'people rows'); };
+  const facOpen = async page => { await home(page); await page.click('#tmore'); await page.click('#bfac'); await until(async () => (await page.locator('#fs-people .ppr').count()) >= 1, 15000, 'people rows'); };
   let rahimKey = '', code = '', kk = '';
   try {
     const page = await T.open();
@@ -848,7 +865,7 @@ async function pushSuite(browser) {
   try {
     const page = await T.open();
     await test('🔔 Turn on (no extra app): the phone address is kept on the relay', async () => {
-      await page.click('#tabs button[data-t="more"]'); await page.click('#bell');
+      await page.click('#tmore'); await page.click('#bell');
       await until(() => page.locator('#wpon').isVisible(), 8000, 'Turn on button');
       await page.click('#wpon');
       await until(() => JSON.parse(T.relay.P.FWP_ABBAS || '[]').some(x => x.endpoint === SUB.endpoint), 15000, 'FWP_ABBAS');
@@ -905,11 +922,107 @@ async function swSuite(browser) {
   } finally { await T.close(); }
 }
 
+// ---- 21 Nov 2026 (Abbas approved the four new screens): Home, the stage boxes, the card's tabs, More as tiles ----
+async function lookSuite(browser) {
+  console.log('\n— the new look (Home · stage boxes · card tabs · More tiles) —');
+  const T = await boot({ browser, home: true, setup: W => { world(W); W.cardD = F.addCard(W, CUTTING, 'SJ-66001 (40) pcs late one', { ageDays: 12, due: new Date(Date.now() - 3 * 86400000).toISOString() }); } });
+  const W = T.W;
+  try {
+    const page = await T.open();
+    await test('the app opens on Home: greeting, what needs you, the factory in boxes, today', async () => {
+      await until(() => page.locator('#hm h1').count(), 8000, 'Home drawn');
+      ok(await page.evaluate(() => window.__f.tab()) === 'home' && await page.locator('#hm').isVisible() && await page.locator('#hcards').isHidden(), 'Home is the first screen');
+      ok(/Good (morning|afternoon|evening), Abbas/.test(await page.textContent('#hm h1')), 'greets by name: ' + await page.textContent('#hm h1'));
+      F.postSlack(W, CUT, { text: 'thread finished, send more', user: 'U1', thread_ts: W.rootB });
+      await until(async () => /new message/.test(await page.textContent('#hneeds')), 15000, 'new messages under NEEDS YOU');
+      ok(/নতুন মেসেজ/.test(await page.textContent('#hneeds')), 'Bengali on the row');
+      await until(async () => /1 design is late/.test(await page.textContent('#hneeds')) && /SJ-66001/.test(await page.textContent('#hneeds')), 8000, 'the late design is named: ' + await page.textContent('#hneeds'));
+      const box = g => page.locator('#hgroups .gp[data-g="' + g + '"]');
+      ok((await box(0).locator('b').textContent()) === '2' && (await box(1).locator('b').textContent()) === '3', 'START 2 · CUTTING 3: ' + await page.textContent('#hgroups'));
+      ok(await box(1).evaluate(e => e.classList.contains('late')), 'the box with the late design is marked');
+      ok(/শুরু/.test(await box(0).textContent()) && (await page.locator('#hgroups .gp').count()) === 8, '8 boxes, Bengali names');
+      await until(async () => /^\d+$/.test((await page.locator('#hm .htile b').first().textContent()).trim()), 10000, 'TODAY numbers loaded');
+    });
+    await test('Home: materials running low show up, and a tap opens the Materials screen', async () => {
+      const j = await page.evaluate(() => window.__call({ op: 'matset', items: [{ n: 'Thread white', q: 2, u: 'box', low: 5 }, { n: 'Elastic', q: 90, u: 'm', low: 10 }] })); ok(j.ok, 'materials saved');
+      await page.evaluate(() => { window.__f.HM.at = 0; }); await page.click('#tabs button[data-t="chats"]'); await page.click('#tabs button[data-t="home"]');
+      await until(async () => /1 material is low/.test(await page.textContent('#hneeds')) && /Thread white/.test(await page.textContent('#hneeds')), 10000, 'low material named');
+      await page.click('#hneeds .need[data-go="mat"]'); await until(() => page.locator('#fac').isVisible(), 5000, 'Factory screen'); await until(async () => /Thread white/.test(await page.textContent('#fac')), 8000, 'materials listed');
+      await page.goBack(); await until(() => page.locator('#fac').isHidden(), 5000, 'closed');
+    });
+    await test('Home: tap the new messages -> Chats; tap a factory box -> the Cards of that stage', async () => {
+      await page.click('#hneeds .need[data-go="chats"]'); await until(() => page.locator('#home section[data-t="chats"]').isVisible(), 3000, 'Chats tab');
+      await page.click('#tabs button[data-t="home"]'); await page.click('#hgroups .gp[data-g="1"]');
+      await until(() => page.locator('#hcards').isVisible(), 3000, 'Cards tab'); await until(async () => /17841/.test(await page.textContent('#list')) && /55555/.test(await page.textContent('#list')), 5000, 'the CUTTING cards');
+      ok(await page.locator('#groups .gp[data-g="1"]').evaluate(e => e.classList.contains('on')), 'CUTTING box is the chosen one');
+      ok(!/48188/.test(await page.textContent('#list')), 'no START card in it');
+    });
+    await test('Cards: a group with two lists shows its two chips, a group with one list shows none', async () => {
+      ok((await page.locator('#stages button:visible').count()) === 2 && /CUTTING START/.test(await page.textContent('#stages')) && /কাটিং শুরু/.test(await page.textContent('#stages')), 'CUTTING START + CUTTING chips: ' + await page.textContent('#stages'));
+      await page.click('#groups .gp[data-g="0"]'); await until(async () => /48188/.test(await page.textContent('#list')), 5000, 'START cards');
+      ok((await page.locator('#stages button:visible').count()) === 0, 'no chips for START');
+      ok((await page.locator('#groups .gp').count()) === 8, 'all 8 boxes stay on top');
+    });
+    await test('bottom bar = Home · Cards · ＋ · Chats · Workers; Returns and More live behind the top-right button', async () => {
+      const ids = await page.$$eval('#tabs > button', b => b.map(x => x.id || x.dataset.t)); ok(ids.join(',') === 'home,cards,tplus,chats,twork', 'bar: ' + ids.join(','));
+      ok(/^(A|AB|AJ)/.test((await page.textContent('#tmore')).trim()), 'the button carries his initials: ' + await page.textContent('#tmore'));
+      await page.click('#tmore'); await until(() => page.locator('#home section[data-t="more"]').isVisible(), 3000, 'More');
+      ok((await page.locator('#home section[data-t="more"] .tl:visible').count()) >= 12, 'tiles: ' + await page.locator('#home section[data-t="more"] .tl:visible').count());
+      ok(await page.locator('#mpeople').isVisible() && await page.locator('#mrep').isVisible(), 'owner tiles for Abbas');
+      ok(/Owner/.test(await page.textContent('#mrole')) && /app \d{4}-\d\d-\d\d[a-z]/.test(await page.textContent('#mrole')), 'profile card: ' + await page.textContent('#mrole'));
+      await page.click('#mret'); await until(() => page.locator('#home section[data-t="returns"]').isVisible(), 3000, 'Returns opens from its tile');
+      ok(await page.locator('#tmore').evaluate(e => e.classList.contains('on')), 'the top button stays lit on Returns');
+      await page.click('#tmore'); await page.click('#mlate'); await until(() => page.locator('#fac').isVisible(), 5000, 'Late screen'); await until(async () => /66001/.test(await page.textContent('#fac')), 8000, 'the late design on it');
+      await page.goBack(); await until(() => page.locator('#fac').isHidden(), 5000, 'closed');
+      await page.click('#mpeople'); await until(async () => await page.locator('#fac').isVisible() && /PEOPLE & PHONES/.test(await page.textContent('#fac')), 8000, 'People & phones'); await page.goBack(); await until(() => page.locator('#fac').isHidden(), 5000, 'closed');
+    });
+    await test('a card opens on its Chat; Work, Sheet and Photos are tabs, Done stays on top', async () => {
+      await openCardNo(page, '17841');
+      ok((await page.$$eval('#ctabs button', b => b.map(x => x.dataset.ct).join(','))) === 'chat,work,sheet,info', 'four tabs');
+      ok(await page.locator('#ctabs button[data-ct="chat"]').evaluate(e => e.classList.contains('on')), 'Chat is the open tab');
+      await until(async () => (await bubbles(page)).some(t => /cutting started/.test(t)), 8000, 'the chat is there at once');
+      ok(await page.locator('#thread').isVisible() && await page.locator('#bdone').isVisible() && await page.locator('#work').isHidden() && await page.locator('#sheet').isHidden() && await page.locator('#card .hero').isHidden(), 'only the chat + Done on the first screen');
+      await workTab(page); ok(await page.locator('#wkrows').isVisible() && await page.locator('#thread').isHidden() && await page.locator('#bdone').isVisible(), 'Work tab: workers, no chat, Done still there');
+      await sheetTab(page); await until(() => page.locator('#shrows .sr').count(), 8000, 'sheet rows'); ok(await page.locator('#work').isHidden(), 'Sheet tab alone');
+      await page.click('#ctabs button[data-ct="info"]'); ok(await page.locator('#card .hero').isVisible() && await page.locator('#sheet').isHidden() && await page.locator('#thread').isHidden(), 'Photos tab: the card pictures');
+      await page.click('#ctabs button[data-ct="chat"]'); ok(await page.locator('#thread').isVisible(), 'back on the chat');
+    });
+    await test('Work tab: who holds pieces is on top; the other workers are behind one button and stay open while giving', async () => {
+      await workTab(page); await until(() => page.locator('#wkrows .wr').count(), 8000, 'rows');
+      ok((await page.locator('#wkgive').count()) === 0 && await page.locator('#wkrows .wr[data-w="Rifat"]').isVisible(), 'nobody holds pieces: the full list is shown');
+      const r = page.locator('#wkrows .wr[data-w="Rifat"]'); await r.locator('input').fill('5'); await r.locator('button.in').click();
+      await until(async () => (await r.locator('button.out').count()) === 1, 10000, 'Rifat has his pieces');
+      ok(await page.evaluate(() => { const b = document.querySelector('#wkrows'); return /IN HAND NOW/.test(b.firstElementChild.textContent) && b.querySelector('.wr').dataset.w === 'Rifat'; }), 'IN HAND NOW first, Rifat under it');
+      ok(await page.locator('#wkrows .wr[data-w="Nahid"]').isVisible(), 'the list stays open for the next worker');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000, 'closed'); await openCardNo(page, '17841'); await workTab(page);
+      await until(async () => (await page.locator('#wkgive').count()) === 1, 8000, 'the Give button');
+      ok(await page.locator('#wkrows .wr[data-w="Rifat"]').isVisible() && await page.locator('#wkrows .wr[data-w="Nahid"]').isHidden(), 'opened again: only who holds pieces');
+      ok(/more workers/.test(await page.textContent('#wkgive')) && /পিস দিন/.test(await page.textContent('#wkgive')), 'button text: ' + await page.textContent('#wkgive'));
+      await page.click('#wkgive'); await until(() => page.locator('#wkrows .wr[data-w="Nahid"]').isVisible(), 3000, 'the others after a tap');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 5000, 'closed');
+    });
+    await test('a card row shows its pieces and who is working on it; "Done →" on the row moves it (with Undo)', async () => {
+      await page.fill('#q', ''); await chip(page, 4);
+      const rb = page.locator('#list .cardrow', { hasText: '17841' }); await rb.waitFor();
+      ok((await rb.locator('.no em').textContent()) === '12 pcs', 'pieces next to the number');
+      await until(() => rb.locator('.rwk .av').count(), 12000, 'the worker on the row'); ok(/R/.test(await rb.locator('.rwk').textContent()), 'Rifat\'s initial');
+      await chip(page, 2); const ra = page.locator('#list .cardrow', { hasText: '77001' }); await ra.waitFor();
+      ok(/Done →/.test(await ra.locator('.rdone').textContent()), 'Done → on the row');
+      await ra.locator('.rdone').click(); await until(() => page.locator('#undo').isVisible(), 2000, 'Undo bar'); ok(await page.locator('#card').isHidden(), 'the card did not open');
+      await page.click('#undo button'); await page.waitForTimeout(6500); ok(W.trello.cards[W.cardR.id].idList === START, 'Undo: still in START');
+      await page.locator('#list .cardrow', { hasText: '77001' }).locator('.rdone').click();
+      await until(() => W.trello.cards[W.cardR.id].idList === '6ae07f38a77a2321736ef9da', 12000, 'moved to Cutting///START in Trello');
+      await until(async () => !/77001/.test(await page.textContent('#list')), 5000, 'left the START list');
+    });
+    await test('no page errors (new look)', async () => { ok(!T.errors.length, T.errors.join('\n')); });
+  } finally { await T.close(); }
+}
+
 const ONLY = process.argv[2];   // e.g. node tools/test/factory.test.js push
 (async () => {
   const browser = await chromium.launch();
-  if (ONLY) { try { await ({ push: pushSuite, sw: swSuite, staff: staffSuite, people: peopleSuite, main: b => suite(false, b), fast: b => suite(true, b) }[ONLY])(browser); } finally { await browser.close(); } const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed'); process.exit(bad.length ? 1 : 0); }
-  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); await staffSuite(browser); await peopleSuite(browser); await pushSuite(browser); await swSuite(browser); } finally { await browser.close(); }
+  if (ONLY) { try { await ({ push: pushSuite, sw: swSuite, staff: staffSuite, people: peopleSuite, look: lookSuite, main: b => suite(false, b), fast: b => suite(true, b) }[ONLY])(browser); } finally { await browser.close(); } const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed'); process.exit(bad.length ? 1 : 0); }
+  try { await suite(false, browser); await suite(true, browser); await slowSuite(false, browser); await slowSuite(true, browser); await staffSuite(browser); await peopleSuite(browser); await lookSuite(browser); await pushSuite(browser); await swSuite(browser); } finally { await browser.close(); }
   const bad = results.filter(r => !r[0]); console.log('\n' + (results.length - bad.length) + ' passed, ' + bad.length + ' failed');
   process.exit(bad.length ? 1 : 0);
 })();
