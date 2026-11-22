@@ -1,0 +1,25 @@
+{
+ "id": "smwrx3gjy3z41",
+ "op": "sell",
+ "ref": "INV-0073",
+ "ok": true,
+ "cards": [
+  {
+   "card": "6b01a78cbee068f726ca73fe",
+   "no": "12164",
+   "before": "Sj =**(12164)**_(24) pcs__ colour = (6)__(4/4/4/4/4/4)",
+   "after": "Sj =**(12164)**_(0) pcs__ colour = (6)__(0/0/0/0/0/0)",
+   "left": 0,
+   "lines": [
+    "colour 1: 4 → 0 (−4)",
+    "colour 2: 4 → 0 (−4)",
+    "colour 3: 4 → 0 (−4)",
+    "colour 4: 4 → 0 (−4)",
+    "colour 5: 4 → 0 (−4)",
+    "colour 6: 4 → 0 (−4)"
+   ],
+   "moved": "moved to FINISH (sold out)"
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
