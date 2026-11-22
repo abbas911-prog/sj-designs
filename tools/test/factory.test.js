@@ -1045,6 +1045,17 @@ async function lookSuite(browser) {
       const f0 = W.ufetch; await page.waitForTimeout(35000); const n = W.ufetch - f0;
       ok(n <= 12, 'at most one round of channel reads in 35 s with Slack\'s push set up (saw ' + n + ' outside calls; the old relay made ~25)'); delete T.relay.P.FAC_EVENTS_ON;
     });
+    await test('the owner sees by himself whether the relay code was copied: a red row on Home while it is old, "✓ newest" under More when it is not', async () => {   // 22 Nov 2026 (Abbas: "I think I copied the code - can you check?")
+      const fs = require('fs'), path = require('path'), RV = (fs.readFileSync(path.join(__dirname, '..', 'relay.gs'), 'utf8').match(/var RELAY_VER = '([^']+)'/) || [])[1], LT = (fs.readFileSync(path.join(__dirname, '..', '..', 'factory.html'), 'utf8').match(/var RV_LATEST = '([^']+)'/) || [])[1];
+      ok(RV && RV === LT, 'the app knows the newest relay version (RV_LATEST ' + LT + ' = RELAY_VER ' + RV + ')');
+      await home(page); await page.click('#tmore'); await until(async () => /relay \S+ ✓ newest/.test(await page.textContent('#verline')), 8000, 'More says newest: ' + await page.textContent('#verline'));
+      await page.click('#tabs button[data-t="home"]'); ok(!/old code/.test(await page.textContent('#hneeds')), 'no row while the relay is the newest');
+      const ctx = T.relay.ctx, real = ctx.RELAY_VER; ctx.RELAY_VER = '2026-11-21a';
+      try { await page.evaluate(() => window.__f.ping(true)); await until(async () => /The relay still runs old code/.test(await page.textContent('#hneeds')) && /2026-11-21a/.test(await page.textContent('#hneeds')), 15000, 'red row with the old version');
+        ok(new RegExp('copy version ' + RV).test(await page.textContent('#hneeds')) && /রিলে পুরনো/.test(await page.textContent('#hneeds')), 'says which version to copy, with Bengali');
+        await page.click('#tmore'); ok(/⚠ old - newest is/.test(await page.textContent('#verline')), 'More: ' + await page.textContent('#verline'));
+      } finally { ctx.RELAY_VER = real; await page.evaluate(() => window.__f.ping(true)); await page.click('#tabs button[data-t="home"]'); await until(async () => !/old code/.test(await page.textContent('#hneeds')), 15000, 'row gone again'); }
+    });
     await test('a phone nobody is touching asks the relay every 30 - 60 s, not every 4 s; a touch brings the quick checks back', async () => {   // 22 Nov 2026
       await home(page); await page.click('#tabs button[data-t="home"]'); await page.waitForTimeout(22000);                  // 20 s without a touch = idle
       const pings = () => T.relayCalls.filter(o => o === 'ping').length, n0 = pings(); await page.waitForTimeout(40000); const idle = pings() - n0;

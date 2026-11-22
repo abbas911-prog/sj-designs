@@ -323,7 +323,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-11-22b';
+var VER = '2026-11-22c';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -642,6 +642,7 @@ function homeLoad(){ if ((TAB !== 'home' && TAB !== 'cards') || !PW || !D.cards 
   if (isOwner() && rvOk('people') && now - HM.pat > 900000) { HM.pat = now; call({ op: 'people', act: 'list' }).then(function(j){ if (j && j.ok) { FD.people = j; if (TAB === 'home') homeDraw(); } }); } }
 setInterval(function(){ if ((TAB === 'home' || TAB === 'cards') && !document.hidden && $('card').hidden) homeLoad(); }, 30000);
 function homeNeeds(){ var N = [], tot = totUnread();
+  var rvn = D.rv || ls('sj_fac_rv') || ''; if (isOwner() && rvn && rvn < RV_LATEST) N.push({ ic: '🧩', c: 'red', n: '!', t: 'The relay still runs old code · রিলে পুরনো', s: 'it has ' + rvn + ' — copy version ' + RV_LATEST + ' into SJ memo · tap to open the copy page', go: 'relaycode' });
   var up = ufPct(); if (up != null && up >= 70 && !quotaHit()) N.push({ ic: '📊', c: up >= 90 ? 'red' : 'amb', n: up + '%', t: 'Google calls: ' + nfmt(D.uf) + ' of ' + nfmt(D.ufl) + ' used · দৈনিক সীমা', s: up >= 90 ? 'almost at the daily limit — the relay may stop until it resets' : 'the relay\'s daily allowance is filling up · tap to see who uses it', go: 'uf' });
   if (quotaHit()) N.push({ ic: '⏳', c: 'amb', n: '!', t: "Google's daily limit is used up · দৈনিক সীমা শেষ", s: 'new cards / Work / Sheet wait until it comes back by itself · chats still work', go: 'chats' });
   if (tot) { var top = null; Object.keys(D.th || {}).forEach(function(k){ var t = D.th[k]; if (t && t.n && (!top || +t.last > +top.last)) top = { k: k, last: t.last, tx: t.tx }; }); var tc = top && D.byId[top.k];
@@ -667,7 +668,7 @@ function homeDraw(){ var el = $('hm'); if (!el || !D.cards || !D.cards.length) r
       return '<div class="hlab">RETURNS · ফেরত</div><div class="hsec" id="hret"><button class="need" data-go="returns"><div class="ic amb">↩️</div><div class="t"><b>Returns · alter pieces · sample requests</b><small>' + (rs.length ? rs.length + ' at the factory · কারখানায়' : 'Nothing at the factory · কিছু নেই') + ' · ফেরত · অল্টার · স্যাম্পল</small></div>' + (ru ? '<span class="newb">NEW ' + ru + '</span>' : '') + '<span class="n amb">' + rs.length + '</span></button></div>'; })()
     + '<div class="hlab">TODAY · আজ</div><div class="htiles"><button class="htile" data-go="work"><b style="color:var(--green)">' + (WKR ? tod : '…') + '</b><span>pcs done · আজ হয়েছে</span></button><button class="htile" data-go="work"><b>' + (WKR ? busy : '…') + '</b><span>working · কাজে</span></button><button class="htile" data-go="work"><b style="color:#c98a12">' + (WKR ? free : '…') + '</b><span>free · ফাঁকা</span></button></div>'; }
 $('hm').onclick = function(e){ var g = e.target.closest('.gp'); if (g) { groupGo(+g.dataset.g); return; } var b = e.target.closest('[data-go]'); if (!b) return; var go = b.dataset.go;
-  if (go === 'chats') setTab('chats'); else if (go === 'uf') ufShow(); else if (go === 'returns') setTab('returns'); else if (go === 'work') wksShow(); else facShow(go); };
+  if (go === 'chats') setTab('chats'); else if (go === 'relaycode') window.open('relaycode.html', '_blank'); else if (go === 'uf') ufShow(); else if (go === 'returns') setTab('returns'); else if (go === 'work') wksShow(); else facShow(go); };
 function moreDraw(){ var own = isOwner(); $('mrep').hidden = !own; $('mpeople').hidden = !own; $('mrole').textContent = (own ? 'Owner · মালিক' : 'Factory · কারখানা') + ' · app ' + VER; $('tmore').textContent = String(WHO || '').trim().split(/\s+/).map(function(w){ return w.charAt(0); }).join('').slice(0, 2).toUpperCase() || '☰';
   var late = D.cards ? D.cards.filter(function(c){ var d = dueDays(c); return d !== null && d < 0 && !AGEOFF.test(lname(c.l)); }).length : 0; $('te-late').textContent = late ? String(late) : '';
   var ws = (WKR && WKR.workers) || []; $('tn-wk').textContent = WKR ? ws.filter(function(w){ return (w.hand || []).length; }).length + ' working · কাজে' : 'কর্মী';
@@ -1959,10 +1960,11 @@ async function checkVer(){ if (busyWork()) { if (!VBUSY) VBUSY = setTimeout(func
 $('who').textContent = WHO;
 thcLoad(); oload(); setInterval(function(){ if (OUT.length && !OUTRUN) outRun(); }, 10000);
 // 24 Oct 2026: the relay tells its version (rv); the app shows it under More and refuses a button the deployed relay does not know yet
+var RV_LATEST = '2026-11-22a';   // the newest relay code in the repo (= RELAY_VER in tools/relay.gs; a test keeps them equal). 22 Nov 2026 (Abbas: "I think I copied the code - can you check?"): the owner's Home says so when the script still runs older code
 var RV_NEED = { part: '2026-10-24a', people: '2026-11-21a', close: '2026-11-21a', usage: '2026-11-22a' };
 function rvSet(v){ D.rv = String(v || ''); ls('sj_fac_rv', D.rv); verLine(); }
 function rvOk(k){ return !RV_NEED[k] || (D.rv || ls('sj_fac_rv') || '') >= RV_NEED[k]; }
-function verLine(){ var rv = D.rv || ls('sj_fac_rv') || ''; $('verline').textContent = 'AL MUTAGADED GARMENTS · app ' + VER + (rv ? ' · relay ' + rv : ' · relay ?'); }
+function verLine(){ var rv = D.rv || ls('sj_fac_rv') || ''; $('verline').textContent = 'AL MUTAGADED GARMENTS · app ' + VER + (rv ? ' · relay ' + rv + (rv >= RV_LATEST ? ' ✓ newest' : ' ⚠ old - newest is ' + RV_LATEST) : ' · relay ?'); }
 setTab(TAB); verLine();
 // 25 Oct 2026: on a weak line the phone's helper (fac-sw.js) can hand over the OLD copy of the app while the URL already says ?v=<new version> - the
 // phone then believed it was up to date and ran old code against the new relay. Now such a page fetches itself again (up to 3 times).
