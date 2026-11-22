@@ -13,7 +13,7 @@
   var R = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec', c = (location.search.match(/[?&]c=([A-Za-z0-9_-]{10,40})/) || [])[1], m = document.getElementById('m');
   function bad() { m.innerHTML = 'This link is not ready. Please message us on WhatsApp.<br><span dir="rtl" lang="ar">الرابط غير جاهز · يرجى التواصل معنا عبر واتساب</span>'; }
   if (!c || !window.fetch) return bad();
-  fetch(R + '?op=cget&c=' + c).then(function (r) { return r.json(); }).then(function (j) {
+  fetch(R + '?op=cget&pg=' + c).then(function (r) { return r.json(); }).then(function (j) {
     if (!j || !j.ok || !j.page) return bad();
     document.open(); document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>' + j.page + '</body></html>'); document.close();
   }).catch(bad);
