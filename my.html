@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SJ Trading</title>
+<meta property="og:type" content="website"><meta property="og:site_name" content="SJ Trading">
+<meta property="og:title" content="SJ Trading · your designs">
+<meta property="og:description" content="Tap to view your designs and order. اضغط لمشاهدة تصاميمك والطلب">
+<meta name="description" content="Tap to view your designs and order. اضغط لمشاهدة تصاميمك والطلب">
+<style>body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f5f7f3;color:#15211b}#w{padding:70px 20px;text-align:center}#w p{color:#5d6a62}</style>
+</head><body><div id="w"><h2>SJ Trading</h2><p id="m">Loading · جاري التحميل</p></div>
+<script>
+// The customer's own page (the new catalogue, 22 Nov 2026). This file only fetches the page from the relay and shows it; it holds no data.
+(function () {
+  var R = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec', c = (location.search.match(/[?&]c=([A-Za-z0-9_-]{10,40})/) || [])[1], m = document.getElementById('m');
+  function bad() { m.innerHTML = 'This link is not ready. Please message us on WhatsApp.<br><span dir="rtl" lang="ar">الرابط غير جاهز · يرجى التواصل معنا عبر واتساب</span>'; }
+  if (!c || !window.fetch) return bad();
+  fetch(R + '?op=cget&c=' + c).then(function (r) { return r.json(); }).then(function (j) {
+    if (!j || !j.ok || !j.page) return bad();
+    document.open(); document.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>' + j.page + '</body></html>'); document.close();
+  }).catch(bad);
+})();
+</script></body></html>
