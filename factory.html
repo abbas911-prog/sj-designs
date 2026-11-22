@@ -323,7 +323,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-11-22a';
+var VER = '2026-11-22b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -1853,7 +1853,8 @@ var PAGAIN = false;
 // thread is older than the relay's 400-post window still counts as new for everybody (relay facHotAdd)
 var HOTQ = {}; function hotAdd(cid, ts){ if (!/^[0-9a-f]{24}$/.test(String(cid || '')) || !/^\d+(\.\d+)?$/.test(String(ts || ''))) return; if (!(+HOTQ[cid] >= +ts)) HOTQ[cid] = String(ts); }
 function hotTake(){ var h = HOTQ; HOTQ = {}; return Object.keys(h).length ? h : undefined; } function hotBack(h){ if (h) Object.keys(h).forEach(function(k){ hotAdd(k, h[k]); }); }
-async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now() - PINGING < 30000) { PAGAIN = true; return; } PINGING = Date.now(); PAGAIN = false;
+var PINGAT = 0;
+async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now() - PINGING < 30000) { PAGAIN = true; return; } PINGING = Date.now(); PINGAT = PINGING; PAGAIN = false;
   var hq = hotTake(), j = await call({ op: 'ping', fresh: fresh ? 1 : 0, hot: hq, v: VER, dv: DEV, ob: OUT.filter(function(x){ return x.tries >= 3; }).length, ua: /Android/i.test(navigator.userAgent) ? 'Android' : /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone' : 'PC' }); PINGING = 0;
   if (j && j.ok && j.key && /^[0-9a-f]{64}$/.test(j.key) && j.key !== PW) { PW = j.key; ls('sj_fac_pw', PW); FAST.k = ''; }   // this phone's own key (it was on the shared password) if (!j || !j.ok) hotBack(hq); if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
@@ -1941,8 +1942,12 @@ var ACX = null; document.addEventListener('pointerdown', function(){ try { if (!
 function beep(){ try { if (navigator.vibrate) navigator.vibrate([80, 60, 80]); if (!ACX) return; var o = ACX.createOscillator(), g = ACX.createGain(); o.type = 'sine'; o.frequency.value = 880; g.gain.setValueAtTime(0.0001, ACX.currentTime); g.gain.exponentialRampToValueAtTime(0.25, ACX.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ACX.currentTime + 0.35); o.connect(g); g.connect(ACX.destination); o.start(); o.stop(ACX.currentTime + 0.4); } catch(e){} }
 setInterval(function(){ POLLN++; if (!PW || document.hidden) return; var home = $('card').hidden;
   if (POLLN % 8 === 0) { load(false).then(alertNew); return; }          // every 32 s: the cards themselves
-  if (liveOk() && POLLN % 4 !== 0) return;                            // doorbell working: a safety check every 16 s is enough
-  if (home || POLLN % 3 === 0) ping(false); }, 4000);
+  // 22 Nov 2026 (Abbas: "the factory phones ask every 10 seconds: make it 30 to 60 seconds when nothing is being typed" - Google's daily limit):
+  // a phone nobody is touching (20 s), with nothing typed and nothing waiting to be sent, asks every 60 s when the doorbell works and every
+  // 30 s when it does not; a doorbell ring, a touch or coming back to the app still asks at once. In use: every 4 s (16 s with the doorbell).
+  var ae = document.activeElement, idle = Date.now() - LOOK.act > 20000 && !OUT.length && !PEND.length && !$('txt').value.trim() && !(ae && /^(TEXTAREA|INPUT)$/.test(ae.tagName));
+  var gap = idle ? (liveOk() ? 60000 : 30000) : liveOk() ? 16000 : home ? 4000 : 12000;
+  if (Date.now() - PINGAT >= gap - 600) ping(false); }, 4000);
 setInterval(function(){ if (!document.hidden && $('card').hidden) checkVer(); }, 300000);
 var VBUSY = 0;
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && PW) { if (LIVE.topic) liveStart(LIVE.topic, true); ping(true); checkVer(); if (open) thPull(); } });
@@ -1967,7 +1972,7 @@ if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } 
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, hotq: function(){ return HOTQ; }, mvr: function(){ return MVR; }, wdTxt: wdTxt, wkd: function(){ if (open) workDraw(open); }, outRun: outRun, HM: HM, fabView: fabView, fabKind: fabKind, fab: function(){ return FAB; }, tab: function(){ return TAB; } };
+window.__f = { pingAt: function(){ return PINGAT; }, D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, hotq: function(){ return HOTQ; }, mvr: function(){ return MVR; }, wdTxt: wdTxt, wkd: function(){ if (open) workDraw(open); }, outRun: outRun, HM: HM, fabView: fabView, fabKind: fabKind, fab: function(){ return FAB; }, tab: function(){ return TAB; } };
 })();
 </script>
 </body></html>

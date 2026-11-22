@@ -1045,6 +1045,12 @@ async function lookSuite(browser) {
       const f0 = W.ufetch; await page.waitForTimeout(35000); const n = W.ufetch - f0;
       ok(n <= 12, 'at most one round of channel reads in 35 s with Slack\'s push set up (saw ' + n + ' outside calls; the old relay made ~25)'); delete T.relay.P.FAC_EVENTS_ON;
     });
+    await test('a phone nobody is touching asks the relay every 30 - 60 s, not every 4 s; a touch brings the quick checks back', async () => {   // 22 Nov 2026
+      await home(page); await page.click('#tabs button[data-t="home"]'); await page.waitForTimeout(22000);                  // 20 s without a touch = idle
+      const pings = () => T.relayCalls.filter(o => o === 'ping').length, n0 = pings(); await page.waitForTimeout(40000); const idle = pings() - n0;
+      ok(idle <= 2, 'at most 2 checks in 40 idle seconds (saw ' + idle + '; it was ~9)');
+      await page.click('#tabs button[data-t="cards"]'); const n1 = pings(); await page.waitForTimeout(13000); ok(pings() - n1 >= 1 && pings() - n1 >= idle, 'after a touch it checks again within seconds (' + (pings() - n1) + ' in 13 s)');
+    });
     await test('the relay counts its outside calls; More -> Google calls shows the last 24 hours and who used them; Home warns from 70 %', async () => {
       const u = await page.evaluate(() => window.__call({ op: 'usage' })); ok(u.ok && u.lim === 20000 && u.h24 > 0 && u.hours.length === 24, 'usage: ' + JSON.stringify({ h24: u.h24, today: u.today }));
       ok(u.by['fac:ping'] > 0 && Object.keys(u.by).every(k => u.by[k] > 0), 'counted per source: ' + JSON.stringify(u.by)); ok(u.today <= W.ufetch && u.today >= W.ufetch * 0.6, 'the count follows the real number of calls (' + u.today + ' of ' + W.ufetch + ' since the test began)');
