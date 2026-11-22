@@ -7,7 +7,7 @@ const enc = lock({ updated: new Date().toISOString(), cards: [{ id: 'c1', idShor
 const slk = [], BILLS = {}; let slkAnswer = () => ({ ok: true });
 function relay(b) { const req = JSON.parse(b.req || '{}');
   if (b.job === 'slackpdf2') { slk.push(req); return slkAnswer(req); }
-  if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: [] }; if (req.op === 'put') { BILLS[req.ref] = req; return { ok: true, ref: req.ref, status: req.status }; } if (req.op === 'next') return { ok: true, ref: req.ref }; return { ok: true }; }
+  if (b.job === 'bills') { if (req.op === 'list') return { ok: true, bills: [] }; if (req.op === 'put') { BILLS[req.ref] = req; return { ok: true, ref: req.ref, status: req.status }; } if (req.op === 'get') return BILLS[req.ref] ? Object.assign({ ok: true, updated: '2026-11-22T00:00:00Z' }, BILLS[req.ref]) : { ok: false, error: 'not saved' }; if (req.op === 'next') return { ok: true, ref: req.ref }; return { ok: true }; }
   if (b.job === 'cust') { if (req.op === 'get') return { ok: true, found: true, name: req.name, bal: 100, n: 1, entries: [] }; if (req.op === 'post') return { ok: true, name: req.name, bal: 0, n: 2 }; return { ok: true, names: [], list: [] }; }
   if (b.job === 'cchat') return { ok: true, customers: [], orders: [] };
   return { ok: true }; }
@@ -43,6 +43,19 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   ok('Slack refused: the receipt shows the reason and a button', /Not posted to #receipts-new/.test(lk) && /invite @SJ Memo/.test(lk) && !!(await pg.$('#vlock [data-slk]')));
   slkAnswer = () => ({ ok: true }); const n0 = slk.length; await pg.click('#vlock [data-slk]'); await wait(n0 + 1); await pg.waitForTimeout(800);
   ok('the button posts it; the receipt then says Posted ✓', slk.length === n0 + 1 && slk[n0].to === 'receipts' && /Posted to #receipts-new/.test(await pg.$eval('#vlock', e => e.textContent).catch(() => '')));
+  // 22 Nov 2026 (INV-0069): the Slack post failed that night (Google's limit) -> the bill is posted again by itself when it is opened, once
+  await pg.evaluate(() => { const S = window.__sj, B = S.B(); B.inv = null; S.st({ '18634:2': { pcs: 4, sets: 0, all: false } }); S.setMode('inv'); });
+  await pg.fill('#bform input[data-k="name"]', 'Matiullah'); await pg.fill('#bform input[data-p="18634"]', '125'); await pg.waitForTimeout(1500);
+  slkAnswer = () => ({ ok: false, error: 'Exception: Service invoked too many times for one day: urlfetch.' });
+  const n5 = slk.length; await pg.click('#dinc'); await pg.waitForTimeout(6000);
+  const failed = slk.length - n5, once5 = (slk[n5] || {}).once;
+  ok('Slack down at the green button: tried, and the bill says Not posted (' + failed + ' tries)', failed >= 1 && /Not posted to #sales-new/.test(await pg.$eval('#gmark', e => e.textContent).catch(() => '')));
+  slkAnswer = () => ({ ok: true }); const n6 = slk.length;
+  await pg.reload(); await pg.waitForSelector('#feed .design:not([hidden])', { timeout: 15000 });
+  await pg.click('#nav button[data-nv="more"]'); await pg.click('.mgrid button[data-go="bills"]'); await pg.waitForTimeout(400);
+  const ref5 = Object.keys(BILLS).filter(r => /^INV-/.test(r) && BILLS[r].status === 'included').sort().pop(); await pg.evaluate(r => window.__sj.bsOpen(r), ref5);   // from Saved bills
+  for (let i = 0; i < 40 && slk.length === n6; i++) await pg.waitForTimeout(250); await pg.waitForTimeout(1500);
+  ok('the bill is opened again later: posted to #sales-new by itself, once, with the SAME once-only id', slk.length === n6 + 1 && slk[n6].to === 'sales' && slk[n6].once === once5 && /Posted to #sales-new/.test(await pg.$eval('#gmark', e => e.textContent).catch(() => '')));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
   // ---- the real relay

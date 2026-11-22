@@ -969,7 +969,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-22c';
+var VER = '2026-11-22d';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1399,7 +1399,7 @@ function drawForm(){
       + (sz.length ? '<span class="zero">⚠ Sold with NO PRICE: ' + sz.map(function(l){ return 'SJ-' + esc(shown(l.no)) + ' C' + l.c + ' · ' + l.pcs + ' pcs'; }).join(', ') + ' — the statement and 50-50 have 0 for ' + (sz.length > 1 ? 'them' : 'it') + '. Type the price in 50-50 (the red line), and ask Abbas to fix the statement.</span>' : '') + '</div>'); }
   if (k === 'rn' && rnLocked(d)) { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
     f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was shared — it cannot be changed.</b><small>For more pieces back make a new return. · تم التأكيد — لا يمكن التعديل</small><div class="vbtn"><button type="button" class="vgo" data-vnew="1">＋ New return · مرتجع جديد</button></div></div>'); }
-  if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); slkPaint(k, d); if (k === 'inv') gmarkStock(); if (d.name && (d.cust === undefined || (d.cust.found && custLive(k, d) && Date.now() - (d.cust.at || 0) > 60000))) custLook(); }
+  if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); slkPaint(k, d); if (k === 'inv') { gmarkStock(); slkAuto(k, d); } if (d.name && (d.cust === undefined || (d.cust.found && custLive(k, d) && Date.now() - (d.cust.at || 0) > 60000))) custLook(); }
 }
 function row(k2, v2, cls){ return '<div class="br ' + (cls || '') + '"><span>' + k2 + '</span><span>' + amt(v2) + ' AED</span></div>'; }
 function drawDyn(){   // only the figures change while typing; the boxes being typed in are never rebuilt
@@ -1564,12 +1564,17 @@ async function docFiles(){ if (sendAs() === 'pdf' || !B.pages || !B.pages.length
 // 20 Nov 2026 (Abbas: "it is very problematic for my employee to do many things at once — when he presses the green button, post it to #sales-new
 // automatically; a receipt goes to #receipts-new"): the bill's PDF goes to Slack by itself, right after the green button / Send. Never twice for
 // one bill (`once` at the relay); when it does not go, the bill says why and has a button to post it again.
+var SLKT = {};
+function slkAuto(k, d){ if (!d || k !== 'inv' || d.status !== 'included' || d.slk !== 'err' || SLKT[d.ref]) return; SLKT[d.ref] = 1; slkPost(k, d, 'auto'); }
 function slkCh(k){ return k === 'inv' ? '#sales-new' : '#receipts-new'; }
 async function slkPost(k, d, again){ if (!RELAY || (k !== 'inv' && k !== 'rv')) return; var file = B.pdf, fixing = !!d.editing;
-  if (!file || again) { try { await preview(); } catch(e){} file = B.pdf; } if (!file || B[k] !== d) return;
+  if (!file || again) { try { B.pdf = null; await preview(); } catch(e){}
+    for (var w = 0; w < 40 && !(B.pdf && B.pdf.name.indexOf(d.ref) === 0) && B[k] === d; w++) await sleep(250);   // another preview may have overtaken this one — wait for THIS bill's PDF
+    file = B.pdf; }
+  if (!file || B[k] !== d || file.name.indexOf(d.ref) !== 0) { if (again === 'auto') delete SLKT[d.ref]; return; }
   var c = k === 'inv' ? invCalc(d) : vchCalc(d), text = shareText(k, d) + ' · ' + ((d.name || '').trim() || 'no name') + ' · ' + amt(k === 'inv' ? c.total : c.amount) + ' AED' + (k === 'inv' ? ' · ' + c.pcs + ' pcs' : '') + (fixing ? ' · CORRECTED' : '') + (me() ? ' · by ' + me() : '');
   d.slk = 'busy'; d.slkErr = ''; slkPaint(k, d);
-  try { var j = await relayJson('slackpdf2', { t: Date.now(), dev: devId(), to: k === 'inv' ? 'sales' : 'receipts', name: file.name, text: text, pdf: await pdfB64(file), once: k + ':' + d.ref + ':' + devId() + ':' + (fixing || again ? Date.now() : (d.soldAt || d.date || '')) }, 3);
+  try { var j = await relayJson('slackpdf2', { t: Date.now(), dev: devId(), to: k === 'inv' ? 'sales' : 'receipts', name: file.name, text: text, pdf: await pdfB64(file), once: k + ':' + d.ref + ':' + (again === 'auto' ? (d.soldDev || devId()) : devId()) + ':' + (fixing || again === true ? Date.now() : (d.soldAt || d.date || '')) }, 3);
     if (!j.ok) throw new Error(j.error === 'bad channel' ? 'the relay needs its new version (2026-11-20b) — Apps Script → Deploy → Manage deployments → ✎ → New version' : (j.error || 'refused'));
     d.slk = 'ok'; uiToast('Posted to ' + slkCh(k) + ' ✓'); }
   catch(e){ d.slk = 'err'; d.slkErr = e.message; uiToast('⚠ Not posted to ' + slkCh(k) + ' — see the bill'); }
@@ -1902,6 +1907,7 @@ async function stkRun(op, auto){
   // 22 Nov 2026 (Abbas, INV-0069: "green is pressed but nothing came off Trello"): these three sat INSIDE the comment above (one line), so the
   // job's answer was never saved or shown — the box stayed on "Taking … off Trello" and the reason of a failure was lost.
   s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s); gmarkStock();
+  if (res.ok && op === 'sell' && B.inv === d) { delete SLKT[d.ref]; slkAuto('inv', d); }
   applyCards(res.cards || []); szPaint();
 }
 function applyCards(cs){ if (!RAW) return; var ch = false;     // show the new numbers at once; the full list refreshes within a few minutes
