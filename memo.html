@@ -969,7 +969,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-21a';
+var VER = '2026-11-22a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1395,11 +1395,11 @@ function drawForm(){
   if (k === 'rv' || k === 'pv') $('dnew').textContent = '＋ New ' + wd + ' · سند جديد'; else $('dnew').textContent = 'New number · رقم جديد';
   if (k === 'inv' && d.status === 'included') { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
     var sz = (d.sold || []).filter(function(l){ return !(l.rate > 0); }), when = d.soldAt ? new Date(d.soldAt) : null;
-    f.insertAdjacentHTML('afterbegin', '<div class="gmark" id="gmark">✅ <b>' + esc(d.ref) + ' — green button pressed · تم التأكيد</b><small>' + (when ? when.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + (d.soldBy ? ' · by ' + esc(d.soldBy) : '') + ' · ' : '') + 'pieces taken off Trello · on ' + esc(d.name || 'the customer') + '\'s statement · in 50-50. It cannot be changed here; to change it press Undo (puts the pieces back) and make it again.</small>'
+    f.insertAdjacentHTML('afterbegin', '<div class="gmark" id="gmark">✅ <b>' + esc(d.ref) + ' — green button pressed · تم التأكيد</b><small>' + (when ? when.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + (d.soldBy ? ' · by ' + esc(d.soldBy) : '') + ' · ' : '') + '<span id="gmstk">pieces taken off Trello</span> · on ' + esc(d.name || 'the customer') + '\'s statement · in 50-50. It cannot be changed here; to change it press Undo (puts the pieces back) and make it again.</small>'
       + (sz.length ? '<span class="zero">⚠ Sold with NO PRICE: ' + sz.map(function(l){ return 'SJ-' + esc(shown(l.no)) + ' C' + l.c + ' · ' + l.pcs + ' pcs'; }).join(', ') + ' — the statement and 50-50 have 0 for ' + (sz.length > 1 ? 'them' : 'it') + '. Type the price in 50-50 (the red line), and ask Abbas to fix the statement.</span>' : '') + '</div>'); }
   if (k === 'rn' && rnLocked(d)) { f.querySelectorAll('input,select,textarea,button').forEach(function(x){ if (!x.closest('.bco')) x.disabled = true; });
     f.insertAdjacentHTML('afterbegin', '<div class="stk ok">🔒 <b>' + esc(d.ref) + ' was shared — it cannot be changed.</b><small>For more pieces back make a new return. · تم التأكيد — لا يمكن التعديل</small><div class="vbtn"><button type="button" class="vgo" data-vnew="1">＋ New return · مرتجع جديد</button></div></div>'); }
-  if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); slkPaint(k, d); if (d.name && (d.cust === undefined || (d.cust.found && custLive(k, d) && Date.now() - (d.cust.at || 0) > 60000))) custLook(); }
+  if (k !== 'pv') { var ni = f.querySelector('input[data-k="name"]'); if (ni) { ni.setAttribute('list', 'custnames'); ni.setAttribute('autocomplete', 'off'); } custHint(); slkPaint(k, d); if (k === 'inv') gmarkStock(); if (d.name && (d.cust === undefined || (d.cust.found && custLive(k, d) && Date.now() - (d.cust.at || 0) > 60000))) custLook(); }
 }
 function row(k2, v2, cls){ return '<div class="br ' + (cls || '') + '"><span>' + k2 + '</span><span>' + amt(v2) + ' AED</span></div>'; }
 function drawDyn(){   // only the figures change while typing; the boxes being typed in are never rebuilt
@@ -1852,6 +1852,12 @@ function stkPaint(s){ var el = $('stk'); if (B.mode !== 'inv' || !B.inv || stkKe
   else { el.className = 'stk ok'; h = (s.st === 'ok' ? 'Trello updated ✓ ' + pcs + ' pcs taken off for ' : 'Put back on Trello ✓ ') + esc(s.ref) + cardLines(s.res) +
     (s.st === 'ok' ? '<button type="button" data-stk="return">Undo · put the pieces back · إرجاع</button>' : ''); }
   el.innerHTML = h; }
+// 22 Nov 2026: the green mark said "pieces taken off Trello" whatever the stock job did. It now follows the job on the phone that pressed it,
+// and a job that could not start is tried again by itself (every 10 min while the bill is open; never twice — Trello skips what is done).
+function gmarkStock(){ var el = $('gmstk'), d = B.inv; if (!el || !d || B.mode !== 'inv') return; var s = STK[stkKey(d.ref)]; if (!s || s.op !== 'sell') return;
+  el.innerHTML = s.st === 'bad' ? '<b class="miss">⚠ pieces NOT taken off Trello yet — see the red box below</b>' : s.st === 'busy' ? 'taking the pieces off Trello…' : 'pieces taken off Trello ✓';
+  if (s.st === 'bad' && /^Could not start/.test(s.err || '') && (s.nostart || 0) < 30 && Date.now() - (s.t || 0) > 600000) stkRun('sell', true); }
+setInterval(function(){ try { gmarkStock(); } catch(e){} }, 60000);
 function cardLines(res){ if (!res || !res.cards) return ''; return res.cards.map(function(c){
   return '<small><b>SJ-' + esc(c.no) + '</b> ' + (c.err ? '✗ ' + esc(c.err) : c.skip ? '(' + esc(c.skip) + ')' : esc((c.lines || []).join(' · ')) + ' · ' + c.left + ' pcs left' + (c.moved ? ' · ' + esc(c.moved) : '')) + '</small>'; }).join(''); }
 async function stkCheck(){
@@ -1862,21 +1868,26 @@ async function stkCheck(){
   el.className = 'stk ' + (res.ok ? 'ok' : 'bad'); el.innerHTML = (res.ok ? 'Test OK ✓ — this is what sending would do (nothing changed):' : 'Test found a problem: ' + esc(res.error || '')) + (res.cards || []).map(function(c){
     return '<small><b>SJ-' + esc(c.no) + '</b> ' + (c.err ? '✗ ' + esc(c.err) : esc(c.before) + ' → ' + esc(c.after) + ' · ' + esc((c.lines || []).join(' · '))) + '</small>'; }).join('');
 }
-async function stkRun(op){
+async function stkRun(op, auto){
   if (op === 'check') return stkCheck();
   var d = B.inv; if (!d || !RELAY) { stkShow(); return; }
   var k = stkKey(d.ref), s = STK[k];
   if (op === 'sell' && s && (s.st === 'ok' || s.st === 'busy' || s.st === 'returned')) { stkPaint(s); return; }   // one invoice number is taken once
   var lines = op === 'sell' ? stkLines() : (s ? s.lines : []);
   if (!lines.length && !(op === 'sell' && manLines(d).length)) { stkShow(); return; }
-  var id = jobId('s');
+  var id = jobId('s'), s0n = s && s.nostart;
   s = STK[k] = { st: 'busy', op: op, ref: d.ref, lines: lines, id: id, who: d.name || $('name').value.trim(), t: Date.now() }; stkSave(); stkPaint(s);
   var req = { id: id, op: op, ref: d.ref, dev: devId(), who: s.who, lines: lines };
   if (op === 'sell') { var fb = ffDraftBill(); if (fb) req.bill = { date: fb.date, name: fb.name || s.who, lines: fb.lines, extras: fb.extras, disc: fb.disc, vat: fb.vat, total: fb.total, sub: fb.sub }; }   // kept for the owner's 50-50 screen
   try { await relay('stock', req); }
-  catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; stkSave(); stkPaint(s); return; }
+  catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; s.nostart = (s0n || 0) + 1; stkSave(); stkPaint(s); gmarkStock();
+    if (op === 'sell' && !auto) alert('⚠ ' + d.ref + ' is saved, but its pieces were NOT taken off Trello yet:\n\n' + e.message + '\n\nThe app tries again by itself while this bill is open. You can also press "Try again" in the red box.\n\nلم يتم الخصم من تريلو بعد');
+    return; }
   var res = await waitJob(id, 'stock', 8);
-  s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; if (res.ok && op === 'sell') ordBillMade(d.ref, d.oid); if (res.ok && op === 'return') custVoid(d);   // d = the invoice this job ran for, even if another bill is open now s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s);
+  s.res = res; s.st = res.ok ? (op === 'sell' ? 'ok' : 'returned') : 'bad'; if (res.ok && op === 'sell') ordBillMade(d.ref, d.oid); if (res.ok && op === 'return') custVoid(d);   // d = the invoice this job ran for, even if another bill is open now
+  // 22 Nov 2026 (Abbas, INV-0069: "green is pressed but nothing came off Trello"): these three sat INSIDE the comment above (one line), so the
+  // job's answer was never saved or shown — the box stayed on "Taking … off Trello" and the reason of a failure was lost.
+  s.err = res.ok ? '' : (res.error || 'some cards were not changed — see below'); stkSave(); stkPaint(s); gmarkStock();
   applyCards(res.cards || []); szPaint();
 }
 function applyCards(cs){ if (!RAW) return; var ch = false;     // show the new numbers at once; the full list refreshes within a few minutes
