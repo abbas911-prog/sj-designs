@@ -118,7 +118,8 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await p4.click('#dsaved'); await p4.waitForSelector('.bsrow[data-ref="' + R2 + '"]', { timeout: 8000 }); await p4.click('.bsrow[data-ref="' + R2 + '"]'); await p4.waitForTimeout(1500);
   out.push(['another device, saved copy damaged + design sold out: still exactly what was sold (12 pcs, 1,200)', (await p4.$eval('#btot', e => e.textContent).catch(() => '')).indexOf('1,200.00') >= 0 && /C1 4 pcs · C2 4 pcs · C3 4 pcs/.test(await p4.$eval('#bform', e => [...e.querySelectorAll('input')].map(i => i.value).join('|')).catch(() => ''))]);
   const before4 = stockReq; await p4.click('#dinc'); await p4.waitForTimeout(2500);
-  out.push(['included bill on another device: green button refused, nothing to Trello', stockReq === before4 && /already went through the green button/.test(p4alert)]); await p4.close();
+  // 22 Nov 2026: such a bill may now FINISH its Trello part from another device — but only under the FIRST phone's id (so the stock job skips what is done), never under this device's own
+  out.push(['included bill on another device: never a sale under THIS device\'s id (refused, or finished under the first phone\'s id)', stockReq === before4 ? /already went through the green button/.test(p4alert) : (stockReq.op === 'sell' && stockReq.dev === 'dev1' && stockReq.dev !== 'lap1')]); await p4.close();
   // a PDF shared on WhatsApp carries only its number as the message (21 Oct 2026)
   const p5 = await br.newPage({ viewport: { width: 390, height: 844 } }); p5.on('pageerror', e => errs.push(e.message)); p5.on('dialog', d => d.accept());
   await p5.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) })); await p5.route(/ntfy\.sh|api\.github\.com|raw\.githubusercontent/, r => r.abort());

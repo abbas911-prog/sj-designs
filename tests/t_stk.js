@@ -50,10 +50,13 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   await p2.evaluate(() => { const S = window.__sj, B = S.B(); S.st({ '18634:1': { pcs: 4, sets: 0, all: false } }); B.inv = null; S.setMode('inv'); Object.assign(B.inv, { ref: 'INV-0069', name: 'Matiullah', status: 'included', soldDev: 'devM', soldAt: Date.now(), sold: [{ no: '18634', card: 'c1', c: 1, pcs: 4, rate: 125 }] }); S.setMode('inv'); });
   await p2.waitForTimeout(800);
   ok('another phone: a green-pressed bill offers "Take the pieces off Trello now"', !!(await p2.$('#stk [data-stk="resell"]')));
-  const n1 = stock.length; await p2.click('#stk [data-stk="resell"]'); for (let i = 0; i < 40 && stock.length === n1; i++) await p2.waitForTimeout(250);
+  const dl2 = []; p2.on('dialog', d => dl2.push(d.message()));
+  const n1 = stock.length; await p2.click('#dinc');   // 22c: the GREEN button itself finishes it (Abbas pressed green and got "already off Trello") for (let i = 0; i < 40 && stock.length === n1; i++) await p2.waitForTimeout(250);
   const rq = stock[n1] || {};
   ok('…it runs the sale under the FIRST phone\'s id, with what the bill sold (never twice)', rq.op === 'sell' && rq.ref === 'INV-0069' && rq.dev === 'devM' && JSON.stringify(rq.lines) === JSON.stringify([{ card: 'c1', no: '18634', c: 1, pcs: 4 }]));
   for (let i = 0; i < 40 && !/Trello updated/.test(await p2.$eval('#stk', e => e.textContent)); i++) await p2.waitForTimeout(500);
+  ok('the green button asks to finish it and does not claim "already off Trello"', dl2.some(m => /take its pieces off Trello now/.test(m) && /ONE copy/.test(m)) && !dl2.some(m => /already off Trello/.test(m)));
+  ok('…the 50-50 copy goes with it under the same first-phone id (it replaces itself, never a second one)', !!rq.bill && rq.dev === 'devM');
   ok('…and shows Trello updated ✓', /Trello updated ✓ 4 pcs/.test(await p2.$eval('#stk', e => e.textContent)));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
