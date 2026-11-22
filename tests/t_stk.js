@@ -39,6 +39,22 @@ const srv = http.createServer((rq, rs) => { let u = rq.url.split('?')[0]; if (u 
   ok('the job\'s answer is SAVED on the phone (it was lost inside a comment)', (await saved()) === 'ok');
   ok('the box shows it: Trello updated ✓ 4 pcs', /Trello updated ✓ 4 pcs/.test(await t('#stk')));
   ok('the green mark now says: pieces taken off Trello ✓', /taken off Trello ✓/.test(await t('#gmstk')));
+  // another phone (the owner's) opens a green-pressed bill it has no stock record of: one button finishes the Trello part under the FIRST phone's id
+  const p2 = await br.newPage({ viewport: { width: 390, height: 844 } }); p2.on('pageerror', e => errs.push(e.message)); p2.on('dialog', d => d.accept());
+  await p2.route(/script\.google\.com/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(relay(JSON.parse(r.request().postData() || '{}'))) }));
+  await p2.route(/raw\.githubusercontent\.com\/.*jobs\//, r => { const id = r.request().url().match(/jobs\/([^.?]+)\.json/)[1]; jobs[id] ? r.fulfill({ contentType: 'application/json', body: JSON.stringify(jobs[id]) }) : r.fulfill({ status: 404, body: 'nf' }); });
+  await p2.route(/ntfy\.sh|api\.github\.com|costs\.enc|costing\.enc/, r => r.abort());
+  await p2.goto(URL0); await p2.evaluate(pw => { localStorage.clear(); localStorage.setItem('sj_memo_pw', pw); localStorage.setItem('sj_me', 'Abbas'); localStorage.setItem('sj_dev', 'devA'); }, PW); await p2.reload();
+  await p2.waitForSelector('#feed .design:not([hidden])', { timeout: 15000 });
+  await p2.click('#nav button[data-nv="more"]'); await p2.click('.mgrid button[data-go="bills"]'); await p2.waitForTimeout(400);
+  await p2.evaluate(() => { const S = window.__sj, B = S.B(); S.st({ '18634:1': { pcs: 4, sets: 0, all: false } }); B.inv = null; S.setMode('inv'); Object.assign(B.inv, { ref: 'INV-0069', name: 'Matiullah', status: 'included', soldDev: 'devM', soldAt: Date.now(), sold: [{ no: '18634', card: 'c1', c: 1, pcs: 4, rate: 125 }] }); S.setMode('inv'); });
+  await p2.waitForTimeout(800);
+  ok('another phone: a green-pressed bill offers "Take the pieces off Trello now"', !!(await p2.$('#stk [data-stk="resell"]')));
+  const n1 = stock.length; await p2.click('#stk [data-stk="resell"]'); for (let i = 0; i < 40 && stock.length === n1; i++) await p2.waitForTimeout(250);
+  const rq = stock[n1] || {};
+  ok('…it runs the sale under the FIRST phone\'s id, with what the bill sold (never twice)', rq.op === 'sell' && rq.ref === 'INV-0069' && rq.dev === 'devM' && JSON.stringify(rq.lines) === JSON.stringify([{ card: 'c1', no: '18634', c: 1, pcs: 4 }]));
+  for (let i = 0; i < 40 && !/Trello updated/.test(await p2.$eval('#stk', e => e.textContent)); i++) await p2.waitForTimeout(500);
+  ok('…and shows Trello updated ✓', /Trello updated ✓ 4 pcs/.test(await p2.$eval('#stk', e => e.textContent)));
   ok('no page errors', errs.length === 0); if (errs.length) console.log(errs);
   await br.close(); srv.close();
   out.forEach(o => console.log((o[1] ? 'PASS ' : 'FAIL ') + o[0])); console.log(out.filter(o => o[1]).length + ' passed, ' + out.filter(o => !o[1]).length + ' failed');

@@ -969,7 +969,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-22a';
+var VER = '2026-11-22b';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1841,6 +1841,11 @@ function stkShow(){ szPaint(); var el = $('stk'); $('dinc').hidden = B.mode !== 
   if (B.mode === 'rn') { rnPaint(); return; }
   if (B.mode !== 'inv' || !B.inv) { el.hidden = true; return; } var s = STK[stkKey(B.inv.ref)];
   if (s) { stkPaint(s); return; }
+  // 22 Nov 2026 (Abbas, INV-0069: "can you reverse it so we press green again?"): no need to undo anything — a green-pressed bill opened on a
+  // phone that has no stock record of it (another phone pressed it, or the job never started) can finish the Trello part from here.
+  // It runs under the first phone's id (`soldDev`), so pieces that already came off are never taken twice.
+  if (B.inv.status === 'included' && Array.isArray(B.inv.sold) && B.inv.sold.some(function(l){ return l.card && l.pcs > 0; })) { el.hidden = false; el.className = 'stk';
+    el.innerHTML = '<b>' + esc(B.inv.ref) + '</b> was pressed green, but this phone cannot see whether its pieces came off Trello.<small>If Trello still shows the old numbers, press the button. It is safe: pieces already taken off are never taken twice. · آمن — لا يخصم مرتين</small><button type="button" data-stk="resell">Take the pieces off Trello now · اخصم من تريلو الآن</button>'; return; }
   el.hidden = false; el.className = 'stk';
   el.innerHTML = RELAY ? '<b>Send PDF</b> does not change stock. <b>Include &amp; share</b> sends the final invoice and takes its pieces off Trello. <small>فقط «تأكيد وإرسال» يخصم القطع من تريلو</small>' + (isOwner() ? '<button type="button" data-stk="check">Test — show what would change (Trello not touched)</button>' : '')
                        : 'Stock link not set up yet — sending will not change Trello. <small>لم يتم ربط المخزون بعد</small>'; }
@@ -1871,13 +1876,16 @@ async function stkCheck(){
 async function stkRun(op, auto){
   if (op === 'check') return stkCheck();
   var d = B.inv; if (!d || !RELAY) { stkShow(); return; }
-  var k = stkKey(d.ref), s = STK[k];
+  var fix = op === 'resell'; if (fix) op = 'sell';
+  var k = stkKey(d.ref), s = STK[k]; if (s && s.fix) fix = true;
   if (op === 'sell' && s && (s.st === 'ok' || s.st === 'busy' || s.st === 'returned')) { stkPaint(s); return; }   // one invoice number is taken once
-  var lines = op === 'sell' ? stkLines() : (s ? s.lines : []);
+  var lines = fix ? (s && s.fix ? s.lines : (d.sold || []).filter(function(l){ return l.card && l.pcs > 0; }).map(function(l){ var dz = byNo(cardNo(l.no, l.card)); return { card: l.card, no: dz ? dz.base : String(l.no).replace(/~$/, ''), c: l.c, pcs: l.pcs }; }))
+    : op === 'sell' ? stkLines() : (s ? s.lines : []);
   if (!lines.length && !(op === 'sell' && manLines(d).length)) { stkShow(); return; }
   var id = jobId('s'), s0n = s && s.nostart;
   s = STK[k] = { st: 'busy', op: op, ref: d.ref, lines: lines, id: id, who: d.name || $('name').value.trim(), t: Date.now() }; stkSave(); stkPaint(s);
-  var req = { id: id, op: op, ref: d.ref, dev: devId(), who: s.who, lines: lines };
+  if (fix) { s.fix = 1; s.dev = d.soldDev || devId(); stkSave(); }
+  var req = { id: id, op: op, ref: d.ref, dev: fix ? s.dev : devId(), who: s.who, lines: lines };
   if (op === 'sell') { var fb = ffDraftBill(); if (fb) req.bill = { date: fb.date, name: fb.name || s.who, lines: fb.lines, extras: fb.extras, disc: fb.disc, vat: fb.vat, total: fb.total, sub: fb.sub }; }   // kept for the owner's 50-50 screen
   try { await relay('stock', req); }
   catch(e){ s.st = 'bad'; s.err = 'Could not start the stock job: ' + e.message; s.nostart = (s0n || 0) + 1; stkSave(); stkPaint(s); gmarkStock();
