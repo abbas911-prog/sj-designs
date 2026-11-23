@@ -32,5 +32,6 @@ jobs:
           git config user.name memo-bot; git config user.email memo-bot@users.noreply.github.com
           git add -A jobs vid *.html og-*.jpg
           if [ -f costs.enc ]; then git add costs.enc; fi
+          if [ -d cat ]; then git add -A cat; fi   # 23 Nov 2026: the page's request, so it can keep itself up to date (memo-catalog-live)
           git commit -q -m "catalogue: $(ls -t jobs | head -1)" || exit 0
           for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done

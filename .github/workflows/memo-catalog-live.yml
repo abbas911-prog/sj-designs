@@ -1,0 +1,40 @@
+name: memo-catalog-live
+run-name: live catalogues
+# 23 Nov 2026 (Abbas: "make the catalogue live - whenever the customer opens it the quantity is sorted by itself, even the photos"):
+# builds a catalogue page again, under the same link, when the pieces / photos of its designs changed (tools/catalog/live.py).
+# Runs after every stock job (a sale or a return), once an hour, and by hand.
+on:
+  workflow_run:
+    workflows: [memo-stock]
+    types: [completed]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: memo-catalog, cancel-in-progress: false }
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Anything saved?
+        id: any
+        run: if ls cat/*.json >/dev/null 2>&1; then echo "go=1" >> "$GITHUB_OUTPUT"; fi
+      - name: Tools
+        if: steps.any.outputs.go == '1'
+        timeout-minutes: 5
+        run: pip install -q pillow numpy imageio-ffmpeg
+      - name: Build the changed catalogues again
+        if: steps.any.outputs.go == '1'
+        env:
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+        run: python3 tools/catalog/live.py
+      - name: Publish
+        if: steps.any.outputs.go == '1'
+        run: |
+          git config user.name memo-bot; git config user.email memo-bot@users.noreply.github.com
+          git add -A cat vid *.html og-*.jpg
+          git commit -q -m "live catalogues" || exit 0
+          for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done

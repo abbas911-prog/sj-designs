@@ -147,6 +147,16 @@ def find_cuts(im, n, lo=0.45, hi=1.75):
     cuts = [b]
     for k in range(n, 0, -1): b = int(arg[k][b]); cuts.append(b)
     cuts = cuts[::-1]                                           # left ... right, n+1 values
+    # 23 Nov 2026 (Abbas, abbas-1114: SJ-90856 showed THREE dresses over the numbers 3 and 4): on a studio photo the colour alone cannot
+    # find the edge of a white dress on a white wall, and with no "evenly spaced" pull the pieces came out 0.09 / 0.33 / 0.16 / 0.33 / 0.09
+    # of the width - the cut then kept a neighbour dress. Studio line-ups ARE evenly spaced and centred: when the pieces are that uneven,
+    # use an even grid between the line-up's edges (the smaller side margin on both sides - an unseen white dress hides one edge),
+    # and let the snap below move each cut into the real wall gap next to it.
+    if clean:
+        ws = [cuts[i + 1] - cuts[i] for i in range(n)]
+        if min(ws) <= 0 or max(ws) / max(1, min(ws)) > 1.6:
+            m = min(left, w - right); span_w = (w - 2 * m) / n
+            cuts = [int(round(m + span_w * i)) for i in range(n + 1)]
     # snap each inner cut to the emptiest column nearby (a real wall gap), if that column is clearly emptier
     span = int(avg * 0.08)
     for i in range(1, n):
@@ -239,7 +249,7 @@ def opts(p, unit):
     if r == 0: return list(range(1, full + 1))
     return list(range(1, full)) + ['F']
 
-def build(req):
+def build(req, _cards=None):
     name = re.sub(r'\s+', ' ', str(req.get('name', ''))).strip().upper()[:60]
     sub = re.sub(r'\s+', ' ', str(req.get('country', ''))).strip().upper()[:40]
     items, seen, PRICEIN, it_card = [], set(), {}, {}   # 31 Oct 2026 (Abbas: "an option to include the prices inside the catalogue with the design, like a tick"): price per design, optional
@@ -258,7 +268,14 @@ def build(req):
             if pr > 0: PRICEIN[no] = pr
         except ValueError: pass
     if not items: return {'ok': False, 'error': 'No design numbers.'}
-    cards = ready_cards()
+    # 23 Nov 2026 (Abbas: "customers reply late and the quantities go up and down — make the catalogue live: whenever he opens it the
+    # quantity is sorted by itself, even the photos"): a page is built again IN PLACE (same link) by tools/catalog/live.py when its cards
+    # changed. Then (`_live`): a design that left READY / sold out / lost its photo is LEFT OUT instead of stopping the build, a design the
+    # app pinned to one card stays on that card, and the page keeps its file name (`_stem`).
+    live = bool(req.get('_live')); gone = []
+    cards = _cards if _cards is not None else ready_cards()
+    global LAST_CARDS; LAST_CARDS = cards
+    USED = {}
     errors, report, flags = [], [], []
     MODE, TOT, COLS, PCSS, PHOTOS, VIDS, ORDER, PRICE = {}, {}, {}, {}, {}, {}, [], {}
     todo, novid = [], set()
@@ -266,13 +283,14 @@ def build(req):
         base, suf = (no.split('-', 1) + [''])[:2]
         cands = [c for c in cards if parse(c['name'])['no'] == base]
         if suf == 'ALL':
-            if not cands: errors.append('SJ-%s is not in READY on Trello.' % base); continue
+            if not cands: (gone if live else errors).append('SJ-%s is not in READY on Trello.' % base); continue
             cands.sort(key=lambda c: c['id'])                        # oldest first: 6668_01 stays 6668_01 next time
             for i, c in enumerate(cands): todo.append(('%s_%02d' % (base, i + 1), mode, c)); PRICE['%s_%02d' % (base, i + 1)] = PRICEIN.get(no)
             report.append('SJ-%s all: %d READY cards → %s_01 … %s_%02d' % (base, len(cands), base, base, len(cands)))
             if len(cands) > 8: novid.update('%s_%02d' % (base, i + 1) for i in range(len(cands))); flags.append('SJ-%s all: %d cards — videos left out (too many for one page); make a small catalogue for the ones that need the video.' % (base, len(cands)))
             continue
         picked = [c for c in cands if c['id'] == str(it_card.get(no, ''))]   # the app sends the card it showed as a tile — never ambiguous
+        if live and it_card.get(no) and not picked: gone.append('SJ-%s: its card is no longer in READY.' % no); continue
         if picked: mine = picked; report.append('SJ-%s = the READY card picked in the app: %s' % (no, picked[0]['name'][:40]))
         elif suf:
             mine = [c for c in cands if re.search(r'\b%s\s*-\s*%s\b' % (base, re.escape(suf)), c['name'], re.I)]
@@ -283,11 +301,11 @@ def build(req):
                 bytop = sorted(cands, key=lambda c: (c.get('pos') is None, c.get('pos') or 0)); k = int(suf)
                 if 1 <= k <= len(bytop):
                     mine = [bytop[k - 1]]; report.append('SJ-%s = READY card no. %d of %d from the top: %s' % (no, k, len(bytop), bytop[k - 1]['name'][:40]))
-                else: errors.append('SJ-%s: there are only %d READY cards named %s (6668-2 = the 2nd from the top of READY).' % (no, len(bytop), base)); continue
+                else: (gone if live else errors).append('SJ-%s: there are only %d READY cards named %s (6668-2 = the 2nd from the top of READY).' % (no, len(bytop), base)); continue
         else:
             plain = [c for c in cands if not re.search(r'\b%s\s*-\s*[A-Za-z0-9]{1,3}\b' % base, c['name'])]
             mine = plain or cands
-        if not mine: errors.append('SJ-%s is not in READY on Trello.' % no + (' (cards with this number: %s)' % ', '.join(c['name'][:30] for c in cands[:3]) if cands else '')); continue
+        if not mine: (gone if live else errors).append('SJ-%s is not in READY on Trello.' % no + (' (cards with this number: %s)' % ', '.join(c['name'][:30] for c in cands[:3]) if cands else '')); continue
         mine.sort(key=lambda c: c['id'], reverse=True)            # "the last one added in trello" = newest card id
         if len(mine) > 1: flags.append('SJ-%s has %d READY cards — used the newest: %s (type "%s all" for every card)' % (no, len(mine), mine[0]['name'], base))
         todo.append((no, mode, mine[0])); PRICE[no] = PRICEIN.get(no)
@@ -299,7 +317,7 @@ def build(req):
         if not p['ok'] or sum(cells) == 0:                        # 23 Oct 2026: "6668 all" leaves such a card out (flag) instead of refusing the whole catalogue
             why = 'every colour is 0 — nothing to offer' if p['ok'] else ('the colours do not add up to the card total' if cells else 'no colour counts in the title')
             if re.search(r'_\d\d$', no): flags.append('SJ-%s LEFT OUT: "%s" — %s (%s). Fix the card in Trello to include it.' % (no, card['name'].strip()[:60], why, line)); continue
-            errors.append('SJ-%s: %s — %s. Fix the card in Trello, then make the catalogue again.' % (no, line, why)); continue
+            (gone if live else errors).append('SJ-%s: %s — %s. Fix the card in Trello, then make the catalogue again.' % (no, line, why)); continue
         # colour groups, in title order
         groups, k = [], 0
         for g in group_sizes(card['name']):
@@ -312,14 +330,14 @@ def build(req):
             if a['id'] not in loaded: loaded[a['id']] = photo(a)
             return loaded[a['id']]
         def jamal(a):                                              # a JAMAL photo: the thumbnail sorter says cover, or the real JAMAL logo is in it
-            if role(a) == 'cover': return True
+            if role(a) == 'cover' or 'jamal' in (ROLES.get(a['id']) or []): return True   # 23 Nov 2026: the sorter's own JAMAL mark counts (the Stock app trusts it too)
             if role(a) == 'shot': return False
             # 14 Nov 2026 (Abbas, SJ-46594: "there are JAMAL photos available, you have still taken the normal photos"): the two JAMAL pictures are
             # ChatGPT exports (file_….png); the sorter called one of them a lineup and its logo scored 0.50 (< 0.6), so a shop photo was used
             if re.match(r'(file_|chatgpt)', str(a.get('name', '')).lower()): return True
             try: return logo_score(load(a)) >= 0.6
             except Exception as e: print('logo_score failed (%s)' % e, file=sys.stderr); return False
-        if not imgs: errors.append('SJ-%s: no photo on the card.' % no); continue
+        if not imgs: (gone if live else errors).append('SJ-%s: no photo on the card.' % no); continue
         covers = [a for a in imgs if jamal(a)]; lineups = [a for a in imgs if a not in covers and role(a) == 'lineup']
         # 14 Nov 2026 (Abbas, SJ-40032: "it took a paper instead of the photo of the design"): a 'shot' (handwritten paper, screenshot, chat)
         # is never a design photo — it is used only when the card has nothing else; the newest photo is no longer enough to win
@@ -332,7 +350,7 @@ def build(req):
             groups[-2] = groups[-2] + groups[-1]; groups.pop()
         if any(a not in covers for a in pick): flags.append('SJ-%s: no JAMĀL photo for every colour group — shop photo used.' % no)
         if check_photos(pick, groups, load): flags.append('SJ-%s: the photos may not match the colour groups (%s) — check the page.' % (no, ' + '.join('%d' % len(g) for g in groups)))
-        ORDER.append(no); MODE[no] = mode; PHOTOS[no] = []
+        ORDER.append(no); MODE[no] = mode; PHOTOS[no] = []; USED[no] = card['id']
         cut = []
         c, PCSS[no] = 0, {}
         for a, g in zip(pick, groups):
@@ -354,7 +372,9 @@ def build(req):
         vids = [] if no in novid else [a for a in att if str(a.get('mimeType', '')).startswith('video/')]
         if vids and video(no, vids[0]): VIDS[no] = 1
     if errors: return {'ok': False, 'error': ' '.join(errors), 'errors': errors, 'report': report}
-    stem = page_stem(name)
+    if live and not ORDER: return {'ok': False, 'empty': True, 'error': 'nothing of this catalogue is in READY any more', 'gone': gone, 'report': report}
+    stem = str(req.get('_stem') or '') if live and re.fullmatch(r'[a-z0-9-]{1,48}', str(req.get('_stem') or '')) else page_stem(name)
+    if gone: flags.extend('LEFT OUT (live): ' + g for g in gone)
     html = render(stem, name, sub, ORDER, MODE, TOT, COLS, PCSS, PHOTOS, VIDS, PRICE)
     html = _apply(html)                                            # PDF-only send + Share on every photo/video
     open(stem + '.html', 'w', encoding='utf-8').write(html)
@@ -362,8 +382,46 @@ def build(req):
     html = og_meta(html, stem, name, sub, n)
     open(stem + '.html', 'w', encoding='utf-8').write(html)
     return {'ok': True, 'page': stem + '.html', 'url': BASE + stem + '.html?v=1', 'cover': 'og-%s.jpg' % stem,
-            'name': name, 'country': sub, 'designs': ORDER, 'report': report, 'flags': flags,
+            'name': name, 'country': sub, 'designs': ORDER, 'report': report, 'flags': flags, 'stem': stem, 'cards': USED,
             'videos': sorted(VIDS), 'bytes': os.path.getsize(stem + '.html')}
+
+LAST_CARDS = None
+def cat_fp(items, cards):
+    """What a catalogue page depends on, as one short mark: for every design number on it, every READY card of that number - its id,
+    its title (the pieces per colour) and its photos / videos. A changed mark = the page must be built again."""
+    bases = set()
+    for it in items or []:
+        mm = re.match(r'\s*(?:SJ|SH)?\s*[-=:]*\s*(\d{3,6})', str(it.get('no', '')), re.I)
+        if mm: bases.add(mm.group(1))
+    rows = []
+    for c in cards or []:
+        try: b = parse(c['name'])['no']
+        except Exception: b = None
+        if b in bases:
+            rows.append('%s|%s|%s' % (c['id'], c['name'], ','.join(sorted(a['id'] for a in c.get('attachments', []) if str(a.get('mimeType', '')).split('/')[0] in ('image', 'video')))))
+    return hashlib.sha1('\n'.join(sorted(rows)).encode()).hexdigest()[:16]
+
+def cat_save(stem, req, res, cards):
+    """The request behind a page, kept in cat/<page>.json so the page can be built again by itself. A plain design keeps the card it was
+    built from (a "6668 all" line is resolved again each time)."""
+    os.makedirs('cat', exist_ok=True)
+    items = []
+    for it in req.get('items', []):
+        x = {'no': str(it.get('no', '')), 'mode': 'C' if str(it.get('mode', 'S')).upper().startswith('C') else 'S'}
+        mm = re.match(r'\s*(?:SJ|SH)?\s*[-=:]*\s*(\d{3,6})\s*(?:-\s*([A-Za-z0-9]{1,3}))?', x['no'], re.I)
+        key = (mm.group(1) + ('-' + mm.group(2).upper() if mm.group(2) else '')) if mm else ''
+        cid = it.get('card') or (res.get('cards') or {}).get(key)
+        if cid: x['card'] = str(cid)
+        if it.get('price') not in (None, ''): x['price'] = it.get('price')
+        items.append(x)
+    now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    old = {}
+    try: old = json.load(open('cat/%s.json' % stem))
+    except Exception: pass
+    d = {'v': 1, 'page': stem + '.html', 'made': old.get('made') or now, 'name': req.get('name', ''), 'country': req.get('country', ''),
+         'items': items, 'prices': 1 if req.get('prices') else 0, 'fp': cat_fp(items, cards), 'built': now}
+    json.dump(d, open('cat/%s.json' % stem, 'w'), ensure_ascii=False, indent=1)
+    return d
 
 def group_sizes(title):
     s = title.replace('**', '  ').replace('{', '(').replace('}', ')')
@@ -597,7 +655,11 @@ def main():
             elif req.get('kind') == 'sizes':
                 from sizes import build_sizes          # invoice -> the customer's own catalogue with sizes (12 Oct 2026)
                 res = build_sizes(req)
-            else: res = build(req)
+            else:
+                res = build(req)
+                if res.get('ok') and res.get('stem'):
+                    try: cat_save(res['stem'], req, res, LAST_CARDS)   # 23 Nov 2026: so the page can keep itself up to date (live.py)
+                    except Exception as e: print('cat_save failed (%s)' % e, file=sys.stderr)
         except Exception as e:
             import traceback; traceback.print_exc(); res = {'ok': False, 'error': 'Build failed: %s: %s' % (type(e).__name__, str(e)[:300])}
     res['id'] = jid
