@@ -1,0 +1,39 @@
+{
+ "id": "smwtgl2mxi2z8",
+ "op": "sell",
+ "ref": "INV-0082",
+ "ok": true,
+ "cards": [
+  {
+   "card": "69dbbf089ae05609886b4e8d",
+   "no": "6668",
+   "before": "Sj= **(6668)** (80)pcs__Colour = (5)                      (16/16/16/16/16)",
+   "after": "Sj= **(6668)** (60)pcs__Colour = (5)                      (12/12/12/12/12)",
+   "left": 60,
+   "lines": [
+    "colour 1: 16 → 12 (−4)",
+    "colour 2: 16 → 12 (−4)",
+    "colour 3: 16 → 12 (−4)",
+    "colour 4: 16 → 12 (−4)",
+    "colour 5: 16 → 12 (−4)"
+   ],
+   "moved": ""
+  },
+  {
+   "card": "69f5bc7fa53db129df014c2f",
+   "no": "6668",
+   "before": "Sj 6668 (50pcs) 5 colors.                             (10/10/10/10/10)",
+   "after": "Sj 6668 (30pcs) 5 colors.                             (6/6/6/6/6)",
+   "left": 30,
+   "lines": [
+    "colour 1: 10 → 6 (−4)",
+    "colour 2: 10 → 6 (−4)",
+    "colour 3: 10 → 6 (−4)",
+    "colour 4: 10 → 6 (−4)",
+    "colour 5: 10 → 6 (−4)"
+   ],
+   "moved": ""
+  }
+ ],
+ "bill": "bill kept for 50-50"
+}
