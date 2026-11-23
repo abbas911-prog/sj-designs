@@ -59,6 +59,16 @@ m1 = os.path.getmtime(page); py(LIVE)
 ok('and it is not built a second time for the same change', os.path.getmtime(page) == m1)
 cards([]); o = py(LIVE)
 ok('everything sold: the page is left as it is, not emptied', os.path.getmtime(page) == m1 and 'left as it is' in o)
+# ---- 3. saved customers (23 Nov 2026): the catalogue made for "Abbas" noted him once (not again at each live rebuild); an anonymous one notes nobody
+cu = os.path.join(T, 'cat', 'customers.json'); cl = json.load(open(cu))['list'] if os.path.exists(cu) else []
+ok('the customer of a new catalogue is saved in cat/customers.json, counted once (%s)' % cl, len(cl) == 1 and cl[0]['name'] == 'Abbas' and cl[0]['country'] == 'Qatar' and cl[0]['n'] == 1 and cl[0].get('page') == stem + '.html')
+cards(CARDS)
+for rid, nm in (('zt2', ''), ('zt3', 'ABBAS ')):
+    subprocess.run([sys.executable, BUILD], cwd=T, env=dict(ENV, REQ=json.dumps(dict(req, id=rid, name=nm)), SIG='x'), capture_output=True, text=True)
+cl = json.load(open(cu))['list'] if os.path.exists(cu) else []
+r2 = json.load(open(os.path.join(T, 'jobs', 'zt2.json'))) if os.path.exists(os.path.join(T, 'jobs', 'zt2.json')) else {}
+ok('an anonymous catalogue is made and saves nobody; the same customer again = still ONE entry, 2 catalogues (%s)' % cl, r2.get('ok') and len(cl) == 1 and cl[0]['n'] == 2)
+ok('the live job limit is 25 days', 'LIVE_DAYS\', \'25\'' in open(os.path.join(ROOT, 'tools', 'catalog', 'live.py')).read())
 for n, v in out: print(('PASS ' if v else 'FAIL ') + n)
 print('%d passed, %d failed' % (sum(1 for _, v in out if v), sum(1 for _, v in out if not v)))
 sys.exit(0 if all(v for _, v in out) else 1)

@@ -210,6 +210,7 @@ main{max-width:720px;margin:0 auto;}
 .stk .vbtn{display:flex;flex-wrap:wrap;gap:8px}.stk .vbtn button{padding:10px 16px;font-size:14.5px}.stk button.vgo{background:var(--gold);border-color:var(--gold);color:#fff}
 #p-cat textarea{width:100%;min-height:90px;padding:10px;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:16px}
 .crow{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;border-radius:10px;padding:8px 10px;margin:6px 0;font-weight:700}
+.ccnote{font-size:12.5px;color:var(--mute);margin:6px 2px 0}.ccnote b{color:var(--ink)}.ccnote button{border:0;background:var(--gold);color:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;font-weight:700;margin-left:4px}.ccs{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px}.ccs button{flex:0 0 auto;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink)}.ccs button.on{border-color:var(--gold);background:var(--goldbg)}.ccs button small{font-weight:400;color:var(--mute)}
 .cpick{margin:-2px 0 8px;padding:8px 10px;background:#fff;border-radius:10px}.cpick>small{display:block;color:var(--mute);font-size:12px;margin-bottom:6px}.cpick>div{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}.cpick button{flex:0 0 auto;width:92px;border:2px solid var(--line);border-radius:12px;background:#fff;padding:4px;font:inherit;text-align:center;color:var(--mute)}.cpick button img,.cpick button i{display:block;width:100%;height:92px;object-fit:cover;border-radius:8px;background:#EFE9DF}.cpick button b{display:block;font-size:12.5px;color:var(--ink);margin-top:4px}.cpick button small{display:block;font-size:10.5px}.cpick button.on{border-color:var(--gold);background:var(--goldbg)}
 .crow .sw{display:flex;border:1.5px solid var(--line);border-radius:999px;overflow:hidden}
 .crow .sw button{border:0;background:#fff;padding:7px 11px;font:inherit;font-size:12.5px;font-weight:700;color:var(--mute)}
@@ -689,7 +690,11 @@ main{padding:10px 12px calc(var(--navh) + 112px)}
   <section id="p-cat" hidden>
   <h2 style="margin:6px 0 2px">Catalogue · كتالوج</h2>
   <div class="sub">Design numbers → a customer catalogue link with photos, videos and the Send-order PDF, same as before. Stock is not touched.</div>
-  <div class="bgrid" style="margin-top:8px"><label class="bf"><span>Customer · العميل</span><input id="cname" placeholder="e.g. AHMAD AL WASTA"></label><label class="bf"><span>Country · البلد</span><input id="ccountry" placeholder="e.g. LIBYA"></label></div>
+  <div id="cwho" class="dfmt" style="margin:10px 0 0;font-size:13px">This catalogue is <button type="button" data-cw="c">👤 For a customer · لعميل</button><button type="button" data-cw="a">🕶 Anonymous · بدون اسم</button></div>
+  <div id="ccbox"><div class="bgrid" style="margin-top:8px"><label class="bf"><span>Customer · العميل</span><input id="cname" list="catcusts" autocomplete="off" placeholder="e.g. AHMAD AL WASTA"></label><label class="bf"><span>Country · البلد</span><input id="ccountry" placeholder="e.g. LIBYA"></label></div>
+  <div id="ccnote" class="ccnote"></div><div id="ccsaved" class="ccs"></div></div>
+  <div id="canon" class="ccnote" hidden>No name on the page, the link or its picture — it says NEW COLLECTION. It is not saved under any customer. <small>بدون اسم العميل</small></div>
+  <datalist id="catcusts"></datalist>
   <label class="bf" style="margin-top:8px"><span>Design numbers — one per line, add SETS or COMPLETE after the number · أرقام التصاميم</span><textarea id="cnos" placeholder="46209 complete&#10;38156 sets&#10;6668 all sets"></textarea></label>
   <div id="clist"></div>
   <div id="cprice" class="pl" hidden></div>
@@ -969,7 +974,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-22d';
+var VER = '2026-11-23a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -2281,7 +2286,38 @@ $('myg').onclick = function(e){ var b = e.target.closest('button'); if (!b) retu
   location.href = x.app || ('slack://channel?team=' + tm + '&id=' + x.ch);
   setTimeout(function(){ document.removeEventListener('visibilitychange', onHide); if (!left && !document.hidden) window.open(x.web || ('https://app.slack.com/client/' + tm + '/' + x.ch), '_blank'); }, 1800); };
 $('catbtn').onclick = function(){ $('done').hidden = false; window.scrollTo(0, 0); setMode('cat'); };
-function catOpen(){ if (!$('cname').value.trim()) $('cname').value = $('name').value.trim(); catParse(); catHist(); }
+function catOpen(){ if (!$('cname').value.trim()) $('cname').value = $('name').value.trim(); catParse(); catHist(); catCustLoad(); catWhoPaint(); }
+// 23 Nov 2026 (Abbas: "an option — is it an anonymous catalogue or for an existing customer, so we save customers all the time"): every
+// catalogue made for a name is noted by the catalogue job in cat/customers.json (names + country only); the screen offers them again.
+var CATC = { list: [], at: 0, who: 'c' };
+function catCustAll(){ var out = [], seen = {}, add = function(x){ var k = nmKey(x && x.name); if (!k || seen[k]) return; seen[k] = 1; out.push(x); };
+  var mine = []; try { mine = JSON.parse(ls('sj_cat_cnew') || '[]'); } catch(e){}
+  mine.forEach(add); CATC.list.forEach(add); out.sort(function(a, b){ return String(b.last || '').localeCompare(String(a.last || '')); }); return out; }
+function catCustFind(n){ var k = nmKey(n); if (!k) return null; return catCustAll().filter(function(x){ return nmKey(x.name) === k; })[0] || null; }
+function catCustNear(n){ var k = nmKey(n), best = null, bd = 99; if (k.length < 4) return null;
+  catCustAll().forEach(function(x){ var q = nmKey(x.name), d = lev(k, q); if (d && d <= Math.max(1, Math.floor(Math.max(k.length, q.length) / 4)) && d < bd) { bd = d; best = x; } }); return best; }
+async function catCustLoad(){ if (!CATC.at) { try { CATC.list = JSON.parse(ls('sj_cat_custs') || '[]'); } catch(e){} }
+  if (Date.now() - CATC.at < 60000) return; CATC.at = Date.now();
+  try { var r = await fetch('cat/customers.json?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return; var j = await r.json(); if (j && Array.isArray(j.list)) { CATC.list = j.list; ls('sj_cat_custs', JSON.stringify(j.list));
+      var mine = []; try { mine = JSON.parse(ls('sj_cat_cnew') || '[]'); } catch(e){}                 // mine = made on this phone, until the site's list has them
+      ls('sj_cat_cnew', JSON.stringify(mine.filter(function(m){ return !j.list.some(function(x){ return nmKey(x.name) === nmKey(m.name); }); }))); catWhoPaint(); } } catch(e){} }
+function catWhoPaint(){ var anon = CATC.who === 'a'; document.querySelectorAll('#cwho button').forEach(function(b){ b.classList.toggle('on', b.dataset.cw === CATC.who); });
+  $('ccbox').hidden = anon; $('canon').hidden = !anon; if (anon) return;
+  var all = catCustAll(), nm = $('cname').value.trim(), hit = catCustFind(nm), seen = {}, opts = [];
+  all.forEach(function(x){ seen[nmKey(x.name)] = 1; opts.push(x.name); });
+  [].forEach.call(document.querySelectorAll('#custnames option'), function(o){ var k = nmKey(o.value); if (k && !seen[k]) { seen[k] = 1; opts.push(o.value); } });
+  $('catcusts').innerHTML = opts.map(function(n){ return '<option value="' + esc(n) + '">'; }).join('');
+  $('ccsaved').innerHTML = all.slice(0, 14).map(function(x, i){ return '<button type="button" data-cc="' + esc(x.name) + '"' + (hit === x ? ' class="on"' : '') + '>' + esc(x.name) + (x.country ? ' <small>' + esc(x.country) + '</small>' : '') + '</button>'; }).join('');
+  var near = !hit && nm ? catCustNear(nm) : null, h = '';
+  if (!nm) h = all.length ? 'Pick a saved customer below, or type a new name — a new one is saved by itself. <small>اختر عميلاً أو اكتب اسماً جديداً</small>' : 'Type the customer name — it is saved for next time.';
+  else if (hit) h = '✓ <b>Saved customer</b>' + (hit.n ? ' · ' + hit.n + ' catalogue' + (hit.n > 1 ? 's' : '') : '') + (hit.last ? ' · last ' + esc(hit.last) : '');
+  else if (near) h = '🆕 New customer. Did you mean <b>' + esc(near.name) + '</b>? <button type="button" data-cc="' + esc(near.name) + '">Use ' + esc(near.name) + '</button>';
+  else h = '🆕 <b>New customer</b> — saved by itself when the catalogue is made. <small>عميل جديد — يُحفظ تلقائياً</small>';
+  $('ccnote').innerHTML = h; }
+function catCustUse(n){ var x = catCustFind(n); $('cname').value = x ? x.name : n; if (x && x.country) $('ccountry').value = x.country; catWhoPaint(); }
+$('cwho').addEventListener('click', function(e){ var b = e.target.closest('button[data-cw]'); if (!b) return; CATC.who = b.dataset.cw; catWhoPaint(); });
+$('ccbox').addEventListener('click', function(e){ var b = e.target.closest('button[data-cc]'); if (b) catCustUse(b.dataset.cc); });
+$('cname').addEventListener('input', function(){ var x = catCustFind($('cname').value); if (x && x.country && !$('ccountry').value.trim()) $('ccountry').value = x.country; catWhoPaint(); });
 function catParse(){
   var out = [], seen = {};
   // 17 Oct 2026 (Abbas): "6668 and 6668-1 ... it only gives me one design" — a dash suffix after the number is a different card, kept as its own line
@@ -2329,7 +2365,9 @@ $('clist').addEventListener('click', function(e){ var ck = e.target.closest('but
 function cst(cls, h){ var el = $('cst'); el.hidden = !h; el.className = 'stk ' + cls; el.innerHTML = h; }
 $('cmake').onclick = async function(){
   if (CAT.busy) return; catParse();
-  var name = $('cname').value.trim(), country = $('ccountry').value.trim(), items = CAT.items;
+  var anon = CATC.who === 'a', name = anon ? '' : $('cname').value.trim().replace(/\s+/g, ' '), country = anon ? '' : $('ccountry').value.trim(), items = CAT.items;
+  if (!anon && !name) { cst('bad', 'Who is it for? Pick or type the customer — or press <b>Anonymous</b> for a catalogue with no name. <small>اختر العميل أو اضغط بدون اسم</small>'); $('cname').focus(); return; }
+  if (!anon) { var sv = catCustFind(name); if (sv) { name = sv.name; $('cname').value = name; } }   // one spelling per customer
   if (!items.length) { cst('bad', 'Type the design numbers first.'); return; }
   var miss = items.filter(function(it){ return !it.mode; });
   if (miss.length) { cst('bad', 'Say SETS or COMPLETE for: ' + miss.map(function(x){ return 'SJ-' + x.no; }).join(', ') + ' <small>اختر SETS أو COMPLETE لكل تصميم</small>'); return; }
@@ -2339,6 +2377,10 @@ $('cmake').onclick = async function(){
   var withP = catShowP() && isBoss() && !!COST, sent = items.map(function(it){ var o = { no: it.no, mode: it.mode }, cd = catCard(it.no); if (cd) o.card = cd.id; if (withP) { var pr = priceOf(it.no.replace(/-ALL$/, '')); if (pr != null) o.price = pr; } return o; });
   try { await relay('catalog', { id: id, name: name, country: country, items: sent, prices: withP ? 1 : 0 }); }
   catch(e){ CAT.busy = false; cst('bad', 'Could not start: ' + esc(e.message)); return; }
+  if (name) { var mine = []; try { mine = JSON.parse(ls('sj_cat_cnew') || '[]'); } catch(e){}
+    var old = catCustFind(name), me = { name: name, country: country || (old && old.country) || '', n: ((old && old.n) || 0) + 1, last: new Date().toISOString().slice(0, 10) };
+    mine = mine.filter(function(m){ return nmKey(m.name) !== nmKey(name); }); mine.unshift(me); CATC.list = CATC.list.filter(function(x){ return nmKey(x.name) !== nmKey(name); }); ls('sj_cat_cnew', JSON.stringify(mine.slice(0, 40))); }
+  CATC.who = 'c'; catWhoPaint();
   var res = await waitJob(id, 'catalog', 30, function(sec){ cst('', 'Building the catalogue… ' + Math.floor(sec / 60) + ':' + ('0' + sec % 60).slice(-2) + '<small>photos, cut-outs, videos, cover picture</small>'); });
   CAT.busy = false;
   if (!res.ok) { cst('bad', 'Catalogue NOT made.<small>' + esc(res.error || '') + '</small>' + (res.report || []).map(function(l){ return '<small>' + esc(l) + '</small>'; }).join('')); return; }

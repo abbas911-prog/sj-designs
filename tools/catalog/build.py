@@ -421,7 +421,29 @@ def cat_save(stem, req, res, cards):
     d = {'v': 1, 'page': stem + '.html', 'made': old.get('made') or now, 'name': req.get('name', ''), 'country': req.get('country', ''),
          'items': items, 'prices': 1 if req.get('prices') else 0, 'fp': cat_fp(items, cards), 'built': now}
     json.dump(d, open('cat/%s.json' % stem, 'w'), ensure_ascii=False, indent=1)
+    if not old: cust_note(req.get('name', ''), req.get('country', ''), stem, now[:10])
     return d
+
+def cust_key(name): return re.sub(r'[^a-z0-9\u0600-\u06ff]+', '', str(name or '').lower())
+
+def cust_note(name, country, stem, day):
+    """cat/customers.json = the customers a catalogue was made for (name, country, how many, the last page), so the Stock app can offer
+    them next time. An anonymous catalogue (no name) is not noted. Names only — nothing about money."""
+    name = ' '.join(str(name or '').split()); country = ' '.join(str(country or '').split())
+    if not cust_key(name): return
+    os.makedirs('cat', exist_ok=True); d = {}
+    try: d = json.load(open('cat/customers.json'))
+    except Exception: pass
+    lst = [x for x in d.get('list', []) if isinstance(x, dict) and x.get('name')]
+    hit = [x for x in lst if cust_key(x['name']) == cust_key(name)]
+    x = hit[0] if hit else {'name': name, 'country': '', 'n': 0, 'pages': []}
+    if not hit: lst.append(x)
+    if country: x['country'] = country
+    if stem not in x.get('pages', []):
+        x['pages'] = ([stem] + x.get('pages', []))[:6]; x['n'] = int(x.get('n') or 0) + 1
+    if day >= str(x.get('last', '')): x['last'] = day; x['page'] = stem + '.html'
+    lst.sort(key=lambda y: (str(y.get('last', '')), y['name']), reverse=True)
+    json.dump({'v': 1, 'list': lst[:400]}, open('cat/customers.json', 'w'), ensure_ascii=False, indent=1)
 
 def group_sizes(title):
     s = title.replace('**', '  ').replace('{', '(').replace('}', ')')

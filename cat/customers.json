@@ -1,0 +1,93 @@
+{
+ "v": 1,
+ "list": [
+  {
+   "name": "ABU ABDULLAH",
+   "country": "(JEDDAH)",
+   "n": 2,
+   "pages": [
+    "abu-abdullah-1119b",
+    "abu-abdullah-1119"
+   ],
+   "last": "2026-11-19",
+   "page": "abu-abdullah-1119b.html"
+  },
+  {
+   "name": "DASTAGIR",
+   "country": "KUWAIT",
+   "n": 2,
+   "pages": [
+    "dastagir-1114",
+    "dastigir-1114"
+   ],
+   "last": "2026-11-14",
+   "page": "dastagir-1114.html"
+  },
+  {
+   "name": "ABBAS",
+   "country": "QATAR",
+   "n": 1,
+   "pages": [
+    "abbas-1114"
+   ],
+   "last": "2026-11-14",
+   "page": "abbas-1114.html"
+  },
+  {
+   "name": "ABU MUSTAFA(JORDAN)",
+   "country": "",
+   "n": 1,
+   "pages": [
+    "abu-mustafa-jordan-1031"
+   ],
+   "last": "2026-10-31",
+   "page": "abu-mustafa-jordan-1031.html"
+  },
+  {
+   "name": "NASIR (LIBYA)",
+   "country": "",
+   "n": 3,
+   "pages": [
+    "nasir-libya-1024",
+    "nasir-libya-1023b",
+    "nasir-libya-1023"
+   ],
+   "last": "2026-10-24",
+   "page": "nasir-libya-1024.html"
+  },
+  {
+   "name": "AHMAD AL WASTA",
+   "country": "LIBYA",
+   "n": 5,
+   "pages": [
+    "ahmad-al-wasta-1022c",
+    "ahmad-al-wasta-1022b",
+    "ahmad-al-wasta-1022",
+    "ahmad-al-wasta-1021b",
+    "ahmad-al-wasta-1021"
+   ],
+   "last": "2026-10-22",
+   "page": "ahmad-al-wasta-1022c.html"
+  },
+  {
+   "name": "MUSALIM",
+   "country": "",
+   "n": 1,
+   "pages": [
+    "musalim-1021"
+   ],
+   "last": "2026-10-21",
+   "page": "musalim-1021.html"
+  },
+  {
+   "name": "ALI",
+   "country": "",
+   "n": 1,
+   "pages": [
+    "ali-1021"
+   ],
+   "last": "2026-10-21",
+   "page": "ali-1021.html"
+  }
+ ]
+}

@@ -8,14 +8,14 @@ build.py keeps each page's request in cat/<page>.json together with a mark of ev
 
   * same link, same file name; the customer just opens it again
   * a design that is gone is left out; a page with nothing left is not touched
-  * pages older than LIVE_DAYS (45) are left alone; at most LIVE_MAX (12) pages per run
+  * pages older than LIVE_DAYS (25) are left alone; at most LIVE_MAX (12) pages per run
   --backfill : make cat/<page>.json for pages built before this existed (from what the page itself says), so they go live too
 """
 import datetime, glob, json, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import build as B
 
-DAYS = int(os.environ.get('LIVE_DAYS', '45')); MAXN = int(os.environ.get('LIVE_MAX', '12'))
+DAYS = int(os.environ.get('LIVE_DAYS', '25')); MAXN = int(os.environ.get('LIVE_MAX', '12'))
 def now(): return datetime.datetime.now(datetime.timezone.utc)
 def iso(t): return t.strftime('%Y-%m-%dT%H:%M:%SZ')
 def age_days(s):
@@ -64,6 +64,23 @@ def backfill(days=21):
         json.dump(d, open('cat/%s.json' % stem, 'w'), ensure_ascii=False, indent=1); made.append(stem)
     return made
 
+def customers():
+    """Once: the customers of the catalogue pages already on the site (what each page says about itself) into cat/customers.json."""
+    n = 0
+    for f in sorted(glob.glob('*.html')):
+        stem = f[:-5]
+        if re.match(r'(sz-|my|memo|factory|jarvis|assistant|timo|tryon|relaycode|fastcode|assistantcode)', stem): continue
+        s = open(f, encoding='utf-8', errors='ignore').read()
+        m = re.search(r'CUSTOMER\s*=\s*("(?:[^"\\]|\\.)*")\s*,\s*CUSTOMER_SUB\s*=\s*("(?:[^"\\]|\\.)*")', s)
+        md = re.search(r'-(\d\d)(\d\d)[a-p]?$', stem)
+        if not m or not md: continue
+        try: name, sub = json.loads(m.group(1)), json.loads(m.group(2))
+        except Exception: continue
+        if not name or name.upper() in ('NEW COLLECTION', 'SJ TRADING'): continue
+        y = now().year - (1 if (int(md.group(1)), int(md.group(2))) > (now().month, now().day) else 0)
+        B.cust_note(name, sub, stem, '%04d-%s-%s' % (y, md.group(1), md.group(2))); n += 1
+    return n
+
 def run():
     files = sorted(glob.glob('cat/*.json'))
     if not files: print('no saved catalogues'); return []
@@ -95,5 +112,6 @@ def run():
     return done
 
 if __name__ == '__main__':
+    if '--customers' in sys.argv: print('customers from', customers(), 'pages'); sys.exit(0)
     if '--backfill' in sys.argv: print('backfilled:', backfill())
     else: run()
