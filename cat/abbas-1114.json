@@ -103,7 +103,29 @@
   }
  ],
  "prices": 0,
- "fp": "",
- "built": "",
- "backfilled": 1
+ "fp": "b48399cdb30d05de",
+ "built": "2026-11-23T16:56:20Z",
+ "backfilled": 1,
+ "checked": "2026-11-23T16:56:20Z",
+ "n": 1,
+ "flags": [
+  "SJ-54758 has 2 READY cards — used the newest: Sj = **(54758)**__(56) pcs colour=(4)___(12-5/11-5/11-5/10-5/12-5) (type \"54758 all\" for every card)",
+  "SJ-6668-1: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-57026: 3 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-85974: 2 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-90856: 4 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-63910-2: 6 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-61924: 4 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-86619: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-86619: 3 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-15907: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-15907: 2 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-65082: 6 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-91746: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-35091: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-35091: 3 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-35218: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-35218: 8 sold-out colours cut out of the photo (numbers stay as on the card) — check the photo.",
+  "LEFT OUT (live): SJ-93810 is not in READY on Trello."
+ ]
 }
