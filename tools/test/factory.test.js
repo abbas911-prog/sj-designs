@@ -971,10 +971,27 @@ async function lookSuite(browser) {
       await page.click('#tabs button[data-t="cards"]'); await page.click('#groups .gp[data-g="1"]');
     });
     await test('Cards: a group with two lists shows its two chips, a group with one list shows none', async () => {
-      ok((await page.locator('#stages button:visible').count()) === 2 && /CUTTING START/.test(await page.textContent('#stages')) && /কাটিং শুরু/.test(await page.textContent('#stages')), 'CUTTING START + CUTTING chips: ' + await page.textContent('#stages'));
+      ok((await page.locator('#stages button:visible').count()) === 3 && /^All/.test(await page.textContent('#stages')) && /CUTTING START/.test(await page.textContent('#stages')) && /কাটিং শুরু/.test(await page.textContent('#stages')), 'CUTTING START + CUTTING chips: ' + await page.textContent('#stages'));
       await page.click('#groups .gp[data-g="0"]'); await until(async () => /48188/.test(await page.textContent('#list')), 5000, 'START cards');
       ok((await page.locator('#stages button:visible').count()) === 0, 'no chips for START');
       ok((await page.locator('#groups .gp').count()) === 8, 'all 8 boxes stay on top');
+    });
+    await test('a stage box shows every card it counts, whatever list was open last (CUTTING said 2, inside there was nothing)', async () => {   // 24 Nov 2026 (Abbas: "SJ50473 has been put to cutting, it shows 2 cards, but inside you cannot see the card at all")
+      await page.click('#tabs button[data-t="cards"]'); await page.click('#groups .gp[data-g="1"]');
+      await page.click('#stages button[data-i="3"]');           // the phone was left on the CUTTING START list, and its card has moved on to CUTTING since
+      await until(async () => /No cards here/.test(await page.textContent('#list')), 3000, 'the CUTTING START list is empty');
+      const n = await page.evaluate(() => window.__f.D.cards.filter(c => /^(CUTTING|Cutting\/\/\/START)$/.test((window.__f.D.lists.find(l => l[1] === c.l) || [])[0] || '')).length); ok(n >= 2, 'cards in the two cutting lists: ' + n);
+      ok(new RegExp('Show all ' + n + ' cards').test(await page.textContent('#list')), 'the empty list says where the cards are: ' + await page.textContent('#list'));
+      await page.click('#tabs button[data-t="home"]'); ok(new RegExp('(^|\\D)' + n + '(\\D|$)').test(await page.textContent('#hgroups .gp[data-g="1"]')), 'Home box counts ' + n + ': ' + await page.textContent('#hgroups .gp[data-g="1"]'));
+      await page.click('#hgroups .gp[data-g="1"]'); await until(() => page.locator('#hcards').isVisible(), 3000, 'Cards tab');
+      await until(async () => /17841/.test(await page.textContent('#list')) && /55555/.test(await page.textContent('#list')), 3000, 'both CUTTING cards are listed: ' + await page.textContent('#list'));
+      ok(await page.locator('#stages button[data-i="all"]').evaluate(e => e.classList.contains('on')) && new RegExp('All\\s*' + n).test(await page.textContent('#stages button[data-i="all"]')), 'the All chip is the chosen one');
+      ok((await page.locator('#list .cardrow').count()) === n && (await page.locator('#list .cardrow .lst').count()) === n, 'every card of the box is listed, each row says its list');
+      await page.click('#stages button[data-i="3"]'); await until(async () => /No cards here/.test(await page.textContent('#list')), 3000, 'empty list again');
+      await page.click('#gall'); await until(async () => /17841/.test(await page.textContent('#list')), 3000, 'Show all brings them back');
+      await page.click('#stages button[data-i="4"]'); await until(async () => page.locator('#stages button[data-i="4"]').evaluate(e => e.classList.contains('on')), 3000, 'one list chosen');
+      ok(/17841/.test(await page.textContent('#list')) && /55555/.test(await page.textContent('#list')), 'the CUTTING chip lists its own cards');
+      await page.click('#groups .gp[data-g="0"]');
     });
     await test('bottom bar = Home · Cards · ＋ · Chats · Returns · Workers; More lives behind the top-right button (Returns has a tile there too)', async () => {
       const ids = await page.$$eval('#tabs > button', b => b.map(x => x.id || x.dataset.t)); ok(ids.join(',') === 'home,cards,tplus,chats,returns,twork', 'bar: ' + ids.join(','));

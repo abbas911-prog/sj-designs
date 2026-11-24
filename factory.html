@@ -47,7 +47,8 @@ section[data-t]{animation:fade .18s ease}@keyframes fade{from{opacity:.4;transfo
 .hok{padding:16px 12px;text-align:center;color:#1d6b33;font-weight:700;font-size:14px}.hok small{display:block;color:var(--mute);font-weight:500;font-size:12px}
 .groups{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 0 8px}.gp{position:relative;border:0;background:#fff;border-radius:13px;box-shadow:var(--sh);padding:7px 6px 6px 10px;text-align:left;font:inherit;color:var(--ink);min-width:0}.gp b{display:block;font-size:19px;line-height:1.1}.gp span{display:block;font-size:9.5px;font-weight:800;letter-spacing:.02em;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gp small{display:block;font-size:9px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gp i{position:absolute;left:0;top:9px;bottom:9px;width:4px;border-radius:0 4px 4px 0}.gp.g1 i{background:#8b9bb0}.gp.g2 i{background:var(--gold)}.gp.g3 i{background:#7a52c7}.gp.g4 i{background:var(--green)}.gp.g5 i{background:#d17aa6}.gp.g6 i{background:#b9b0a2}
-.gp.on{background:var(--ink);color:#fff}.gp.on span,.gp.on small{color:#d8cfc0}.gp u{position:absolute;top:-4px;right:-2px;text-decoration:none;background:var(--red);color:#fff;border-radius:999px;font-size:10px;min-width:17px;height:17px;line-height:17px;text-align:center;padding:0 4px;font-weight:800}.gp .glate{display:block;font-style:normal;font-size:10px;font-weight:800;color:var(--red);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gp.on .glate{color:#ffb4b4}
+.gp.on{background:var(--ink);color:#fff}.gp.on span,.gp.on small{color:#d8cfc0}.gp u{position:absolute;top:-4px;right:-2px;text-decoration:none;background:var(--red);color:#fff;border-radius:999px;font-size:10px;min-width:17px;height:17px;line-height:17px;text-align:center;padding:0 4px;font-weight:800}.gall{display:block;margin:4px auto 20px;padding:12px 18px;border:0;border-radius:12px;background:#111;color:#fff;font:600 15px/1.2 inherit}
+.gp .glate{display:block;font-style:normal;font-size:10px;font-weight:800;color:var(--red);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gp.on .glate{color:#ffb4b4}
 #hm .groups{padding:0}.htiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.htile{border:0;background:#fff;border-radius:16px;box-shadow:var(--sh);padding:10px 6px;text-align:center;font:inherit;color:var(--ink)}.htile b{display:block;font-size:22px}.htile span{font-size:11px;color:var(--mute);font-weight:600}
 .sect{font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--mute);margin:14px 2px 8px}
 #lorders .lon{color:#c62828}#lorders .lomore{width:100%;margin:4px 0 10px;padding:10px;border:1px solid #ddd;border-radius:10px;background:transparent;font-size:14px;color:inherit}.loph{display:inline-block;width:34px;height:34px;border-radius:8px;background:#eee center/cover;vertical-align:middle;margin-right:8px;font-size:0;color:transparent;overflow:hidden}
@@ -323,7 +324,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-11-24a';
+var VER = '2026-11-24b';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -351,6 +352,8 @@ var NEXT = { 'SAMPLES': 'SAMPLE DONE', 'START': 'Cutting///START', 'Cutting///ST
 var UR = { 'SAMPLES': 'স্যাম্পল', 'SAMPLE DONE': 'স্যাম্পল হয়ে গেছে', 'START': 'শুরু', 'Cutting///START': 'কাটিং শুরু', 'CUTTING': 'কাটিং', 'IN LINE': 'লাইন', 'READY FOR HAND WORK': 'হ্যান্ড ওয়ার্কের জন্য রেডি', 'IN HAND WORK': 'হ্যান্ড ওয়ার্কে', 'CAME FROM HAND WORK': 'হ্যান্ড ওয়ার্ক থেকে এসেছে',
   'IN LINE (2)': 'লাইন (2)', 'IRON/CHECKING': 'ইস্ত্রি · চেকিং', 'READY': 'রেডি', 'READY 2': 'রেডি 2', 'FINISH': 'শেষ', 'FINISH SAMPLES': 'স্যাম্পল শেষ', 'RETURNS': 'ফেরত', 'RETURNS BACK': 'ফেরত এসেছে' };
 var D = { lists: [], cards: [], byId: {}, w: true, later: {} }, cur = +(ls('sj_fac_chip') || 2), open = null; if (!CHIPS[cur] || /^RETURNS/.test(CHIPS[cur][0])) cur = 2;
+// 24 Nov 2026 (Abbas: "CUTTING shows 2 cards, but inside you cannot see the card at all"): a stage box opens ALL its lists together; a chip under it narrows to one list
+var GA = true;   // not kept on the phone: after a restart the box shows everything again
 function lname(id){ var l = D.lists.filter(function(x){ return x[1] === id; })[0]; return l ? l[0] : '?'; }
 function lid(name){ var l = D.lists.filter(function(x){ return x[0] === name; })[0]; return l ? l[1] : null; }
 
@@ -574,7 +577,7 @@ $('inbox').onclick = function(e){ if (e.target.closest('#bcatch')) { catchUp(); 
 var DRAWN = '';
 function draw(force){
   mvApply();
-  var sig = cur + '|' + Math.floor(Date.now() / 86400000) + '|' + $('q').value + '|' + D.cards.map(function(c){ return c.id + c.l + c.pos + c.img + c.name + (c.due || '') + JSON.stringify(c.lb || '') + (D.th[c.id] ? D.th[c.id].n : 0) + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|' + D.w;
+  var sig = cur + (GA ? 'a' : '') + '|' + Math.floor(Date.now() / 86400000) + '|' + $('q').value + '|' + D.cards.map(function(c){ return c.id + c.l + c.pos + c.img + c.name + (c.due || '') + JSON.stringify(c.lb || '') + (D.th[c.id] ? D.th[c.id].n : 0) + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|' + D.w;
   if (!FABINIT) { FABINIT = 1; fabAll(true); } sig += '|fb' + FABV + '.' + OUT.filter(function(x){ return /^FABRIC NEEDED/.test(x.text || ''); }).length;
   sig += '|xr' + xrooms().map(function(c){ return c.id + unread(c) + ((D.th[c.id] || {}).tx || '') + ((D.later || {})[c.id] ? 'L' : ''); }).join(',') + '|dm' + unread(DMC) + ((D.dm || {}).name || '') + ((D.later || {}).dm ? 'L' : '') + '|lais' + unread(LAISC) + ((D.lais || {}).name || '') + ((D.later || {}).lais ? 'L' : '');
   sig += '|wk' + (WKR ? WKR.t : 0);
@@ -582,16 +585,20 @@ function draw(force){
   dmRow(); laisRow(); xroomRows();
   // 21 Nov 2026: the stages are boxes (groups of lists) that all fit on the screen - no sideways sliding; a group with several lists shows them as chips under it
   var gcur = grpOf(cur); $('groups').innerHTML = groupsHtml(gcur);
-  $('stages').innerHTML = CHIPS.map(function(ch, i){ if (/^RETURNS/.test(ch[0]) || gcur < 0 || GRP[gcur][3].length < 2 || GRP[gcur][3].indexOf(i) < 0) return ''; var cs0 = D.cards.filter(function(c){ return inChip(c, i); }), n = cs0.length, u = cs0.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0);
-    return '<button data-i="' + i + '"' + (i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i>' + (u ? '<b class="u">' + u + '</b>' : '') + '<small>' + ch[2] + '</small></button>'; }).join('');
+  var gl = gcur >= 0 ? GRP[gcur][3] : [cur], all = GA && gl.length > 1, inGrp = function(c){ return gl.some(function(i){ return inChip(c, i); }); };
+  $('stages').innerHTML = (gl.length > 1 ? '<button data-i="all"' + (all ? ' class="on"' : '') + '>All<i>' + D.cards.filter(inGrp).length + '</i><small>সব</small></button>' : '') + CHIPS.map(function(ch, i){ if (/^RETURNS/.test(ch[0]) || gcur < 0 || GRP[gcur][3].length < 2 || GRP[gcur][3].indexOf(i) < 0) return ''; var cs0 = D.cards.filter(function(c){ return inChip(c, i); }), n = cs0.length, u = cs0.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0);
+    return '<button data-i="' + i + '"' + (!all && i === cur ? ' class="on"' : '') + '>' + ch[0] + '<i>' + n + '</i>' + (u ? '<b class="u">' + u + '</b>' : '') + '<small>' + ch[2] + '</small></button>'; }).join('');
   // 20 Oct 2026 (Abbas: "do all"): search by words too - "lace", "red", a worker's name, a label: every word must be on the card (title, labels,
   // fields, stage). Only numbers (or SJ + number) = the design-number search as before.
   var qr = $('q').value.trim().toLowerCase(), qn = qr.replace(/^s[jh]\s*[-=:#]?\s*(?=\d)/, ''), q = /[a-z\u0980-\u09ff]/.test(qn) ? '' : qr.replace(/\D/g, ''), qw = q || !qr ? null : qr.split(/\s+/).filter(Boolean);
   var cs = D.cards.filter(function(c){ if (qw) { var hay = (c.name + ' ' + (c.lb || []).map(function(l){ return l.n; }).join(' ') + ' ' + Object.keys(c.f || {}).map(function(k){ return k + ' ' + c.f[k]; }).join(' ') + ' ' + lname(c.l)).toLowerCase(); return qw.every(function(w){ return hay.indexOf(w) >= 0; }); }
-    return q ? parse(c.name).no.indexOf(q) >= 0 || c.name.indexOf(q) >= 0 : inChip(c, cur); });
-  cs.sort(function(a, b){ return a.pos - b.pos; });
-  $('list').innerHTML = cs.length ? cs.map(function(c){ return rowHtml(c, !!qr || CHIPS[cur][1].length > 1); }).join('')
-    : '<div class="empty">' + (qr ? 'No card with “' + esc(qr) + '” · কোনো কার্ড পাওয়া যায়নি' : 'No cards here · এখানে কোনো কার্ড নেই') + '</div>';
+    return q ? parse(c.name).no.indexOf(q) >= 0 || c.name.indexOf(q) >= 0 : all ? inGrp(c) : inChip(c, cur); });
+  var ord = function(c){ for (var k = 0; k < gl.length; k++) if (inChip(c, gl[k])) return k; return 99; };
+  cs.sort(function(a, b){ return (all && !qr ? ord(a) - ord(b) : 0) || a.pos - b.pos; });
+  $('list').innerHTML = cs.length ? cs.map(function(c){ return rowHtml(c, !!qr || all || CHIPS[cur][1].length > 1); }).join('')
+    : '<div class="empty">' + (qr ? 'No card with “' + esc(qr) + '” · কোনো কার্ড পাওয়া যায়নি' : 'No cards here · এখানে কোনো কার্ড নেই') + '</div>'
+      + (!qr && !all && gl.length > 1 && D.cards.some(inGrp) ? '<button class="gall" id="gall">Show all ' + D.cards.filter(inGrp).length + ' cards of ' + GRP[gcur][0] + ' · সব কার্ড দেখুন</button>' : '');
+  if ($('gall')) $('gall').onclick = function(){ GA = true; draw(true); };
   document.querySelectorAll('#list .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); });
   inbox(); laterBox(); retBox(); chatsDraw(); retDraw(); tabBadges(); moreDraw(); if (TAB === 'home') { homeDraw(); homeLoad(); }
 }
@@ -634,7 +641,7 @@ function grpOf(i){ for (var g = 0; g < GRP.length; g++) if (GRP[g][3].indexOf(i)
 function groupsHtml(sel){ return GRP.map(function(G, gi){ var cs = D.cards.filter(function(c){ return G[3].some(function(i){ return inChip(c, i); }); }), u = cs.reduce(function(a, c){ return a + (unread(c) ? 1 : 0); }, 0), late = cs.filter(function(c){ var d = dueDays(c); return d !== null && d < 0 && !AGEOFF.test(lname(c.l)); }).length;   // 24 Nov 2026 (Ibrahim circled the bare red ⚠ on CUTTING: "some issue?"): the box now says in words what the mark means
     return '<button class="gp ' + G[2] + (gi === sel ? ' on' : '') + (late ? ' late' : '') + '" data-g="' + gi + '" data-chips="' + G[3].join(' ') + '"><i></i><b>' + cs.length + '</b><span>' + G[0] + '</span><small>' + G[1] + '</small>' + (late ? '<em class="glate">⏰ ' + late + ' late · দেরি</em>' : '') + (u ? '<u>' + u + '</u>' : '') + '</button>'; }).join(''); }
 function groupGo(gi){ var G = GRP[gi]; if (!G) return; var i = G[3].indexOf(cur) >= 0 ? cur : (G[3].filter(function(x){ return D.cards.some(function(c){ return inChip(c, x); }); })[0]); if (i === undefined) i = G[3][0];
-  cur = i; ls('sj_fac_chip', String(cur)); $('q').value = ''; if (TAB !== 'cards') setTab('cards'); draw(true); window.scrollTo(0, 0); }
+  cur = i; ls('sj_fac_chip', String(cur)); GA = true; $('q').value = ''; if (TAB !== 'cards') setTab('cards'); draw(true); window.scrollTo(0, 0); }
 var HM = { at: 0, pat: 0 };
 function homeLoad(){ if ((TAB !== 'home' && TAB !== 'cards') || !PW || !D.cards || !D.cards.length || quotaHit()) return; var now = Date.now();   // Cards too: its rows show who holds each design
   if (now - HM.at > 900000) {   // 21 Nov 2026: every 15 min by itself (and once after a Give / Done on this phone) - it was every 55 s, and each read costs the relay ~20 Trello calls: Google's daily limit was used up by the evening
@@ -732,7 +739,7 @@ function retDraw(force){ if (TAB !== 'returns' || !D.cards) return; var cs = D.c
   $('retlist').innerHTML = cs.length ? cs.map(function(c){ return rowHtml(c, false); }).join('') : '<div class="empty">' + (RSEG === 'RETURNS' ? 'Nothing at the factory · কারখানায় কিছু নেই' : 'Nothing came back yet · এখনো কিছু ফেরত আসেনি') + '</div>';
   document.querySelectorAll('#retlist .cardrow').forEach(function(r){ photo(D.byId[r.dataset.id], r.querySelector('.ph')); }); }
 $('retlist').onclick = function(e){ if (Date.now() - SWX < 450) return; var r = e.target.closest('.cardrow'); if (r) openCard(D.byId[r.dataset.id]); };
-$('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; ls('sj_fac_chip', String(cur)); $('q').value = ''; draw(); window.scrollTo(0, 0); var on = document.querySelector('#stages button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' }); };
+$('stages').onclick = function(e){ var b = e.target.closest('button'); if (!b) return; if (b.dataset.i === 'all') GA = true; else { cur = +b.dataset.i; ls('sj_fac_chip', String(cur)); GA = false; } $('q').value = ''; draw(); window.scrollTo(0, 0); var on = document.querySelector('#stages button.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' }); };
 $('q').oninput = function(){ if (TAB !== 'cards') setTab('cards'); draw(); };
 $('list').onclick = function(e){ if (Date.now() - SWX < 450) return; var r = e.target.closest('.cardrow'); if (!r) return; var db = e.target.closest('.rdone'), c = D.byId[r.dataset.id];
   if (db) { if (c && NEXT[lname(c.l)]) move(NEXT[lname(c.l)], c); return; }      // 21 Nov 2026: Done → on the row (same 5-s Undo bar as the swipe)
