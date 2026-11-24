@@ -26,9 +26,11 @@ def ar_count(n):
     if n == 2: return 'تصميمان جديدان'
     return ('%d' % n).translate(AR_DIG) + (' تصاميم جديدة' if n <= 10 else ' تصميماً جديداً')
 
-def cover_html(name, country, n, photos, arfont=''):
+def cover_html(name, country, n, photos, arfont='', arname=''):
     """The picture of the link, 1200 x 630: the newest designs across the whole picture, a dark green shade rising from the bottom,
-    the customer's name large on it, a gold line, and what to do in English and Arabic. photos = picture addresses (1 to 8 are used)."""
+    the customer's name large on it, a gold line, and what to do in English and Arabic. photos = picture addresses (1 to 8 are used).
+    arname (24 Nov 2026, Abbas: "you automatically write Arabic names as well. It will be very appealing for the customers") = his name
+    or company in Arabic, written on the right at the height of his name."""
     k = len(photos)
     if k > 4: k = 6 if k <= 6 else 8
     cols = k if k <= 4 else (3 if k == 6 else 4); rows = 1 if k <= 4 else 2
@@ -38,6 +40,8 @@ def cover_html(name, country, n, photos, arfont=''):
     big = 78 if len(name or '') <= 14 else 62 if len(name or '') <= 22 else 48
     badge = ('<div class="new">%d NEW DESIGN%s</div>' % (n, '' if n == 1 else 'S')) if n else ''
     ar = (ar_count(n) + ' · ' if n else '') + 'اضغط للمشاهدة والطلب'
+    wa = ('<div class="wa" style="font-size:%dpx">%s</div>' % (50 if len(arname) <= 16 else 40 if len(arname) <= 24 else 32, H.escape(arname))) if arname else ''
+    wr = 500 if arname else 40                                # his Latin name leaves the right side to the Arabic one
     return '''<!doctype html><meta charset="utf-8"><style>
 %s
 html,body{margin:0}
@@ -47,19 +51,21 @@ body{position:relative;width:1200px;height:630px;background:#0f2a24;font-family:
 .sh{position:absolute;left:0;right:0;bottom:0;height:400px;background:linear-gradient(to top,rgba(12,34,29,.97) 0,rgba(12,34,29,.93) 38%%,rgba(12,34,29,.55) 68%%,rgba(12,34,29,0) 100%%)}
 .tag{position:absolute;left:36px;top:30px;padding:9px 18px;border-radius:999px;background:rgba(12,34,29,.78);border:1.5px solid #C9A961;color:#E9D9B4;font:bold 20px Arial;letter-spacing:4px}
 .new{position:absolute;right:36px;top:30px;padding:10px 20px;border-radius:999px;background:#C9A961;color:#14251f;font:bold 22px Arial;letter-spacing:2px}
-.who{position:absolute;left:40px;right:40px;bottom:118px;font:bold %dpx Arial;letter-spacing:1px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 14px rgba(0,0,0,.45)}
+.who{position:absolute;left:40px;right:%dpx;bottom:118px;font:bold %dpx Arial;letter-spacing:1px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 14px rgba(0,0,0,.45)}
 .who small{font:bold 26px Arial;color:#E9D9B4;margin-left:18px;letter-spacing:5px}
+.wa{position:absolute;right:40px;bottom:108px;max-width:440px;font-family:'SJArabic','Segoe UI',Arial;font-weight:bold;direction:rtl;color:#fff;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 14px rgba(0,0,0,.45)}
 .ln{position:absolute;left:40px;bottom:96px;width:120px;height:4px;background:#C9A961;border-radius:2px}
 .en{position:absolute;left:40px;bottom:38px;font:bold 25px Arial;color:#E9D9B4;letter-spacing:1.5px}
 .ar{position:absolute;right:40px;bottom:32px;font:bold 32px 'SJArabic','Segoe UI',Arial;direction:rtl;color:#fff}
-</style><div class="g">%s</div><div class="sh"></div><div class="tag">SJ TRADING · DUBAI</div>%s
+</style><div class="g">%s</div><div class="sh"></div><div class="tag">SJ TRADING · DUBAI</div>%s%s
 <div class="who">%s<small>%s</small></div><div class="ln"></div>
-<div class="en">TAP TO VIEW &amp; ORDER</div><div class="ar">%s</div>''' % (font, cols, rows, big, tiles, badge, who, sub, ar)
+<div class="en">TAP TO VIEW &amp; ORDER</div><div class="ar">%s</div>''' % (font, cols, rows, wr, big, tiles, badge, wa, who, sub, ar)
 
-def page_html(code, stem, name, country, n, relay, v):
-    """The customer's link: his picture card for WhatsApp, and a few lines that fetch his page from the relay and show it."""
+def page_html(code, stem, name, country, n, relay, v, arname=''):
+    """The customer's link: his picture card for WhatsApp, and a few lines that fetch his page from the relay and show it.
+    While his page loads he sees his name, in Arabic too (arname), on the catalogue's own colours."""
     who = (name or 'SJ Trading') + (' · ' + country if country else '')
-    title = who + ' — SJ Trading'
+    title = who + (' · ' + arname if arname else '') + ' — SJ Trading'
     desc = (('%d new design%s · ' % (n, '' if n == 1 else 's')) if n else '') + 'Tap to view your catalogue and order. ' + ((ar_count(n) + ' · ') if n else '') + 'اضغط لمشاهدة الكتالوج والطلب'
     img = BASE + 'og-my-%s.jpg?v=%s' % (stem, v)
     e = lambda s: H.escape(s, quote=True)
@@ -70,8 +76,11 @@ def page_html(code, stem, name, country, n, relay, v):
             '<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">\n<meta property="og:image:alt" content="%s">\n'
             '<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:image" content="%s">\n<meta name="description" content="%s">\n'
             '<meta name="robots" content="noindex">\n'
-            '<style>body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f5f7f3;color:#15211b}#w{padding:70px 20px;text-align:center}#w p{color:#5d6a62}</style>\n'
-            '</head><body><div id="w"><h2>%s</h2><p id="m">Loading · جاري التحميل</p></div>\n<script>\n'
+            '<style>body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#F5EFEC;color:#241616}#w{min-height:100vh;box-sizing:border-box;padding:22vh 22px 40px;text-align:center}'
+            '#w small{display:block;font-size:11px;font-weight:700;letter-spacing:.28em;color:#B08D3C;margin-bottom:16px}#w h2{font-family:Georgia,"Times New Roman",serif;font-weight:500;font-size:34px;margin:0;letter-spacing:.02em}'
+            '#w h3{font-family:"Geeza Pro","Noto Naskh Arabic","Segoe UI",serif;font-weight:600;font-size:28px;margin:10px 0 0;color:#6B1F2C}#w i{display:block;width:56px;height:2px;background:#B08D3C;margin:18px auto}'
+            '#w p{color:#7A6663;font-size:14px;margin:0;animation:sjp 1.2s ease-in-out infinite alternate}@keyframes sjp{from{opacity:.35}to{opacity:1}}</style>\n'
+            '</head><body><div id="w"><small>SJ TRADING · DUBAI</small><h2>%s</h2>%s<i></i><p id="m"><span dir="rtl" lang="ar">جاري تحميل الكتالوج</span> · Loading your catalogue</p></div>\n<script>\n'
             '// The customer\'s own page of the new catalogue (job %s). This file only fetches the page from the relay and shows it; it holds no data.\n'
             '(function () {\n  var R = %s, c = %s, m = document.getElementById(\'m\');\n'
             '  function bad() { m.innerHTML = \'This link is not ready. Please message us on WhatsApp.<br><span dir="rtl" lang="ar">الرابط غير جاهز · يرجى التواصل معنا عبر واتساب</span>\'; }\n'
@@ -80,7 +89,7 @@ def page_html(code, stem, name, country, n, relay, v):
             '    if (!j || !j.ok || !j.page) return bad();\n'
             '    document.open(); document.write(\'<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>\' + j.page + \'</body></html>\'); document.close();\n'
             '  }).catch(bad);\n})();\n</script></body></html>\n') % (
-        e(title), e(title), e(desc), BASE, stem, e(img), e(img), e(title), e(img), e(desc), e(who), e(v), json.dumps(relay), json.dumps(code))
+        e(title), e(title), e(desc), BASE, stem, e(img), e(img), e(title), e(img), e(desc), e(who), ('<h3 dir="rtl" lang="ar">%s</h3>' % e(arname)) if arname else '', e(v), json.dumps(relay), json.dumps(code))
 
 def shot(page, out):
     """the cover's HTML -> a 1200 x 630 JPEG under 280 KB (Chrome on the runner, as the catalogue job does it)"""
@@ -103,6 +112,7 @@ def build(req):
     if not re.fullmatch(r'[A-Za-z0-9_-]{10,40}', code): return {'ok': False, 'error': 'bad page code'}
     if not re.fullmatch(r'https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec', relay): return {'ok': False, 'error': 'bad relay link'}
     name = re.sub(r'[\x00-\x1f<>]', ' ', str(req.get('name') or '')).strip()[:60]; country = re.sub(r'[\x00-\x1f<>]', ' ', str(req.get('country') or '')).strip()[:40]
+    arname = re.sub(r'[\x00-\x1f<>]', ' ', str(req.get('ar') or '')).strip()[:60]
     try: n = max(0, min(99, int(req.get('n') or 0)))
     except (TypeError, ValueError): n = 0
     ph = [a for a in (req.get('ph') or []) if isinstance(a, str) and re.fullmatch(r'[0-9a-f]{24}', a)][:8]
@@ -110,8 +120,8 @@ def build(req):
     photos = [pathlib.Path(os.path.abspath('thumbs/%s.jpg' % a)).as_uri() if os.path.exists('thumbs/%s.jpg' % a) else BASE + 'thumbs/%s.jpg' % a for a in ph]
     font = os.path.join(os.path.dirname(HERE), 'catalog', 'fonts', 'NotoNaskhArabic-Regular.ttf')
     v = re.sub(r'[^a-z0-9-]', '', str(req.get('id') or ''))[:40] or 'x'
-    shot(cover_html(name, country, n, photos, pathlib.Path(font).as_uri() if os.path.exists(font) else ''), 'og-my-%s.jpg' % stem)
-    open('my-%s.html' % stem, 'w', encoding='utf-8').write(page_html(code, stem, name, country, n, relay, v))
+    shot(cover_html(name, country, n, photos, pathlib.Path(font).as_uri() if os.path.exists(font) else '', arname), 'og-my-%s.jpg' % stem)
+    open('my-%s.html' % stem, 'w', encoding='utf-8').write(page_html(code, stem, name, country, n, relay, v, arname))
     return {'ok': True, 'kind': 'page2', 'page': 'my-%s.html' % stem, 'cover': 'og-my-%s.jpg' % stem, 'url': BASE + 'my-%s.html' % stem, 'bytes': os.path.getsize('og-my-%s.jpg' % stem)}
 
 def main():
