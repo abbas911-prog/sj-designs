@@ -9,9 +9,14 @@ KEY = os.environ.get('TRELLO_KEY', '83fea3748717dd1e3fe28a15f2371759')
 TOKEN = os.environ['TRELLO_TOKEN'].strip()
 API = os.environ.get('TRELLO_API', 'https://api.trello.com')
 BOARD = '6527c52485d9627f63157296'                       # ALM
-LISTS = {'65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '6527c572b12b208471c080cb', '6527c57751007e81a43f55a6', '6527c57cd7e267fbf2a602b4',
+# 24 Nov 2026 (Abbas, Ibrahim's screenshot with CUTTING circled: "not uploading or some issue"): the list of lists here had not followed the
+# app - Cutting///START (a stage since 27 Oct) and RETURNS / RETURNS BACK were missing, so a card lost its photo on the site the moment it
+# moved there and the app had to fetch it the slow way (or showed none). Every list the app shows must be here: ids below + the names in NAMES.
+LISTS = {'6ae07f38a77a2321736ef9da',                      # Cutting///START
+         '65f8c9fd96d90dda4b355f0a', '65a121d2829a36ccacd05593', '6527c572b12b208471c080cb', '6527c57751007e81a43f55a6', '6527c57cd7e267fbf2a602b4',
          '6527c585b9300f804906d9bd', '6527c59b796865bd9639b0c3', '6602ad25e74db40a25ab0296', '6527c5a3964596815651a97f', '6527c5a93db4d8b8e91a8be9',
          '6527c5b13129a9ba37acd3ad', '699b35ceb77292db0289c473', '6527c5b41e630c094b619f5e', '68b77a221eef6fbb9a305e0e'}
+NAMES = {'RETURNS', 'RETURNS BACK'}                      # made by the relay; found by name
 OUT = 'facthumbs'
 AUTH = {'Authorization': f'OAuth oauth_consumer_key="{KEY}", oauth_token="{TOKEN}"'}
 
@@ -30,7 +35,13 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     q = urllib.parse.urlencode({'filter': 'open', 'limit': 1000, 'fields': 'idList,idAttachmentCover', 'attachments': 'cover',
                                 'attachment_fields': 'id,mimeType,url,previews', 'key': KEY, 'token': TOKEN})
-    cards = [c for c in json.loads(get(f'{API}/1/boards/{BOARD}/cards?{q}')) if c.get('idList') in LISTS]
+    lists = set(LISTS)
+    try:
+        ql = urllib.parse.urlencode({'filter': 'open', 'fields': 'name', 'key': KEY, 'token': TOKEN})
+        lists |= {l['id'] for l in json.loads(get(f'{API}/1/boards/{BOARD}/lists?{ql}')) if str(l.get('name', '')).strip() in NAMES}
+    except Exception as e:
+        print('lists by name not read', type(e).__name__, str(e)[:80], file=sys.stderr)
+    cards = [c for c in json.loads(get(f'{API}/1/boards/{BOARD}/cards?{q}')) if c.get('idList') in lists]
     want, made, failed = set(), 0, 0
     for c in cards:
         for a in c.get('attachments', [])[:1]:

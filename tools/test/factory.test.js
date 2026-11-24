@@ -940,7 +940,7 @@ async function lookSuite(browser) {
       await until(async () => /1 design is late/.test(await page.textContent('#hneeds')) && /SJ-66001/.test(await page.textContent('#hneeds')), 8000, 'the late design is named: ' + await page.textContent('#hneeds'));
       const box = g => page.locator('#hgroups .gp[data-g="' + g + '"]');
       ok((await box(0).locator('b').textContent()) === '2' && (await box(1).locator('b').textContent()) === '3', 'START 2 · CUTTING 3: ' + await page.textContent('#hgroups'));
-      ok(await box(1).evaluate(e => e.classList.contains('late')), 'the box with the late design is marked');
+      ok(await box(1).evaluate(e => e.classList.contains('late')) && /⏰ 1 late · দেরি/.test(await box(1).textContent()) && !/⚠/.test(await box(1).textContent()) && !/late/.test(await box(0).textContent()), 'the box with the late design says "1 late" in words (24 Nov 2026: a bare ⚠ looked like an error): ' + await box(1).textContent());
       ok(/শুরু/.test(await box(0).textContent()) && (await page.locator('#hgroups .gp').count()) === 8, '8 boxes, Bengali names');
       await until(async () => /^\d+$/.test((await page.locator('#hm .htile b').first().textContent()).trim()), 10000, 'TODAY numbers loaded');
     });
