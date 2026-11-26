@@ -1,0 +1,30 @@
+{
+ "v": 1,
+ "page": "example-1126.html",
+ "made": "2026-11-26T14:50:12Z",
+ "name": "EXAMPLE",
+ "country": "",
+ "items": [
+  {
+   "no": "63810",
+   "mode": "S",
+   "card": "69d56f53e93dcb1da0d35094",
+   "price": 120.0
+  },
+  {
+   "no": "20563",
+   "mode": "S",
+   "card": "69ce27848ea904e6321b989b",
+   "price": 120.0
+  },
+  {
+   "no": "29847",
+   "mode": "S",
+   "card": "69eb42a38dbdeb97d61287ac",
+   "price": 115.0
+  }
+ ],
+ "prices": 1,
+ "fp": "69cec2cd426fe38b",
+ "built": "2026-11-26T14:50:12Z"
+}

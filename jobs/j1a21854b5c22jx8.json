@@ -1,0 +1,38 @@
+{
+ "ok": true,
+ "page": "example-1126.html",
+ "url": "https://abbas911-prog.github.io/sj-designs/example-1126.html?v=1",
+ "cover": "og-example-1126.jpg",
+ "name": "EXAMPLE",
+ "country": "",
+ "designs": [
+  "63810",
+  "20563",
+  "29847"
+ ],
+ "report": [
+  "SJ-63810 SETS  4+4+13+4+0+8+4 = 37 ✓ (card: 37) → 6 colours",
+  "SJ-20563 SETS  0+4+4+4+4+4+8+4+8+8+4+8 = 60 ✓ (card: 60) → 11 colours",
+  "SJ-29847 SETS  4+4+4+4+4 = 20 ✓ (card: 20) → 5 colours"
+ ],
+ "flags": [
+  "SJ-63810: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-63810: 1 sold-out colour cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-20563: no JAMĀL photo for every colour group — shop photo used.",
+  "SJ-20563: 1 sold-out colour cut out of the photo (numbers stay as on the card) — check the photo.",
+  "SJ-29847: no JAMĀL photo for every colour group — shop photo used."
+ ],
+ "stem": "example-1126",
+ "cards": {
+  "63810": "69d56f53e93dcb1da0d35094",
+  "20563": "69ce27848ea904e6321b989b",
+  "29847": "69eb42a38dbdeb97d61287ac"
+ },
+ "videos": [
+  "20563",
+  "29847",
+  "63810"
+ ],
+ "bytes": 1146309,
+ "id": "j1a21854b5c22jx8"
+}
