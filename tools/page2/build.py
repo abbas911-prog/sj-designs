@@ -105,6 +105,61 @@ def shot(page, out):
             if os.path.getsize(out) < 280_000 or q <= 50: break
             q -= 6
 
+# ---------- 27 Nov 2026: the videos of his designs (Abbas: "there is no video with the design?" -> "I want the videos just like before").
+# Until now only the old catalogue's job (tools/catalog/build.py, video()) made vid/<no>.mp4. The request may name designs of his page that
+# have no video yet: vids = ['48188:<the id of its card on the SJTC board>', …]. For each one the card's first video is taken from Trello and
+# made small exactly the way the old catalogue did it. Only cards of the SJTC board, never one of its SAMPLES list; only vid/<no>.mp4 and
+# vid/<no>.src are written. Run as the job's second part ("build.py videos"), after his link page is published, so the link never waits.
+SJTC, SAMPLES = '66254d970f894fea0c7cebae', '6824cdd97bb99de098f1b7ae'
+def _trello():
+    key = os.environ.get('TRELLO_KEY', '')
+    if not key:                                             # the same key the catalogue job has; read from its file, not written a second time
+        try: key = re.search(r"TRELLO_KEY',\s*'([0-9a-f]{32})'", open(os.path.join(os.path.dirname(HERE), 'catalog', 'build.py'), encoding='utf-8').read()).group(1)
+        except Exception: key = ''
+    return {'Authorization': 'OAuth oauth_consumer_key="%s", oauth_token="%s"' % (key, os.environ.get('TRELLO_TOKEN', '').strip())}
+def _fetch(url, headers=None, timeout=180):
+    import urllib.request
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers or {}), timeout=timeout) as r: return r.read()
+def _ffmpeg():
+    import shutil
+    p = os.environ.get('FFMPEG') or shutil.which('ffmpeg')
+    if p: return p
+    try:
+        import imageio_ffmpeg; return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception: return 'ffmpeg'
+def videos(req, budget=16 * 60):
+    "-> {ok, kind: 'page2-videos', made: [numbers], same: [already there], none: [the card has no video], bad: ['number: why']}"
+    import time, shutil
+    t0 = time.time(); A = _trello(); made, same, none, bad = [], [], [], []
+    os.makedirs('vid', exist_ok=True)
+    for v in (req.get('vids') or [])[:10]:
+        m = re.fullmatch(r'(\d{3,6}(?:-[A-Za-z0-9]{1,3})?):([0-9a-f]{24})', str(v))
+        if not m: continue
+        no, cid = m.group(1), m.group(2)
+        if time.time() - t0 > budget: bad.append(no + ': no time left in this run, it comes with the next one'); continue
+        try:
+            c = json.loads(_fetch('https://api.trello.com/1/cards/%s?fields=idBoard,idList,name&attachments=true&attachment_fields=id,name,mimeType,url,bytes' % cid, A, 60))
+            if c.get('idBoard') != SJTC or c.get('idList') == SAMPLES or not re.search(r'(?<!\d)%s(?!\d)' % re.escape(no.split('-')[0]), str(c.get('name') or '')):
+                bad.append(no + ': that card is not this design on the SJTC board'); continue
+            vs = [a for a in c.get('attachments') or [] if str(a.get('mimeType') or '').startswith('video/')]
+            if not vs: none.append(no); continue
+            a = vs[0]; out, mark = 'vid/%s.mp4' % no, 'vid/%s.src' % no
+            if os.path.exists(out) and os.path.exists(mark) and open(mark).read().strip() == a['id']: same.append(no); continue
+            u = str(a.get('url') or '')
+            for pre in ('https://trello.com', 'https://api.trello.com'):
+                if u.startswith(pre): u = 'https://api.trello.com' + u[len(pre):]; break
+            with tempfile.TemporaryDirectory() as t:
+                src, tmp = os.path.join(t, 'in'), os.path.join(t, 'out.mp4'); open(src, 'wb').write(_fetch(u, A, 300))
+                for crf in (29, 32, 35):                    # the old catalogue's own settings (Rule Eleven): 720 px on the short side, H.264, under 9 MB
+                    subprocess.run([_ffmpeg(), '-y', '-loglevel', 'error', '-i', src, '-vf', "scale='if(gt(iw,ih),-2,min(720,iw))':'if(gt(iw,ih),min(720,ih),-2)'",
+                                    '-c:v', 'libx264', '-preset', 'medium', '-crf', str(crf), '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-ac', '1', '-b:a', '64k',
+                                    '-movflags', '+faststart', tmp], check=True, timeout=600)
+                    if os.path.getsize(tmp) < 9_000_000: break
+                shutil.move(tmp, out)
+            open(mark, 'w').write(a['id']); made.append(no)
+        except Exception as e: bad.append('%s: %s: %s' % (no, type(e).__name__, str(e)[:120]))
+    return {'ok': True, 'kind': 'page2-videos', 'made': made, 'same': same, 'none': none, 'bad': bad}
+
 def build(req):
     if req.get('kind') != 'page2': return {'ok': False, 'error': 'not a page2 request'}
     stem, code, relay = str(req.get('stem') or ''), str(req.get('t') or ''), str(req.get('r') or '')
@@ -128,6 +183,14 @@ def main():
     req_s, sig, pw = os.environ.get('REQ', ''), os.environ.get('SIG', ''), os.environ.get('MEMO_PASSWORD', '')
     req = json.loads(req_s)
     jid = re.sub(r'[^a-z0-9-]', '', str(req.get('id', '')))[:40] or 'x'
+    if sys.argv[1:2] == ['videos']:                         # the job's second part: never fails the job, writes jobs/<id>-v.json
+        if not req.get('vids'): print('no videos asked for'); return
+        if not (pw and hmac.compare_digest(hmac.new(pw.encode(), req_s.encode(), hashlib.sha256).hexdigest(), sig)): res = {'ok': False, 'kind': 'page2-videos', 'error': 'not signed with the shop password'}
+        else:
+            try: res = videos(req)
+            except Exception as e: res = {'ok': False, 'kind': 'page2-videos', 'error': '%s: %s' % (type(e).__name__, str(e)[:300])}
+        res['id'] = jid; os.makedirs('jobs', exist_ok=True)
+        json.dump(res, open('jobs/%s-v.json' % jid, 'w'), ensure_ascii=False, indent=1); print(json.dumps(res, ensure_ascii=False, indent=1)); return
     if not (pw and hmac.compare_digest(hmac.new(pw.encode(), req_s.encode(), hashlib.sha256).hexdigest(), sig)):
         res = {'ok': False, 'error': 'not signed with the shop password'}
     else:
