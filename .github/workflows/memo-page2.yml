@@ -2,7 +2,8 @@ name: memo-page2
 run-name: page2 ${{ fromJSON(inputs.req).id }}
 # Started by Jarvis on the PC through the relay (op=cjob), 23 Nov 2026: writes ONE customer's own link page of the new catalogue
 # (my-<name>.html) and the picture WhatsApp shows for that link (og-my-<name>.jpg). It does not touch the old catalogue or any other file.
-# 27 Nov 2026: a second part makes the videos of his designs that have none on the site yet (vid/<no>.mp4), the way the old catalogue did.
+# 27 Nov 2026: a second part makes the videos of his designs that have none on the site yet (vid/<no>.mp4), the way the old catalogue did,
+# and a sharp 1200 px copy of each photo of his page (big/<photo>.jpg).
 # His link is published first, so it never waits for a video.
 on:
   workflow_dispatch:
@@ -34,7 +35,7 @@ jobs:
           for f in my-*.html og-my-*.jpg; do if [ -f "$f" ]; then git add "$f"; fi; done
           git commit -q -m "page2: $(ls -t jobs | head -1)" || exit 0
           for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done
-      - name: Videos of his designs
+      - name: Sharp photos and videos of his designs
         if: always()
         timeout-minutes: 20
         continue-on-error: true
@@ -49,6 +50,7 @@ jobs:
         run: |
           git config user.name memo-bot; git config user.email memo-bot@users.noreply.github.com
           if [ -d vid ]; then git add -A vid; fi
+          if [ -d big ]; then git add -A big; fi
           git add -A jobs
-          git commit -q -m "page2 videos: $(ls -t jobs | head -1)" || exit 0
+          git commit -q -m "page2 photos and videos: $(ls -t jobs | head -1)" || exit 0
           for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done
