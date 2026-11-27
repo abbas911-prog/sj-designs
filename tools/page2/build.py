@@ -160,6 +160,49 @@ def videos(req, budget=16 * 60):
         except Exception as e: bad.append('%s: %s: %s' % (no, type(e).__name__, str(e)[:120]))
     return {'ok': True, 'kind': 'page2-videos', 'made': made, 'same': same, 'none': none, 'bad': bad}
 
+# ---------- 27 Nov 2026: sharp photos (Abbas: "the picture's quality … it's very blurry in the catalog"). The pages showed the SJ Stock app's
+# small photos (thumbs/, 600 px). The request may name photos of his page: pics = ['<card id>:<photo id>,<photo id>', …]. Each one is taken
+# from its card at full size and saved 1200 px wide as big/<photo id>.jpg, the size the old catalogue showed. Same rules as the videos:
+# only cards of the SJTC board, never its SAMPLES list. A photo whose shape differs from the small one is left alone (the page cuts
+# sold-out colours by the small photo's measures), and so is one that is no larger on the card.
+def _api(u):
+    u = str(u or '')
+    for pre in ('https://trello.com', 'https://api.trello.com'):
+        if u.startswith(pre): return 'https://api.trello.com' + u[len(pre):]
+    return u
+def photos(req, budget=7 * 60):
+    "-> {pmade: [photo ids], psame: [already there], psmall: [no larger on the card], pbad: ['photo: why']}"
+    import time, io
+    from PIL import Image, ImageOps
+    t0 = time.time(); A = _trello(); made, same, small, bad = [], [], [], []; n = 0
+    os.makedirs('big', exist_ok=True)
+    for ent in (req.get('pics') or [])[:16]:
+        m = re.fullmatch(r'([0-9a-f]{24}):([0-9a-f]{24}(?:,[0-9a-f]{24}){0,11})', str(ent))
+        if not m: continue
+        cid, ids = m.group(1), m.group(2).split(',')
+        todo = [a for a in ids if not os.path.exists('big/%s.jpg' % a)]; same += [a for a in ids if a not in todo]
+        if not todo: continue
+        try:
+            c = json.loads(_fetch('https://api.trello.com/1/cards/%s?fields=idBoard,idList,name&attachments=true&attachment_fields=id,name,mimeType,url,bytes' % cid, A, 60))
+            if c.get('idBoard') != SJTC or c.get('idList') == SAMPLES: bad.append(cid[:6] + ': not a card of the SJTC stock'); continue
+            byid = {a.get('id'): a for a in c.get('attachments') or [] if str(a.get('mimeType') or '').startswith('image/')}
+        except Exception as e: bad.append('%s: %s: %s' % (cid[:6], type(e).__name__, str(e)[:80])); continue
+        for att in todo:
+            n += 1
+            if n > 40 or time.time() - t0 > budget: bad.append(att[:6] + ': left for the next run'); continue
+            a = byid.get(att)
+            if not a: bad.append(att[:6] + ': not a photo of that card'); continue
+            try:
+                im = ImageOps.exif_transpose(Image.open(io.BytesIO(_fetch(_api(a.get('url')), A, 180)))).convert('RGB'); tw = 600
+                if os.path.exists('thumbs/%s.jpg' % att):
+                    t = Image.open('thumbs/%s.jpg' % att); tw = t.width
+                    if abs(im.width / im.height - t.width / t.height) > 0.02 * (t.width / t.height): bad.append(att[:6] + ': its shape is not the small photo\'s'); continue
+                if im.width > 1200: im = im.resize((1200, round(im.height * 1200 / im.width)), Image.LANCZOS)
+                if im.width < tw * 1.2: small.append(att); continue
+                im.save('big/%s.jpg' % att, 'JPEG', quality=82, optimize=True, progressive=True); made.append(att)
+            except Exception as e: bad.append('%s: %s: %s' % (att[:6], type(e).__name__, str(e)[:80]))
+    return {'pmade': made, 'psame': same, 'psmall': small, 'pbad': bad}
+
 def build(req):
     if req.get('kind') != 'page2': return {'ok': False, 'error': 'not a page2 request'}
     stem, code, relay = str(req.get('stem') or ''), str(req.get('t') or ''), str(req.get('r') or '')
@@ -184,11 +227,14 @@ def main():
     req = json.loads(req_s)
     jid = re.sub(r'[^a-z0-9-]', '', str(req.get('id', '')))[:40] or 'x'
     if sys.argv[1:2] == ['videos']:                         # the job's second part: never fails the job, writes jobs/<id>-v.json
-        if not req.get('vids'): print('no videos asked for'); return
+        if not req.get('vids') and not req.get('pics'): print('no videos or photos asked for'); return
         if not (pw and hmac.compare_digest(hmac.new(pw.encode(), req_s.encode(), hashlib.sha256).hexdigest(), sig)): res = {'ok': False, 'kind': 'page2-videos', 'error': 'not signed with the shop password'}
         else:
-            try: res = videos(req)
-            except Exception as e: res = {'ok': False, 'kind': 'page2-videos', 'error': '%s: %s' % (type(e).__name__, str(e)[:300])}
+            res = {'ok': True, 'kind': 'page2-videos', 'made': [], 'same': [], 'none': [], 'bad': []}
+            try: res.update(photos(req))                    # the sharp photos first: they take seconds
+            except Exception as e: res['pbad'] = ['%s: %s' % (type(e).__name__, str(e)[:300])]
+            try: res.update(videos(req))
+            except Exception as e: res['bad'] = ['%s: %s' % (type(e).__name__, str(e)[:300])]
         res['id'] = jid; os.makedirs('jobs', exist_ok=True)
         json.dump(res, open('jobs/%s-v.json' % jid, 'w'), ensure_ascii=False, indent=1); print(json.dumps(res, ensure_ascii=False, indent=1)); return
     if not (pw and hmac.compare_digest(hmac.new(pw.encode(), req_s.encode(), hashlib.sha256).hexdigest(), sig)):
