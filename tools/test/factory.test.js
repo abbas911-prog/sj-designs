@@ -1101,6 +1101,58 @@ async function lookSuite(browser) {
         ok(/function facWatch\(\) \{ if \(!tickDue\('watch', 5\)\) return;/.test(src) && /function watchTrello\(\) \{ if \(!tickDue\('ready', 5\)\) return;/.test(src) && !/UrlFetchApp\.fetch(All)?\((?!url|rs)/.test(src), 'facWatch and watchTrello are gated; every outside call goes through the counter');
       } finally { Date.now = realNow; ctx.facNotifyScan = scan0; }
     });
+    await test('a check that fails keeps the NEW badges; a check asked for during another one still runs; the chats this phone wrote in are told again', async () => {   // 28 Nov 2026: three statements of ping() sat behind a comment since 21 Nov
+      await page.click('#tabs button[data-t="home"]');
+      F.postSlack(W, CUT, { text: 'a new line for the badge', user: 'U1', thread_ts: W.rootB });
+      T.relay.post(JSON.stringify({ type: 'event_callback', event_id: 'E' + Date.now(), event: { type: 'message', channel: CUT, thread_ts: W.rootB, ts: F.slackTs() } }));
+      await until(async () => { await page.evaluate(() => window.__f.ping(true)); return page.evaluate(id => !!(window.__f.D.th[id] && window.__f.D.th[id].n), W.cardB.id); }, 20000, 'NEW on SJ-17841');
+      const badge = (await page.textContent('#tbchat')).trim(); ok(+badge > 0, 'badge on the Chats button: ' + badge);
+      await page.evaluate(id => window.__f.hotAdd(id, '1795000000.000100'), W.cardB.id);
+      T.relayDown = true;
+      try { await page.evaluate(() => window.__f.ping(false)); await page.waitForTimeout(300);
+        ok(await page.evaluate(id => !!(window.__f.D.th[id] && window.__f.D.th[id].n), W.cardB.id), 'the NEW count survives a check that failed');
+        ok((await page.textContent('#tbchat')).trim() === badge, 'the badge is still there: ' + await page.textContent('#tbchat'));
+        ok(await page.evaluate(id => window.__f.hotq()[id] === '1795000000.000100', W.cardB.id), 'the chat this phone wrote in waits for the next check');
+      } finally { T.relayDown = false; }
+      T.opDelay = { ping: 1200 }; const n0 = T.relayCalls.filter(o => o === 'ping').length;
+      try { const p1 = page.evaluate(() => window.__f.ping(false)); await page.waitForTimeout(150); await page.evaluate(() => { window.__f.ping(false); }); await p1; await page.waitForTimeout(500);
+        ok(T.relayCalls.filter(o => o === 'ping').length >= n0 + 2, 'the check asked for meanwhile ran right after: ' + (T.relayCalls.filter(o => o === 'ping').length - n0));
+      } finally { T.opDelay = null; }
+    });
+    await test('Back with the card\'s ⋯ menu open closes the menu and keeps the card; Back on Workers closes it; a closed card takes its menu with it', async () => {   // 28 Nov 2026 (Android Back)
+      await openCardNo(page, '17841'); await page.click('#bmore'); await until(() => page.locator('#cmenu').isVisible(), 3000, 'menu');
+      await page.goBack(); await until(() => page.locator('#cmenu').isHidden(), 3000, 'menu closed by Back');
+      ok(await page.locator('#card').isVisible(), 'the card is still open'); ok(await page.evaluate(() => window.__f.TH && !document.getElementById('card').hidden), 'card screen stays');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 3000, 'the next Back closes the card');
+      await openCardNo(page, '17841'); await page.click('#bmore'); await page.click('#bmove'); await until(() => page.locator('#mv').isVisible(), 3000, 'Move to sheet');
+      await page.goBack(); await until(() => page.locator('#mv').isHidden(), 3000, 'Move to closed by Back'); ok(await page.locator('#card').isVisible(), 'card still open after Move to was closed');
+      await page.goBack(); await until(() => page.locator('#card').isHidden(), 3000, 'card closed');
+      await page.fill('#q', ''); await page.click('#twork'); await until(() => page.locator('#wks').isVisible(), 3000, 'Workers screen');
+      await page.goBack(); await until(() => page.locator('#wks').isHidden(), 3000, 'Back closes the Workers screen');
+    });
+    await test('Workers -> Week: the grand total adds up; Share without a share sheet says Copied only when it was, else shows the text', async () => {   // 28 Nov 2026
+      await page.click('#twork'); await until(() => page.locator('#wks').isVisible(), 3000, 'Workers');
+      await page.click('#wkview button[data-v="k"]'); await until(() => page.locator('#wksbody .wtab').count(), 8000, 'week table');
+      const sums = await page.$$eval('#wksbody .wtab td.s', t => t.map(x => +x.textContent || 0)), tot = +(await page.locator('#wksbody .wtab tr.tot td').last().textContent());
+      ok(tot === sums.reduce((a, b) => a + b, 0), 'grand total ' + tot + ' = the rows ' + sums.join('+'));
+      await page.evaluate(() => { try { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }); } catch (e) {} Object.defineProperty(navigator, 'clipboard', { value: { writeText: () => Promise.reject(new Error('denied')) }, configurable: true }); });
+      await page.click('#wkshare'); await until(() => page.locator('#tg').isVisible(), 3000, 'the text is shown to copy by hand'); ok(/Week|week|Σ|pcs/i.test(await page.textContent('#tgbody')), 'week text shown: ' + (await page.textContent('#tgbody')).slice(0, 80));
+      await page.evaluate(() => { document.getElementById('tg').hidden = true; }); await page.goBack(); await until(() => page.locator('#wks').isHidden(), 3000, 'Workers closed');
+    });
+    await test('Home: a phone not opened for days raises no alarm; a first read that failed is tried again after a minute', async () => {   // 28 Nov 2026
+      const now = Date.now(), ph = JSON.parse(T.relay.P.FAC_PHONES || '{}');
+      ph.oldman = { n: 'Oldman', d: { dvold1: { v: '2026-10-01a', at: now - 9 * 86400000, ua: 'PC', ob: 2 } } }; T.relay.P.FAC_PHONES = JSON.stringify(ph);
+      await page.click('#tabs button[data-t="home"]'); await page.evaluate(() => { window.__f.HM.pat = 0; }); await page.click('#tabs button[data-t="cards"]'); await page.click('#tabs button[data-t="home"]');
+      await page.waitForTimeout(2500); ok(!/Oldman/.test(await page.textContent('#hneeds')), 'no row for a phone last seen 9 days ago: ' + await page.textContent('#hneeds'));
+      ph.oldman.d.dvold1.at = now - 3600000; T.relay.P.FAC_PHONES = JSON.stringify(ph);
+      await page.evaluate(() => { window.__f.HM.pat = 0; }); await page.click('#tabs button[data-t="cards"]'); await page.click('#tabs button[data-t="home"]');
+      await until(async () => /Oldman|phones need a look/.test(await page.textContent('#hneeds')), 8000, 'a phone seen an hour ago with stuck messages is named');
+      delete ph.oldman; T.relay.P.FAC_PHONES = JSON.stringify(ph);
+      T.relayDown = true;
+      try { await page.evaluate(() => { window.__f.HM.at = 0; }); await page.click('#tabs button[data-t="cards"]'); await page.click('#tabs button[data-t="home"]');
+        await until(() => page.evaluate(() => { const a = Date.now() - window.__f.HM.at; return a > 700000 && a < 900000; }), 30000, 'the failed read is due again in about a minute');
+      } finally { T.relayDown = false; }
+    });
     await test('Google\'s daily limit reached: the app says so in plain words (English + Bengali), not Google\'s sentence, and Home shows it', async () => {   // 21 Nov 2026
       W.quota = true;
       try { await home(page); await page.click('#tplus'); await page.click('#pret');
