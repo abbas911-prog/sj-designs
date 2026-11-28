@@ -324,7 +324,7 @@ body.kb #tabs{display:none}body.kb .toast{bottom:14px}
 
 <script>
 (function(){
-var VER = '2026-11-24b';
+var VER = '2026-11-28a';
 var RELAY = 'https://script.google.com/macros/s/AKfycbylqzZf0KPyK_u2W52l3Jb8u9uhd4o4mYp7vOeJlmBGJeQfejwYAazjQa6ymmlIsXpVoA/exec';   // SJ memo relay (same as the order memo)
 var $ = function(id){ return document.getElementById(id); };
 function ls(k, v){ try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch(e){} return null; }
@@ -643,10 +643,12 @@ function groupsHtml(sel){ return GRP.map(function(G, gi){ var cs = D.cards.filte
 function groupGo(gi){ var G = GRP[gi]; if (!G) return; var i = G[3].indexOf(cur) >= 0 ? cur : (G[3].filter(function(x){ return D.cards.some(function(c){ return inChip(c, x); }); })[0]); if (i === undefined) i = G[3][0];
   cur = i; ls('sj_fac_chip', String(cur)); GA = true; $('q').value = ''; if (TAB !== 'cards') setTab('cards'); draw(true); window.scrollTo(0, 0); }
 var HM = { at: 0, pat: 0 };
+// 28 Nov 2026: a phone needs a look (stuck messages / old app) only while it is still in use - seen in the last 3 days; a browser opened once kept the alarm on Home for ever
+function phBad(d){ return !!d && Date.now() - (+d.at || 0) < 3 * 86400000 && (d.ob > 0 || !!(d.v && d.v < VER)); }
 function homeLoad(){ if ((TAB !== 'home' && TAB !== 'cards') || !PW || !D.cards || !D.cards.length || quotaHit()) return; var now = Date.now();   // Cards too: its rows show who holds each design
   if (now - HM.at > 900000) {   // 21 Nov 2026: every 15 min by itself (and once after a Give / Done on this phone) - it was every 55 s, and each read costs the relay ~20 Trello calls: Google's daily limit was used up by the evening
-    HM.at = now; call({ op: 'workrep', days: WKD }).then(function(j){ if (j && j.ok) { WKR = j; if (TAB === 'home') homeDraw(); else if (TAB === 'cards') draw(); } }); }
-  if (isOwner() && rvOk('people') && now - HM.pat > 900000) { HM.pat = now; call({ op: 'people', act: 'list' }).then(function(j){ if (j && j.ok) { FD.people = j; if (TAB === 'home') homeDraw(); } }); } }
+    HM.at = now; call({ op: 'workrep', days: WKD }).then(function(j){ if (j && j.ok) { WKR = j; if (TAB === 'home') homeDraw(); else if (TAB === 'cards') draw(); } else if (!quotaHit()) HM.at = Date.now() - 840000; }); }   // 28 Nov 2026: a read that failed (no line for a moment) is tried again after a minute - TODAY stayed on "…" for 15 min
+  if (isOwner() && rvOk('people') && now - HM.pat > 900000) { HM.pat = now; call({ op: 'people', act: 'list' }).then(function(j){ if (j && j.ok) { FD.people = j; if (TAB === 'home') homeDraw(); } else if (!quotaHit()) HM.pat = Date.now() - 840000; }); } }
 setInterval(function(){ if ((TAB === 'home' || TAB === 'cards') && !document.hidden && $('card').hidden) homeLoad(); }, 30000);
 function homeNeeds(){ var N = [], tot = totUnread();
   var rvn = D.rv || ls('sj_fac_rv') || ''; if (isOwner() && rvn && rvn < RV_LATEST) N.push({ ic: '🧩', c: 'red', n: '!', t: 'The relay still runs old code · রিলে পুরনো', s: 'it has ' + rvn + ' — copy version ' + RV_LATEST + ' into SJ memo · tap to open the copy page', go: 'relaycode' });
@@ -659,8 +661,8 @@ function homeNeeds(){ var N = [], tot = totUnread();
   if (WKR) { var fn = 0, fp = 0, fw = ''; (WKR.workers || []).forEach(function(w){ (w.hand || []).forEach(function(h){ if (h.fin) { fn++; fp += h.g; fw = fw || w.name; } }); });
     if (fn) N.push({ ic: '⚠', c: 'red', n: fn, t: fp + ' pcs forgotten · ভুলে যাওয়া কাজ', s: fw + (fn > 1 ? ' +' + (fn - 1) : '') + ' · the card is finished · tap to close', go: 'work' });
     var low = WKR.low || []; if (low.length) N.push({ ic: '📦', c: 'amb', n: low.length, t: low.length + ' material' + (low.length > 1 ? 's are' : ' is') + ' low · মাল কম', s: low.map(function(m){ return m.n; }).join(', ').slice(0, 60), go: 'mat' }); }
-  if (isOwner() && FD.people) { var bad = (FD.people.people || []).filter(function(x){ return !x.own && x.d.some(function(d){ return d.ob > 0 || (d.v && d.v < VER); }); });
-    if (bad.length) { var b0 = bad[0], ob = b0.d.reduce(function(a, d){ return a + (d.ob || 0); }, 0), old = b0.d.some(function(d){ return d.v && d.v < VER; });
+  if (isOwner() && FD.people) { var bad = (FD.people.people || []).filter(function(x){ return !x.own && x.d.some(phBad); });
+    if (bad.length) { var b0 = bad[0], ob = b0.d.filter(phBad).reduce(function(a, d){ return a + (d.ob || 0); }, 0), old = b0.d.filter(phBad).some(function(d){ return d.v && d.v < VER; });
       N.push({ ic: '📱', c: 'pur', n: bad.length > 1 ? bad.length : '!', t: bad.length > 1 ? bad.length + ' phones need a look · ফোন' : b0.n + '\'s phone · ফোন', s: [ob ? ob + ' message' + (ob > 1 ? 's' : '') + ' stuck' : '', old ? 'old app' : ''].filter(Boolean).join(' · '), go: 'people' }); } }
   return N; }
 function homeDraw(){ var el = $('hm'); if (!el || !D.cards || !D.cards.length) return;
@@ -680,7 +682,7 @@ function moreDraw(){ var own = isOwner(); $('mrep').hidden = !own; $('mpeople').
   var late = D.cards ? D.cards.filter(function(c){ var d = dueDays(c); return d !== null && d < 0 && !AGEOFF.test(lname(c.l)); }).length : 0; $('te-late').textContent = late ? String(late) : '';
   var ws = (WKR && WKR.workers) || []; $('tn-wk').textContent = WKR ? ws.filter(function(w){ return (w.hand || []).length; }).length + ' working · কাজে' : 'কর্মী';
   var low = (WKR && WKR.low) || []; $('te-mat').textContent = low.length ? String(low.length) : ''; var upm = ufPct(); $('te-uf').textContent = upm != null ? upm + '%' : '';
-  if (own && FD.people) { var pp = FD.people.people || [], bad = pp.filter(function(x){ return !x.own && x.d.some(function(d){ return d.ob > 0 || (d.v && d.v < VER); }); }).length; $('tn-pp').textContent = pp.length + ' people · লোক'; $('te-pp').textContent = bad ? String(bad) : ''; } }
+  if (own && FD.people) { var pp = FD.people.people || [], bad = pp.filter(function(x){ return !x.own && x.d.some(phBad); }).length; $('tn-pp').textContent = pp.length + ' people · লোক'; $('te-pp').textContent = bad ? String(bad) : ''; } }
 $('plusx').onclick = function(){ $('plus').hidden = true; };
 $('pcard').onclick = function(){ $('plus').hidden = true; $('badd').click(); };
 $('psample').onclick = function(){ $('plus').hidden = true; $('bstar').click(); };
@@ -962,8 +964,7 @@ function wksDraw(){ var j = WKR; if (!j) return; var now = Date.now(), ws = (j.w
   } else {
     var days = wkDays(j), rows = ws.slice().sort(function(a, b){ return b.pcs - a.pcs || (a.name < b.name ? -1 : 1); }), tot = {}, all = 0;
     var head = '<tr><th style="text-align:left;padding-left:10px">Worker · কর্মী</th>' + days.map(function(d){ return '<th' + (d.k === (j.today || isoDay(now)) ? ' class="td"' : '') + '>' + d.n + '<small>' + d.d + '</small></th>'; }).join('') + '<th>Σ</th></tr>';
-    var body = rows.map(function(w){ var sum = 0; return '<tr><td class="nm">' + avHtml(w.name, 's') + esc(w.name) + '</td>' + days.map(function(d){ var n = (w.byDay || {})[d.k] || 0, a = attMark(j, w.name, d.k); sum += n; tot[d.k] = (tot[d.k] || 0) + n; return '<td class="' + (n ? 'n' : '') + (a === '✗' ? ' ab' : '') + '">' + (n ? n : a === '✗' ? '✗' : a === '✓' ? '·' : '') + '</td>'; }).join('') + '<td class="s">' + sum + '</td></tr>'; all += sum; return ''; }).join('');
-    body = rows.map(function(w){ var sum = 0; return '<tr><td class="nm">' + avHtml(w.name, 's') + esc(w.name) + '</td>' + days.map(function(d){ var n = (w.byDay || {})[d.k] || 0, a = attMark(j, w.name, d.k); sum += n; return '<td class="' + (n ? 'n' : '') + (a === '✗' ? ' ab' : '') + '">' + (n ? n : a === '✗' ? '✗' : a === '✓' ? '·' : '') + '</td>'; }).join('') + '<td class="s">' + sum + '</td></tr>'; }).join('');
+    var body = rows.map(function(w){ var sum = 0, tr = '<tr><td class="nm">' + avHtml(w.name, 's') + esc(w.name) + '</td>' + days.map(function(d){ var n = (w.byDay || {})[d.k] || 0, a = attMark(j, w.name, d.k); sum += n; tot[d.k] = (tot[d.k] || 0) + n; return '<td class="' + (n ? 'n' : '') + (a === '✗' ? ' ab' : '') + '">' + (n ? n : a === '✗' ? '✗' : a === '✓' ? '·' : '') + '</td>'; }).join('') + '<td class="s">' + sum + '</td></tr>'; all += sum; return tr; }).join('');   // 28 Nov 2026: the grand total (bottom right) always said 0 - it was added up after the return
     var foot = '<tr class="tot"><td style="text-align:left;padding-left:10px">Total · মোট</td>' + days.map(function(d){ return '<td>' + (tot[d.k] || 0) + '</td>'; }).join('') + '<td>' + all + '</td></tr>';
     el.innerHTML = tiles + lateH + sub + '<div class="wtabw"><table class="wtab">' + head + body + foot + '</table></div><div class="dnote">✗ = absent · অনুপস্থিত &nbsp; · = present, nothing finished · <button class="lnk" id="wkshare">⬆️ Share this week · শেয়ার</button></div>';
   }
@@ -973,15 +974,19 @@ function wkWeekText(){ var j = WKR; if (!j) return ''; var days = wkDays(j), L =
   (j.workers || []).slice().sort(function(a, b){ return b.pcs - a.pcs; }).forEach(function(w){ var sum = 0, cells = days.map(function(d){ var n = (w.byDay || {})[d.k] || 0; sum += n; return n ? String(n) : attMark(j, w.name, d.k) === '✗' ? '✗' : '-'; }); tot += sum; L.push(w.name + ': ' + cells.join(' ') + ' = ' + sum); });
   L.push('Total: ' + tot + ' pcs'); return L.join('\n'); }
 async function wksLoad(fresh){ var j = await call({ op: 'workrep', days: WKD, fresh: fresh ? 1 : 0 }); if (!j.ok) { if (!WKR) $('wksbody').innerHTML = '<div class="empty">' + esc(j.error) + '</div>'; return; } WKR = j; if (!$('wks').hidden) wksDraw(); }
-function wksShow(){ $('wks').hidden = false; document.querySelectorAll('#wkseg button').forEach(function(x){ x.classList.toggle('on', +x.dataset.d === WKD); }); document.querySelectorAll('#wkview button').forEach(function(x){ x.classList.toggle('on', x.dataset.v === WKV); }); document.querySelectorAll('#wksort button').forEach(function(x){ x.classList.toggle('on', x.dataset.s === WKS); });
+function wksShow(){ $('wks').hidden = false; if (!history.state || !history.state.wks) history.pushState({ wks: 1 }, '');   // 28 Nov 2026: the phone's Back button closes the Workers screen (it left the app)
+  document.querySelectorAll('#wkseg button').forEach(function(x){ x.classList.toggle('on', +x.dataset.d === WKD); }); document.querySelectorAll('#wkview button').forEach(function(x){ x.classList.toggle('on', x.dataset.v === WKV); }); document.querySelectorAll('#wksort button').forEach(function(x){ x.classList.toggle('on', x.dataset.s === WKS); });
   if (WKR && WKR.days === WKD) wksDraw(); else $('wksbody').innerHTML = '<div class="empty">Loading… · লোড হচ্ছে</div>'; wksLoad(false);
   clearInterval(WKT); WKT = setInterval(function(){ if ($('wks').hidden || document.hidden) return; wksDraw(); if (!quotaHit() && Date.now() - (WKR ? WKR.t : 0) > 300000) wksLoad(false); }, 30000); }
+// 28 Nov 2026: share a text (week / month): the phone's share sheet; without one, copy it - and say "Copied" only when the phone really took it, else show the text to copy by hand
+function shareTxt(title, txt){ if (navigator.share) { navigator.share({ text: txt }).catch(function(){}); return; }
+  var no = function(){ alertBox(title, txt); }; try { if (!navigator.clipboard || !navigator.clipboard.writeText) return no(); navigator.clipboard.writeText(txt).then(function(){ toast('📋 Copied · কপি হয়েছে'); }, no); } catch(x){ no(); } }
 function wksHide(){ $('wks').hidden = true; clearInterval(WKT); }
 $('bwork').onclick = wksShow; $('wksx').onclick = wksHide; $('wksrf').onclick = function(){ wksLoad(true); toast('↻ Refreshing… · আবার লোড হচ্ছে'); };
 $('wkview').onclick = function(e){ var b = e.target.closest('button[data-v]'); if (!b) return; WKV = b.dataset.v; wksShow(); };
 $('wksort').onclick = function(e){ var b = e.target.closest('button[data-s]'); if (!b) return; WKS = b.dataset.s; ls('sj_fac_wksort', WKS); wksShow(); };
 $('wksbody').onclick = function(e){ if (e.target.closest('#wkclose')) { wkClose(); return; } var t = e.target.closest('.dtile'); if (t) { WKF = WKF === t.dataset.f ? '' : t.dataset.f; wksDraw(); return; }
-  if (e.target.closest('#wklate')) { wksHide(); facShow('late'); return; } if (e.target.closest('#wkshare')) { var txt = wkWeekText(); if (navigator.share) navigator.share({ text: txt }).catch(function(){}); else { try { navigator.clipboard.writeText(txt); toast('📋 Copied · কপি হয়েছে'); } catch(x){ alertBox('Week', txt); } } return; }
+  if (e.target.closest('#wklate')) { wksHide(); facShow('late'); return; } if (e.target.closest('#wkshare')) { shareTxt('Week', wkWeekText()); return; }
   var r = e.target.closest('.hb, .dgc, .rr'); if (!r) return; var c = D.byId && D.byId[r.dataset.id]; if (c) { wksHide(); openCard(c); } else toast('This card is not on the board any more · কার্ডটি আর বোর্ডে নেই'); };
 // ===== 22 Oct 2026 (Abbas: "a complete factory app - what else is there in the factory? add it as an option"): More → 🏭 Factory =====
 // Attendance (present / absent per worker per day, anyone marks it), Late designs (cards with a due date past or within 2 days), Materials
@@ -1088,7 +1093,7 @@ $('monbody').onclick = function(e){ var nav = e.target.closest('button[data-m]')
     $('mondays').innerHTML = '<div class="fsec"><h3>' + avHtml(w.name, 's') + esc(w.name) + '<small>' + ds.length + ' days</small></h3>' + (ds.length ? ds.map(function(d){ var r = w.days[d], dd = new Date(d + 'T12:00:00Z'); return '<div class="ar"><div class="nm">' + DAYN[dd.getUTCDay()] + ' ' + dd.getUTCDate() + '<small class="' + (r.a ? 'late' : r.late ? 'late' : 'ok') + '">' + (r.a ? 'absent · অনুপস্থিত' : r.in ? 'in ' + hhmm(r.in) + (r.late ? ' ⏰ late ' + r.late + ' min' : '') + (r.out ? ' → out ' + hhmm(r.out) : r.noOut ? ' → no Out ⚠' : ' → still in · এখনো আছে') + ' · ' + r.h + ' h' : 'present ✓') + '</small></div></div>'; }).join('') : '<div class="empty">nothing · কিছু নেই</div>') + '</div>'; $('mondays').scrollIntoView({ behavior: 'smooth', block: 'start' }); } };
 $('monsh').onclick = function(){ var j = MONR; if (!j) return; var own = isOwner() && j.sal, sal = j.sal || {}, L = ['AL MUTAGADED · attendance · ' + j.ym + ' (' + j.daysSoFar + '/' + j.daysInMonth + ' days)'];
   (j.workers || []).forEach(function(w){ var s0 = sal[w.name.toUpperCase()] || 0; L.push(w.name + ': ' + w.present + ' days · ' + w.absent + ' absent · ' + w.late + ' late · ' + w.hours + ' h' + (own && s0 ? ' · pay ' + Math.round(s0 - w.absent * s0 / 30) : '')); });
-  var txt = L.join('\n'); if (navigator.share) navigator.share({ text: txt }).catch(function(){}); else { try { navigator.clipboard.writeText(txt); toast('📋 Copied · কপি হয়েছে'); } catch(x){ alertBox('Month', txt); } } };
+  shareTxt('Month', L.join('\n')); };
 function salEdit(){ var r = (MONR && MONR.sal) || {}, names = (MONR ? MONR.workers.map(function(w){ return w.name; }) : D.workers) || []; $('saletxt').value = names.map(function(n){ return n + ' ' + (r[n.toUpperCase()] || ''); }).join('\n'); $('sale').hidden = false; }
 $('salex').onclick = function(){ $('sale').hidden = true; };
 $('salego').onclick = async function(){ var sal = {}; $('saletxt').value.split('\n').forEach(function(ln){ var m = ln.trim().match(/^(.+?)\s+([\d.]+)$/); if (m && +m[2] > 0) sal[m[1].trim()] = +m[2]; });
@@ -1152,9 +1157,14 @@ async function bigPhoto(cid, att, vn){ var fj = fastTr() ? await fast({ op: 'tim
   var j = await call({ op: 'img', card: cid, att: att, big: 1 }); if (j.ok) viewSet(vn, 'data:image/jpeg;base64,' + j.b64); }
 // 20 Oct 2026: on leaving a chat it is marked seen up to the last line ON SCREEN - it used to re-read the chat, and with the relay's delay a
 // message that came in just after leaving was marked read too (no NEW badge, no notification).
-function closeCard(){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } if (REC.r) recStop(); try { if (open && TH.opened && LOOK.act > TH.opened) { var rl = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }); if (rl.length) call({ op: 'seen', card: open.id, ts: rl[rl.length - 1].ts }); } } catch(e){} $('card').hidden = true; cardShow(false); $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; CHATSIG = ''; draw(); homeLoad(); }
+function closeCard(){ if (!$('viewer').hidden) { VIEW.st = false; viewClose(true); } if (REC.r) recStop(); try { if (open && TH.opened && LOOK.act > TH.opened) { var rl = TH.msgs.filter(function(m){ return !m.pend && /^\d+\.\d+$/.test(m.ts); }); if (rl.length) call({ op: 'seen', card: open.id, ts: rl[rl.length - 1].ts }); } } catch(e){} $('card').hidden = true; cardShow(false); ['cmenu', 'mv', 'probs', 'ed', 'cp', 'fabs'].forEach(function(x){ if ($(x)) $(x).hidden = true; }); $('cu').hidden = true; CU.ids = []; CU.i = -1; thStop(); open = null; CHATSIG = ''; draw(); homeLoad(); }
 $('back').onclick = function(){ history.back(); };
-window.addEventListener('popstate', function(){ if (VIEW.skip) { VIEW.skip = false; return; } if (!$('mon').hidden && $('card').hidden) { monHide(); return; } if (!$('fac').hidden && $('card').hidden) { facHide(); return; } if (!$('wks').hidden && $('card').hidden) { wksHide(); return; } if (VIEW.st) { viewClose(true); return; } if (!$('card').hidden) closeCard(); });
+window.addEventListener('popstate', function(){ if (VIEW.skip) { VIEW.skip = false; return; }
+  // 28 Nov 2026: Back with a pop-up sheet open (the card's ⋯ menu, Move to, Need fabric, New card …) closed the card UNDER it and left the sheet hanging - its buttons then did nothing.
+  // Now Back closes the sheet and the screen under it stays (its place in the Back history is put back).
+  var shs = document.querySelectorAll('.sheet:not([hidden])'); if (shs.length && !VIEW.st) { Array.prototype.forEach.call(shs, function(x){ x.hidden = true; });
+    var st = !$('card').hidden ? { card: 1 } : !$('mon').hidden ? { mon: 1 } : !$('fac').hidden ? { fac: 1 } : !$('wks').hidden ? { wks: 1 } : null; if (st) history.pushState(st, ''); return; }
+  if (!$('mon').hidden && $('card').hidden) { monHide(); return; } if (!$('fac').hidden && $('card').hidden) { facHide(); return; } if (!$('wks').hidden && $('card').hidden) { wksHide(); return; } if (VIEW.st) { viewClose(true); return; } if (!$('card').hidden) closeCard(); });
 $('btrello').onclick = function(){ if (open) window.open(open.url, '_blank'); };
 // ---- 13 Oct 2026 (Abbas): edit the card's description/title, copy the card, add a new card ----
 function listSel(sel, def){ sel.innerHTML = D.lists.map(function(l){ return '<option value="' + esc(l[1]) + '"' + (l[1] === def ? ' selected' : '') + '>' + esc(l[0]) + ' · ' + (UR[l[0]] || '') + '</option>'; }).join(''); }
@@ -1864,7 +1874,10 @@ function hotTake(){ var h = HOTQ; HOTQ = {}; return Object.keys(h).length ? h : 
 var PINGAT = 0;
 async function ping(fresh){ if (!PW || !D.cards) return; if (PINGING && Date.now() - PINGING < 30000) { PAGAIN = true; return; } PINGING = Date.now(); PINGAT = PINGING; PAGAIN = false;
   var hq = hotTake(), j = await call({ op: 'ping', fresh: fresh ? 1 : 0, hot: hq, v: VER, dv: DEV, ob: OUT.filter(function(x){ return x.tries >= 3; }).length, ua: /Android/i.test(navigator.userAgent) ? 'Android' : /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'iPhone' : 'PC' }); PINGING = 0;
-  if (j && j.ok && j.key && /^[0-9a-f]{64}$/.test(j.key) && j.key !== PW) { PW = j.key; ls('sj_fac_pw', PW); FAST.k = ''; }   // this phone's own key (it was on the shared password) if (!j || !j.ok) hotBack(hq); if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
+  if (j && j.ok && j.key && /^[0-9a-f]{64}$/.test(j.key) && j.key !== PW) { PW = j.key; ls('sj_fac_pw', PW); FAST.k = ''; }   // this phone's own key (it was on the shared password)
+  // 28 Nov 2026: the next three statements sat BEHIND the comment above since 21 Nov, so they never ran: a check that failed (weak line, Google's limit)
+  // wiped every NEW badge, a check asked for while one was on its way was dropped, and the chats this phone wrote in were not told to the relay again.
+  if (!j || !j.ok) hotBack(hq); if (PAGAIN) { PAGAIN = false; setTimeout(function(){ ping(false); }, 30); } if (!j || !j.ok) return;
   var th = j.th || {}; if (open && looking()) delete th[open.id];     // the open chat is being read right now
   if (j.uf != null) { D.uf = +j.uf || 0; D.ufl = +j.ufl || 20000; }   // 22 Nov 2026: outside calls the relay made in the last 24 h (Google's daily limit)
   D.th = th; D.later = j.later || D.later || {}; if (j.dm !== undefined) D.dm = j.dm; if (j.dmno !== undefined) D.dmno = !!j.dmno; if (j.lais !== undefined) D.lais = j.lais; if (j.rooms !== undefined) { D.rooms = j.rooms || []; xrooms().forEach(function(c){ D.byId[c.id] = c; }); } if (j.lo !== undefined) { D.lo = j.lo || []; loSync(); } if (j.live) liveStart(j.live); if (j.fast !== undefined) fastSet(j.fast); if (j.rv) rvSet(j.rv); if (j.refs) refsSet(j.refs, true); if (j.act) D.act = j.act; draw(); alertNew(); liveMark(); prefetch(); }
@@ -1981,7 +1994,7 @@ if (!PW) showLogin(); else { if (loadCached()) { openFromHash(); ping(false); } 
 // 20 Oct 2026: the page can now open from the phone's copy (fac-sw.js), so the version check at start must really run - it waits while the app
 // is busy loading (up to ~30 s) instead of being skipped until the 5-minute check
 (function vtry(n){ if (busyWork() && n < 10) { setTimeout(function(){ vtry(n + 1); }, 3000); return; } checkVer(); })(0);
-window.__f = { pingAt: function(){ return PINGAT; }, D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, hotq: function(){ return HOTQ; }, mvr: function(){ return MVR; }, wdTxt: wdTxt, wkd: function(){ if (open) workDraw(open); }, outRun: outRun, HM: HM, fabView: fabView, fabKind: fabKind, fab: function(){ return FAB; }, tab: function(){ return TAB; } };
+window.__f = { hotAdd: hotAdd, pingAt: function(){ return PINGAT; }, D: D, parse: parse, call: call, TH: TH, PEND: PEND, ping: ping, load: load, OUT: OUT, NET: NET, LIVE: LIVE, liveOk: liveOk, MVD: MVD, hotq: function(){ return HOTQ; }, mvr: function(){ return MVR; }, wdTxt: wdTxt, wkd: function(){ if (open) workDraw(open); }, outRun: outRun, HM: HM, fabView: fabView, fabKind: fabKind, fab: function(){ return FAB; }, tab: function(){ return TAB; } };
 })();
 </script>
 </body></html>
