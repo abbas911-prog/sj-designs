@@ -974,7 +974,7 @@ document.addEventListener('visibilitychange', function(){ if (document.hidden) s
 window.addEventListener('pagehide', saveWork);
 // SELF-UPDATE (7 Oct 2026: his phone kept an old copy of the memo, so SAMPLES had no "Add" button).
 // The memo compares its VER with the copy on the site; if the site is newer it saves the work and reloads itself.
-var VER = '2026-11-23a';
+var VER = '2026-11-28a';
 // 20 Oct 2026 (lag): the site is asked "did memo.html change?" (ETag) — before, every return to the app downloaded the whole 430 KB page again
 async function checkVer(){ try { var h = {}, et = ls('sj_memo_etag') || ''; if (et) h['If-None-Match'] = et;
   var r = await fetch('memo.html?t=' + Date.now(), { cache: 'no-store', headers: h }); if (r.status === 304) return;
@@ -1223,7 +1223,7 @@ var PFX = { inv: 'INV-', rv: 'RV-', pv: 'PV-', rn: 'RET-' };
 function nextRef(k){ return PFX[k] + String(lastNo(k) + 1).padStart(4, '0'); }
 // 21 Oct 2026: ONE number series for the whole shop. When a bill is finalised (green button / Send) the relay confirms its number: if another phone
 // already used it, or is ahead of it, the bill moves to the next free number and says so. Offline or an older relay: the number is kept as before.
-async function bsNext(k, d){ if (!RELAY || !token || !d || (d.status && d.status !== 'draft')) return '';   // 5 Nov 2026: says 'kept' / 'moved', '' = no answer
+async function bsNext(k, d){ dateFresh(k, d); if (!RELAY || !token || !d || (d.status && d.status !== 'draft')) return '';   // 5 Nov 2026: says 'kept' / 'moved', '' = no answer
   try { var j = await bsCall({ op: 'next', type: k, ref: d.ref, name: d.name || '', date: d.date }, 1); if (!j.ok || !j.ref) return ''; if (j.ref === d.ref) return 'kept';
     var old = d.ref; keepNo(k, old); delete BS.last[old]; d.ref = j.ref; keepNo(k, j.ref); if (B[k] === d) redraw();
     uiToast(old + ' → ' + j.ref + ' · that number was already used on another phone · الرقم مستخدم'); return 'moved'; } catch(e){ return ''; } }
@@ -1243,6 +1243,10 @@ function today(){ var d = new Date(); return d.getFullYear() + '-' + String(d.ge
 function dmy(s){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : s; }
 
 var B = { mode: 'memo', inv: null, rv: null, pv: null, rn: null, pdf: null, timer: null };
+// 28 Nov 2026: a bill not sent yet carries TODAY's date unless the date was typed by hand. The next receipt is opened the moment the
+// last one is sent, so RV-0077 (opened 24 Nov, sent 26 Nov) and RV-0075 went on the statement with the day of the receipt BEFORE them.
+function dateFresh(k, d){ if (!d || d.dateSet || d.editing || d.done || d.status === 'sent' || d.status === 'included') return false; var t = today(); if (d.date === t) return false;
+  d.date = t; var el = document.querySelector('#bform input[data-k="date"]'); if (el && B[B.mode] === d) el.value = t; return true; }
 function freshDoc(k){
   var d = { ref: nextRef(k), date: today(), name: $('name').value.trim(), open: '', note: '' };
   if (k === 'inv') { d.vat = false; d.extras = [{ d: '', a: '' }]; d.disc = ''; d.paid = ''; d.man = []; d.nophoto = false; d.cat = true; }
@@ -1342,6 +1346,7 @@ function vchFix(k, d){
 function vchUndo(d){ if (d.fix) ['name', 'date', 'open', 'amount', 'disc', 'modeP', 'chq', 'note', 'saved', 'cust'].forEach(function(f){ d[f] = d.fix[f]; }); delete d.fix; delete d.editing; redraw(); try { saveWork(); } catch(e){} }
 function drawForm(){
   var k = B.mode, d = B[k] || (B[k] = freshDoc(k)), f = $('bform'), co = coGet(), h = '';
+  dateFresh(k, d);
   var who = k === 'inv' ? 'Bill to · العميل' : k === 'rn' ? 'Returned by · العميل' : (k === 'rv' ? 'Received from · استلمنا من' : 'Paid to · دفعنا إلى');
   h += '<div class="bgrid">' + field(who, inp('name', d.name)) + field((k === 'inv' ? 'Invoice no.' : k === 'rn' ? 'Return no.' : 'Voucher no.') + ' · رقم', inp('ref', d.ref)) + field('Date · التاريخ', inp('date', d.date, 'date')) + '</div>';
   if (k !== 'pv') h += '<div class="bcust" id="bcust"></div>';
@@ -1430,6 +1435,7 @@ function onForm(e){
     if (t.dataset.f === 'no') { var dz0 = rnDz(t.value), pk = document.querySelector('#bform [data-rnp="' + t.dataset.ri + '"]'); if (dz0 && !it0.rate && prices[dz0.no] > 0) { it0.rate = String(prices[dz0.no]); var ri = document.querySelector('#bform input[data-ri="' + t.dataset.ri + '"][data-f="rate"]'); if (ri) ri.value = it0.rate; }
       if (pk) { var tmp = document.createElement('div'); tmp.innerHTML = rnPicker(it0, +t.dataset.ri); pk.replaceWith(tmp.firstChild); rnPhotos(); } } }
   else if (t.dataset.k) { d[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value;
+    if (t.dataset.k === 'date') d.dateSet = 1;
     if (k !== 'pv' && t.dataset.k === 'open') { d.openTyped = true; custHint(); }
     if (k !== 'pv' && t.dataset.k === 'name' && (d.name || '').trim().toUpperCase() !== (d.lookName || '')) { d.cust = undefined; d.saved = null; clearTimeout(CU.t); CU.t = setTimeout(custLook, 700); custHint(); } }
   else return;

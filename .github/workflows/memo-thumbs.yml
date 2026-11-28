@@ -32,4 +32,4 @@ jobs:
           if [ -f memo-data.enc ]; then git add memo-data.enc; fi
           mkdir -p cthumbs && git add -A cthumbs
           if [ -f costing.enc ]; then git add costing.enc; fi
-          git diff --cached --quiet || (git commit -m "memo photos sync" && git pull --rebase && git push)
+          git diff --cached --quiet || (git commit -m "memo photos sync" && (for i in 1 2 3 4; do git pull -q --rebase && git push -q && exit 0; sleep 6; done; exit 1))
